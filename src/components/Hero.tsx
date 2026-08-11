@@ -80,7 +80,7 @@ export function Hero() {
 
           <div className="hero__ctas">
             <a href="#apps" className="hero__cta">
-              Explore our work <span className="hero__cta-arrow">→</span>
+              Explore our work <span className="hero__cta-arrow" aria-hidden="true">→</span>
             </a>
             <a href="#story" className="hero__cta hero__cta--ghost">
               Our story

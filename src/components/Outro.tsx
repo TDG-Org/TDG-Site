@@ -27,7 +27,7 @@ export function Outro() {
       <section className="outro__gh-section">
         <div ref={card} className="outro__gh">
           <div className="outro__gh-left">
-            <span className="outro__gh-icon">↗</span>
+            <span className="outro__gh-icon" aria-hidden="true">↗</span>
             <div>
               <div className="outro__gh-title">Open on GitHub</div>
               <p className="outro__gh-copy">

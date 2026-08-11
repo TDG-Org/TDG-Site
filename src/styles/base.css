@@ -316,7 +316,11 @@ stop {
   font: 500 10px var(--font-mono);
   letter-spacing: 0.1em;
   color: var(--accent-2);
-  transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1);
+  /* append, do not replace — a bare shorthand here dropped --t-theme and made
+     the index badges snap colour while everything around them eased */
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1),
+    var(--t-theme);
 }
 .card[data-lit='true'] .badge {
   transform: scale(1.12) rotate(-5deg);
@@ -527,5 +531,18 @@ stop {
   *::before,
   *::after {
     animation-play-state: paused !important;
+  }
+
+  /* Pausing pins each animation at its 0% frame, and for these that frame is
+     the dimmest one, not a resting state — the scroll cue faded to 0.4 and the
+     light shafts to their darkest. An !important author declaration is the one
+     thing that outranks a running animation. (The story pulse is deliberately
+     left pinned: its 0% frame is the ring tucked behind the dot.) */
+  .hero__scroll-arrow {
+    opacity: 1 !important;
+  }
+  .hero__shaft,
+  .faith__ray {
+    opacity: 0.55 !important;
   }
 }

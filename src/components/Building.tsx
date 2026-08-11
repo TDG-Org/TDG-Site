@@ -77,7 +77,9 @@ export function Building() {
           <div className="building__body">
             <div className="building__tags">
               <span className="building__tag">GAME</span>
-              <span className="building__tag building__tag--live">● IN PLAYTEST</span>
+              <span className="building__tag building__tag--live">
+                <span aria-hidden="true">● </span>IN PLAYTEST
+              </span>
             </div>
             <h3 className="building__title">{MARANATHA.heading}</h3>
             <p className="building__copy">{MARANATHA.copy}</p>

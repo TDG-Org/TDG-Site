@@ -148,7 +148,9 @@
   text-transform: uppercase;
   color: var(--obj-label);
   opacity: 0;
-  transition: opacity 0.5s ease;
+  /* the name is swapped 250ms in, so the fade has to be over by then or the
+     visitor watches the old label mutate into the new one at half opacity */
+  transition: opacity 0.25s ease;
 }
 .hero__model-label[data-visible='true'] {
   opacity: 1;

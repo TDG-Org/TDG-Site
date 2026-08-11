@@ -27,7 +27,7 @@ export function Faith() {
 
       <div ref={content} className="faith__content">
         <div className="faith__cross-row">
-          <div className="faith__cross" tabIndex={0} aria-label="TDG cross">
+          <div className="faith__cross" aria-hidden="true">
             <CrossGlyph variant="faith" />
           </div>
         </div>

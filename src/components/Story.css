@@ -113,7 +113,6 @@
   border-radius: 50%;
   background-color: var(--accent);
   transition:
-    box-shadow 0.5s ease,
     transform 0.5s ease,
     var(--t-theme);
 }
