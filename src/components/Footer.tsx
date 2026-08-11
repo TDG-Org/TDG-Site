@@ -7,7 +7,22 @@ export function Footer() {
       <div className="footer__shell">
         <div className="footer__top">
           <div className="footer__brand">
-            <img className="footer__wordmark" src="/assets/tdg-wordmark.png" alt="TDG" />
+            <picture>
+              <source
+                type="image/avif"
+                srcSet="/assets/tdg-wordmark-56.avif 1x, /assets/tdg-wordmark-112.avif 2x"
+              />
+              <img
+                className="footer__wordmark"
+                src="/assets/tdg-wordmark-56.webp"
+                srcSet="/assets/tdg-wordmark-56.webp 1x, /assets/tdg-wordmark-112.webp 2x"
+                alt="TDG"
+                width={53}
+                height={28}
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
             <div className="footer__name">THE DISCIPLES OF GOD</div>
             <p className="footer__blurb">
               Brothers building software, games, and tools — for the glory of Jesus.
