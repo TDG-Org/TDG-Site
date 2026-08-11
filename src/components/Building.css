@@ -82,9 +82,9 @@
   color: var(--accent-2);
 }
 .building__tag.building__tag--live {
-  background: rgba(74, 222, 128, 0.14);
-  color: #4ea36a;
-  border-color: rgba(74, 222, 128, 0.4);
+  background: var(--live-bg);
+  color: var(--live-fg);
+  border-color: var(--live-border);
 }
 .building__title {
   margin: 0 0 13px;

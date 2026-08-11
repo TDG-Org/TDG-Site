@@ -42,6 +42,11 @@
   --edge-hi: rgba(255, 255, 255, 0.95);
   --edge-mid: rgba(255, 255, 255, 0.3);
 
+  /* the "playable" green, per theme — one hardcoded #4ea36a failed AA in both */
+  --live-fg: #59b880;
+  --live-bg: rgba(74, 222, 128, 0.14);
+  --live-border: rgba(74, 222, 128, 0.4);
+
   /* the one pair the reference calls "invert" — a chip that flips with theme */
   --invert-bg: #f2f2f5;
   --invert-fg: #07070a;
@@ -69,7 +74,9 @@
   --hero-edge: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6));
   --hero-eyebrow: rgba(255, 255, 255, 0.72);
   --hero-tag: rgba(255, 255, 255, 0.68);
-  --hero-meta: rgba(255, 255, 255, 0.44);
+  /* nudged off the reference values: 0.44 dark / 0.50 light measured 4.28 and
+     3.44 against the hero sky, both under AA for 10px text */
+  --hero-meta: rgba(255, 255, 255, 0.47);
   --hero-rule: rgba(255, 255, 255, 0.16);
   --hero-strip-border: rgba(255, 255, 255, 0.09);
   --hero-strip-bg: linear-gradient(180deg, transparent, rgba(3, 3, 4, 0.6));
@@ -122,6 +129,10 @@
   --edge-hi: rgba(20, 20, 26, 0.7);
   --edge-mid: rgba(20, 20, 26, 0.18);
 
+  --live-fg: #2e784a;
+  --live-bg: rgba(45, 140, 85, 0.12);
+  --live-border: rgba(45, 140, 85, 0.42);
+
   --invert-bg: #141419;
   --invert-fg: #f6f6f8;
 
@@ -147,7 +158,7 @@
   --hero-edge: linear-gradient(90deg, transparent, rgba(20, 20, 26, 0.5));
   --hero-eyebrow: rgba(20, 20, 26, 0.66);
   --hero-tag: rgba(20, 20, 26, 0.66);
-  --hero-meta: rgba(20, 20, 26, 0.5);
+  --hero-meta: rgba(20, 20, 26, 0.62);
   --hero-rule: rgba(20, 20, 26, 0.18);
   --hero-strip-border: rgba(20, 20, 26, 0.12);
   --hero-strip-bg: linear-gradient(180deg, transparent, rgba(251, 251, 252, 0.7));

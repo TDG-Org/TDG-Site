@@ -24,6 +24,9 @@ function paint(el: HTMLElement, kind: RevealKind, p: number, mi: number) {
   }
   el.dataset.revealing = ''
 
+  // Promote only while it is actually moving. Setting this at mount left every
+  // block below the fold holding a compositor layer until you scrolled to it.
+  el.style.willChange = 'transform,opacity'
   el.style.opacity = (mi >= 1 ? eased : 1 - (1 - eased) * mi).toFixed(3)
   const inv = (1 - eased) * mi
 
@@ -77,7 +80,6 @@ export function useReveal<T extends HTMLElement>(kind: RevealKind, index = 0) {
     }
 
     el.style.transition = 'none'
-    el.style.willChange = 'transform,opacity'
     // Seed from where the element actually is rather than from zero, so nothing
     // sits invisible waiting for a first frame that may be a tab-switch away.
     const vh0 = window.innerHeight || 800

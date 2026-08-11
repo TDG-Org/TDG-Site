@@ -315,7 +315,9 @@
     display: inline-flex;
   }
 }
-@media (min-width: 821px) {
+/* the exact complement of the 820px query above — `min-width: 821px` leaves a
+   gap at fractional widths, which fractional OS scaling produces */
+@media not all and (max-width: 820px) {
   .nav__panel {
     display: none;
   }

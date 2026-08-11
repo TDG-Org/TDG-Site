@@ -130,8 +130,17 @@ export function PointCloud() {
     let py1 = -1
 
     const resize = () => {
-      const cw = holder.clientWidth || 520
-      const ch = holder.clientHeight || 520
+      const cw = holder.clientWidth
+      const ch = holder.clientHeight
+      // Below 640px the wrapper is display:none. Substituting a 520px default
+      // here allocated ~4 MB of canvas buffers on every phone for a model that
+      // is never painted. No layout means no buffers; the ResizeObserver fires
+      // again if it ever gains one.
+      if (!cw || !ch) {
+        W = 0
+        H = 0
+        return
+      }
       // A soft point cloud gains nothing from 2x, and it costs 4x the fill.
       dpr = Math.min(window.devicePixelRatio || 1, 1.5)
       const nw = Math.round(cw * dpr)

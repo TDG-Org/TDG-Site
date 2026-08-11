@@ -156,11 +156,16 @@ export function Nav() {
           </a>
         </div>
 
+        {/* max-height:0 + opacity:0 + pointer-events:none hide the panel from
+            sight but not from the tab order — a closed menu left six invisible
+            links between the toggle and the page. `inert` removes the subtree
+            from focus and the a11y tree without touching the height animation. */}
         <div
           id="nav-panel"
           ref={panel}
           className="nav__panel"
           data-open={menuOpen}
+          inert={!menuOpen}
         >
           <div className="nav__panel-inner">
             {NAV_LINKS.map((link) => (

@@ -141,6 +141,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     typeof document === 'undefined' ? 'dark' : readStoredTheme(),
   )
   const wiping = useRef(false)
+  /** A toggle pressed mid-wave is remembered, not dropped on the floor. */
+  const queued = useRef(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -152,7 +154,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme])
 
   const toggle = useCallback((event?: { currentTarget: Element | null }) => {
-    if (wiping.current) return
+    // A second press during the 1.05s wave used to be dropped silently. Hold it
+    // and run it when the wave lands instead.
+    if (wiping.current) {
+      queued.current = true
+      return
+    }
     const next: Theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
 
     if (motionIntensity() === 0) {
@@ -177,9 +184,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => {
       clearBloom()
       wiping.current = false
+      if (queued.current) {
+        queued.current = false
+        toggleRef.current?.(event)
+      }
     }, 1050)
     window.setTimeout(clearDelays, WAVE_RESTORE)
   }, [])
+
+  // so the queued press can re-enter without making `toggle` depend on itself
+  const toggleRef = useRef(toggle)
+  toggleRef.current = toggle
 
   const value = useMemo(() => ({ theme, toggle }), [theme, toggle])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
