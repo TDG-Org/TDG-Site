@@ -21,28 +21,58 @@ Thumbs.db
 *.key
 
 # ── agent / assistant tooling and internal notes ──────────────────────────
-# None of this belongs in a public repo.
+# None of this belongs in a public repo. Case-insensitive variants included
+# because these files get created with whatever capitalisation the tool likes.
 CLAUDE.md
 CLAUDE.local.md
+claude.md
+[Cc]laude*.md
 AGENTS.md
+[Aa]gents.md
 GEMINI.md
+[Gg]emini.md
 .claude/
+.claude-*/
+.codex/
+.continue/
 .cursor/
 .cursorrules
+.cursorignore
 .aider*
 .windsurfrules
+.windsurf/
+.roo/
+.clinerules
 .github/copilot-instructions.md
+.specstory/
+.sourcegraph/
+mcp.json
+.mcp.json
 
-# internal working notes, handoffs and design-tool exports
-HANDOFF.md
-WORKLOG.md
+# internal working notes, handoffs, plans and design-tool exports
+HANDOFF*.md
+WORKLOG*.md
 NOTES.md
 TODO.md
+SCRATCH*.md
+PLAN*.md
+ROADMAP*.md
 /docs/internal/
 /handoff/
 /.private/
+/private/
+/internal/
 *.dc.html
 public/ref/
+
+# never commit raw source art or exports — public/shots holds the encoded ones
+/design/
+/raw-assets/
+*.psd
+*.ai
+*.fig
+*.sketch
+*.xcf
 
 # ── logs & scratch ────────────────────────────────────────────────────────
 logs/

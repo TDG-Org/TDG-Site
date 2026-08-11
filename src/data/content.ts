@@ -221,17 +221,17 @@ export const TOOLS: ToolCard[] = [
 
 /** The Building-now feature: MARANATHA. */
 export const MARANATHA = {
-  title: 'MARANATHA',
-  kicker: 'A BIBLE GAME IN THE BROWSER',
   heading: 'A calm walk through Scripture.',
   copy: 'Walk the real events of Scripture in a hand-drawn world — the World English Bible on screen and read aloud on every beat. No install, no login.',
   note: 'Runs in the browser',
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',
+  // The game's own home screen — it carries the wordmark, so the panel does not
+  // overlay a second one.
   shot: {
     slug: 'maranatha',
     widths: [720, 1440],
-    alt: "MARANATHA: Joseph in his father's camp at sunrise, with the objective to bring three stray sheep back to the pen",
+    alt: 'The MARANATHA home screen at night: the story path winding through Genesis, with Joseph selected and ready to play',
   } satisfies Shot,
 }
 

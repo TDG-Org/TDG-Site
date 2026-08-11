@@ -1,0 +1,75 @@
+TDG SOURCE-AVAILABLE LICENSE
+Version 1.0
+
+Copyright (c) 2026 Nate McIlvenny and Luke McIlvenny (TDG).
+All rights reserved.
+
+Thanks for checking out our site.
+
+Read it, learn from it, run it, and tell us what you find. The only thing
+we ask is that you don't ship it as your own.
+
+The terms below are plain, and they're binding.
+
+
+1. WHAT YOU CAN DO
+
+We give you a free, worldwide, non-exclusive license to:
+
+  a. read the code and see how it works;
+  b. copy or fork it so you can run and experiment with it privately;
+  c. modify your private copy however you like;
+  d. open issues and pull requests to help improve it;
+  e. quote short excerpts in reviews, tutorials, or school work, with
+     credit to TDG.
+
+
+2. WHAT YOU CAN'T DO
+
+  a. publish, host, deploy, or distribute this site, or a renamed or
+     modified version of it;
+  b. sell it, or use it inside anything you charge for;
+  c. copy a meaningful part of it into another project or product;
+  d. use it as training or evaluation data for an AI or machine-learning
+     system;
+  e. remove our names, this license, or other notices;
+  f. present the work as yours, or imply we endorse you.
+
+In short: private forks are fine, public ones aren't.
+
+If you need something on this list, get in touch first. Nothing beyond
+Section 1 applies unless we've agreed to it directly.
+
+
+3. CONTRIBUTIONS
+
+If you send us a pull request, you keep the copyright in what you wrote,
+and you give us permission to use, change, and distribute it as part of
+this site. Please only submit work you have the right to share.
+
+
+4. THE LEGAL PART
+
+  a. This license covers the code, text, and artwork we own. Third-party
+     libraries, fonts, and media keep their own licenses, which control for
+     those pieces.
+
+  b. Publishing a repository is not an open-source grant. Where a hosting
+     platform's terms give users viewing or forking rights, those rights
+     come from that platform, not from us.
+
+  c. No rights are granted to the TDG name, logos, or marks. No patent
+     license is granted.
+
+  d. This license ends automatically if its terms are broken. If that
+     happens, stop using it and delete your copies.
+
+  e. Anything not granted above stays with us.
+
+  f. THE SITE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+     TITLE, AND NON-INFRINGEMENT. TO THE FULLEST EXTENT PERMITTED BY LAW,
+     WE ARE NOT LIABLE FOR ANY DAMAGES ARISING FROM IT OR ITS USE.
+
+
+Collaboration, licensing, and partnership inquiries: natemci.com

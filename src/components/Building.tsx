@@ -67,16 +67,11 @@ export function Building() {
                 src={`/shots/${MARANATHA.shot.slug}-${MARANATHA.shot.widths[0]}.webp`}
                 alt={MARANATHA.shot.alt}
                 width={720}
-                height={495}
+                height={405}
                 loading="lazy"
                 decoding="async"
               />
             </picture>
-            <div className="building__art-scrim" aria-hidden="true" />
-            <div className="building__art-text">
-              <div className="building__art-title">{MARANATHA.title}</div>
-              <div className="building__art-sub">{MARANATHA.kicker}</div>
-            </div>
           </div>
 
           <div className="building__body">
