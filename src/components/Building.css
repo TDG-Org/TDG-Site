@@ -1,0 +1,187 @@
+.building__scan {
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 9px);
+  -webkit-mask-image: linear-gradient(104deg, #000 4%, transparent 58%);
+  mask-image: linear-gradient(104deg, #000 4%, transparent 58%);
+}
+
+.building__blob {
+  top: 18%;
+  right: 4%;
+  width: 420px;
+  height: 420px;
+  filter: blur(30px);
+}
+
+.shell.building__shell {
+  max-width: 1180px;
+}
+
+.building__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 44px;
+}
+.h2.building__heading {
+  margin-top: 18px;
+}
+.lede.building__lede {
+  max-width: 520px;
+}
+.building__count {
+  font: 500 13px var(--font-body);
+  color: var(--faint);
+}
+
+.building__feature {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
+}
+
+.building__art {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1c1c22, #0a0a0e);
+}
+.building__art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* keeps the wordmark legible over a bright sunrise */
+.building__art-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(72% 60% at 50% 46%, rgba(6, 6, 10, 0.68), rgba(6, 6, 10, 0.18) 70%, transparent);
+}
+.building__art-text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+.building__art-title {
+  font: 500 40px var(--font-serif);
+  color: #f7f7fa;
+  text-shadow:
+    0 0 26px rgba(0, 0, 0, 0.55),
+    0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.building__art-sub {
+  margin-top: 10px;
+  font: 500 10.5px var(--font-mono);
+  letter-spacing: 0.24em;
+  color: rgba(247, 247, 250, 0.78);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.building__body {
+  padding: 42px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.building__tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.building__tag {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  padding: 5px 11px;
+  border-radius: 3px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--border-hover);
+  color: var(--accent-2);
+}
+.building__tag.building__tag--live {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ea36a;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+.building__title {
+  margin: 0 0 13px;
+  font: 700 26px var(--font-display);
+  color: var(--text);
+}
+.building__copy {
+  margin: 0 0 24px;
+  font: 400 15.5px/1.7 var(--font-body);
+  color: var(--muted);
+}
+.building__actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.building__play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  border-radius: 3px;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 600 14px var(--font-body);
+  transition:
+    transform 0.3s,
+    var(--t-theme);
+}
+.building__play:hover {
+  transform: translateY(-3px);
+}
+/* not a link until the demo is actually reachable */
+.building__play.building__play--soon {
+  background-color: var(--surface);
+  border: 1px solid var(--border-hover);
+  color: var(--faint);
+  cursor: default;
+}
+.building__play.building__play--soon:hover {
+  transform: none;
+}
+.building__note {
+  font: 500 12.5px var(--font-body);
+  color: var(--faint);
+}
+
+.building__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.building__pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 2px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  font: 500 13px var(--font-body);
+  color: var(--muted);
+}
+.building__pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+.building__pill-dot[data-alt] {
+  background-color: var(--accent);
+}

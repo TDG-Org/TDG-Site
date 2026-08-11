@@ -1,0 +1,125 @@
+.apps__dots {
+  opacity: 0.72;
+  background-image: repeating-radial-gradient(
+    circle at 86% 10%,
+    var(--border) 0 1px,
+    transparent 1px 76px
+  );
+  -webkit-mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
+  mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
+}
+
+.apps__blob {
+  top: 14%;
+  left: -4%;
+  width: 480px;
+  height: 480px;
+  filter: blur(30px);
+}
+
+.shell.apps__shell {
+  max-width: 1180px;
+}
+
+.apps__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 46px;
+}
+.h2.apps__heading {
+  margin-top: 18px;
+}
+.lede.apps__lede {
+  max-width: 500px;
+}
+.apps__nudge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 2px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--border-hover);
+  font: 500 12.5px var(--font-body);
+  color: var(--accent-2);
+  animation: floaty 3.2s ease-in-out infinite;
+}
+
+.apps__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+  gap: 20px;
+}
+
+.apps__card {
+  padding: 28px;
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
+}
+
+.apps__shot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin: 0 0 22px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  background-color: var(--bg2);
+}
+
+.badge.apps__index {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 7px;
+  margin-bottom: 14px;
+}
+
+.apps__chips {
+  margin-bottom: 14px;
+}
+
+.apps__title {
+  margin: 0 0 10px;
+  font: 700 21px var(--font-display);
+  color: var(--text);
+}
+.apps__copy {
+  margin: 0 0 20px;
+  font: 400 14.5px/1.65 var(--font-body);
+  color: var(--muted);
+}
+.apps__status {
+  display: flex;
+  align-items: center;
+  font: 600 13px var(--font-body);
+  color: var(--faint);
+}
+
+.apps__more {
+  border-radius: 3px;
+  padding: 30px;
+  background: linear-gradient(150deg, var(--accent-soft), transparent);
+  border: 1px dashed var(--border-hover);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.apps__more-title {
+  font: 500 28px var(--font-serif);
+  color: var(--accent-2);
+}
+.apps__more-copy {
+  margin: 0;
+  font: 400 14.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.apps__more-link {
+  font: 600 13px var(--font-body);
+  color: var(--accent-2);
+}

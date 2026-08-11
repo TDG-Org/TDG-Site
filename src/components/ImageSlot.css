@@ -1,0 +1,72 @@
+.slot {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.slot[data-filled='false'] {
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.slot__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.slot__drop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  color: var(--text);
+  background: transparent;
+  transition: background-color 0.3s ease;
+}
+/* dashed ring, drawn inside the frame so a drop target reads as one */
+.slot[data-filled='false'] .slot__drop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1.5px dashed currentColor;
+  opacity: 0.35;
+  transition:
+    border-color 0.12s,
+    opacity 0.12s;
+}
+.slot[data-over='true'] .slot__drop {
+  background-color: var(--accent-soft);
+}
+.slot[data-over='true'] .slot__drop::after {
+  opacity: 0.9;
+}
+
+.slot__icon {
+  opacity: 0.45;
+  flex: none;
+}
+
+.slot__hint {
+  max-width: 90%;
+  font: 500 13px/1.3 var(--font-body);
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.slot__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

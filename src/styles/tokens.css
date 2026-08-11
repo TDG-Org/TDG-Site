@@ -1,0 +1,190 @@
+/* ── Design tokens ────────────────────────────────────────────────────────
+   Dark is the default scene; light is applied by [data-theme="light"] on the
+   document element. Radii are deliberately tight (2–3px) everywhere.        */
+
+/* Registered so the section blend gradients can animate with the theme wave.
+   Unregistered custom properties inside a gradient would snap instead.       */
+@property --tint-top {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --tint-mid {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --tint-bot {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+:root {
+  --bg: #07070a;
+  --bg2: #0b0b10;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-hover: rgba(255, 255, 255, 0.085);
+  --text: #f2f2f5;
+  --muted: rgba(242, 242, 245, 0.6);
+  --faint: rgba(242, 242, 245, 0.58);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.34);
+  --accent: #e9e9ef;
+  --accent-2: #b9b9c4;
+  --accent-soft: rgba(255, 255, 255, 0.07);
+  --glow: rgba(255, 255, 255, 0.2);
+  --warm: #f5c98a;
+  --nav-scrolled: rgba(9, 7, 17, 0.72);
+  --card-shadow: 0 22px 54px -26px rgba(0, 0, 0, 0.72);
+  --cross-glow: rgba(255, 255, 255, 0.82);
+  --sb: rgba(255, 255, 255, 0.2);
+  --edge-hi: rgba(255, 255, 255, 0.95);
+  --edge-mid: rgba(255, 255, 255, 0.3);
+
+  /* the one pair the reference calls "invert" — a chip that flips with theme */
+  --invert-bg: #f2f2f5;
+  --invert-fg: #07070a;
+
+  /* hero is its own scene, independent of the page surface */
+  --hero-bg: #030304;
+  --hero-sky: radial-gradient(118% 96% at 74% 6%, #1b2334 0%, #0d1220 26%, #060911 56%, #02040a 100%);
+  --hero-shaft: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(214, 232, 255, 0.013) 14%,
+    rgba(214, 232, 255, 0.07) 37%,
+    rgba(214, 232, 255, 0.13) 50%,
+    rgba(214, 232, 255, 0.07) 63%,
+    rgba(214, 232, 255, 0.013) 86%,
+    transparent 100%
+  );
+  --hero-shaft-2: linear-gradient(100deg, transparent, rgba(214, 232, 255, 0.036) 50%, transparent);
+  --hero-bloom: radial-gradient(
+    closest-side,
+    rgba(214, 232, 255, 0.2),
+    rgba(214, 232, 255, 0.046) 46%,
+    transparent 74%
+  );
+  --hero-edge: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6));
+  --hero-eyebrow: rgba(255, 255, 255, 0.72);
+  --hero-tag: rgba(255, 255, 255, 0.68);
+  --hero-meta: rgba(255, 255, 255, 0.44);
+  --hero-rule: rgba(255, 255, 255, 0.16);
+  --hero-strip-border: rgba(255, 255, 255, 0.09);
+  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(3, 3, 4, 0.6));
+  --hero-grain-opacity: 0.5;
+  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 42%, rgba(0, 0, 0, 0.5) 88%);
+  --hero-dg: linear-gradient(162deg, #ffffff 0%, #f6f6f8 30%, #a8a8b4 74%, #74747f 100%);
+  --hero-cta-bg: #ffffff;
+  --hero-cta-fg: #08080c;
+  --hero-cta-shadow: 0 18px 46px -18px rgba(255, 255, 255, 0.42);
+  --hero-cta-shadow-hover: 0 26px 60px -18px rgba(255, 255, 255, 0.6);
+  --hero-cta2-border: rgba(255, 255, 255, 0.22);
+  --hero-cta2-border-hover: rgba(255, 255, 255, 0.55);
+  --hero-cta2-bg-hover: rgba(255, 255, 255, 0.055);
+  --hero-cta2-fg: #ffffff;
+  --obj-label: rgba(255, 255, 255, 0.5);
+  --cross-stop-0: #ffffff;
+  --cross-stop-1: #f2f2f5;
+  --cross-stop-2: #9a9aa6;
+  --cross-stop-3: #6e6e79;
+  --faith-stop-0: #ffffff;
+  --faith-stop-1: #dcdce4;
+  --faith-stop-2: #8d8d99;
+
+  /* type */
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+[data-theme='light'] {
+  --bg: #f6f6f8;
+  --bg2: #ececed;
+  --surface: #ffffff;
+  --surface-hover: #ffffff;
+  --text: #141419;
+  --muted: rgba(20, 20, 25, 0.64);
+  --faint: rgba(20, 20, 25, 0.68);
+  --border: rgba(23, 18, 45, 0.1);
+  --border-hover: rgba(20, 20, 26, 0.34);
+  --accent: #1b1b22;
+  --accent-2: #4a4a55;
+  --accent-soft: rgba(20, 20, 26, 0.055);
+  --glow: rgba(20, 20, 26, 0.16);
+  --warm: #b8763a;
+  --nav-scrolled: rgba(245, 243, 251, 0.82);
+  --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
+  --cross-glow: rgba(20, 20, 26, 0.45);
+  --sb: rgba(20, 20, 26, 0.15);
+  --edge-hi: rgba(20, 20, 26, 0.7);
+  --edge-mid: rgba(20, 20, 26, 0.18);
+
+  --invert-bg: #141419;
+  --invert-fg: #f6f6f8;
+
+  --hero-bg: #fbfbfc;
+  --hero-sky: radial-gradient(118% 96% at 74% 6%, #ffffff 0%, #f4f4f6 30%, #e6e6ea 62%, #d9d9df 100%);
+  --hero-shaft: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(20, 20, 26, 0.014) 14%,
+    rgba(20, 20, 26, 0.05) 37%,
+    rgba(20, 20, 26, 0.075) 50%,
+    rgba(20, 20, 26, 0.05) 63%,
+    rgba(20, 20, 26, 0.014) 86%,
+    transparent 100%
+  );
+  --hero-shaft-2: linear-gradient(100deg, transparent, rgba(20, 20, 26, 0.03) 50%, transparent);
+  --hero-bloom: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.4) 46%,
+    transparent 74%
+  );
+  --hero-edge: linear-gradient(90deg, transparent, rgba(20, 20, 26, 0.5));
+  --hero-eyebrow: rgba(20, 20, 26, 0.66);
+  --hero-tag: rgba(20, 20, 26, 0.66);
+  --hero-meta: rgba(20, 20, 26, 0.5);
+  --hero-rule: rgba(20, 20, 26, 0.18);
+  --hero-strip-border: rgba(20, 20, 26, 0.12);
+  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(251, 251, 252, 0.7));
+  --hero-grain-opacity: 0.28;
+  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 46%, rgba(20, 20, 26, 0.1) 92%);
+  --hero-dg: linear-gradient(162deg, #14141a 0%, #25252e 32%, #5f5f6b 78%, #8a8a95 100%);
+  --hero-cta-bg: #14141a;
+  --hero-cta-fg: #fbfbfc;
+  --hero-cta-shadow: 0 18px 46px -20px rgba(20, 20, 26, 0.5);
+  --hero-cta-shadow-hover: 0 26px 60px -20px rgba(20, 20, 26, 0.62);
+  --hero-cta2-border: rgba(20, 20, 26, 0.26);
+  --hero-cta2-border-hover: rgba(20, 20, 26, 0.55);
+  --hero-cta2-bg-hover: rgba(20, 20, 26, 0.05);
+  --hero-cta2-fg: #14141a;
+  --obj-label: rgba(20, 20, 26, 0.55);
+  --cross-stop-0: #14141a;
+  --cross-stop-1: #25252e;
+  --cross-stop-2: #4e4e5a;
+  --cross-stop-3: #84848f;
+  --faith-stop-0: #14141a;
+  --faith-stop-1: #33333d;
+  --faith-stop-2: #6f6f7b;
+}
+
+/* ── Theme transition ─────────────────────────────────────────────────────
+   Declared on every element (not on :root) so that each one substitutes
+   --wave-delay in its *own* context. The wave sets that delay per element
+   from its distance to the toggle; without the per-element declaration the
+   root's value would inherit already-substituted and the change would snap. */
+*,
+*::before,
+*::after {
+  --t-theme:
+    background-color 0.6s ease var(--wave-delay, 0ms), color 0.55s ease var(--wave-delay, 0ms),
+    border-color 0.55s ease var(--wave-delay, 0ms), box-shadow 0.6s ease var(--wave-delay, 0ms),
+    fill 0.55s ease var(--wave-delay, 0ms);
+  --t-tint:
+    --tint-top 0.6s ease var(--wave-delay, 0ms), --tint-mid 0.6s ease var(--wave-delay, 0ms),
+    --tint-bot 0.6s ease var(--wave-delay, 0ms);
+}

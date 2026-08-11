@@ -1,0 +1,153 @@
+.section.faith {
+  padding: clamp(88px, 11vw, 150px) clamp(18px, 4vw, 40px);
+}
+
+.faith__field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(80% 78% at 50% 44%, #000, transparent 86%);
+  mask-image: radial-gradient(80% 78% at 50% 44%, #000, transparent 86%);
+}
+.faith__drift {
+  position: absolute;
+  inset: -24%;
+  background:
+    radial-gradient(40% 46% at 30% 32%, var(--glow), transparent 70%),
+    radial-gradient(36% 42% at 72% 64%, var(--accent-soft), transparent 72%);
+  animation: gradDrift 24s ease-in-out infinite;
+  will-change: transform;
+}
+/* A 46px blur across a layer larger than the viewport is far too much work to
+   redo every frame. Same look for a ninth of the pixels: paint and blur it at
+   a third of the size, then scale it back up — the blur scales with it. */
+.faith__spin {
+  position: absolute;
+  inset: 23%;
+  opacity: 0.55;
+  filter: blur(15px);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    var(--accent-soft) 18%,
+    transparent 38%,
+    var(--glow) 62%,
+    transparent 82%
+  );
+  animation: gradSpin 52s linear infinite;
+  will-change: transform;
+}
+.faith__pulse {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(118deg, transparent 18%, var(--accent-soft) 50%, transparent 82%);
+  animation: gradPulse 14s ease-in-out infinite;
+}
+
+.faith__rays {
+  position: absolute;
+  inset: -20% -10%;
+  pointer-events: none;
+  will-change: translate;
+  -webkit-mask-image: radial-gradient(58% 62% at 50% 40%, #000, transparent 78%);
+  mask-image: radial-gradient(58% 62% at 50% 40%, #000, transparent 78%);
+}
+.faith__ray {
+  position: absolute;
+  top: -14%;
+  left: 41%;
+  width: 30%;
+  height: 150%;
+  transform: rotate(15deg);
+  transform-origin: 50% 0;
+  background: linear-gradient(100deg, transparent, var(--accent-soft) 46%, transparent);
+  filter: blur(16px);
+  animation: raybreathe 13s ease-in-out infinite;
+}
+.faith__ray--thin {
+  left: 58%;
+  width: 16%;
+  height: 145%;
+  background: linear-gradient(100deg, transparent, var(--accent-soft) 50%, transparent);
+  filter: blur(20px);
+  animation-duration: 17s;
+}
+
+.faith__blob {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow), transparent 64%);
+  filter: blur(30px);
+  pointer-events: none;
+  opacity: 0.7;
+  will-change: translate;
+}
+
+.faith__content {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.faith__cross-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+.faith__cross {
+  position: relative;
+  width: 60px;
+  height: 112px;
+  filter: drop-shadow(0 0 22px var(--glow));
+  transition:
+    transform 0.9s cubic-bezier(0.16, 0.84, 0.24, 1),
+    filter 0.7s ease;
+}
+.faith__cross:hover,
+.faith__cross:focus-visible {
+  transform: scale(1.09) translateY(-4px);
+  filter: drop-shadow(0 0 13px var(--cross-glow)) drop-shadow(0 0 48px var(--cross-glow));
+}
+.faith__cross svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.kicker.faith__kicker {
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.kicker__label.faith__kicker-label {
+  letter-spacing: 0.36em;
+}
+
+.faith__quote {
+  margin: 0;
+  font: italic 400 clamp(28px, 4.2vw, 48px) / 1.32 var(--font-serif);
+  color: var(--text);
+  text-wrap: pretty;
+}
+.faith__cite {
+  margin-top: 24px;
+  font: 500 13px var(--font-mono);
+  letter-spacing: 0.18em;
+  color: var(--accent-2);
+}
+.faith__copy {
+  margin: 36px auto 0;
+  max-width: 500px;
+  font: 400 16.5px/1.7 var(--font-body);
+  color: var(--muted);
+  text-wrap: pretty;
+}

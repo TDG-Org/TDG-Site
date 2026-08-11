@@ -1,0 +1,109 @@
+/* Only ever hidden once the component is mounted and the pointer is fine, so a
+   failed script still leaves a usable cursor behind. */
+html[data-cursor='on'],
+html[data-cursor='on'] *,
+html[data-cursor='on'] *::before,
+html[data-cursor='on'] *::after {
+  cursor: none !important;
+}
+
+.cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.cursor[data-awake='true'] {
+  opacity: 1;
+}
+
+.cursor__dot,
+.cursor__ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.cursor__dot {
+  width: 5px;
+  height: 5px;
+  margin: 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--glow);
+  transition:
+    width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.25s ease,
+    var(--t-theme);
+}
+
+.cursor__ring {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-hover);
+  transition:
+    width 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.32s ease,
+    border-style 0.2s ease,
+    background-color 0.32s ease,
+    opacity 0.25s ease;
+}
+
+/* over anything clickable: the ring opens and the dot steps back */
+.cursor[data-kind='link'] .cursor__ring,
+.cursor[data-kind='wide'] .cursor__ring {
+  width: 44px;
+  height: 44px;
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+.cursor[data-kind='link'] .cursor__dot {
+  width: 3px;
+  height: 3px;
+  opacity: 0.55;
+}
+.cursor[data-kind='wide'] .cursor__ring {
+  width: 38px;
+  height: 38px;
+}
+
+/* over the hero model: a dashed ring reads as "you can take hold of this" */
+.cursor[data-kind='grab'] .cursor__ring {
+  width: 52px;
+  height: 52px;
+  border-style: dashed;
+  border-color: var(--accent);
+  background-color: transparent;
+}
+.cursor[data-kind='grab'] .cursor__dot {
+  opacity: 0;
+}
+
+/* press */
+.cursor[data-press] .cursor__ring {
+  width: 20px;
+  height: 20px;
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+.cursor[data-press][data-kind='grab'] .cursor__ring {
+  width: 34px;
+  height: 34px;
+}
+.cursor[data-press] .cursor__dot {
+  width: 7px;
+  height: 7px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor__dot,
+  .cursor__ring {
+    transition-duration: 0.01ms;
+  }
+}

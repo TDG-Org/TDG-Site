@@ -1,0 +1,444 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) transparent;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: var(--t-theme);
+}
+
+body,
+nav,
+section,
+footer,
+article,
+a,
+button,
+h1,
+h2,
+h3,
+p,
+span,
+div,
+blockquote,
+img {
+  transition: var(--t-theme);
+}
+
+a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background-color: var(--accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--sb);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-2);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* SVG gradient stops ride the wave too. */
+stop {
+  transition: stop-color 0.55s ease var(--wave-delay, 0ms);
+}
+
+/* ── shared primitives ─────────────────────────────────────────────────── */
+
+.page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.section {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(72px, 9vw, 130px) clamp(18px, 4vw, 40px);
+}
+
+/* Story / Tools / Faith paint an edge-to-edge blend; Apps / Building stay
+   flat as contrast anchors. Every boundary meets on an identical value. */
+.section--blend {
+  background-image: linear-gradient(
+    180deg,
+    var(--tint-top) 0%,
+    var(--tint-mid) 30%,
+    var(--tint-mid) 70%,
+    var(--tint-bot) 100%
+  );
+  transition: var(--t-theme), var(--t-tint);
+}
+
+.section--flat {
+  background-color: var(--tint-mid);
+}
+
+#story {
+  --tint-top: #030304;
+  --tint-mid: #0a0b12;
+  --tint-bot: #08080c;
+}
+#apps {
+  --tint-mid: #08080c;
+}
+#tools {
+  --tint-top: #08080c;
+  --tint-mid: #090b13;
+  --tint-bot: #0f0d0d;
+}
+#building {
+  --tint-mid: #0f0d0d;
+}
+#faith {
+  --tint-top: #0f0d0d;
+  --tint-mid: #0c0d15;
+  --tint-bot: #0b0b10;
+}
+
+[data-theme='light'] #story {
+  --tint-top: #fbfbfc;
+  --tint-mid: #eef0f6;
+  --tint-bot: #f8f8fa;
+}
+[data-theme='light'] #apps {
+  --tint-mid: #f8f8fa;
+}
+[data-theme='light'] #tools {
+  --tint-top: #f8f8fa;
+  --tint-mid: #eceff6;
+  --tint-bot: #f8f5f3;
+}
+[data-theme='light'] #building {
+  --tint-mid: #f8f5f3;
+}
+[data-theme='light'] #faith {
+  --tint-top: #f8f5f3;
+  --tint-mid: #eff0f7;
+  --tint-bot: #ececed;
+}
+
+.texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow), var(--accent-soft) 42%, transparent 72%);
+  pointer-events: none;
+  will-change: translate;
+}
+
+/* kicker: 0N —— LABEL */
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.kicker__num {
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.2em;
+  color: var(--faint);
+}
+.kicker__rule {
+  width: 28px;
+  height: 1px;
+  background: var(--border);
+}
+.kicker__label {
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.h2 {
+  margin: 0 0 12px;
+  font: 700 clamp(32px, 4.2vw, 48px) / 1.05 var(--font-display);
+  color: var(--text);
+}
+.h2.h2--serif {
+  font: 500 clamp(36px, 4.6vw, 54px) / 1.1 var(--font-serif);
+}
+
+.lede {
+  margin: 0;
+  font: 400 17px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+.chip {
+  font: 600 9px var(--font-mono);
+  letter-spacing: 0.12em;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.chip.chip--hot {
+  background-color: var(--accent-soft);
+  border-color: var(--border-hover);
+  color: var(--accent);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card {
+  position: relative;
+  border-radius: 3px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  isolation: isolate;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+.card:hover {
+  border-color: var(--border-hover);
+}
+
+/* cursor-following spotlight + a 1px ring that is brightest nearest the pointer */
+.card__spot,
+.card__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.card__spot {
+  z-index: 0;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 50%),
+    var(--accent-soft),
+    transparent 60%
+  );
+}
+.card__edge {
+  z-index: 4;
+  padding: 1px;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    220px circle at var(--mx, 50%) var(--my, 50%),
+    var(--edge-hi),
+    var(--edge-mid) 38%,
+    transparent 64%
+  );
+  -webkit-mask:
+    linear-gradient(#000, #000) content-box,
+    linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000, #000) content-box,
+    linear-gradient(#000, #000);
+  mask-composite: exclude;
+}
+.card[data-lit='true'] .card__spot,
+.card[data-lit='true'] .card__edge {
+  opacity: 1;
+}
+.card > *:not(.card__spot):not(.card__edge) {
+  position: relative;
+  z-index: 1;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--accent-2);
+  transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.card[data-lit='true'] .badge {
+  transform: scale(1.12) rotate(-5deg);
+}
+
+/* ── keyframes ─────────────────────────────────────────────────────────── */
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(7px);
+    opacity: 1;
+  }
+}
+@keyframes raybreathe {
+  0%,
+  100% {
+    opacity: 0.34;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+@keyframes bloombreathe {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+@keyframes sweepIn {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes nodePulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 var(--glow),
+      0 0 12px 2px var(--glow);
+  }
+  50% {
+    box-shadow:
+      0 0 0 7px transparent,
+      0 0 22px 5px var(--glow);
+  }
+}
+@keyframes roadRun {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 92px;
+  }
+}
+@keyframes gradDrift {
+  0% {
+    transform: translate3d(-5%, -3%, 0) scale(1.06);
+  }
+  50% {
+    transform: translate3d(6%, 4%, 0) scale(1.24);
+  }
+  100% {
+    transform: translate3d(-5%, -3%, 0) scale(1.06);
+  }
+}
+/* 3.36 = the 1.12 the design asks for, times the 3x the layer is painted down
+   by. See .faith__spin. */
+@keyframes gradSpin {
+  0% {
+    transform: rotate(0deg) scale(3.36);
+  }
+  100% {
+    transform: rotate(360deg) scale(3.36);
+  }
+}
+@keyframes gradPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.66;
+  }
+}
+
+/* Nothing animates in a section you cannot see. */
+[data-live='false'],
+[data-live='false'] *,
+[data-live='false'] *::before,
+[data-live='false'] *::after {
+  animation-play-state: paused !important;
+}
+
+/* Every ambient loop is parked when the visitor asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-play-state: paused !important;
+  }
+}

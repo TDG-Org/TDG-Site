@@ -1,0 +1,158 @@
+/* Extra bottom padding keeps every card clear of the neon band. */
+.section.tools {
+  padding-top: clamp(72px, 9vw, 120px);
+  padding-bottom: clamp(120px, 14vw, 190px);
+}
+
+.tools__sun,
+.tools__sun-ring {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(88px, 11vh, 124px);
+  transform: translate(-50%, 50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.tools__sun {
+  width: min(34vw, 206px);
+  height: min(34vw, 206px);
+  background: radial-gradient(closest-side, var(--warm), var(--glow) 44%, transparent 74%);
+  opacity: 0.5;
+  /* upper half only, banded by scanlines */
+  -webkit-mask-image:
+    linear-gradient(#000 0 49.5%, transparent 49.5%),
+    repeating-linear-gradient(0deg, #000 0 8px, transparent 8px 11px);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(#000 0 49.5%, transparent 49.5%),
+    repeating-linear-gradient(0deg, #000 0 8px, transparent 8px 11px);
+  mask-composite: intersect;
+}
+.tools__sun-ring {
+  width: min(22vw, 138px);
+  height: min(22vw, 138px);
+  border: 1px solid var(--warm);
+  opacity: 0.28;
+  animation: raybreathe 15s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(#000 0 49.5%, transparent 49.5%);
+  mask-image: linear-gradient(#000 0 49.5%, transparent 49.5%);
+}
+
+.tools__road {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(88px, 11vh, 124px);
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 230px;
+  perspective-origin: 50% 0;
+}
+.tools__road-grid {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  top: 0;
+  bottom: -44%;
+  transform: rotateX(64deg);
+  transform-origin: 50% 0;
+  opacity: 0.42;
+  background-image:
+    repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 92px),
+    repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 92px);
+  animation: roadRun 7s linear infinite;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 52%);
+  mask-image: linear-gradient(transparent 0, #000 52%);
+}
+.tools__horizon {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--warm), transparent);
+  opacity: 0.24;
+}
+.tools__horizon-glow {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: -14px;
+  height: 30px;
+  background: radial-gradient(closest-side, var(--glow), transparent 76%);
+  filter: blur(12px);
+  opacity: 0.22;
+}
+
+.tools__blob {
+  bottom: 6%;
+  right: -3%;
+  width: 440px;
+  height: 440px;
+  filter: blur(28px);
+}
+
+.shell.tools__shell {
+  max-width: 1180px;
+}
+.tools__head {
+  margin-bottom: 44px;
+}
+.h2.tools__heading {
+  margin-top: 18px;
+}
+.lede.tools__lede {
+  max-width: 500px;
+}
+
+.tools__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+  gap: 18px;
+}
+
+.tools__card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
+}
+
+.tools__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.badge.tools__index {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  flex: none;
+}
+.chips.tools__chips {
+  justify-content: flex-end;
+}
+
+.tools__title {
+  margin: 0 0 7px;
+  font: 700 18px var(--font-display);
+  color: var(--text);
+}
+.tools__copy {
+  margin: 0;
+  font: 400 13.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.tools__cta {
+  font: 600 12.5px var(--font-body);
+  color: var(--accent-2);
+}
+.tools__cta.tools__cta--muted {
+  color: var(--faint);
+}
