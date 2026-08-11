@@ -9,6 +9,38 @@
       content="Brothers building software, games, and tools — for the glory of Jesus."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#07070a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+
+    <!-- Share cards. og:image must be absolute, and this site has no origin of
+         its own yet, so it points at the copy in the public repo. Swap both
+         URLs for the real origin once it is deployed. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TDG — The Disciples of God" />
+    <meta property="og:title" content="TDG — The Disciples of God" />
+    <meta
+      property="og:description"
+      content="Brothers building software, games, and tools — for the glory of Jesus."
+    />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/TDG-Org/TDG-Site/main/public/og.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The TDG landing page" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TDG — The Disciples of God" />
+    <meta
+      name="twitter:description"
+      content="Brothers building software, games, and tools — for the glory of Jesus."
+    />
+    <meta
+      name="twitter:image"
+      content="https://raw.githubusercontent.com/TDG-Org/TDG-Site/main/public/og.png"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Only the weights the page actually sets. Cormorant 500 + italic 400,
@@ -27,6 +59,46 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <style>
+        .noscript {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 32px;
+          background: #07070a;
+          color: #f2f2f5;
+          font: 400 16px/1.7 'Manrope', system-ui, sans-serif;
+          text-align: center;
+        }
+        .noscript h1 {
+          margin: 0 0 12px;
+          font: 500 56px 'Cormorant Garamond', Georgia, serif;
+          letter-spacing: -0.012em;
+        }
+        .noscript p {
+          margin: 0 auto;
+          max-width: 40ch;
+          color: rgba(242, 242, 245, 0.6);
+        }
+        .noscript a {
+          color: #b9b9c4;
+        }
+      </style>
+      <div class="noscript">
+        <div>
+          <h1>✝ TDG</h1>
+          <p>
+            Brothers building software, games, and tools — for the glory of Jesus.
+            <br /><br />
+            This page needs JavaScript. You can find our work on
+            <a href="https://github.com/TDG-Org">GitHub</a>.
+          </p>
+        </div>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
