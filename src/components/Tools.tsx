@@ -58,7 +58,9 @@ export function Tools() {
       <div className="tools__sun" aria-hidden="true" />
       <div className="tools__sun-ring" aria-hidden="true" />
       <div className="tools__road" aria-hidden="true">
-        <div className="tools__road-grid" />
+        <div className="tools__road-grid">
+          <div className="tools__road-run" />
+        </div>
         <div className="tools__horizon" />
         <div className="tools__horizon-glow" />
       </div>

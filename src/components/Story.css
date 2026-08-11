@@ -122,8 +122,50 @@
   transform: scale(1.55);
   box-shadow: 0 0 20px 5px var(--glow);
 }
-.story__row[data-turn] .story__dot {
-  animation: nodePulse 3.4s ease-in-out infinite;
+/* ── the turn's pulse ──────────────────────────────────────────────────────
+   Rebuilt from the two shadows the original keyframes interpolated:
+
+     0%,100%  box-shadow: 0 0 0  0 glow,  0 0 12px 2px glow
+     50%      box-shadow: 0 0 0 7px transparent, 0 0 22px 5px glow
+
+   The first is a hard ring growing from the dot's edge (r 5.5 → 12.5) while
+   its alpha falls to zero — exactly a scale plus an opacity fade. The second
+   is a soft halo whose extent grows 13.5 → 21.5, which is that same halo
+   scaled by 1.593. Both now animate on the compositor and never repaint. */
+.story__pulse {
+  position: absolute;
+  left: 23px;
+  top: 36px;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+}
+.story__pulse::before,
+.story__pulse::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: var(--glow);
+  will-change: transform, opacity;
+}
+/* the ring: radius 12.5 at full size, started at 5.5/12.5 */
+.story__pulse::before {
+  inset: -7px;
+  animation: pulseRing 3.4s ease-in-out infinite;
+}
+/* the halo: a 7.5px-radius disc under a static 6px blur — the same Gaussian a
+   12px box-shadow blur draws — then scaled */
+.story__pulse::after {
+  inset: -2px;
+  filter: blur(6px);
+  animation: pulseHalo 3.4s ease-in-out infinite;
+}
+
+/* the animated shadow used to win over :hover, so the turn's dot never showed
+   the hover glow — keep it that way */
+.story__row[data-turn]:hover .story__dot,
+.story__row[data-turn]:focus-visible .story__dot {
+  box-shadow: none;
 }
 
 .story__meta {

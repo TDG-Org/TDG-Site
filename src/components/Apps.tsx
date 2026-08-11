@@ -20,7 +20,11 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           id={app.id}
           placeholder={app.slotPlaceholder}
           shot={app.shot}
-          sizes="(max-width: 640px) 90vw, (max-width: 1100px) 44vw, 300px"
+          /* Breakpoints track the real column count of the auto-fit grid
+             (1 col <613px, 2 to 929, 3 to 1227, 4 above), minus the card's
+             56px of padding. Over-declaring made retina readers pull the
+             1120w candidate into a 224px slot. */
+          sizes="(max-width: 612px) calc(100vw - 2 * clamp(18px, 4vw, 40px) - 56px), (max-width: 929px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 20px) / 2 - 56px), (max-width: 1227px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 40px) / 3 - 56px), 224px"
         />
       </div>
       <div className="badge apps__index">{app.index}</div>

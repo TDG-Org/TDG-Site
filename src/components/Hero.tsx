@@ -21,13 +21,19 @@ export function Hero() {
     const el = content.current
     if (!el) return
     let hero: HTMLElement | null = null
+    let painted = ''
     return onFrame(({ vh }) => {
       hero ??= document.getElementById('top')
       if (!hero) return
       const p = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / (vh || 800)))
+      const opacity = (1 - p * 0.92).toFixed(4)
+      const blur = p > 0.01 ? `blur(${(p * 5).toFixed(2)}px)` : ''
+      const next = `${opacity}|${blur}`
+      if (next === painted) return
+      painted = next
       return () => {
-        el.style.opacity = String(1 - p * 0.92)
-        el.style.filter = p > 0.01 ? `blur(${(p * 5).toFixed(2)}px)` : ''
+        el.style.opacity = opacity
+        el.style.filter = blur
       }
     })
   }, [content])
@@ -105,15 +111,21 @@ export function useHeroTakeover<T extends HTMLElement>(ref: RefObject<T | null>)
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    let painted = ''
     return onFrame(({ vh, mi }) => {
       const top = el.getBoundingClientRect().top
       const e = Math.max(0, Math.min(1, (vh - top) / (vh * 0.9)))
       const wave = Math.sin(e * Math.PI)
+      const translate = `0 ${(-wave * 148 * mi).toFixed(2)}px`
+      const scale = (1 - 0.012 * wave * mi).toFixed(5)
+      const shadow = e > 0.02 ? `0 -34px 90px -26px rgba(0,0,0,${(0.6 * mi).toFixed(2)})` : 'none'
+      const next = `${translate}|${scale}|${shadow}`
+      if (next === painted) return
+      painted = next
       return () => {
-        el.style.translate = `0 ${(-wave * 148 * mi).toFixed(2)}px`
-        el.style.scale = String(1 - 0.012 * wave * mi)
-        el.style.boxShadow =
-          e > 0.02 ? `0 -34px 90px -26px rgba(0,0,0,${(0.6 * mi).toFixed(2)})` : 'none'
+        el.style.translate = translate
+        el.style.scale = scale
+        el.style.boxShadow = shadow
       }
     })
   }, [ref])

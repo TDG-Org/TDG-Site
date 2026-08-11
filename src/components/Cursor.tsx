@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { motionIntensity, onFrame } from '../lib/motion'
+import { onFrame } from '../lib/motion'
 import './Cursor.css'
 
 /** What the pointer is currently over — drives the ring's shape. */
@@ -72,14 +72,28 @@ export function Cursor() {
     document.addEventListener('pointerleave', leave)
     document.addEventListener('pointerenter', enter)
 
-    const stop = onFrame(() => {
+    let painted = ''
+    const stop = onFrame(({ dt, mi, hold }) => {
+      // Once the ring has caught the pointer there is nothing left to compute
+      // until the pointer moves again — no lerp, no string, no allocation.
+      if (rx === x && ry === y) return
+      // still catching up
+      hold()
       // Reduced motion gets a ring locked to the pointer — still a custom
       // cursor, just without the trailing.
-      const ease = motionIntensity() === 0 ? 1 : 0.19
+      const ease = mi === 0 ? 1 : 1 - Math.pow(1 - 0.19, dt * 60)
       rx += (x - rx) * ease
       ry += (y - ry) * ease
+      // below half the rounding quantum the written string can never change again
+      if (Math.abs(x - rx) < 0.005 && Math.abs(y - ry) < 0.005) {
+        rx = x
+        ry = y
+      }
+      const next = `translate3d(${rx.toFixed(2)}px,${ry.toFixed(2)}px,0) translate(-50%,-50%)`
+      if (next === painted) return
+      painted = next
       return () => {
-        ringEl.style.transform = `translate3d(${rx.toFixed(2)}px,${ry.toFixed(2)}px,0) translate(-50%,-50%)`
+        ringEl.style.transform = next
       }
     })
 

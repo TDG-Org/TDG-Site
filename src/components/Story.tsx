@@ -21,6 +21,10 @@ function StoryRow({ chapter, index }: { chapter: Chapter; index: number }) {
       aria-label={chapter.title}
     >
       <span className="story__sweep" aria-hidden="true" />
+      {/* The turn's halo. Painted behind the dot as two compositable layers
+          rather than an animated box-shadow, which costs ~45ms of main thread
+          per second for this one 11px dot. */}
+      {chapter.turn ? <span className="story__pulse" aria-hidden="true" /> : null}
       <span className="story__dot" aria-hidden="true" />
       <div className="story__meta">
         <span className="story__chapter">{chapter.chapter}</span>
@@ -51,11 +55,15 @@ export function Story() {
     const fill = rail.current
     const el = section.current
     if (!fill || !el) return
+    let painted = ''
     return onFrame(({ vh }) => {
       const r = el.getBoundingClientRect()
       const p = clamp01((vh * 0.86 - r.top) / (r.height * 0.66))
+      const next = `${(p * 100).toFixed(1)}%`
+      if (next === painted) return
+      painted = next
       return () => {
-        fill.style.height = `${(p * 100).toFixed(1)}%`
+        fill.style.height = next
       }
     })
   }, [])

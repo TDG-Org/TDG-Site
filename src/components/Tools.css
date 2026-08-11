@@ -58,12 +58,28 @@
   transform: rotateX(64deg);
   transform-origin: 50% 0;
   opacity: 0.42;
+  /* mandatory: the child overhangs by one tile, and mask-repeat defaults to
+     repeat — without the clip a second copy of the fade draws grid lines above
+     the horizon */
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 52%);
+  mask-image: linear-gradient(transparent 0, #000 52%);
+}
+/* Animating background-position repaints this whole 3D-transformed, masked
+   band every frame. The gradients instead ride one tile high and translate
+   exactly one 92px period, which wraps to the identical image — but on the
+   compositor, with no repaint at all. */
+.tools__road-run {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -92px;
+  bottom: 0;
   background-image:
     repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 92px),
     repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 92px);
   animation: roadRun 7s linear infinite;
-  -webkit-mask-image: linear-gradient(transparent 0, #000 52%);
-  mask-image: linear-gradient(transparent 0, #000 52%);
+  will-change: transform;
 }
 .tools__horizon {
   position: absolute;

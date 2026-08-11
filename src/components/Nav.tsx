@@ -65,13 +65,16 @@ export function Nav() {
     const bar = progress.current
     if (!bar) return
     let top: HTMLElement | null = null
+    let painted = ''
     return onFrame(({ vh }) => {
       top ??= document.getElementById('top')
       const max = document.documentElement.scrollHeight - vh || 1
       const travelled = top ? Math.max(0, -top.getBoundingClientRect().top) : 0
-      const pct = Math.max(0, Math.min(100, (travelled / max) * 100)).toFixed(2)
+      const next = `${Math.max(0, Math.min(100, (travelled / max) * 100)).toFixed(2)}%`
+      if (next === painted) return
+      painted = next
       return () => {
-        bar.style.width = `${pct}%`
+        bar.style.width = next
       }
     })
   }, [])

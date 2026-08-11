@@ -371,25 +371,35 @@ stop {
     transform: translateX(120%);
   }
 }
-@keyframes nodePulse {
+/* see .story__pulse — these replace an animated box-shadow with two
+   compositor-only layers */
+@keyframes pulseRing {
   0%,
   100% {
-    box-shadow:
-      0 0 0 0 var(--glow),
-      0 0 12px 2px var(--glow);
+    transform: scale(0.44);
+    opacity: 1;
   }
   50% {
-    box-shadow:
-      0 0 0 7px transparent,
-      0 0 22px 5px var(--glow);
+    transform: scale(1);
+    opacity: 0;
   }
 }
-@keyframes roadRun {
-  0% {
-    background-position: 0 0;
-  }
+@keyframes pulseHalo {
+  0%,
   100% {
-    background-position: 0 92px;
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.593);
+  }
+}
+/* one gradient period, so the wrap is seamless — see .tools__road-run */
+@keyframes roadRun {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 92px, 0);
   }
 }
 @keyframes gradDrift {

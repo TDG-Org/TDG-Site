@@ -7,6 +7,11 @@ type Mote = { x: number; y: number; z: number; phase: number; speed: number; swa
 /** Density multiplier for the midnight hero look. */
 const DENSITY = 1.7
 const BEAM_ANGLE = 21
+/** These crawl at 4–17 px/s. Nobody can tell 24Hz from 60Hz, and it is 2.5x
+ *  less canvas work for an identical result. */
+const HZ = 24
+/** Sub-pixel dust gains nothing from a retina backing store. */
+const MAX_DPR = 1.5
 
 /**
  * Dust motes, visible only where the hero's light shaft rakes the frame.
@@ -34,7 +39,7 @@ export function Starfield() {
     const seed = () => {
       w = cv.clientWidth || 1
       h = cv.clientHeight || 1
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
       cv.width = Math.round(w * dpr)
       cv.height = Math.round(h * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -55,9 +60,14 @@ export function Starfield() {
 
     const tan = Math.tan((BEAM_ANGLE * Math.PI) / 180)
 
-    const stop = onFrame(({ now, mi }) => {
+    let pending = 0
+    const stop = onFrame(({ now, mi, dt, hold }) => {
       // the hero is the only place these are visible — stop once it scrolls away
       if (cv.getBoundingClientRect().bottom <= 0) return
+      hold()
+      pending += dt
+      if (pending < 1 / HZ) return
+      pending = 0
       const t = now * 0.001
       const isLight = lightRef.current
       const span = h + 40

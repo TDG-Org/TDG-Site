@@ -4,9 +4,8 @@ import { useTheme } from '../../theme/ThemeProvider'
 import { buildShapes } from './shapes'
 
 /**
- * The reference draws 4200 points. That is a lot of sprite blits per frame, so
- * scale it to what the device can comfortably paint — the form stays legible
- * well below the full count.
+ * The reference draws 4200 points. Scale it to what the device can comfortably
+ * paint — the form stays legible well below the full count.
  */
 function pointBudget() {
   if (typeof window === 'undefined') return 4200
@@ -22,58 +21,37 @@ const CAM_Z = 7.4
 const POINT_SIZE = 15
 const HOLD = 2.15
 const MORPH = 1.45
-
-/**
- * Sprite atlas.
- *
- * Drawing 4000 points meant 4000 `globalAlpha` writes and 4000 *scaled*
- * drawImage calls a frame, which is what a canvas is worst at. Instead every
- * combination of brightness and on-screen size is pre-rendered once, so the
- * hot loop is a straight 1:1 blit with no state changes at all.
- */
-const ALPHA_STEPS = 6
-const SIZE_STEPS = 12
 const MIN_PX = 1
 const MAX_PX = 9
 
-/** Falls out of the reference's fragment shader: smoothstep(0.5, 0.06, d). */
-const PROFILE: [number, number][] = [
-  [0, 1],
-  [0.12, 1],
-  [0.3, 0.895],
-  [0.5, 0.606],
-  [0.7, 0.278],
-  [0.85, 0.077],
-  [1, 0],
-]
+/**
+ * The cloud drifts at ~0.16 rad/s and a morph takes 1.45s. Neither needs
+ * display refresh rate; at 30Hz the motion is identical to the eye and the
+ * work halves. A drag is different — that tracks a hand, so it runs uncapped.
+ */
+const IDLE_HZ = 30
 
-type Atlas = { sprites: HTMLCanvasElement[][]; px: number[] }
+/**
+ * The point profile, straight out of the reference's fragment shader:
+ * smoothstep(0.5, 0.06, d) where d is distance in point-size units.
+ * Indexed by (r / radius)² so the hot loop never calls sqrt.
+ */
+const LUT_N = 256
+const PROFILE = new Float32Array(LUT_N + 1)
+for (let i = 0; i <= LUT_N; i++) {
+  const u = Math.sqrt(i / LUT_N) // r / radius, 0..1
+  const t = Math.max(0, Math.min(1, (0.5 - u * 0.5) / 0.44))
+  PROFILE[i] = t * t * (3 - 2 * t)
+}
 
-function buildAtlas(color: string, maxAlpha: number, dpr: number): Atlas {
-  const px: number[] = []
-  const sprites: HTMLCanvasElement[][] = []
-  for (let a = 0; a < ALPHA_STEPS; a++) {
-    const alpha = (maxAlpha * (a + 1)) / ALPHA_STEPS
-    const row: HTMLCanvasElement[] = []
-    for (let s = 0; s < SIZE_STEPS; s++) {
-      const cssSize = MIN_PX + ((MAX_PX - MIN_PX) * s) / (SIZE_STEPS - 1)
-      if (a === 0) px.push(cssSize)
-      const dim = Math.max(2, Math.round(cssSize * dpr))
-      const c = document.createElement('canvas')
-      c.width = dim
-      c.height = dim
-      const g = c.getContext('2d')!
-      const grad = g.createRadialGradient(dim / 2, dim / 2, 0, dim / 2, dim / 2, dim / 2)
-      for (const [at, profile] of PROFILE) {
-        grad.addColorStop(at, `rgba(${color},${(profile * alpha).toFixed(4)})`)
-      }
-      g.fillStyle = grad
-      g.fillRect(0, 0, dim, dim)
-      row.push(c)
-    }
-    sprites.push(row)
-  }
-  return { sprites, px }
+/** Pack an RGB triple the way a Uint32 view over ImageData expects it. */
+function packRGB(r: number, g: number, b: number) {
+  const probe = new Uint8ClampedArray(4)
+  probe[0] = r
+  probe[1] = g
+  probe[2] = b
+  probe[3] = 0
+  return new Uint32Array(probe.buffer)[0]
 }
 
 /**
@@ -82,6 +60,11 @@ function buildAtlas(color: string, maxAlpha: number, dpr: number): Atlas {
  * Interaction contract — it rotates *only* while the left mouse button is held
  * and dragged, never on hover. The drag carries inertia and X rotation is
  * clamped so the form can never tumble past readable.
+ *
+ * Rendering: every point is splatted into one alpha buffer and the frame is
+ * handed to the canvas as a single putImageData over the region that actually
+ * changed. The obvious implementation — one drawImage per point — spent 72% of
+ * the page's entire CPU budget on canvas call overhead alone.
  */
 export function PointCloud() {
   const { theme } = useTheme()
@@ -107,44 +90,62 @@ export function PointCloud() {
     const from = new Float32Array(shapes[0].pts)
     const to = new Float32Array(shapes[0].pts)
     const scales = new Float32Array(COUNT)
-    // brightness is fixed per point, so its atlas row can be resolved once
-    const alphaRow = new Uint8Array(COUNT)
+    // per-point brightness is fixed; the theme's base opacity is applied at
+    // draw time (0.92 additive on dark, 0.72 over on light — the reference's
+    // uOpacity uniform)
+    const alphas = new Float32Array(COUNT)
     for (let i = 0; i < COUNT; i++) {
       const s = 0.6 + Math.random() * 0.8
       scales[i] = s
-      const rel = Math.min(1, 0.45 + s * 0.5)
-      alphaRow[i] = Math.min(ALPHA_STEPS - 1, Math.max(0, Math.round(rel * ALPHA_STEPS) - 1))
+      alphas[i] = Math.min(1, 0.45 + s * 0.5)
     }
+    const DARK_OPACITY = 0.92
+    const LIGHT_OPACITY = 0.72
+
+    const WHITE = packRGB(255, 255, 255)
+    const INK = packRGB(20, 20, 26)
 
     let index = 0
     let next = 0
     let phase: 'hold' | 'morph' = 'hold'
     let clock = 0
+    let pending = 0 // unrendered time, for the frame cap
 
     // rotation: an ambient drift plus whatever the visitor has dragged in
     const drag = { on: false, x: 0, y: 0, vx: 0, vy: 0, rx: 0, ry: 0 }
 
-    let atlas: Record<'dark' | 'light', Atlas> | null = null
-    const buildAtlases = (dpr: number) => {
-      atlas = {
-        dark: buildAtlas('255,255,255', 0.92, dpr),
-        light: buildAtlas('20,20,26', 0.72, dpr),
-      }
-    }
-
-    let w = holder.clientWidth || 520
-    let h = holder.clientHeight || 520
+    // ── buffers ───────────────────────────────────────────────────────────
+    let W = 0
+    let H = 0
     let dpr = 1
+    let acc = new Float32Array(0)
+    let image: ImageData | null = null
+    let img32 = new Uint32Array(0)
+    // region of the canvas that currently holds ink
+    let px0 = 0
+    let py0 = 0
+    let px1 = -1
+    let py1 = -1
+
     const resize = () => {
-      w = holder.clientWidth || 520
-      h = holder.clientHeight || 520
+      const cw = holder.clientWidth || 520
+      const ch = holder.clientHeight || 520
       // A soft point cloud gains nothing from 2x, and it costs 4x the fill.
-      const next = Math.min(window.devicePixelRatio || 1, 1.5)
-      if (next !== dpr || !atlas) buildAtlases(next)
-      dpr = next
-      cv.width = Math.round(w * dpr)
-      cv.height = Math.round(h * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const nw = Math.round(cw * dpr)
+      const nh = Math.round(ch * dpr)
+      if (nw === W && nh === H) return
+      W = nw
+      H = nh
+      cv.width = W
+      cv.height = H
+      acc = new Float32Array(W * H)
+      image = ctx.createImageData(W, H)
+      img32 = new Uint32Array(image.data.buffer)
+      px0 = 0
+      py0 = 0
+      px1 = -1
+      py1 = -1
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -189,10 +190,12 @@ export function PointCloud() {
     // ── frame ─────────────────────────────────────────────────────────────
     let hero: HTMLElement | null = null
     const focal = 1 / Math.tan(((FOV * Math.PI) / 180) / 2)
+    let lastFade = -1
+    let lastGrab = -1
 
-    const stop = onFrame(({ vh, mi, dt, now }) => {
+    const stop = onFrame(({ vh, mi, dt, now, hold }) => {
       // Below 640px the wrapper is display:none — never pay for a hidden model.
-      if (!cv.width || !cv.height || !holder.offsetParent) return
+      if (!W || !H || !holder.offsetParent) return
 
       // the model fades out as the hero sinks; stop grabbing once it is faint
       hero ??= document.getElementById('top')
@@ -201,14 +204,29 @@ export function PointCloud() {
         const p = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / (vh || 800)))
         opacity = Math.max(0, 1 - p * 1.35)
       }
-      // CSS multiplies this by --model-cap so the tablet dim-down still fades
-      const applyFade = () => {
-        holder.style.setProperty('--fade', String(opacity))
-        holder.style.pointerEvents = opacity > 0.2 ? 'auto' : 'none'
-      }
+      const grabbable = opacity > 0.2 ? 1 : 0
+      // CSS multiplies --fade by --model-cap so the tablet dim-down still fades.
+      // Only touch the DOM when the value actually changed.
+      const applyFade =
+        opacity === lastFade && grabbable === lastGrab
+          ? undefined
+          : () => {
+              lastFade = opacity
+              lastGrab = grabbable
+              holder.style.setProperty('--fade', opacity.toFixed(3))
+              holder.style.pointerEvents = grabbable ? 'auto' : 'none'
+            }
       if (opacity <= 0) return applyFade
 
-      clock += dt * (0.35 + mi * 0.65)
+      // the model is always in motion while it is on screen
+      hold()
+
+      pending += dt
+      if (!drag.on && pending < 1 / IDLE_HZ) return applyFade
+      const step = pending
+      pending = 0
+
+      clock += step * (0.35 + mi * 0.65)
 
       if (phase === 'hold' && clock >= HOLD) {
         clock = 0
@@ -246,27 +264,47 @@ export function PointCloud() {
       if (!drag.on) {
         drag.ry += drag.vx
         drag.rx += drag.vy
-        drag.vx *= 0.945
-        drag.vy *= 0.945
+        // decay per second of wall clock, not per frame, so the throw feels the
+        // same at 30Hz, 60Hz and 144Hz
+        const decay = Math.pow(0.945, step * 60)
+        drag.vx *= decay
+        drag.vy *= decay
+        if (Math.abs(drag.vx) < 1e-5) drag.vx = 0
+        if (Math.abs(drag.vy) < 1e-5) drag.vy = 0
       }
       drag.rx = Math.max(-1.15, Math.min(1.15, drag.rx))
       const ry = drift + drag.ry
       const rx = Math.sin(drift * 0.7) * 0.16 + drag.rx
 
       const light = themeRef.current === 'light'
-      const { sprites, px } = (light ? atlas?.light : atlas?.dark) ?? { sprites: [], px: [] }
-      if (!sprites.length) return applyFade
+      const baseOpacity = light ? LIGHT_OPACITY : DARK_OPACITY
 
-      ctx.clearRect(0, 0, w, h)
-      ctx.globalCompositeOperation = light ? 'source-over' : 'lighter'
+      // clear only what we inked last time
+      if (px1 >= px0) {
+        for (let y = py0; y <= py1; y++) {
+          acc.fill(0, y * W + px0, y * W + px1 + 1)
+        }
+      }
+      const oldX0 = px0
+      const oldY0 = py0
+      const oldX1 = px1
+      const oldY1 = py1
+
+      let nx0 = W
+      let ny0 = H
+      let nx1 = -1
+      let ny1 = -1
 
       const cosY = Math.cos(ry)
       const sinY = Math.sin(ry)
       const cosX = Math.cos(rx)
       const sinX = Math.sin(rx)
-      const halfW = w / 2
-      const halfH = h / 2
-      const sizeSpan = (SIZE_STEPS - 1) / (MAX_PX - MIN_PX)
+      const halfW = W / 2
+      const halfH = H / 2
+      const scale = focal * halfH
+      const minD = MIN_PX * dpr
+      const maxD = MAX_PX * dpr
+      const sizeK = POINT_SIZE * dpr
 
       for (let i = 0, k = 0; i < COUNT; i++, k += 3) {
         const x0 = pos[k]
@@ -280,19 +318,90 @@ export function PointCloud() {
         const depth = CAM_Z - z2
         if (depth < 0.2) continue
         const inv = 1 / depth
-        const sx = halfW + focal * x1 * inv * halfH
-        const sy = halfH - focal * y1 * inv * halfH
+        const cx = halfW + x1 * inv * scale
+        const cy = halfH - y1 * inv * scale
 
-        let step = ((POINT_SIZE * scales[i] * inv - MIN_PX) * sizeSpan + 0.5) | 0
-        if (step < 0) step = 0
-        else if (step >= SIZE_STEPS) step = SIZE_STEPS - 1
+        let d = sizeK * scales[i] * inv
+        if (d < minD) d = minD
+        else if (d > maxD) d = maxD
+        const r = d * 0.5
 
-        const half = px[step] * 0.5
-        // 1:1 blit — no scaling, no per-point state change
-        ctx.drawImage(sprites[alphaRow[i]][step], sx - half, sy - half, px[step], px[step])
+        let bx0 = Math.ceil(cx - r)
+        let bx1 = Math.floor(cx + r)
+        let by0 = Math.ceil(cy - r)
+        let by1 = Math.floor(cy + r)
+        if (bx0 < 0) bx0 = 0
+        if (by0 < 0) by0 = 0
+        if (bx1 > W - 1) bx1 = W - 1
+        if (by1 > H - 1) by1 = H - 1
+        if (bx0 > bx1 || by0 > by1) continue
+
+        if (bx0 < nx0) nx0 = bx0
+        if (by0 < ny0) ny0 = by0
+        if (bx1 > nx1) nx1 = bx1
+        if (by1 > ny1) ny1 = by1
+
+        const a = alphas[i] * baseOpacity
+        const invR2 = 1 / (r * r)
+        for (let y = by0; y <= by1; y++) {
+          const dy = y - cy
+          const row = y * W
+          const rest = r * r - dy * dy
+          if (rest <= 0) continue
+          for (let x = bx0; x <= bx1; x++) {
+            const dx = x - cx
+            const r2 = dx * dx + dy * dy
+            if (r2 > r * r) continue
+            const v = PROFILE[(r2 * invR2 * LUT_N) | 0] * a
+            const at = row + x
+            if (light) {
+              // source-over: each point lays over what is already there
+              const prev = acc[at]
+              acc[at] = prev + v * (1 - prev)
+            } else {
+              // additive, exactly like the reference's 'lighter' blend
+              acc[at] = acc[at] + v
+            }
+          }
+        }
       }
 
-      return applyFade
+      px0 = nx0
+      py0 = ny0
+      px1 = nx1
+      py1 = ny1
+
+      // repaint the union of what we cleared and what we drew
+      const ux0 = oldX1 >= oldX0 ? Math.min(oldX0, nx0) : nx0
+      const uy0 = oldY1 >= oldY0 ? Math.min(oldY0, ny0) : ny0
+      const ux1 = oldX1 >= oldX0 ? Math.max(oldX1, nx1) : nx1
+      const uy1 = oldY1 >= oldY0 ? Math.max(oldY1, ny1) : ny1
+      if (ux1 < ux0 || uy1 < uy0 || !image) return applyFade
+
+      const rgb = light ? INK : WHITE
+      for (let y = uy0; y <= uy1; y++) {
+        const row = y * W
+        for (let x = ux0; x <= ux1; x++) {
+          const at = row + x
+          const v = acc[at]
+          if (v <= 0) {
+            img32[at] = 0
+          } else {
+            const alpha = v >= 1 ? 255 : (v * 255 + 0.5) | 0
+            img32[at] = (alpha << 24) | rgb
+          }
+        }
+      }
+
+      const frame = image
+      const rx0 = ux0
+      const ry0 = uy0
+      const rw = ux1 - ux0 + 1
+      const rh = uy1 - uy0 + 1
+      return () => {
+        applyFade?.()
+        ctx.putImageData(frame, 0, 0, rx0, ry0, rw, rh)
+      }
     })
 
     return () => {

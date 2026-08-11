@@ -50,14 +50,14 @@ export function Building() {
             <picture>
               <source
                 type="image/avif"
-                sizes="(max-width: 760px) 100vw, 50vw"
+                sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
                 srcSet={MARANATHA.shot.widths
                   .map((w) => `/shots/${MARANATHA.shot.slug}-${w}.avif ${w}w`)
                   .join(', ')}
               />
               <source
                 type="image/webp"
-                sizes="(max-width: 760px) 100vw, 50vw"
+                sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
                 srcSet={MARANATHA.shot.widths
                   .map((w) => `/shots/${MARANATHA.shot.slug}-${w}.webp ${w}w`)
                   .join(', ')}
