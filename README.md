@@ -99,7 +99,7 @@ same value.
 
 <div align="center">
 
-`0.0008 CLS` · `492 ms LCP` · `183 kB` total · `60 fps` everywhere
+`176 kB` total page weight · `0.0008` CLS · `60 fps` · **~0 CPU** when you stop scrolling
 
 </div>
 
@@ -151,7 +151,8 @@ public/shots/    product screenshots (AVIF + WebP, 1x and 2x)
 the toggle, so colour crosses the page like a wave. The trick that makes it animate rather
 than snap is forcing a reflow between setting the delays and flipping the theme.
 
-**✨ The hero point cloud.** 4,200 points morphing between twelve forms on a 2D canvas.
+**✨ The hero point cloud.** Up to 4,200 points — scaled to the device — morphing between
+twelve forms on a 2D canvas.
 It rotates **only** while you hold and drag — never on hover — with inertia. Every point is
 splatted into one alpha buffer and uploaded in a single call.
 
