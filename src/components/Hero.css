@@ -1,6 +1,9 @@
 .hero {
   position: relative;
+  /* svh is the viewport with the mobile browser chrome showing, so the bottom
+     strip and the scroll cue are not hidden under the URL bar on first paint */
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   overflow: hidden;

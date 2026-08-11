@@ -61,13 +61,18 @@ export function Starfield() {
     const tan = Math.tan((BEAM_ANGLE * Math.PI) / 180)
 
     let pending = 0
+    let settled = false
     const stop = onFrame(({ now, mi, dt, hold }) => {
       // the hero is the only place these are visible — stop once it scrolls away
       if (cv.getBoundingClientRect().bottom <= 0) return
-      hold()
+      // Reduced motion: paint the field once and let the loop park. The motes
+      // freeze in place already, but their brightness used to keep oscillating.
+      if (mi === 0 && settled) return
+      if (mi > 0) hold()
       pending += dt
-      if (pending < 1 / HZ) return
+      if (mi > 0 && pending < 1 / HZ) return
       pending = 0
+      settled = mi === 0
       const t = now * 0.001
       const isLight = lightRef.current
       const span = h + 40
@@ -83,7 +88,8 @@ export function Starfield() {
         const d = Math.abs(px - beamX) / (w * 0.17)
         const inBeam = Math.max(0, 1 - d * d)
         if (inBeam < 0.02) continue
-        const flicker = 0.55 + 0.45 * Math.sin(t * 1.1 + m.phase)
+        // the third motion term — gated like y and sway, or reduced motion still twinkles
+        const flicker = mi === 0 ? 0.85 : 0.55 + 0.45 * Math.sin(t * 1.1 + m.phase)
         ctx.globalAlpha =
           Math.min(1, inBeam * flicker * (0.18 + m.z * 0.62)) *
           (1 - y / (h * 1.35)) *

@@ -29,8 +29,6 @@ export function Cursor() {
     if (!host || !ringEl || !dotEl) return
     if (!window.matchMedia('(pointer: fine)').matches) return
 
-    document.documentElement.setAttribute('data-cursor', 'on')
-
     let x = window.innerWidth / 2
     let y = window.innerHeight / 2
     let rx = x
@@ -45,19 +43,38 @@ export function Cursor() {
       return 'default'
     }
 
+    /**
+     * Both parts are placed and the native cursor is hidden in the same frame,
+     * on the first real pointer position. Hiding it at mount instead left the
+     * page with no cursor at all until the visitor moved.
+     */
+    const wakeCursor = () => {
+      awake = true
+      rx = x
+      ry = y
+      ringEl.style.transform = `translate3d(${rx}px,${ry}px,0) translate(-50%,-50%)`
+      host.setAttribute('data-awake', 'true')
+      document.documentElement.setAttribute('data-cursor', 'on')
+    }
+
     const move = (e: PointerEvent) => {
       x = e.clientX
       y = e.clientY
       // the dot is written here, not in the frame loop, so it never trails
       dotEl.style.transform = `translate3d(${x}px,${y}px,0) translate(-50%,-50%)`
-      if (!awake) {
-        awake = true
-        rx = x
-        ry = y
-        host.setAttribute('data-awake', 'true')
-      }
+      if (!awake) wakeCursor()
     }
-    const over = (e: PointerEvent) => host.setAttribute('data-kind', kindOf(e.target))
+    const over = (e: PointerEvent) => {
+      // pointerover also carries a real position — a click without a preceding
+      // move should still bring the cursor up
+      if (!awake) {
+        x = e.clientX
+        y = e.clientY
+        dotEl.style.transform = `translate3d(${x}px,${y}px,0) translate(-50%,-50%)`
+        wakeCursor()
+      }
+      host.setAttribute('data-kind', kindOf(e.target))
+    }
     const down = () => host.setAttribute('data-press', 'true')
     const up = () => host.removeAttribute('data-press')
     const leave = () => host.removeAttribute('data-awake')

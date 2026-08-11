@@ -54,14 +54,28 @@ function stageWave(origin: { x: number; y: number }): () => void {
     Math.hypot(Math.max(origin.x, w - origin.x), Math.max(origin.y, h - origin.y)) || 1
 
   const elements = Array.from(document.querySelectorAll<HTMLElement>(THEMED))
+
+  // Measure everything first, then write. --wave-delay is inherited, so a write
+  // dirties the whole subtree; interleaving the two forced a style recalc per
+  // element and blocked the main thread through the start of the wave.
+  const delays: number[] = []
   for (const el of elements) {
     const r = el.getBoundingClientRect()
-    if (!r.width && !r.height) continue
+    if (!r.width && !r.height) {
+      delays.push(-1)
+      continue
+    }
     const cx = r.left + r.width / 2
     // clamp tall elements so a full-page section does not measure from its middle
     const cy = Math.max(-h, Math.min(h * 2, r.top + Math.min(r.height / 2, h * 0.6)))
-    const d = Math.min(WAVE_SPREAD, (Math.hypot(cx - origin.x, cy - origin.y) / far) * WAVE_SPREAD)
-    el.style.setProperty('--wave-delay', `${Math.round(d)}ms`)
+    delays.push(
+      Math.round(
+        Math.min(WAVE_SPREAD, (Math.hypot(cx - origin.x, cy - origin.y) / far) * WAVE_SPREAD),
+      ),
+    )
+  }
+  for (let i = 0; i < elements.length; i++) {
+    if (delays[i] >= 0) elements[i].style.setProperty('--wave-delay', `${delays[i]}ms`)
   }
 
   return () => {

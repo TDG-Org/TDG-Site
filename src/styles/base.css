@@ -98,6 +98,7 @@ stop {
   position: relative;
   width: 100%;
   min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--bg);
 }
 
@@ -439,6 +440,82 @@ stop {
 [data-live='false'] *::before,
 [data-live='false'] *::after {
   animation-play-state: paused !important;
+}
+
+/* Printing a dark page produces white-on-white. Re-use the light tokens and
+   drop everything decorative. */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --bg2: #ffffff;
+    --surface: #ffffff;
+    --text: #141419;
+    --muted: rgba(20, 20, 25, 0.72);
+    --faint: rgba(20, 20, 25, 0.72);
+    --border: rgba(20, 20, 26, 0.22);
+    --border-hover: rgba(20, 20, 26, 0.35);
+    --accent: #1b1b22;
+    --accent-2: #4a4a55;
+    --accent-soft: transparent;
+    --glow: transparent;
+    --card-shadow: none;
+    --hero-bg: #ffffff;
+    --hero-sky: none;
+    --hero-eyebrow: rgba(20, 20, 26, 0.72);
+    --hero-tag: rgba(20, 20, 26, 0.72);
+    --hero-meta: rgba(20, 20, 26, 0.6);
+    --hero-dg: none;
+    --hero-cta-bg: transparent;
+    --hero-cta-fg: #141419;
+    --hero-cta-shadow: none;
+    --hero-vignette: none;
+    --hero-strip-bg: none;
+    --cross-stop-0: #14141a;
+    --cross-stop-1: #25252e;
+    --cross-stop-2: #4e4e5a;
+    --cross-stop-3: #84848f;
+    --faith-stop-0: #14141a;
+    --faith-stop-1: #33333d;
+    --faith-stop-2: #6f6f7b;
+  }
+  .page,
+  .hero {
+    min-height: auto;
+  }
+  .cursor,
+  .hero__stars,
+  .hero__model,
+  .hero__shafts,
+  .hero__bloom,
+  .hero__grain,
+  .hero__vignette,
+  .nav,
+  .texture,
+  .blob,
+  .faith__field,
+  .faith__rays,
+  .faith__blob,
+  .tools__road,
+  .tools__sun,
+  .tools__sun-ring,
+  .story__pulse {
+    display: none !important;
+  }
+  .section,
+  .section--blend,
+  .section--flat {
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+  .hero__dg {
+    -webkit-text-fill-color: #141419;
+    color: #141419;
+  }
+  a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: rgba(20, 20, 26, 0.6);
+  }
 }
 
 /* Every ambient loop is parked when the visitor asks for less motion. */

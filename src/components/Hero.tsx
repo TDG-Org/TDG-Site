@@ -65,7 +65,9 @@ export function Hero() {
             <span className="hero__eyebrow">The Disciples of God</span>
           </div>
 
-          <h1 className="hero__wordmark">
+          {/* the cross glyph is the "T", so the heading's only text is "DG" —
+              name it explicitly or the page's h1 reads as "DG" */}
+          <h1 className="hero__wordmark" aria-label="TDG">
             <span className="hero__cross">
               <CrossGlyph variant="hero" />
             </span>

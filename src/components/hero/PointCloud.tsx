@@ -110,6 +110,8 @@ export function PointCloud() {
     let phase: 'hold' | 'morph' = 'hold'
     let clock = 0
     let pending = 0 // unrendered time, for the frame cap
+    let settled = false // reduced motion: one frame painted, nothing more to do
+    let labelTimer = 0 // cleared on unmount so a late swap cannot outlive us
 
     // rotation: an ambient drift plus whatever the visitor has dragged in
     const drag = { on: false, x: 0, y: 0, vx: 0, vy: 0, rx: 0, ry: 0 }
@@ -184,8 +186,12 @@ export function PointCloud() {
     }
     holder.addEventListener('pointerdown', down)
     holder.addEventListener('pointermove', move)
-    holder.addEventListener('pointerup', up)
-    holder.addEventListener('pointercancel', up)
+    // Release is bound to the window, not the element: pointer capture is
+    // best-effort, and a release outside the model would otherwise latch
+    // drag.on true forever — defeating the frame cap and pinning the loop.
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    window.addEventListener('blur', up)
 
     // ── frame ─────────────────────────────────────────────────────────────
     let hero: HTMLElement | null = null
@@ -218,15 +224,23 @@ export function PointCloud() {
             }
       if (opacity <= 0) return applyFade
 
-      // the model is always in motion while it is on screen
-      hold()
+      // Reduced motion means still, not slower: paint the form once and let the
+      // loop park. Without this the model kept drifting AND held the loop awake
+      // forever for exactly the people who asked for less of both.
+      const still = mi === 0 && !drag.on
+      if (still && settled) return applyFade
+      if (!still) hold()
 
       pending += dt
-      if (!drag.on && pending < 1 / IDLE_HZ) return applyFade
+      if (!drag.on && !still && pending < 1 / IDLE_HZ) return applyFade
       const step = pending
       pending = 0
+      settled = still
 
-      clock += step * (0.35 + mi * 0.65)
+      // Proportional in mi, not affine: at mi = 1 these are identical to the
+      // reference (0.35 + 0.65, 0.3 + 0.7, 0.4 + 0.6 all reach 1.0), and at
+      // mi = 0 they are genuinely zero instead of 35% speed.
+      clock += step * mi
 
       if (phase === 'hold' && clock >= HOLD) {
         clock = 0
@@ -235,14 +249,15 @@ export function PointCloud() {
         next = (index + 1) % shapes.length
         to.set(shapes[next].pts)
         setLabelVisible(false)
-        window.setTimeout(() => {
+        window.clearTimeout(labelTimer)
+        labelTimer = window.setTimeout(() => {
           setLabel({ index: next + 1, name: shapes[next].name })
           setLabelVisible(true)
         }, 250)
       } else if (phase === 'morph') {
         const p = Math.min(1, clock / MORPH)
         const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
-        const swirl = Math.sin(e * Math.PI) * 0.55 * (0.4 + mi * 0.6)
+        const swirl = Math.sin(e * Math.PI) * 0.55 * mi
         for (let k = 0; k < pos.length; k += 3) {
           const x = from[k] + (to[k] - from[k]) * e
           const y = from[k + 1] + (to[k + 1] - from[k + 1]) * e
@@ -260,7 +275,7 @@ export function PointCloud() {
         }
       }
 
-      const drift = now * 0.00016 * (0.3 + mi * 0.7)
+      const drift = now * 0.00016 * mi
       if (!drag.on) {
         drag.ry += drag.vx
         drag.rx += drag.vy
@@ -409,8 +424,10 @@ export function PointCloud() {
       ro.disconnect()
       holder.removeEventListener('pointerdown', down)
       holder.removeEventListener('pointermove', move)
-      holder.removeEventListener('pointerup', up)
-      holder.removeEventListener('pointercancel', up)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      window.removeEventListener('blur', up)
+      window.clearTimeout(labelTimer)
     }
   }, [])
 

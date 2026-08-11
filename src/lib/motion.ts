@@ -51,8 +51,11 @@ let held = false
 let awakeUntil = 0
 let wired = false
 
-/** How many frames the shared loop has run. Zero means rAF is parked. */
+/** Total frames the loop has ever run; zero means it has not run yet. */
 export const framesRun = () => frames
+
+/** True while the loop is asleep because nothing needs a frame. */
+export const isParked = () => rafId === 0
 
 /** 0–1.5; scales parallax and takeover amounts. 1 is the designed feel. */
 let intensity = 1
@@ -95,22 +98,30 @@ function run(now: number) {
   frame.now = now
   frame.dt = dt
 
-  // read phase — subscribers measure and stash their writes
-  writes.length = 0
-  for (const tick of ticks) {
-    const write = tick(frame)
-    if (write) writes.push(write)
-  }
-  // write phase — nothing here reads layout, so nothing forces a re-flow
-  for (let i = 0; i < writes.length; i++) writes[i]()
-  writes.length = 0
-
-  if (held || now < awakeUntil) {
-    rafId = requestAnimationFrame(run)
-  } else {
-    // nothing left to do — stop asking the browser for frames
-    rafId = 0
-    last = 0
+  // One subscriber throwing must not take the page's motion with it. Without
+  // the finally, the throw escapes before the loop re-arms — and because rafId
+  // still holds the id of the callback we are already inside, nothing can ever
+  // restart it. Every animation on the page would stop, silently.
+  try {
+    // read phase — subscribers measure and stash their writes
+    writes.length = 0
+    for (const tick of ticks) {
+      const write = tick(frame)
+      if (write) writes.push(write)
+    }
+    // write phase — nothing here reads layout, so nothing forces a re-flow
+    for (let i = 0; i < writes.length; i++) writes[i]()
+  } catch (err) {
+    console.error('[motion] subscriber threw', err)
+  } finally {
+    writes.length = 0
+    if (held || now < awakeUntil) {
+      rafId = requestAnimationFrame(run)
+    } else {
+      // nothing left to do — stop asking the browser for frames
+      rafId = 0
+      last = 0
+    }
   }
 }
 

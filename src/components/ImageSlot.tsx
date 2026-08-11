@@ -2,6 +2,14 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Shot } from '../data/content'
 import './ImageSlot.css'
 
+/**
+ * Drop-to-fill is an authoring convenience for reviewing the page before the
+ * real screenshots land. It must never reach a visitor — a public site does not
+ * ask people to upload a file, and "Drop a Music Everything screenshot" is not
+ * copy anyone outside this repo should read.
+ */
+const AUTHORING = import.meta.env.DEV
+
 function DropLayer({
   as,
   label,
@@ -41,13 +49,12 @@ function DropLayer({
 type Props = {
   /** persistence key for a locally dropped image — must be unique per slot */
   id: string
+  /** authoring-only prompt; never rendered in a production build */
   placeholder: string
   /** a real screenshot; a local drop still overrides it in that browser */
   shot?: Shot
   /** widest the slot is ever painted, as a CSS sizes value */
   sizes?: string
-  /** the first card in view should not wait for the lazy loader */
-  priority?: boolean
 }
 
 const key = (id: string) => `tdg-slot:${id}`
@@ -56,15 +63,23 @@ const srcSet = (shot: Shot, ext: 'avif' | 'webp') =>
   shot.widths.map((w) => `/shots/${shot.slug}-${w}.${ext} ${w}w`).join(', ')
 
 /**
- * A product screenshot, or an empty region waiting on one. Drops are kept in
- * that browser only, so the page can be filled in for review without a build.
+ * A product screenshot, or — until one exists — a quiet empty frame that keeps
+ * the card's proportions. In development the empty frame also accepts a
+ * dropped image, kept in that browser only, so the page can be reviewed filled
+ * in without a build.
  */
-export function ImageSlot({ id, placeholder, shot, sizes = '(max-width: 700px) 90vw, 320px', priority }: Props) {
+export function ImageSlot({
+  id,
+  placeholder,
+  shot,
+  sizes = '(max-width: 700px) 90vw, 320px',
+}: Props) {
   const [dropped, setDropped] = useState<string | undefined>()
   const [over, setOver] = useState(false)
   const input = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
+    if (!AUTHORING) return
     try {
       const stored = localStorage.getItem(key(id))
       if (stored) setDropped(stored)
@@ -94,9 +109,9 @@ export function ImageSlot({ id, placeholder, shot, sizes = '(max-width: 700px) 9
   const filled = Boolean(dropped || shot)
 
   return (
-    <div className="slot" data-over={over} data-filled={filled}>
+    <div className="slot" data-over={over} data-filled={filled} data-authoring={AUTHORING || undefined}>
       {dropped ? (
-        <img className="slot__img" src={dropped} alt={shot?.alt ?? placeholder} />
+        <img className="slot__img" src={dropped} alt={shot?.alt ?? ''} />
       ) : shot ? (
         <picture>
           <source type="image/avif" srcSet={srcSet(shot, 'avif')} sizes={sizes} />
@@ -107,52 +122,55 @@ export function ImageSlot({ id, placeholder, shot, sizes = '(max-width: 700px) 9
             alt={shot.alt}
             width={shot.widths[0]}
             height={Math.round((shot.widths[0] / 16) * 10)}
-            loading={priority ? 'eager' : 'lazy'}
+            loading="lazy"
             decoding="async"
-            fetchPriority={priority ? 'high' : 'auto'}
             style={shot.position ? { objectPosition: shot.position } : undefined}
           />
         </picture>
       ) : null}
 
-      {/* A filled slot still accepts a drag-drop replacement, but it is not a
-          button — clicking a screenshot should not open a file dialog. */}
-      <DropLayer
-        as={filled ? 'div' : 'button'}
-        label={placeholder}
-        onPick={filled ? undefined : () => input.current?.click()}
-        onOver={setOver}
-        onFile={accept}
-      >
-        {filled ? null : (
-          <>
-            <svg
-              className="slot__icon"
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              aria-hidden="true"
-            >
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <circle cx="8.5" cy="9.5" r="1.6" />
-              <path d="M4 17l4.5-5 3.5 4 3-2.5L20 17" />
-            </svg>
-            <span className="slot__hint">{placeholder}</span>
-          </>
-        )}
-      </DropLayer>
+      {AUTHORING ? (
+        <>
+          {/* A filled slot still accepts a drag-drop replacement, but it is not
+              a button — clicking a screenshot should not open a file dialog. */}
+          <DropLayer
+            as={filled ? 'div' : 'button'}
+            label={placeholder}
+            onPick={filled ? undefined : () => input.current?.click()}
+            onOver={setOver}
+            onFile={accept}
+          >
+            {filled ? null : (
+              <>
+                <svg
+                  className="slot__icon"
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <circle cx="8.5" cy="9.5" r="1.6" />
+                  <path d="M4 17l4.5-5 3.5 4 3-2.5L20 17" />
+                </svg>
+                <span className="slot__hint">{placeholder}</span>
+              </>
+            )}
+          </DropLayer>
 
-      <input
-        ref={input}
-        className="slot__input"
-        type="file"
-        accept="image/*"
-        tabIndex={-1}
-        onChange={(e) => accept(e.target.files?.[0])}
-      />
+          <input
+            ref={input}
+            className="slot__input"
+            type="file"
+            accept="image/*"
+            tabIndex={-1}
+            onChange={(e) => accept(e.target.files?.[0])}
+          />
+        </>
+      ) : null}
     </div>
   )
 }
