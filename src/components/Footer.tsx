@@ -1,4 +1,5 @@
 import { CONTACT, GITHUB_ORG, VOLUME_CONTROLLER } from '../data/content'
+import { asset } from '../lib/asset'
 import './Footer.css'
 
 export function Footer() {
@@ -10,12 +11,12 @@ export function Footer() {
             <picture>
               <source
                 type="image/avif"
-                srcSet="/assets/tdg-wordmark-56.avif 1x, /assets/tdg-wordmark-112.avif 2x"
+                srcSet={`${asset('assets/tdg-wordmark-56.avif')} 1x, ${asset('assets/tdg-wordmark-112.avif')} 2x`}
               />
               <img
                 className="footer__wordmark"
-                src="/assets/tdg-wordmark-56.webp"
-                srcSet="/assets/tdg-wordmark-56.webp 1x, /assets/tdg-wordmark-112.webp 2x"
+                src={asset('assets/tdg-wordmark-56.webp')}
+                srcSet={`${asset('assets/tdg-wordmark-56.webp')} 1x, ${asset('assets/tdg-wordmark-112.webp')} 2x`}
                 alt="TDG"
                 width={53}
                 height={28}

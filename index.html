@@ -13,9 +13,10 @@
     <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />
 
-    <!-- Share cards. og:image must be absolute, and this site has no origin of
-         its own yet, so it points at the copy in the public repo. Swap both
-         URLs for the real origin once it is deployed. -->
+    <!-- Share cards. og:image must be absolute — a crawler has no page to
+         resolve a relative one against — so these carry the deployed origin.
+         Change all four if the site ever moves to a custom domain. -->
+    <link rel="canonical" href="https://tdg-org.github.io/TDG-Site/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="TDG — The Disciples of God" />
     <meta property="og:title" content="TDG — The Disciples of God" />
@@ -23,10 +24,8 @@
       property="og:description"
       content="Brothers building software, games, and tools — for the glory of Jesus."
     />
-    <meta
-      property="og:image"
-      content="https://raw.githubusercontent.com/TDG-Org/TDG-Site/main/public/og.png"
-    />
+    <meta property="og:url" content="https://tdg-org.github.io/TDG-Site/" />
+    <meta property="og:image" content="https://tdg-org.github.io/TDG-Site/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="The TDG landing page" />
@@ -36,10 +35,7 @@
       name="twitter:description"
       content="Brothers building software, games, and tools — for the glory of Jesus."
     />
-    <meta
-      name="twitter:image"
-      content="https://raw.githubusercontent.com/TDG-Org/TDG-Site/main/public/og.png"
-    />
+    <meta name="twitter:image" content="https://tdg-org.github.io/TDG-Site/og.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

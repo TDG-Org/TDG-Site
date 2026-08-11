@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Shot } from '../data/content'
+import { asset } from '../lib/asset'
 import './ImageSlot.css'
 
 /**
@@ -60,7 +61,7 @@ type Props = {
 const key = (id: string) => `tdg-slot:${id}`
 
 const srcSet = (shot: Shot, ext: 'avif' | 'webp') =>
-  shot.widths.map((w) => `/shots/${shot.slug}-${w}.${ext} ${w}w`).join(', ')
+  shot.widths.map((w) => `${asset(`shots/${shot.slug}-${w}.${ext}`)} ${w}w`).join(', ')
 
 /**
  * A product screenshot, or — until one exists — a quiet empty frame that keeps
@@ -118,7 +119,7 @@ export function ImageSlot({
           <source type="image/webp" srcSet={srcSet(shot, 'webp')} sizes={sizes} />
           <img
             className="slot__img"
-            src={`/shots/${shot.slug}-${shot.widths[0]}.webp`}
+            src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
             alt={shot.alt}
             width={shot.widths[0]}
             height={Math.round((shot.widths[0] / 16) * 10)}

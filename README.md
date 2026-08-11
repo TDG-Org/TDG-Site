@@ -8,8 +8,11 @@
 
 Two brothers, Nate & Luke. This is our landing page.
 
+### 🌐 [**tdg-org.github.io/TDG-Site**](https://tdg-org.github.io/TDG-Site/)
+
 <br>
 
+![Live](https://img.shields.io/github/deployments/TDG-Org/TDG-Site/github-pages?style=flat-square&label=live&logo=github)
 ![Vite](https://img.shields.io/badge/Vite-7-646cff?style=flat-square&logo=vite&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white)

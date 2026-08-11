@@ -3,6 +3,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { MARANATHA, NEXT_UP } from '../data/content'
+import { asset } from '../lib/asset'
 import './Building.css'
 
 function NextUpPill({ label, index }: { label: string; index: number }) {
@@ -52,19 +53,19 @@ export function Building() {
                 type="image/avif"
                 sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
                 srcSet={MARANATHA.shot.widths
-                  .map((w) => `/shots/${MARANATHA.shot.slug}-${w}.avif ${w}w`)
+                  .map((w) => `${asset(`shots/${MARANATHA.shot.slug}-${w}.avif`)} ${w}w`)
                   .join(', ')}
               />
               <source
                 type="image/webp"
                 sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
                 srcSet={MARANATHA.shot.widths
-                  .map((w) => `/shots/${MARANATHA.shot.slug}-${w}.webp ${w}w`)
+                  .map((w) => `${asset(`shots/${MARANATHA.shot.slug}-${w}.webp`)} ${w}w`)
                   .join(', ')}
               />
               <img
                 className="building__art-img"
-                src={`/shots/${MARANATHA.shot.slug}-${MARANATHA.shot.widths[0]}.webp`}
+                src={asset(`shots/${MARANATHA.shot.slug}-${MARANATHA.shot.widths[0]}.webp`)}
                 alt={MARANATHA.shot.alt}
                 width={720}
                 height={405}
