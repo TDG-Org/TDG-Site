@@ -6,5 +6,7 @@
  * HTML and in CSS — but not strings assembled at runtime, which is every
  * `srcSet` in this codebase. `BASE_URL` is `/` in dev and always ends in a
  * slash, so the argument never takes one.
+ *
+ * Usage: `srcSet={asset('shots/maranatha-720.webp')}`
  */
 export const asset = (path: string) => import.meta.env.BASE_URL + path
