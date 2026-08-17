@@ -54,6 +54,7 @@ export function Hero() {
       <div className="hero__grain" aria-hidden="true" />
       <div className="hero__vignette" aria-hidden="true" />
 
+      {/* The model loads in the background — no fallback UI on mobile or slow networks */}
       <Suspense fallback={null}>
         <PointCloud />
       </Suspense>
