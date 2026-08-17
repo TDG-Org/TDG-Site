@@ -55,21 +55,24 @@
 }
 
 .apps__card {
-  padding: 28px;
   transition:
     transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
     var(--t-theme);
 }
 
+/* Bleeds to the card's own edges (top corners clip via the card's radius +
+   overflow:hidden) rather than sitting inset — same idea as .building__art. */
 .apps__shot {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
-  margin: 0 0 22px;
-  border: 1px solid var(--border);
-  border-radius: 2px;
   overflow: hidden;
+  border-bottom: 1px solid var(--border);
   background-color: var(--bg2);
+}
+
+.apps__body {
+  padding: 24px 28px 28px;
 }
 
 .badge.apps__index {

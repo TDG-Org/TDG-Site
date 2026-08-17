@@ -21,23 +21,26 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           placeholder={app.slotPlaceholder}
           shot={app.shot}
           /* Breakpoints track the real column count of the auto-fit grid
-             (1 col <613px, 2 to 929, 3 to 1227, 4 above), minus the card's
-             56px of padding. Over-declaring made retina readers pull the
-             1120w candidate into a 224px slot. */
-          sizes="(max-width: 612px) calc(100vw - 2 * clamp(18px, 4vw, 40px) - 56px), (max-width: 929px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 20px) / 2 - 56px), (max-width: 1227px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 40px) / 3 - 56px), 224px"
+             (1 col <613px, 2 to 929, 3 to 1227, 4 above) — the shot now
+             bleeds to the card's own edges, so no padding to subtract.
+             Over-declaring made retina readers pull the 1120w candidate
+             into a too-small slot. */
+          sizes="(max-width: 612px) calc(100vw - 2 * clamp(18px, 4vw, 40px)), (max-width: 929px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 20px) / 2), (max-width: 1227px) calc((100vw - 2 * clamp(18px, 4vw, 40px) - 40px) / 3), 280px"
         />
       </div>
-      <div className="badge apps__index">{app.index}</div>
-      <div className="chips apps__chips">
-        {app.chips.map((chip) => (
-          <span key={chip.label} className={chip.hot ? 'chip chip--hot' : 'chip'}>
-            {chip.label}
-          </span>
-        ))}
+      <div className="apps__body">
+        <div className="badge apps__index">{app.index}</div>
+        <div className="chips apps__chips">
+          {app.chips.map((chip) => (
+            <span key={chip.label} className={chip.hot ? 'chip chip--hot' : 'chip'}>
+              {chip.label}
+            </span>
+          ))}
+        </div>
+        <h3 className="apps__title">{app.title}</h3>
+        <p className="apps__copy">{app.copy}</p>
+        <div className="apps__status">{app.status}</div>
       </div>
-      <h3 className="apps__title">{app.title}</h3>
-      <p className="apps__copy">{app.copy}</p>
-      <div className="apps__status">{app.status}</div>
     </article>
   )
 }
