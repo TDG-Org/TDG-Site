@@ -186,10 +186,10 @@ export function PointCloud() {
       const dy = e.clientY - drag.y
       drag.x = e.clientX
       drag.y = e.clientY
-      drag.ry += dx * 0.0072
-      drag.rx += dy * 0.005
-      drag.vx = dx * 0.0072
-      drag.vy = dy * 0.005
+      drag.ry += dx * 0.0058
+      drag.rx += dy * 0.004
+      drag.vx = dx * 0.0058
+      drag.vy = dy * 0.004
     }
     const up = () => {
       if (!drag.on) return

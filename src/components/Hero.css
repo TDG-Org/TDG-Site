@@ -204,7 +204,6 @@
 }
 
 .hero__wordmark {
-  position: relative;
   display: inline-flex;
   align-items: flex-end;
   gap: 0.015em;
@@ -228,37 +227,45 @@
   height: 100%;
   display: block;
 }
+
+/* A soft highlight sweeps across "DG" every so often. This is a second
+   background layer on the SAME element that's already clipped to the glyph
+   shapes via background-clip: text — unlike an overlay positioned on top of
+   the wordmark, a background layer literally cannot paint outside the
+   letterforms, so there is no risk of it washing over the space around the
+   cross or between the letters the way a box-shaped overlay did.
+   background-position is a paint-triggering property, but this is a small,
+   isolated element that repaints only for the ~2s sweep out of every 11s —
+   a different order of magnitude from the continuous, page-wide animations
+   the rest of this codebase keeps off the paint path. It still parks fully
+   off-frame at rest, which is where the site-wide
+   `animation-play-state: paused !important` under reduced motion freezes it. */
 .hero__dg {
-  background-image: var(--hero-dg);
+  background-image:
+    linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.92) 50%, transparent 60%),
+    var(--hero-dg);
+  background-size: 400% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  background-position:
+    0% 0,
+    0 0;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  will-change: background-position;
+  animation: dgGlint 11s ease-in-out infinite;
 }
-
-/* A light pass over the whole wordmark — cross and "DG" together — every so
-   often. Only `transform` is animated (never background-position) so this
-   composites for free instead of repainting; it parks fully off-frame at 0%,
-   which is also where the site-wide `animation-play-state: paused !important`
-   under reduced motion freezes it, so reduced motion sees no glint at all. */
-.hero__glint {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.8) 50%, transparent 70%);
-  mix-blend-mode: screen;
-  opacity: 0.85;
-  transform: translate3d(-130%, 0, 0);
-  will-change: transform;
-  animation: heroGlint 11s ease-in-out infinite;
-}
-@keyframes heroGlint {
+@keyframes dgGlint {
   0%,
-  82% {
-    transform: translate3d(-130%, 0, 0);
+  78% {
+    background-position:
+      0% 0,
+      0 0;
   }
   100% {
-    transform: translate3d(130%, 0, 0);
+    background-position:
+      100% 0,
+      0 0;
   }
 }
 
