@@ -124,6 +124,11 @@
   opacity: calc(var(--fade, 1) * var(--model-cap, 1));
   cursor: grab;
   touch-action: pan-y;
+  /* a drag that crosses the label beneath the model must rotate it, never
+     select the label's text or trigger iOS's touch-and-hold callout */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .hero__model-canvas {
   position: absolute;
@@ -199,6 +204,7 @@
 }
 
 .hero__wordmark {
+  position: relative;
   display: inline-flex;
   align-items: flex-end;
   gap: 0.015em;
@@ -227,6 +233,33 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* A light pass over the whole wordmark — cross and "DG" together — every so
+   often. Only `transform` is animated (never background-position) so this
+   composites for free instead of repainting; it parks fully off-frame at 0%,
+   which is also where the site-wide `animation-play-state: paused !important`
+   under reduced motion freezes it, so reduced motion sees no glint at all. */
+.hero__glint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.8) 50%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  transform: translate3d(-130%, 0, 0);
+  will-change: transform;
+  animation: heroGlint 11s ease-in-out infinite;
+}
+@keyframes heroGlint {
+  0%,
+  82% {
+    transform: translate3d(-130%, 0, 0);
+  }
+  100% {
+    transform: translate3d(130%, 0, 0);
+  }
 }
 
 .hero__tagline {

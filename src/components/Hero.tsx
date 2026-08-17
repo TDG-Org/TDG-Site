@@ -73,6 +73,7 @@ export function Hero() {
               <CrossGlyph variant="hero" />
             </span>
             <span className="hero__dg">DG</span>
+            <span className="hero__glint" aria-hidden="true" />
           </h1>
 
           <p className="hero__tagline">

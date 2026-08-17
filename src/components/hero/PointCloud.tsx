@@ -165,6 +165,9 @@ export function PointCloud() {
     // ── drag ──────────────────────────────────────────────────────────────
     const down = (e: PointerEvent) => {
       if (e.button !== 0) return
+      // Without this, a drag that crosses the label underneath starts a native
+      // text-selection instead of — or as well as — rotating the model.
+      e.preventDefault()
       drag.on = true
       drag.x = e.clientX
       drag.y = e.clientY
