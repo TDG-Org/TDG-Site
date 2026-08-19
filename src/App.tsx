@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { Story } from './components/Story'
@@ -8,14 +9,24 @@ import { Faith } from './components/Faith'
 import { Outro } from './components/Outro'
 import { Footer } from './components/Footer'
 import { Cursor } from './components/Cursor'
+import { AuthModal } from './components/AuthModal'
+import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 
 export default function App() {
   useOffscreenPause()
+  const { oauthError } = useAuth()
+  const [authOpen, setAuthOpen] = useState(false)
+
+  // A provider redirect (e.g. GitHub/Google) can land back here with the
+  // modal unmounted — reopen it so AuthModal has a chance to show the error.
+  useEffect(() => {
+    if (oauthError) setAuthOpen(true)
+  }, [oauthError])
 
   return (
     <div className="page">
-      <Nav />
+      <Nav onOpenAuth={() => setAuthOpen(true)} />
       <main>
         <Hero />
         <Story />
@@ -27,6 +38,7 @@ export default function App() {
       </main>
       <Footer />
       <Cursor />
+      <AuthModal open={authOpen} initialTab="login" onClose={() => setAuthOpen(false)} />
     </div>
   )
 }
