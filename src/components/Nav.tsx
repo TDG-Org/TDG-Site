@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { onFrame } from '../lib/motion'
 import { useTheme } from '../theme/ThemeProvider'
-import { GITHUB_ORG, NAV_LINKS } from '../data/content'
+import { useAuth } from '../auth/AuthProvider'
+import { NAV_LINKS } from '../data/content'
 import './Nav.css'
 
 function ThemeToggle() {
@@ -40,8 +41,60 @@ function ThemeToggle() {
   )
 }
 
-export function Nav() {
+function AccountMenu() {
+  const { user, profile, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocPointer = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDocPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDocPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="nav__account" ref={ref}>
+      <button
+        type="button"
+        className="nav__auth-btn"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        Account
+      </button>
+      <div className="nav__account-panel" data-open={open}>
+        <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
+        {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
+        {user?.email && <div className="nav__account-email">{user.email}</div>}
+        <button
+          type="button"
+          className="nav__account-signout"
+          onClick={() => {
+            setOpen(false)
+            signOut()
+          }}
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { theme } = useTheme()
+  const { status, profile, signOut } = useAuth()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const sentinel = useRef<HTMLDivElement | null>(null)
@@ -151,9 +204,13 @@ export function Nav() {
 
           <ThemeToggle />
 
-          <a className="nav__github" href={GITHUB_ORG} target="_blank" rel="noopener">
-            GitHub ↗
-          </a>
+          {status === 'signedIn' ? (
+            <AccountMenu />
+          ) : (
+            <button type="button" className="nav__auth-btn" onClick={onOpenAuth}>
+              Sign in
+            </button>
+          )}
         </div>
 
         {/* max-height:0 + opacity:0 + pointer-events:none hide the panel from
@@ -178,15 +235,34 @@ export function Nav() {
                 {link.label}
               </a>
             ))}
-            <a
-              className="nav__panel-cta"
-              href={GITHUB_ORG}
-              target="_blank"
-              rel="noopener"
-              onClick={() => setMenuOpen(false)}
-            >
-              GitHub ↗
-            </a>
+            {status === 'signedIn' ? (
+              <div className="nav__panel-account">
+                <div className="nav__panel-account-name">
+                  {profile?.display_name || profile?.username || 'Signed in'}
+                </div>
+                <button
+                  type="button"
+                  className="nav__panel-cta"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    signOut()
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="nav__panel-cta"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onOpenAuth()
+                }}
+              >
+                Sign in
+              </button>
+            )}
           </div>
         </div>
 

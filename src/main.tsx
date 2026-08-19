@@ -6,11 +6,14 @@ import './styles/tokens.css'
 import './styles/base.css'
 import App from './App'
 import { ThemeProvider } from './theme/ThemeProvider'
+import { AuthProvider } from './auth/AuthProvider'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
 )

@@ -130,7 +130,7 @@
   gap: 16px;
 }
 
-.nav__github {
+.nav__auth-btn {
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -141,16 +141,73 @@
     background 0.25s,
     var(--t-theme);
 }
-.nav__github:hover {
+.nav__auth-btn:hover {
   background-color: var(--accent-soft);
   border-color: var(--border-hover);
 }
-.nav[data-scrolled='true'] .nav__github {
+.nav[data-scrolled='true'] .nav__auth-btn {
   transform: scale(0.96);
 }
-.nav[data-over-dark='true'] .nav__github {
+.nav[data-over-dark='true'] .nav__auth-btn {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.26);
+}
+
+/* ── account menu ──────────────────────────────────────────────────────── */
+
+.nav__account {
+  position: relative;
+}
+.nav__account-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 200px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    var(--t-theme);
+}
+.nav__account-panel[data-open='true'] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.nav__account-name {
+  font: 600 14px var(--font-body);
+  color: var(--text);
+}
+.nav__account-handle,
+.nav__account-email {
+  margin-top: 3px;
+  font: 400 12px var(--font-body);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.nav__account-signout {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font: 600 12px var(--font-body);
+  color: var(--text);
+  text-align: center;
+  transition: background 0.2s, var(--t-theme);
+}
+.nav__account-signout:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--border-hover);
 }
 
 /* ── theme toggle ──────────────────────────────────────────────────────── */
@@ -291,6 +348,20 @@
   border-radius: 2px;
   font: 600 14px var(--font-body);
   color: var(--text);
+}
+.nav__panel-account {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.nav__panel-account-name {
+  font: 600 15px var(--font-body);
+  color: var(--text);
+}
+.nav__panel-account .nav__panel-cta {
+  margin-top: 0;
 }
 
 /* ── progress ──────────────────────────────────────────────────────────── */
