@@ -379,7 +379,7 @@
 
 @media (max-width: 820px) {
   .nav__links,
-  .nav__github {
+  .nav__auth-btn {
     display: none;
   }
   .nav__burger {

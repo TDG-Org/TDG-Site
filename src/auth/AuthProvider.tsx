@@ -25,6 +25,8 @@ type AuthContextValue = {
   profile: Profile | null
   /** subscriptions.tier for the signed-in user ('free' by default); null while signed out. */
   tier: string | null
+  /** True from the moment a password-reset email link lands back here until updatePassword succeeds. */
+  recovery: boolean
   /** Set when a provider redirect lands back with `?error=…` (e.g. OAuth not configured yet). */
   oauthError: string | null
   dismissOauthError: () => void
@@ -32,6 +34,7 @@ type AuthContextValue = {
   signIn: (input: SignInInput) => Promise<{ error: string | null }>
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -51,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [tier, setTier] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading' | 'signedOut' | 'signedIn'>('loading')
+  const [recovery, setRecovery] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
 
   // A provider that isn't enabled yet redirects back here with ?error=…
@@ -74,7 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // A clicked reset-password link lands here as a real session, not as
+      // a normal sign-in — hold it in "recovery" until a new password is set,
+      // so the UI shows "choose a new password" instead of flipping to Account.
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setUser(session?.user ?? null)
       setStatus(session?.user ? 'signedIn' : 'signedOut')
       if (!session?.user) {
@@ -113,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       profile,
       tier,
+      recovery,
       oauthError,
       dismissOauthError: () => setOauthError(null),
 
@@ -146,11 +155,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error?.message ?? null }
       },
 
+      async updatePassword(newPassword) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword })
+        if (error) return { error: error.message }
+        setRecovery(false)
+        return { error: null }
+      },
+
       async signOut() {
+        setRecovery(false)
         await supabase.auth.signOut()
       },
     }),
-    [status, user, profile, tier, oauthError],
+    [status, user, profile, tier, recovery, oauthError],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -15,14 +15,15 @@ import { useOffscreenPause } from './hooks/useOffscreenPause'
 
 export default function App() {
   useOffscreenPause()
-  const { oauthError } = useAuth()
+  const { oauthError, recovery } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
 
-  // A provider redirect (e.g. GitHub/Google) can land back here with the
-  // modal unmounted — reopen it so AuthModal has a chance to show the error.
+  // A provider redirect (e.g. GitHub/Google) or a clicked password-reset
+  // link can land back here with the modal unmounted — reopen it so
+  // AuthModal has a chance to show the error or the reset-password form.
   useEffect(() => {
-    if (oauthError) setAuthOpen(true)
-  }, [oauthError])
+    if (oauthError || recovery) setAuthOpen(true)
+  }, [oauthError, recovery])
 
   return (
     <div className="page">

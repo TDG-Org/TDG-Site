@@ -162,6 +162,7 @@ type GlowFieldProps = {
   id: string
   label: ReactNode | null
   optionalTag?: boolean
+  className?: string
   icon: ReactNode
   type: 'text' | 'email' | 'password'
   value: string
@@ -178,6 +179,7 @@ function GlowField({
   id,
   label,
   optionalTag,
+  className,
   icon,
   type,
   value,
@@ -193,7 +195,9 @@ function GlowField({
   const glyphs = masked ? '•'.repeat(value.length) : value
 
   return (
-    <div className={`authmodal__field${rightSlot ? ' authmodal__field--has-eye' : ''}`}>
+    <div
+      className={`authmodal__field${rightSlot ? ' authmodal__field--has-eye' : ''}${className ? ` ${className}` : ''}`}
+    >
       {label !== null && (
         <label htmlFor={id} className="authmodal__label">
           {label}
@@ -288,7 +292,7 @@ function SocialRow({ onGitHub, onGoogle }: { onGitHub: () => void; onGoogle: () 
         </span>
         <span>GitHub</span>
       </button>
-      <button type="button" className="authmodal__social" onClick={onGoogle}>
+      <button type="button" className="authmodal__social authmodal__social--google" onClick={onGoogle}>
         <span className="authmodal__social-icon">
           <IconGoogle />
         </span>
@@ -307,7 +311,16 @@ type AuthModalProps = {
 }
 
 export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
-  const { signUp, signIn, signInWithOAuth, resetPassword, oauthError, dismissOauthError } = useAuth()
+  const {
+    signUp,
+    signIn,
+    signInWithOAuth,
+    resetPassword,
+    updatePassword,
+    recovery,
+    oauthError,
+    dismissOauthError,
+  } = useAuth()
 
   const [tab, setTab] = useState<TabKey>(initialTab)
   const [username, setUsername] = useState('')
@@ -317,9 +330,13 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   const [confirm, setConfirm] = useState('')
   const [loginId, setLoginId] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showNewPasswordConfirm, setShowNewPasswordConfirm] = useState(false)
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -337,9 +354,13 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     setConfirm('')
     setLoginId('')
     setLoginPassword('')
+    setNewPassword('')
+    setNewPasswordConfirm('')
     setShowPassword(false)
     setShowConfirm(false)
     setShowLoginPassword(false)
+    setShowNewPassword(false)
+    setShowNewPasswordConfirm(false)
     setUsernameStatus('idle')
     setSubmitting(false)
     setFormError(null)
@@ -482,6 +503,29 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     setNotice(`Password reset link sent to ${identifier}.`)
   }
 
+  async function handleUpdatePasswordSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (newPassword.length < 8) {
+      setFormError('Password must be at least 8 characters.')
+      return
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setFormError("Passwords don't match.")
+      return
+    }
+    setFormError(null)
+    setSubmitting(true)
+    const { error } = await updatePassword(newPassword)
+    setSubmitting(false)
+    if (error) {
+      setFormError(error)
+      return
+    }
+    setNotice('Password updated. You can close this and keep browsing.')
+    setNewPassword('')
+    setNewPasswordConfirm('')
+  }
+
   async function handleOAuth(provider: 'github' | 'google') {
     setFormError(null)
     const { error } = await signInWithOAuth(provider)
@@ -524,6 +568,27 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     )
   ) : undefined
 
+  const newPasswordStrength = getPasswordStrength(newPassword)
+  const newPasswordHint = newPassword ? (
+    <div className="authmodal__meter">
+      <div className="authmodal__meter-track">
+        <div className="authmodal__meter-fill" style={{ width: `${newPasswordStrength.percent}%` }} />
+      </div>
+      <div className="authmodal__meter-label">{newPasswordStrength.label}</div>
+    </div>
+  ) : undefined
+
+  const newPasswordConfirmHint = newPasswordConfirm ? (
+    newPasswordConfirm === newPassword ? (
+      <div className="authmodal__match">
+        <IconCheck />
+        <span>Match</span>
+      </div>
+    ) : (
+      <div className="authmodal__hint authmodal__hint--bad">Doesn't match yet</div>
+    )
+  ) : undefined
+
   return (
     <div className="authmodal__backdrop" onClick={onClose}>
       <div
@@ -542,15 +607,74 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
         </div>
 
         <div className="authmodal__intro">
-          <div className="authmodal__eyebrow">Welcome</div>
+          <div className="authmodal__eyebrow">{recovery ? 'Password reset' : 'Welcome'}</div>
           <h1 className="authmodal__title" id="authmodal-title">
-            {tab === 'signup' ? 'Create your account' : 'Welcome back'}
+            {recovery ? 'Choose a new password' : tab === 'signup' ? 'Create your account' : 'Welcome back'}
           </h1>
           <p className="authmodal__subtitle">
-            {tab === 'signup' ? 'One account for everything TDG builds.' : 'Good to see you again.'}
+            {recovery
+              ? "You're signed in from the reset link — set a new password to finish."
+              : tab === 'signup'
+                ? 'One account for everything TDG builds.'
+                : 'Good to see you again.'}
           </p>
         </div>
 
+        {recovery ? (
+          <form className="authmodal__form" onSubmit={handleUpdatePasswordSubmit}>
+            <GlowField
+              id="rec-password"
+              label="New password"
+              icon={<IconLock />}
+              type={showNewPassword ? 'text' : 'password'}
+              masked={!showNewPassword}
+              value={newPassword}
+              onChange={setNewPassword}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              required
+              rightSlot={<EyeToggle shown={showNewPassword} onToggle={() => setShowNewPassword((v) => !v)} />}
+              hint={newPasswordHint}
+            />
+            <GlowField
+              id="rec-password-confirm"
+              className="authmodal__field--pre-cta"
+              label="Confirm new password"
+              icon={<IconLock />}
+              type={showNewPasswordConfirm ? 'text' : 'password'}
+              masked={!showNewPasswordConfirm}
+              value={newPasswordConfirm}
+              onChange={setNewPasswordConfirm}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              required
+              rightSlot={
+                <EyeToggle
+                  shown={showNewPasswordConfirm}
+                  onToggle={() => setShowNewPasswordConfirm((v) => !v)}
+                />
+              }
+              hint={newPasswordConfirmHint}
+            />
+
+            {formError && (
+              <div className="authmodal__error" role="alert">
+                {formError}
+              </div>
+            )}
+            {notice && (
+              <div className="authmodal__notice" role="status">
+                {notice}
+              </div>
+            )}
+
+            <div className="authmodal__cta-row">
+              <RingButton busy={submitting}>Update password</RingButton>
+            </div>
+            <div className="authmodal__foot">TDG Brothers</div>
+          </form>
+        ) : (
+          <>
         <div className="authmodal__tabs" role="tablist">
           <button
             type="button"
@@ -612,7 +736,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
               required
             />
 
-            <div className="authmodal__grid2">
+            <div className="authmodal__grid2 authmodal__grid2--pre-cta">
               <GlowField
                 id="su-password"
                 label="Password"
@@ -693,6 +817,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
             </div>
             <GlowField
               id="li-password"
+              className="authmodal__field--pre-cta"
               label={null}
               icon={<IconLock />}
               type={showLoginPassword ? 'text' : 'password'}
@@ -731,6 +856,8 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
             </div>
             <div className="authmodal__foot">TDG Brothers</div>
           </form>
+        )}
+          </>
         )}
       </div>
     </div>
