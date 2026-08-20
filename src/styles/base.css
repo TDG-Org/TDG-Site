@@ -136,6 +136,7 @@ stop {
   --tint-top: #030304;
   --tint-mid: #0a0b12;
   --tint-bot: #08080c;
+  --story-glow-warm: rgba(245, 201, 138, 0.16);
 }
 #apps {
   --tint-mid: #08080c;
@@ -158,6 +159,7 @@ stop {
   --tint-top: #fbfbfc;
   --tint-mid: #eef0f6;
   --tint-bot: #f8f8fa;
+  --story-glow-warm: rgba(184, 118, 58, 0.12);
 }
 [data-theme='light'] #apps {
   --tint-mid: #f8f8fa;

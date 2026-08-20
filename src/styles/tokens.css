@@ -19,6 +19,11 @@
   inherits: false;
   initial-value: transparent;
 }
+@property --story-glow-warm {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
 
 :root {
   --bg: #07070a;

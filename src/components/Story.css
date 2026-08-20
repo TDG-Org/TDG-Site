@@ -3,6 +3,28 @@
   will-change: translate, scale;
 }
 
+/* The section's own background, not another floating layer: a broad soft
+   band at the top (hero's light continuing down past the seam) and a warm
+   pool low on the opposite side, over the same three-stop tint blend every
+   other section uses. Both stay clear of the text column (.story__intro is
+   left-aligned, max 660px) and low-alpha enough not to touch contrast. */
+.story.section--blend {
+  background-image:
+    radial-gradient(1200px 480px at 50% -8%, var(--glow), transparent 60%),
+    radial-gradient(1000px 720px at 4% 100%, var(--story-glow-warm), transparent 68%),
+    linear-gradient(
+      180deg,
+      var(--tint-top) 0%,
+      var(--tint-mid) 30%,
+      var(--tint-mid) 70%,
+      var(--tint-bot) 100%
+    );
+  transition:
+    var(--t-theme),
+    var(--t-tint),
+    --story-glow-warm 0.6s ease var(--wave-delay, 0ms);
+}
+
 .story__grid {
   opacity: 0.72;
   background-image:
