@@ -5,6 +5,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useHeroTakeover } from './Hero'
+import { StoryField } from './story/StoryField'
 import { CHAPTERS, type Chapter } from '../data/content'
 import './Story.css'
 
@@ -70,6 +71,7 @@ export function Story() {
 
   return (
     <section id="story" ref={section} className="section section--blend story">
+      <StoryField />
       <div className="texture story__grid" aria-hidden="true" />
       <div ref={blob} className="blob story__blob" aria-hidden="true" />
 
