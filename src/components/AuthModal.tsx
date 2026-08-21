@@ -448,6 +448,35 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     }
     setFormError(null)
     setSubmitting(true)
+
+    /*
+     * Ask ONE more time, right here, and refuse on anything but a clear yes.
+     *
+     * The check that runs while you type is debounced, so a fast typist can
+     * submit before its answer lands — and the cost of missing is invisible:
+     * tdg-core's handle_new_user trigger does not fail on a taken
+     * username, it silently stores NULL and creates the account anyway.
+     * Somebody would sign up as "clyde", be told it worked, and have no
+     * username at all, with nothing anywhere saying why.
+     *
+     * A network failure refuses too. Guessing "probably free" is what produces
+     * that same silent drop, and asking somebody to press the button again is
+     * the cheaper mistake.
+     */
+    const { data: stillFree, error: checkError } = await supabase.rpc('bea_username_available', {
+      uname: normalized,
+    })
+    if (checkError || stillFree !== true) {
+      setSubmitting(false)
+      setUsernameStatus(checkError ? 'idle' : 'taken')
+      setFormError(
+        checkError
+          ? 'Could not check that username just now. Try again in a moment.'
+          : 'That username was taken a moment ago. Choose another.',
+      )
+      return
+    }
+
     const { error, needsEmailConfirm } = await signUp({
       email,
       password,
@@ -470,13 +499,19 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     e.preventDefault()
     setNotice(null)
     const identifier = loginId.trim()
-    if (identifier && !identifier.includes('@')) {
-      setFormError('Log in with your email for now — username login is coming soon.')
+    if (!identifier) {
+      setFormError('Enter your username or email.')
+      return
+    }
+    if (!loginPassword) {
+      setFormError('Enter your password.')
       return
     }
     setFormError(null)
     setSubmitting(true)
-    const { error } = await signIn({ email: identifier, password: loginPassword })
+    // Username OR email — resolved server-side by tdg-site-account, because a
+    // browser may not turn a public handle into somebody's email address.
+    const { error } = await signIn({ identifier, password: loginPassword })
     setSubmitting(false)
     if (error) {
       setFormError(error)
@@ -487,8 +522,8 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
 
   async function handleForgotPassword() {
     const identifier = loginId.trim()
-    if (!identifier || !identifier.includes('@')) {
-      setFormError('Enter your email above, then tap "Forgot password?" again.')
+    if (!identifier) {
+      setFormError('Enter your username or email above, then tap "Forgot password?" again.')
       return
     }
     setFormError(null)
@@ -500,7 +535,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setFormError(error)
       return
     }
-    setNotice(`Password reset link sent to ${identifier}.`)
+    setNotice('If that account exists, a reset link is on its way. Check the inbox for its email address.')
   }
 
   async function handleUpdatePasswordSubmit(e: FormEvent<HTMLFormElement>) {
