@@ -107,18 +107,7 @@ export const STORE_APPS: StoreApp[] = [
           'A full light and a full dark of every one — the palette holds when you switch',
           'Every card, pane, dialog and control, not just the background',
         ],
-        /*
-         * ⚠ TEST MODE. DevFleet's live product, price and Payment Link do not
-         * exist yet, so this is the test-mode link its catalog currently holds
-         * — see `paymentLinkUrl` in DevFleet's `src/shared/storeCatalog.ts`.
-         * It is a real, working checkout that only ever accepts test cards, and
-         * `isTestLink` reads that off the URL so the card says so rather than
-         * letting a real customer be refused with no explanation. Paste the
-         * live URL here and the notice clears itself; there is no second flag
-         * to remember. The live link comes from `npm run store:links --live`
-         * in DevFleet, which needs a Stripe key with Products Write on it.
-         */
-        paymentLink: 'https://buy.stripe.com/test_eVq3cu2K2fGO79gbh94ZG02',
+        paymentLink: 'https://buy.stripe.com/00w7sK98q1PYctA70T4ZG0d',
       },
     ],
   },
