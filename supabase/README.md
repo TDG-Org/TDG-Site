@@ -8,6 +8,7 @@ deletes it in a dashboard.
 | Path | What it is |
 | --- | --- |
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
+| `migrations/` | SQL already applied to the shared project — today, the `tdg_admin_*` family behind the site's Developer console (`src/dev/`). See its own README. |
 
 ## Why the site cannot do this itself
 

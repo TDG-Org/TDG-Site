@@ -222,6 +222,82 @@
   border-color: var(--border-hover);
 }
 
+/* ── developer tab ─────────────────────────────────────────────────────────
+   Marked with one warm dot so an internal page is never mistaken for a public
+   one at a glance — the same warm the console uses for "this is the live
+   project". Only ever rendered for a signed-in TDG developer; see
+   src/dev/README.md for why hiding it is tidiness rather than security.      */
+
+.nav__link[data-dev]::before,
+.nav__panel-link[data-dev]::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background-color: var(--warm);
+  vertical-align: 1px;
+}
+
+/* The switch that hides the tab. It lives in the account menu because that is
+   the one place still reachable once the tab is gone. */
+.nav__devmode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--border);
+}
+.nav__devmode-label {
+  font: 500 12px var(--font-body);
+  color: var(--muted);
+}
+.nav__devmode:hover .nav__devmode-label {
+  color: var(--text);
+}
+.nav__devmode-track {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--accent-soft);
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease;
+}
+.nav__devmode-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--accent-2);
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 0.24s ease;
+}
+.nav__devmode[aria-checked='true'] .nav__devmode-track {
+  background-color: color-mix(in srgb, var(--warm) 20%, transparent);
+  border-color: color-mix(in srgb, var(--warm) 55%, transparent);
+}
+.nav__devmode[aria-checked='true'] .nav__devmode-knob {
+  transform: translateX(14px);
+  background-color: var(--warm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav__devmode-knob {
+    transition: none;
+  }
+}
+
 /* ── theme toggle ──────────────────────────────────────────────────────── */
 
 .nav__toggle {

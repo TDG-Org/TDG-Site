@@ -41,6 +41,17 @@ export type Profile = {
   user_id: string
   username: string | null
   display_name: string | null
+  /**
+   * The TDG developer flag on the shared `profiles` table — the same column
+   * `bea_is_admin()` reads, so this and the server always agree about who is a
+   * developer. Readable here only because `profiles_select_own` lets an account
+   * read its OWN row: nobody learns anybody else's.
+   *
+   * It reveals the Developer console (src/dev/) and nothing more. Every
+   * privileged action re-checks it in Postgres, so a copy of this site with the
+   * flag forced true is a page full of buttons that all answer 42501.
+   */
+  is_admin: boolean
 }
 
 type SignUpInput = { email: string; password: string; username: string; displayName: string }
@@ -54,6 +65,8 @@ type AuthContextValue = {
   profile: Profile | null
   /** subscriptions.tier for the signed-in user ('free' by default); null while signed out. */
   tier: string | null
+  /** True only for a signed-in TDG developer. Reveals the Developer console; grants nothing. */
+  isAdmin: boolean
   /** True from the moment a password-reset email link lands back here until updatePassword succeeds. */
   recovery: boolean
   /** Set when a provider redirect lands back with `?error=…` (e.g. OAuth not configured yet). */
@@ -77,7 +90,7 @@ export function useAuth() {
 }
 
 /** Columns the UI actually reads — never select('*') against a shared table. */
-const PROFILE_COLUMNS = 'user_id,username,display_name'
+const PROFILE_COLUMNS = 'user_id,username,display_name,is_admin'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -151,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       profile,
       tier,
+      isAdmin: profile?.is_admin === true,
       recovery,
       oauthError,
       dismissOauthError: () => setOauthError(null),

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { Story } from './components/Story'
@@ -15,11 +15,33 @@ import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 import { useRoute } from './lib/route'
 
+/**
+ * The Developer console, in its own chunk.
+ *
+ * A static `import` would put every panel, label and table name of it into the
+ * bundle every visitor downloads. This way the request is only ever made by a
+ * browser that has already been told, by the shared `profiles` table, that it
+ * is signed in as a TDG developer.
+ *
+ * That is tidiness, not a lock. The lock is that every read and write the
+ * console makes goes through a Postgres function that refuses a non-admin —
+ * see src/dev/README.md.
+ */
+const DevConsole = lazy(() => import('./dev/DevConsole'))
+
 export default function App() {
   useOffscreenPause()
-  const { oauthError, recovery } = useAuth()
+  const { oauthError, recovery, isAdmin } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
   const route = useRoute()
+
+  /*
+   * `#/dev` for anybody else behaves EXACTLY like `#/banana`: it renders the
+   * home page and leaves the hash alone. Not a "restricted" notice, and not a
+   * redirect — both of those answer the question "is there something here?",
+   * and the answer a stranger should get is the one an unknown anchor gets.
+   */
+  const showDev = route === 'dev' && isAdmin
 
   // A provider redirect (e.g. GitHub/Google) or a clicked password-reset
   // link can land back here with the modal unmounted — reopen it so
@@ -28,13 +50,13 @@ export default function App() {
     if (oauthError || recovery) setAuthOpen(true)
   }, [oauthError, recovery])
 
-  // Leaving or entering the Store swaps the whole page, and the browser has
+  // Leaving or entering a page swaps the whole document, and the browser has
   // already done whatever it was going to do with the hash by the time React
   // renders the new one — so a section anchor clicked FROM the Store points at
   // an element that did not exist when it was clicked. Effects run after the
   // commit, so by here it does.
   useEffect(() => {
-    if (route === 'store') {
+    if (route === 'store' || showDev) {
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
       // change, and `auto` resolves to smooth here — so arriving at the Store
       // from halfway down the home page slid the new page up under you instead
@@ -45,12 +67,20 @@ export default function App() {
     const id = window.location.hash.replace(/^#/, '')
     if (!id || id.startsWith('/')) return
     document.getElementById(id)?.scrollIntoView()
-  }, [route])
+  }, [route, showDev])
 
   return (
     <div className="page">
       <Nav onOpenAuth={() => setAuthOpen(true)} />
-      {route === 'store' ? (
+      {showDev ? (
+        <main>
+          {/* The chunk is local and small; the placeholder only stops the
+              footer flying up to meet the nav for one frame. */}
+          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+            <DevConsole />
+          </Suspense>
+        </main>
+      ) : route === 'store' ? (
         <main>
           <Store onOpenAuth={() => setAuthOpen(true)} />
         </main>

@@ -3,8 +3,21 @@ import { onFrame } from '../lib/motion'
 import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '../auth/AuthProvider'
 import { NAV_LINKS } from '../data/content'
-import { useRoute, STORE_HASH } from '../lib/route'
+import { useRoute, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
+import { setDevMode, useDevMode } from '../dev/devMode'
 import './Nav.css'
+
+/**
+ * The Developer tab, appended to the nav for a signed-in TDG developer with
+ * Developer Mode on — and for nobody else, ever.
+ *
+ * It is not in NAV_LINKS because that array is the site's public navigation and
+ * is read by everything; this is one link with two conditions on it. Hiding it
+ * is tidiness rather than security: `#/dev` renders the home page for anybody
+ * who is not a developer, and the console's data all comes from Postgres
+ * functions that refuse them. See src/dev/README.md.
+ */
+const DEV_LINK = { href: DEV_HASH, label: 'Developer' } as const
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme()
@@ -43,7 +56,8 @@ function ThemeToggle() {
 }
 
 function AccountMenu() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, isAdmin } = useAuth()
+  const devMode = useDevMode()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -78,6 +92,23 @@ function AccountMenu() {
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
+        {/* The only way back once the tab is hidden, so it lives here rather
+            than on the console page itself — a switch you can only reach
+            through the thing it hides is a switch you cannot un-flip. */}
+        {isAdmin && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={devMode}
+            className="nav__devmode"
+            onClick={() => setDevMode(!devMode)}
+          >
+            <span className="nav__devmode-label">Developer Tab</span>
+            <span className="nav__devmode-track" aria-hidden="true">
+              <span className="nav__devmode-knob" />
+            </span>
+          </button>
+        )}
         <button
           type="button"
           className="nav__account-signout"
@@ -93,9 +124,17 @@ function AccountMenu() {
   )
 }
 
+/** Only a ROUTE can be the current page; the rest are anchors on this one. */
+function isCurrent(href: string, route: Route): boolean {
+  if (href === STORE_HASH) return route === 'store'
+  if (href === DEV_HASH) return route === 'dev'
+  return false
+}
+
 export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { theme } = useTheme()
-  const { status, profile, signOut } = useAuth()
+  const { status, profile, signOut, isAdmin } = useAuth()
+  const devMode = useDevMode()
   const route = useRoute()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -163,6 +202,10 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   // The hero is a dark scene in dark mode; chrome sitting over it stays light.
   const overDark = !scrolled && theme === 'dark'
 
+  // One list, so the desktop bar and the mobile panel can never disagree about
+  // whether the Developer tab is there.
+  const links = isAdmin && devMode ? [...NAV_LINKS, DEV_LINK] : NAV_LINKS
+
   const lightIndicator = (event: React.PointerEvent<HTMLAnchorElement>) => {
     const bar = indicator.current
     if (!bar) return
@@ -185,12 +228,13 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
 
         <div className="nav__links" onPointerLeave={() => indicator.current?.style.setProperty('opacity', '0')}>
           <span ref={indicator} className="nav__indicator" aria-hidden="true" />
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <a
               key={link.href}
               className="nav__link"
+              data-dev={link.href === DEV_HASH || undefined}
               href={link.href}
-              aria-current={link.href === STORE_HASH && route === 'store' ? 'page' : undefined}
+              aria-current={isCurrent(link.href, route) ? 'page' : undefined}
               onPointerEnter={lightIndicator}
             >
               {link.label}
@@ -236,12 +280,13 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
           inert={!menuOpen}
         >
           <div className="nav__panel-inner">
-            {NAV_LINKS.map((link) => (
+            {links.map((link) => (
               <a
                 key={link.href}
                 className="nav__panel-link"
+                data-dev={link.href === DEV_HASH || undefined}
                 href={link.href}
-                aria-current={link.href === STORE_HASH && route === 'store' ? 'page' : undefined}
+                aria-current={isCurrent(link.href, route) ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
               >
                 {link.label}
