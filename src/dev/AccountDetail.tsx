@@ -287,7 +287,10 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
           label="Tier"
           hint="Bible Educator ranks these free → plus → pro → lifetime and treats anything it does not recognise as at least the top paid tier."
         >
-          <Combo value={tier} onChange={setTier} options={catalog.core_tiers} />
+          {/* Keyed by account: Combo holds its own "showing the free-text box"
+              state, and without this, picking Other… on one person would leave
+              the box open on whoever you clicked next. */}
+          <Combo key={a.user_id} value={tier} onChange={setTier} options={catalog.core_tiers} />
         </Field>
         <Field label="Status" hint="Only 'active' actually unlocks anything today; the rest are for matching Stripe.">
           <Select

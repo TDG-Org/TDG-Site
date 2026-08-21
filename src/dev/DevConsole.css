@@ -516,9 +516,6 @@
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
 }
-.dev__facts > .dev__fact:last-child:nth-child(odd) {
-  border-bottom: 1px solid var(--border);
-}
 .dev__fact-label {
   flex: none;
   font: 500 11px var(--font-body);
