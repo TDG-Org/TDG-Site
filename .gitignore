@@ -48,6 +48,8 @@ GEMINI.md
 .sourcegraph/
 mcp.json
 .mcp.json
+.devfleet/
+.appmanifest.json
 
 # internal working notes, handoffs, plans and design-tool exports
 HANDOFF*.md

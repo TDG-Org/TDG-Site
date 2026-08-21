@@ -124,6 +124,18 @@
   color: rgba(255, 255, 255, 0.74);
 }
 
+/* The Store is a page rather than a place on this one, so it is the only link
+   that can be the CURRENT one — marked in the text rather than with a second
+   underline, which the hover indicator already owns. */
+.nav__link[aria-current='page'],
+.nav[data-over-dark='true'] .nav__link[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
+}
+.nav[data-over-dark='true'] .nav__link[aria-current='page'] {
+  color: #ffffff;
+}
+
 .nav__actions {
   display: flex;
   align-items: center;
@@ -339,6 +351,10 @@
   font: 500 17px var(--font-body);
   color: var(--muted);
   border-bottom: 1px solid var(--border);
+}
+.nav__panel-link[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
 }
 .nav__panel-cta {
   margin-top: 16px;

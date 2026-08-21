@@ -1,0 +1,410 @@
+/* ── Store ────────────────────────────────────────────────────────────────
+   Its own page rather than a section of the scroll, so it owns the blend
+   tints the way each section id does in base.css. It sits between Faith and
+   the page floor in temperature — the shop is not a mood piece, and a heavy
+   scene behind a price is the wrong kind of persuasion.                     */
+
+.store {
+  --tint-top: #0b0b10;
+  --tint-mid: #0a0c14;
+  --tint-bot: #08080c;
+  min-height: 100vh;
+  min-height: 100svh;
+  /* The nav sits over the top of the page; without this the kicker starts
+     underneath it on a page that has no hero to absorb the overlap. */
+  padding-top: clamp(104px, 12vw, 156px);
+}
+
+[data-theme='light'] .store {
+  --tint-top: #f2f3f7;
+  --tint-mid: #eef0f6;
+  --tint-bot: #f6f6f8;
+}
+
+.store__grid {
+  opacity: 0.5;
+  background-image:
+    repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 92px),
+    repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 92px);
+  -webkit-mask-image: radial-gradient(78% 58% at 50% 0%, #000, transparent 76%);
+  mask-image: radial-gradient(78% 58% at 50% 0%, #000, transparent 76%);
+}
+
+.store__blob {
+  top: -6%;
+  right: -6%;
+  width: 520px;
+  height: 520px;
+  filter: blur(34px);
+}
+
+.shell.store__shell {
+  max-width: 1180px;
+}
+
+/* ── head ─────────────────────────────────────────────────────────────── */
+
+.store__head {
+  max-width: 720px;
+  margin-bottom: clamp(44px, 6vw, 72px);
+}
+.h2.store__heading {
+  margin-top: 18px;
+}
+.lede.store__lede {
+  max-width: 620px;
+}
+
+/* Who the purchase will land on. A shop that takes money without naming the
+   account it credits is asking for a support email. */
+.store__account {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+  padding: 12px 16px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.store__account[data-signed-in] {
+  border-color: var(--live-border);
+  background-color: var(--live-bg);
+}
+.store__account-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background-color: var(--live-fg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--live-fg) 22%, transparent);
+}
+.store__account-text {
+  flex: 1 1 240px;
+  min-width: 0;
+  font: 400 13.5px/1.5 var(--font-body);
+  color: var(--muted);
+}
+.store__account[data-signed-in] .store__account-text {
+  color: var(--text);
+}
+.store__account-text strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── one app's shelf ──────────────────────────────────────────────────── */
+
+.store__app {
+  margin-bottom: clamp(48px, 6vw, 80px);
+}
+
+.store__app-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 22px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+.store__app-titles {
+  flex: 1 1 460px;
+  min-width: 0;
+}
+.store__app-title {
+  margin: 0 0 10px;
+  font: 700 clamp(23px, 2.6vw, 30px) / 1.1 var(--font-display);
+  color: var(--text);
+}
+.store__app-copy {
+  margin: 0;
+  max-width: 640px;
+  font: 400 15px/1.65 var(--font-body);
+  color: var(--muted);
+}
+.store__app-availability {
+  margin: 12px 0 0;
+  max-width: 640px;
+  font: 400 13px/1.6 var(--font-body);
+  color: var(--faint);
+}
+/* A tag, and therefore short — a sentence in a 9px mono chip reads as a code
+   block bolted to the side of the shelf, which is what the first pass shipped. */
+.chip.store__app-status {
+  flex: none;
+  margin-top: 6px;
+}
+
+/* ── the pack cards ───────────────────────────────────────────────────── */
+
+.store__packs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.store__pack {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
+}
+.store__pack[data-owned] {
+  border-color: var(--live-border);
+}
+
+.store__pack-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.store__price {
+  flex: none;
+  font: 700 clamp(26px, 3vw, 33px) / 1 var(--font-display);
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.store__pack-name {
+  margin: 0 0 8px;
+  font: 600 19px/1.2 var(--font-display);
+  color: var(--text);
+}
+.store__pack-tagline {
+  margin: 0 0 20px;
+  font: 400 14px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+.store__unlocks {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  /* Pushes the action row to the card's floor, so two cards of unequal copy
+     still line their buttons up. */
+  flex: 1 1 auto;
+}
+.store__unlocks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font: 400 13.5px/1.55 var(--font-body);
+  color: var(--faint);
+}
+.store__unlock-tick {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 2px;
+  background-color: var(--accent-soft);
+  border: 1px solid var(--border);
+  color: var(--accent-2);
+  transition: var(--t-theme);
+}
+.store__pack[data-owned] .store__unlock-tick {
+  border-color: var(--live-border);
+  background-color: var(--live-bg);
+  color: var(--live-fg);
+}
+
+/* ── the action row ───────────────────────────────────────────────────── */
+
+.store__action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  /* One floor for every state, so a card does not change height when it flips
+     from Buy to Waiting to Owned — a shelf that jumps as answers arrive reads
+     as a page still loading. */
+  min-height: 104px;
+}
+
+.store__buy {
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 600 14px var(--font-body);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.25s ease,
+    var(--t-theme);
+}
+.store__buy:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+.store__buy:active {
+  transform: translateY(0);
+}
+.store__buy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.store__ghost {
+  padding: 9px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border-hover);
+  background-color: transparent;
+  color: var(--text);
+  font: 500 12.5px var(--font-body);
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    var(--t-theme);
+}
+.store__ghost:hover {
+  background-color: var(--accent-soft);
+}
+.store__ghost:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.store__note {
+  margin: 0;
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--faint);
+}
+.store__note--quiet {
+  opacity: 0.8;
+}
+.store__note--warn {
+  color: var(--warm);
+}
+
+.store__owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--live-border);
+  background-color: var(--live-bg);
+  color: var(--live-fg);
+  font: 600 13px var(--font-body);
+  letter-spacing: 0.02em;
+}
+.store__owned-tick {
+  display: inline-flex;
+}
+
+.store__waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font: 600 13px var(--font-body);
+  color: var(--text);
+}
+.store__waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--warm);
+  animation: storePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes storePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── how it works ─────────────────────────────────────────────────────── */
+
+.store__how {
+  padding: clamp(26px, 3.5vw, 38px);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.store__how-title {
+  margin: 0 0 22px;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.store__steps {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+}
+.store__steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.store__step-num {
+  flex: none;
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  padding-top: 3px;
+}
+.store__step-text {
+  font: 400 13.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.store__step-text strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.store__fine {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--faint);
+}
+
+@media (max-width: 620px) {
+  .store__pack {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store__waiting-dot {
+    animation: none;
+    opacity: 1;
+  }
+  .store__buy:hover {
+    transform: none;
+  }
+}

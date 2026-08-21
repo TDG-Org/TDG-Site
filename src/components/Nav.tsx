@@ -3,6 +3,7 @@ import { onFrame } from '../lib/motion'
 import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '../auth/AuthProvider'
 import { NAV_LINKS } from '../data/content'
+import { useRoute, STORE_HASH } from '../lib/route'
 import './Nav.css'
 
 function ThemeToggle() {
@@ -95,6 +96,7 @@ function AccountMenu() {
 export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { theme } = useTheme()
   const { status, profile, signOut } = useAuth()
+  const route = useRoute()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const sentinel = useRef<HTMLDivElement | null>(null)
@@ -120,7 +122,10 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
     let top: HTMLElement | null = null
     let painted = ''
     return onFrame(({ vh }) => {
-      top ??= document.getElementById('top')
+      // Re-resolved when the cached node has left the document: switching to
+      // the Store replaces the page, and a detached element reports a rect of
+      // zeros for ever, which pins the bar at 0% with nothing to see.
+      if (!top || !top.isConnected) top = document.getElementById('top')
       const max = document.documentElement.scrollHeight - vh || 1
       const travelled = top ? Math.max(0, -top.getBoundingClientRect().top) : 0
       const next = `${Math.max(0, Math.min(100, (travelled / max) * 100)).toFixed(2)}%`
@@ -181,7 +186,13 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
         <div className="nav__links" onPointerLeave={() => indicator.current?.style.setProperty('opacity', '0')}>
           <span ref={indicator} className="nav__indicator" aria-hidden="true" />
           {NAV_LINKS.map((link) => (
-            <a key={link.href} className="nav__link" href={link.href} onPointerEnter={lightIndicator}>
+            <a
+              key={link.href}
+              className="nav__link"
+              href={link.href}
+              aria-current={link.href === STORE_HASH && route === 'store' ? 'page' : undefined}
+              onPointerEnter={lightIndicator}
+            >
               {link.label}
             </a>
           ))}
@@ -230,6 +241,7 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
                 key={link.href}
                 className="nav__panel-link"
                 href={link.href}
+                aria-current={link.href === STORE_HASH && route === 'store' ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
               >
                 {link.label}

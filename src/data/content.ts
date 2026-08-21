@@ -9,6 +9,10 @@ export const NAV_LINKS = [
   { href: '#tools', label: 'Tools' },
   { href: '#building', label: 'Building' },
   { href: '#faith', label: 'Faith' },
+  // Last, and a ROUTE rather than a section anchor — the Store is its own page.
+  // The slash is what keeps '#/store' from colliding with '#story', which is
+  // one letter away and would otherwise be a coin flip for whoever matched first.
+  { href: '#/store', label: 'Store' },
 ] as const
 
 /** A real screenshot, served as AVIF with a WebP fallback at 1x and 2x. */
