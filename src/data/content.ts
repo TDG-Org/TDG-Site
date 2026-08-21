@@ -191,15 +191,6 @@ export const APPS: AppCard[] = [
     status: 'Coming soon',
     slotPlaceholder: 'Drop a TDG Veditor screenshot',
   },
-  {
-    id: 'app-mvtrade',
-    index: '07',
-    title: 'MVTrade',
-    copy: 'A paper-trading robot that learns from every trade. Real money is locked in the code on purpose, and stays locked until the strategy proves itself.',
-    chips: [{ label: 'DESKTOP' }, { label: 'DEV ONLY', hot: true }, { label: 'PAPER ONLY' }],
-    status: 'Coming soon',
-    slotPlaceholder: 'Drop an MVTrade screenshot',
-  },
 ]
 
 export type ToolCard = {
@@ -213,7 +204,7 @@ export type ToolCard = {
 
 export const TOOLS: ToolCard[] = [
   {
-    index: '08',
+    index: '07',
     title: 'Volume Controller',
     copy: 'Global and per-site volume from 0 to 600%, with a 2–10 band EQ, loudness normalize, and per-site memory.',
     chips: [{ label: 'EXTENSION' }, { label: 'LIVE', hot: true }, { label: 'FREE' }],
@@ -221,14 +212,14 @@ export const TOOLS: ToolCard[] = [
     href: VOLUME_CONTROLLER,
   },
   {
-    index: '09',
+    index: '08',
     title: 'VidHelper',
     copy: 'A local video downloader — the extension spots the video, a small backend on 127.0.0.1 grabs it and serves your own library.',
     chips: [{ label: 'EXTENSION' }, { label: 'WIP', hot: true }, { label: 'LOCAL' }],
     cta: 'Coming soon',
   },
   {
-    index: '10',
+    index: '09',
     title: 'N8-Tools',
     copy: 'A browser workspace for music and sound — transcripts, a melody reader that exports MIDI, tuner, metronome, key and BPM detection.',
     chips: [{ label: 'BROWSER' }, { label: 'WIP', hot: true }, { label: 'MIC' }],

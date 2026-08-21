@@ -58,15 +58,14 @@ Two brothers, Nate & Luke. This is our landing page.
 | 04 | **DevFleet** | Every git repo on your machine as a live card, sixteen panes at once. | 🟡 In dev |
 | 05 | **Music Everything** | Scales, chords, a playable piano, live pitch tracking, MIDI export. | 🟡 In dev |
 | 06 | **TDG Veditor** | A desktop video editor — timeline, effects, colour, audio, FFmpeg export. | 🟡 In dev |
-| 07 | **MVTrade** | A paper-trading robot that learns from every trade. Real money stays locked. | ⚪ Dev only |
 
 ### 🧩 Tools & extensions
 
 | # | Project | What it does | Status |
 |:--|:--|:--|:--|
-| 08 | **[Volume Controller](https://chromewebstore.google.com/detail/volume-controller/lamahdjkmgpfpcoccinmipdonifnadcf)** | Global & per-site volume 0–600%, with EQ and loudness normalize. | 🟢 **Live on the Chrome Web Store** |
-| 09 | **VidHelper** | A local video downloader — extension plus a small backend on `127.0.0.1`. | 🟠 WIP |
-| 10 | **N8-Tools** | A browser workspace for music and sound — transcripts, melody → MIDI, tuner. | 🟠 WIP |
+| 07 | **[Volume Controller](https://chromewebstore.google.com/detail/volume-controller/lamahdjkmgpfpcoccinmipdonifnadcf)** | Global & per-site volume 0–600%, with EQ and loudness normalize. | 🟢 **Live on the Chrome Web Store** |
+| 08 | **VidHelper** | A local video downloader — extension plus a small backend on `127.0.0.1`. | 🟠 WIP |
+| 09 | **N8-Tools** | A browser workspace for music and sound — transcripts, melody → MIDI, tuner. | 🟠 WIP |
 
 ### 🎮 Games
 
