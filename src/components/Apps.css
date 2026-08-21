@@ -103,6 +103,31 @@
   color: var(--faint);
 }
 
+/* Takes the status caption's place on a card that has a real download. Same
+   solid pill as .building__play, one size down to sit inside a card, and it
+   answers with shadow rather than a lift so it never fights the card's tilt.
+   Focus comes from the shared a:focus-visible ring in base.css, which clears
+   the card's overflow clip inside .apps__body's 28px padding. */
+.apps__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 3px;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 600 13px var(--font-body);
+  transition:
+    box-shadow 0.35s ease,
+    var(--t-theme);
+}
+.apps__download:hover {
+  box-shadow: 0 16px 34px -18px var(--glow);
+}
+.apps__download-arrow {
+  font-size: 12px;
+}
+
 .apps__more {
   border-radius: 3px;
   padding: 30px;

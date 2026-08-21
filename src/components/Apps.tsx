@@ -39,7 +39,16 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
         </div>
         <h3 className="apps__title">{app.title}</h3>
         <p className="apps__copy">{app.copy}</p>
-        <div className="apps__status">{app.status}</div>
+        {app.download ? (
+          <a className="apps__download" href={app.download.href} target="_blank" rel="noopener">
+            {app.download.label}
+            <span className="apps__download-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
+        ) : (
+          <div className="apps__status">{app.status}</div>
+        )}
       </div>
     </article>
   )

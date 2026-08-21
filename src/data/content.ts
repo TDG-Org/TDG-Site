@@ -76,6 +76,13 @@ export type AppCard = {
   copy: string
   chips: { label: string; hot?: boolean }[]
   status: string
+  /**
+   * Optional real action. When it is present the card renders this link where
+   * the plain status caption would go; when it is absent the card is exactly
+   * what it was. The linked page owns everything about the download itself —
+   * per-OS builds, version, install notes — so nothing here restates it.
+   */
+  download?: { href: string; label: string }
   slotPlaceholder: string
   shot?: Shot
 }
@@ -128,11 +135,17 @@ export const APPS: AppCard[] = [
     copy: 'A calm desk for studying: write and draw in your own books, import a syllabus, convert class files, run flashcards. Nine full themes, all on your machine.',
     chips: [
       { label: 'WINDOWS' },
-      { label: 'IN DEV', hot: true },
+      { label: 'EARLY BUILD', hot: true },
       { label: 'LOCAL' },
       { label: 'STUDENTS' },
     ],
-    status: 'Coming soon',
+    status: 'Early build',
+    download: {
+      // Its own site owns the download: per-OS buttons, the version that is
+      // actually published, and the unsigned-installer note.
+      href: 'https://tdg-org.github.io/makullveny-site/#download',
+      label: 'Download Makullveny',
+    },
     slotPlaceholder: 'Drop a Makullveny screenshot',
     shot: {
       slug: 'makullveny',
