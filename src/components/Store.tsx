@@ -5,7 +5,15 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
 import { useOwnedPacks } from '../store/useOwnedPacks'
-import { STORE_APPS, buyUrl, formatUsd, type StoreApp, type StorePack } from '../data/store'
+import {
+  STORE_APPS,
+  buyUrl,
+  formatUsd,
+  isTestLink,
+  packKey,
+  type StoreApp,
+  type StorePack,
+} from '../data/store'
 import './Store.css'
 
 /** How long to keep asking after a buy before giving the button back. */
@@ -40,6 +48,7 @@ function Tick() {
 
 function PackCard({
   pack,
+  appTitle,
   index,
   state,
   onBuy,
@@ -47,6 +56,8 @@ function PackCard({
   onCheck,
 }: {
   pack: StorePack
+  /** The app this pack is for, so a card never names the wrong one. */
+  appTitle: string
   index: number
   state: CardState
   onBuy: () => void
@@ -56,6 +67,7 @@ function PackCard({
   const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
   const owned = state.kind === 'owned'
+  const testMode = isTestLink(pack)
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card store__pack" data-owned={owned || undefined}>
@@ -119,8 +131,8 @@ function PackCard({
             </p>
             <p className="store__note">
               {state.justLanded
-                ? 'Payment received — it is on your account now. Open TDG Veditor and it is there.'
-                : 'On your TDG Account. Sign in inside TDG Veditor and it unlocks.'}
+                ? `Payment received — it is on your account now. Open ${appTitle} and it is there.`
+                : `On your TDG Account. Sign in inside ${appTitle} and it unlocks.`}
             </p>
           </>
         )}
@@ -145,7 +157,16 @@ function PackCard({
             <button type="button" className="store__buy" onClick={onBuy}>
               Buy {pack.name} — {formatUsd(pack.priceCents)}
             </button>
-            <p className="store__note">Secure checkout by Stripe. Opens in a new tab.</p>
+            {/* A test-mode link is a real checkout that refuses every real card,
+                and Stripe's own refusal says nothing about why. Better to say it
+                here than to take somebody to a page that cannot serve them. */}
+            {testMode ? (
+              <p className="store__note store__note--warn">
+                Not on sale yet — this opens a Stripe test checkout, which only takes test cards.
+              </p>
+            ) : (
+              <p className="store__note">Secure checkout by Stripe. Opens in a new tab.</p>
+            )}
           </>
         )}
       </div>
@@ -161,8 +182,8 @@ function AppSection({
   onCheck,
 }: {
   app: StoreApp
-  cardState: (pack: StorePack) => CardState
-  onBuy: (pack: StorePack) => void
+  cardState: (app: StoreApp, pack: StorePack) => CardState
+  onBuy: (app: StoreApp, pack: StorePack) => void
   onSignIn: () => void
   onCheck: () => void
 }) {
@@ -181,14 +202,17 @@ function AppSection({
         <span className="chip chip--hot store__app-status">{app.status}</span>
       </div>
 
-      <div className="store__packs">
+      {/* A shelf holding ONE pack is told so, because the grid collapses its
+          empty tracks and a lone card would otherwise stretch the page. */}
+      <div className="store__packs" data-single={app.packs.length === 1 || undefined}>
         {app.packs.map((pack, i) => (
           <PackCard
             key={pack.id}
             pack={pack}
+            appTitle={app.title}
             index={i}
-            state={cardState(pack)}
-            onBuy={() => onBuy(pack)}
+            state={cardState(app, pack)}
+            onBuy={() => onBuy(app, pack)}
             onSignIn={onSignIn}
             onCheck={onCheck}
           />
@@ -200,27 +224,27 @@ function AppSection({
 
 export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { status, user, profile } = useAuth()
-  const { state: ownedState, packs, refresh } = useOwnedPacks()
+  const { stateFor, owned, refresh } = useOwnedPacks()
   const blob = useParallax<HTMLDivElement>(-0.12)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const how = useReveal<HTMLDivElement>('scale', 1)
 
-  /** The pack whose Stripe tab is open, if any. */
+  /** The pack whose Stripe tab is open, if any — a `packKey`, never a pack id. */
   const [pending, setPending] = useState<string | null>(null)
   /** Packs that arrived while this page was open — worth saying so. */
   const [justLanded, setJustLanded] = useState<readonly string[]>([])
 
   // It landed. Stop waiting, and remember to say so on the card.
   useEffect(() => {
-    if (!pending || !packs.includes(pending)) return
+    if (!pending || !owned.has(pending)) return
     setJustLanded((seen) => (seen.includes(pending) ? seen : [...seen, pending]))
     setPending(null)
-  }, [pending, packs])
+  }, [pending, owned])
 
   // Keep asking while a checkout is open. The webhook lands the pack within a
   // minute of payment and the payment happens in another tab, so watching for
   // it is the only honest thing this page can do. Depends on `pending` alone,
-  // never on `packs`: re-running on every answer would reset the deadline and
+  // never on `owned`: re-running on every answer would reset the deadline and
   // poll for ever.
   useEffect(() => {
     if (!pending) return
@@ -244,16 +268,18 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     }
   }, [pending, refresh])
 
-  const cardState = (pack: StorePack): CardState => {
-    if (packs.includes(pack.id)) return { kind: 'owned', justLanded: justLanded.includes(pack.id) }
-    if (pending === pack.id) return { kind: 'waiting' }
-    if (ownedState === 'loading') return { kind: 'checking' }
-    if (ownedState === 'signedOut') return { kind: 'signedOut' }
-    if (ownedState === 'error') return { kind: 'error' }
+  const cardState = (app: StoreApp, pack: StorePack): CardState => {
+    const key = packKey(app.id, pack.id)
+    if (owned.has(key)) return { kind: 'owned', justLanded: justLanded.includes(key) }
+    if (pending === key) return { kind: 'waiting' }
+    const state = stateFor(app.id)
+    if (state === 'loading') return { kind: 'checking' }
+    if (state === 'signedOut') return { kind: 'signedOut' }
+    if (state === 'error') return { kind: 'error' }
     return { kind: 'buy' }
   }
 
-  const buy = (pack: StorePack) => {
+  const buy = (app: StoreApp, pack: StorePack) => {
     if (!user) {
       onOpenAuth()
       return
@@ -262,7 +288,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     // coming back to a shop that has already flipped to Owned is the whole
     // point of watching for it.
     window.open(buyUrl(pack, user.id, user.email), '_blank', 'noopener,noreferrer')
-    setPending(pack.id)
+    setPending(packKey(app.id, pack.id))
   }
 
   const who = profile?.display_name || profile?.username || user?.email || null

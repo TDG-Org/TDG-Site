@@ -142,9 +142,21 @@
 /* ── the pack cards ───────────────────────────────────────────────────── */
 
 .store__packs {
+  --pack-gap: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  /* `min(100%, 300px)`, not a bare 300px: a grid track whose MINIMUM is wider
+     than its container overflows it, and at 320px the shell is 284px wide. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--pack-gap);
+}
+
+/* A shelf holding ONE pack. `auto-fit` collapses its empty tracks, so without
+   this the lone card stretches the full 1180px and reads as a banner across
+   the page rather than a card on a shelf. Held to exactly the width two cards
+   get, off the same gap, so every card on the page is the same size whichever
+   shelf it sits on. */
+.store__packs[data-single] {
+  grid-template-columns: minmax(min(100%, 300px), calc((100% - var(--pack-gap)) / 2));
 }
 
 .store__pack {
