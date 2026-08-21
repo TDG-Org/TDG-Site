@@ -3,7 +3,18 @@ import { useAuth } from '../auth/AuthProvider'
 import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevOverview } from './api'
-import { Button, Select, Switch, Tag, TextInput, Toasts, useToasts } from './controls'
+import {
+  Button,
+  Panel,
+  SectionControls,
+  Select,
+  Switch,
+  Tag,
+  TextInput,
+  Toasts,
+  useToasts,
+} from './controls'
+import { SectionsProvider } from './sections'
 import { setDevMode, useDevMode } from './devMode'
 import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
 import './DevConsole.css'
@@ -36,7 +47,20 @@ const TABS: { id: Tab; label: string; what: string }[] = [
   { id: 'audit', label: 'Audit Log', what: 'Every action a developer has taken, in every app.' },
 ]
 
+/**
+ * The provider has to sit OUTSIDE the component that renders the panels, so it
+ * survives every re-render one of them causes — a provider mounted inside would
+ * reset every section to shut each time a write landed.
+ */
 export default function DevConsole() {
+  return (
+    <SectionsProvider>
+      <DevConsoleBody />
+    </SectionsProvider>
+  )
+}
+
+function DevConsoleBody() {
   const { user, profile } = useAuth()
   const devMode = useDevMode()
   const { toasts, push, dismiss } = useToasts()
@@ -255,6 +279,8 @@ export default function DevConsole() {
           </p>
         )}
 
+        <SectionControls />
+
         <Overview overview={overview} />
 
         <nav className="dev__tabs" aria-label="Developer sections">
@@ -358,6 +384,12 @@ export default function DevConsole() {
                   ? 'Could not read the ledger.'
                   : `${shownEvents.length} entr${shownEvents.length === 1 ? 'y' : 'ies'} · PAID came from Stripe, GRANTED came from this console`}
             </p>
+            <Panel
+              title="Every Payment And Grant"
+              what="All three Stripe ledgers merged, newest first. PAID is a real payment; GRANTED is somebody switching a pack on from this console."
+              writes="veditor_purchase_events + devfleet_purchase_events + mak_subscription_events"
+              right={<LedgerTag state={ledgerState} n={shownEvents.length} noun="ENTRIES" />}
+            >
             <ul className="dev__log dev__log--wide">
               {shownEvents.map((e) => (
                 <li key={e.event_id} className="dev__log-row">
@@ -396,6 +428,7 @@ export default function DevConsole() {
                 <li className="dev__empty">Nothing recorded yet.</li>
               )}
             </ul>
+            </Panel>
           </div>
         )}
 
@@ -417,6 +450,12 @@ export default function DevConsole() {
                   ? 'Could not read the log.'
                   : `${allAudit.length} action${allAudit.length === 1 ? '' : 's'} · tdg-core is this console, the rest are each app's own tools`}
             </p>
+            <Panel
+              title="Every Developer Action"
+              what="Moderation and permission changes from every TDG app, newest first. Rows tagged tdg-core came from this console; the rest came from an app's own tools."
+              writes="bea_moderation_audit"
+              right={<LedgerTag state={ledgerState} n={allAudit.length} noun="ACTIONS" />}
+            >
             <ul className="dev__log dev__log--wide">
               {allAudit.map((r) => (
                 <li key={r.id} className="dev__log-row">
@@ -436,12 +475,33 @@ export default function DevConsole() {
                 <li className="dev__empty">No developer has done anything yet.</li>
               )}
             </ul>
+            </Panel>
           </div>
         )}
       </div>
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </section>
+  )
+}
+
+/** A shut section's tag is all it says about itself, so it never reports zero
+ *  while the real answer is still in flight. */
+function LedgerTag({
+  state,
+  n,
+  noun,
+}: {
+  state: 'loading' | 'ready' | 'error'
+  n: number
+  noun: string
+}) {
+  if (state === 'loading') return <Tag>READING</Tag>
+  if (state === 'error') return <Tag tone="bad">UNREADABLE</Tag>
+  return (
+    <Tag tone={n ? 'ok' : 'plain'}>
+      {n} {noun}
+    </Tag>
   )
 }
 
@@ -475,19 +535,25 @@ function Overview({ overview: o }: { overview: DevOverview | null }) {
     : []
 
   return (
-    <div className="dev__stats">
-      {o
-        ? stats.map((s) => (
+    <Panel
+      title="Overview"
+      what="The whole project in numbers, re-read after every change you make below."
+      right={<Tag tone={o ? 'plain' : undefined}>{o ? `${o.accounts} ACCOUNTS` : 'READING'}</Tag>}
+    >
+      <div className="dev__stats">
+        {o
+          ? stats.map((s) => (
             <div key={s.label} className="dev__stat" data-tone={s.tone}>
               <span className="dev__stat-value">{s.value}</span>
               <span className="dev__stat-label">{s.label}</span>
               <span className="dev__stat-what">{s.what}</span>
             </div>
           ))
-        : Array.from({ length: 11 }, (_, i) => (
-            <div key={i} className="dev__stat dev__stat--skeleton" aria-hidden="true" />
-          ))}
-    </div>
+          : Array.from({ length: 11 }, (_, i) => (
+              <div key={i} className="dev__stat dev__stat--skeleton" aria-hidden="true" />
+            ))}
+      </div>
+    </Panel>
   )
 }
 

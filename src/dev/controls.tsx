@@ -1,4 +1,5 @@
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { sectionDomId, useSections } from './sections'
 
 /**
  * The Developer console's control set.
@@ -13,14 +14,25 @@ import { useCallback, useId, useRef, useState, type ReactNode } from 'react'
 /* ── layout ────────────────────────────────────────────────────────────── */
 
 /**
- * One titled block of the console.
+ * One titled, collapsible block of the console.
  *
  * `what` is the sentence that makes the panel usable by somebody who did not
  * write it: what this section IS, and what changing it does. `writes` names the
  * actual table underneath, because when something looks wrong the next question
- * is always "where does that live?".
+ * is always "where does that live?". Both stay visible while collapsed, so a
+ * shut page still reads as an index rather than as a stack of nine mystery
+ * headings.
+ *
+ * Collapsed by default — see `sections.tsx` for why, and for how Expand All
+ * finds panels it never rendered itself.
+ *
+ * `right` sits inside the header BUTTON, so whatever goes there must be
+ * non-interactive: a Tag or a span, never a control. It is the summary a shut
+ * panel is judged on — the tier, the pack count, whether there are unsaved
+ * edits — so keep putting one there.
  */
 export function Panel({
+  id,
   title,
   what,
   writes,
@@ -28,6 +40,8 @@ export function Panel({
   right,
   children,
 }: {
+  /** Stable section id. Defaults to the title, which is unique per page. */
+  id?: string
   title: string
   what: string
   writes?: string
@@ -35,23 +49,90 @@ export function Panel({
   right?: ReactNode
   children: ReactNode
 }) {
+  const sectionId = id ?? title
+  const { isOpen, toggle, register } = useSections()
+  useEffect(() => register(sectionId), [register, sectionId])
+
+  const open = isOpen(sectionId)
+  const regionId = sectionDomId(sectionId)
+
   return (
-    <section className="dev__panel" data-tone={tone}>
-      <header className="dev__panel-head">
-        <div className="dev__panel-titles">
-          <h3 className="dev__panel-title">{title}</h3>
-          <p className="dev__panel-what">{what}</p>
+    <section className="dev__panel" data-tone={tone} data-open={open || undefined}>
+      {/* The button lives inside the heading rather than around it, so the
+          section still has a heading in the outline when it is shut. */}
+      <h3 className="dev__panel-heading">
+        <button
+          type="button"
+          className="dev__panel-head"
+          aria-expanded={open}
+          aria-controls={regionId}
+          onClick={() => toggle(sectionId)}
+        >
+          <span className="dev__panel-chevron" aria-hidden="true">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </span>
+          <span className="dev__panel-titles">
+            <span className="dev__panel-title">{title}</span>
+            <span className="dev__panel-what">{what}</span>
+          </span>
+          {right && <span className="dev__panel-right">{right}</span>}
+        </button>
+      </h3>
+
+      {/* A 0fr → 1fr grid row rather than a measured max-height: the content
+          here changes size while it is open (a confirm box opens, a warning
+          appears), and a measured height would need re-measuring every time. */}
+      <div className="dev__panel-region" id={regionId} inert={!open}>
+        <div className="dev__panel-region-inner">
+          <div className="dev__panel-body">{children}</div>
+          {writes && (
+            <footer className="dev__panel-foot">
+              <span className="dev__panel-foot-label">Writes to</span>
+              <code className="dev__code">{writes}</code>
+            </footer>
+          )}
         </div>
-        {right && <div className="dev__panel-right">{right}</div>}
-      </header>
-      <div className="dev__panel-body">{children}</div>
-      {writes && (
-        <footer className="dev__panel-foot">
-          <span className="dev__panel-foot-label">Writes to</span>
-          <code className="dev__code">{writes}</code>
-        </footer>
-      )}
+      </div>
     </section>
+  )
+}
+
+/**
+ * Expand All / Collapse All, plus how many sections are open right now.
+ *
+ * The count is the honest one: sections currently ON SCREEN. Switching tabs
+ * changes it, because the buttons only ever act on what you can see.
+ */
+export function SectionControls() {
+  const { expandAll, collapseAll, openCount, total } = useSections()
+  return (
+    <div className="dev__sections">
+      <div className="dev__sections-text">
+        <span className="dev__sections-label">Sections</span>
+        <span className="dev__sections-count">
+          {openCount} of {total} open
+        </span>
+      </div>
+      <div className="dev__sections-btns">
+        <Button onClick={expandAll} disabled={total === 0 || openCount === total}>
+          Expand All
+        </Button>
+        <Button onClick={collapseAll} disabled={openCount === 0}>
+          Collapse All
+        </Button>
+      </div>
+    </div>
   )
 }
 

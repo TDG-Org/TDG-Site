@@ -23,6 +23,24 @@ Turning Developer Mode off is for shoulders and screen shares. The switch lives
 in the **account menu**, not on this page — a switch you can only reach through
 the thing it hides is a switch you cannot un-flip.
 
+## Reading it
+
+**Every section starts collapsed**, and there is an Expand All / Collapse All
+row at the top with a live count of how many are open. The count is only ever
+about sections currently on screen — switching tabs changes it, because the two
+buttons only act on what you can see.
+
+A shut section still carries its title, the sentence saying what it is, and a
+summary tag on the right: the tier, the pack count, `DEVELOPER`, `SUSPENDED`,
+whether there are unsaved edits. So the closed page is a readable index of the
+account rather than nine mystery headings, and one click gets you into the one
+you wanted instead of scrolling past eight you did not.
+
+Which sections are open follows you between accounts. Expanding Makullveny and
+then clicking the next person shows Makullveny open again, which is what makes
+comparing two accounts bearable. Nothing persists across a reload — every visit
+starts shut.
+
 ## What it can do
 
 Search by name, `@username`, email or user id, then for the account you pick:
@@ -52,7 +70,8 @@ in every app).
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the three tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The nine panels for one account. Each states what it is and names the table it writes. |
-| `controls.tsx` | Panel, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts. Shared so fifteen switches cannot drift into fifteen switches. |
+| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts. Shared so fifteen switches cannot drift into fifteen switches. |
+| `sections.tsx` | Which sections are open. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail — panels the page itself never renders. |
 | `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
@@ -92,6 +111,9 @@ add anything here that relies on the page being secret.
 2. Add the column to `tdg_admin_accounts`'s `returns table` **and** to
    `DevAccount` in `api.ts`, in the same sitting — there is no generated types
    package to catch a drift.
-3. Give it a panel with a `what` sentence and a `writes` table name. A control
-   whose effect a tired developer at midnight cannot name is a bug.
+3. Give it a panel with a `what` sentence, a `writes` table name, and a `right`
+   summary tag. A control whose effect a tired developer at midnight cannot
+   name is a bug, and a section that says nothing while shut is one too. Keep
+   `right` non-interactive — it renders inside the header button.
+   Collapsing comes free from `Panel`; nothing to wire up.
 4. Reuse `controls.tsx`. Nothing here ships wearing the browser's default look.

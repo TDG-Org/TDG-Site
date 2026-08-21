@@ -93,6 +93,13 @@ function WhoPanel({ account: a }: { account: DevAccount }) {
       title="At A Glance"
       what="Read-only facts about the account itself. Nothing here can be edited from this console — the email and the password belong to GoTrue, and the id is fixed for life."
       writes="auth.users + public.profiles"
+      right={
+        a.email_confirmed_at ? (
+          <Tag tone="ok">CONFIRMED</Tag>
+        ) : (
+          <Tag tone="warn">UNCONFIRMED</Tag>
+        )
+      }
     >
       <div className="dev__facts">
         <Fact label="User id" value={a.user_id} copy={a.user_id} mono />
@@ -228,6 +235,7 @@ function PermissionsPanel({ account: a, run, busy, isSelf }: Props & { isSelf: b
       what="Developer is the only permission TDG has. It unlocks this console and Bible Educator's moderation tools, for every TDG app at once."
       writes="public.profiles.is_admin"
       tone={a.is_admin ? 'danger' : 'plain'}
+      right={a.is_admin ? <Tag tone="hot">DEVELOPER</Tag> : <Tag>STANDARD</Tag>}
     >
       <Switch
         tone="danger"
@@ -523,6 +531,9 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
   const authLocked = a.auth_banned_until != null && stillInForce(a.auth_banned_until)
   const hidden = a.hidden_by_admin && stillInForce(a.hidden_until)
   const hoursOf = (v: string) => (v === 'null' ? null : Number(v))
+  // The same one-word verdict the page header shows, so a shut panel still
+  // answers "is anything limiting this account?".
+  const standing = standingOf(a)
 
   if (isSelf) {
     return (
@@ -531,6 +542,7 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
         what="Suspending, hiding and deleting. None of it can be aimed at your own account — the server refuses, so there are no buttons here to mislead you."
         writes="public.bea_profile_state + auth.users"
         tone="danger"
+        right={<Tag>THIS IS YOU</Tag>}
       >
         <p className="dev__panel-quiet">
           This is you. Pick another account to use these tools.
@@ -545,6 +557,7 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
       what="Everything that limits an account. Suspending locks sign-in for every TDG app at once; hiding only affects how they appear inside Bible Educator."
       writes="public.bea_profile_state + auth.users"
       tone="danger"
+      right={<Tag tone={standing.tone}>{standing.label.toUpperCase()}</Tag>}
     >
       <Field
         label="Reason (Optional)"
@@ -747,6 +760,17 @@ function HistoryPanel({ events, audit, historyState }: Props) {
       title="This Account's History"
       what="Every payment, grant and moderation action recorded against them, newest first."
       writes="*_purchase_events + mak_subscription_events + bea_moderation_audit"
+      right={
+        historyState === 'ready' ? (
+          <Tag tone={events.length + audit.length ? 'ok' : 'plain'}>
+            {events.length + audit.length} ENTRIES
+          </Tag>
+        ) : (
+          <Tag tone={historyState === 'error' ? 'bad' : 'plain'}>
+            {historyState === 'error' ? 'UNREADABLE' : 'READING'}
+          </Tag>
+        )
+      }
     >
       {historyState === 'loading' && <p className="dev__panel-quiet">Reading the ledger…</p>}
       {historyState === 'error' && (

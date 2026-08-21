@@ -404,19 +404,72 @@
   border-color: color-mix(in srgb, #e05a5a 34%, var(--border));
 }
 
+/* The whole header row is the toggle. A 12px chevron is a 12px target, and
+   this page is used at speed — the row is 700px of it. */
+.dev__panel-heading {
+  margin: 0;
+  font: inherit;
+}
 .dev__panel-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 12px;
+  width: 100%;
   padding: var(--dev-pad);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  text-align: left;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    var(--t-theme);
 }
+.dev__panel-head:hover {
+  background-color: var(--accent-soft);
+}
+.dev__panel-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Only an OPEN panel draws the rule, or a shut one ends on a stray line. */
+.dev__panel[data-open] .dev__panel-head {
+  padding-bottom: 12px;
+  border-bottom-color: var(--border);
+}
+
+.dev__panel-chevron {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.dev__panel-head:hover .dev__panel-chevron {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.dev__panel[data-open] .dev__panel-chevron {
+  transform: rotate(90deg);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
 .dev__panel-titles {
+  flex: 1 1 auto;
   min-width: 0;
 }
 .dev__panel-title {
+  display: block;
   margin: 0 0 5px;
   font: 600 11px var(--font-mono);
   letter-spacing: 0.24em;
@@ -424,6 +477,7 @@
   color: var(--accent);
 }
 .dev__panel-what {
+  display: block;
   margin: 0;
   max-width: 78ch;
   font: 400 12.5px/1.6 var(--font-body);
@@ -431,6 +485,60 @@
 }
 .dev__panel-right {
   flex: none;
+  margin-top: 1px;
+}
+
+/* 0fr → 1fr rather than a measured max-height: what is inside changes size
+   while it is open (a confirm box, a warning), and a measured height would be
+   wrong the moment it did. `overflow: hidden` stays on while open too — every
+   focus ring in here sits inside the panel's own padding, so nothing clips. */
+.dev__panel-region {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dev__panel[data-open] .dev__panel-region {
+  grid-template-rows: 1fr;
+}
+.dev__panel-region-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── expand / collapse all ────────────────────────────────────────────── */
+
+.dev__sections {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.dev__sections-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.dev__sections-label {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.dev__sections-count {
+  font: 400 12px var(--font-body);
+  color: var(--faint);
+}
+.dev__sections-btns {
+  display: flex;
+  gap: 8px;
 }
 .dev__panel-quiet {
   margin: 0;
@@ -1173,6 +1281,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dev__panel-region,
+  .dev__panel-chevron {
+    transition: none;
+  }
   .dev__btn-spinner {
     animation: none;
   }
