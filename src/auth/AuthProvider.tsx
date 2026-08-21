@@ -8,6 +8,7 @@ import {
 } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { watchRevokedSession } from './sessionGuard'
 import { OFFLINE_MESSAGE, authMessage } from './wording'
 
 /**
@@ -157,6 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe()
     }
   }, [])
+
+  /*
+   * A session can be ended somewhere else — the Developer console's Sign Out
+   * Everywhere, or a ban. Neither can expire the access token already in this
+   * browser, and supabase-js restores that token from storage without asking
+   * anybody, so without this the tab stays signed in for up to an hour of
+   * reloads after the account was signed out. See sessionGuard.ts.
+   */
+  useEffect(() => watchRevokedSession(supabase), [])
 
   const value = useMemo<AuthContextValue>(
     () => ({

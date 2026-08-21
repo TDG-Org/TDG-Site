@@ -56,8 +56,9 @@ Search by name, `@username`, email or user id, then for the account you pick:
 - **TDG Veditor / DevFleet Store** — each pack on or off, for anybody. (The
   existing `veditor_admin_set_pack` only ever touched your own account.)
 - **Standing** — suspend (locks sign-in across every TDG app and ends every live
-  session), hide from Bible Educator's public surfaces, sign out everywhere,
-  soft delete, restore, and permanent deletion behind a typed confirmation.
+  session), hide from Bible Educator's public surfaces, sign out everywhere (see
+  below for what that does and does not reach), soft delete, restore, and
+  permanent deletion behind a typed confirmation.
 - **History** — every payment, free grant and moderation action on that account.
 
 Two more tabs cover the whole project: **Purchases** (all three ledgers merged,
@@ -76,6 +77,43 @@ in every app).
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
+
+## Sign Out Everywhere, and the hour it cannot reach into
+
+`tdg_admin_moderate(..., 'sign_out_everywhere')` deletes every row the account
+has in `auth.sessions`. The cascade on `auth.refresh_tokens.session_id` takes
+its refresh tokens with it, so from that instant the refresh grant answers
+`refresh_token_not_found` and no new access token can ever be minted.
+
+**What no server can do is expire an access token already in somebody's app.**
+A Supabase access token is a signed JWT with a one-hour life, and PostgREST
+accepts it on its signature alone — it never asks whether the session behind it
+still exists. supabase-js, for its part, restores that token from storage on
+boot and only talks to the server when the token is near expiring. So for a
+while this button ended every session in the database and every app carried on
+exactly as before, reloads included. Measured, not inferred: with the sessions
+deleted, `GET /rest/v1/profiles` still answered 200 with the account's own row.
+
+The one thing that checks is GoTrue's own `/auth/v1/user`. The token carries a
+`session_id` claim, and that endpoint answers `403 session_not_found` once the
+session is gone — which is `supabase.auth.getUser()`, and is not `getSession()`.
+So each app now asks:
+
+| App | Where | When |
+| --- | --- | --- |
+| This site | `src/auth/sessionGuard.ts` | boot, tab foreground, back online, every 5 min |
+| Bible Educator | `src/services/account/sessionGuard.ts` | the same four |
+| TDG Veditor | `src/main/accounts/session-guard.ts` + `resyncFromSession` | launch, window focus, every 5 min |
+
+A failed request is never treated as a revocation — only an answer from the
+server counts — so nobody is signed out for losing their connection.
+
+**What is still true, and is worth knowing before relying on this for a leaked
+password:** somebody holding a stolen access token who is not running our client
+can keep reading that account's own rows through the data API until the token
+expires, which is at most an hour. Ending the session is what stops it being
+renewed; it cannot un-sign a JWT. If that hour ever matters more than it does
+today, the lever is the project's JWT expiry, not this function.
 
 ## How the security actually works
 
