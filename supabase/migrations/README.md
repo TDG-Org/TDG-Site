@@ -8,6 +8,7 @@ nobody can read the reasoning for six months later.
 | File | What it added |
 | --- | --- |
 | `20260821090000_tdg_core_admin_console.sql` | The `tdg_admin_*` family: the server half of the site's Developer console (`src/dev/`). Reads that fold one account's standing across all four TDG apps into one row, and narrow write verbs for permissions, subscriptions, entitlements and moderation — each one guarded by `bea_is_admin()` and each one writing its own audit row. |
+| `20260821160000_subscriptions_one_row_per_account.sql` | A `UNIQUE (user_id)` on `public.subscriptions`, so one account cannot end up with two rows. Five apps read that table with `.maybeSingle()`, which throws on two rows and lands them on the free tier — a duplicate would silently downgrade somebody who had paid. Also makes `handle_new_user` and `tdg_admin_set_core_subscription` idempotent, so the constraint cannot turn a retry into a failed signup. The file carries the audit of every writer that justified adding it. |
 
 ## Rules
 
