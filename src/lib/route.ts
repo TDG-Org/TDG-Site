@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { APPS, MARANATHA, TOOLS } from '../data/content'
+import { STORE_APPS } from '../data/store'
 
 /**
  * The pages this site can be showing.
@@ -13,6 +14,12 @@ import { APPS, MARANATHA, TOOLS } from '../data/content'
  * same leading slash for the same reason; `#/app/<slug>` also puts the slug
  * behind a segment, so no future app name can collide with a section either.
  *
+ * A route may also name a PLACE on the page it opens, which is what
+ * `#/store/<app>` is: the Store, landed at that app's shelf rather than at its
+ * top. A link that has already said which shelf it means should not make the
+ * reader find it again, so anything pointing at one thing on a long page gets
+ * a route of this shape rather than a bare page hash.
+ *
  * `dev` is the Developer console, and it is not a secret because of this file:
  * anything the router can recognise has to be named here. What keeps it out of
  * everyone's way is that App renders HOME for it unless the signed-in account
@@ -23,7 +30,13 @@ import { APPS, MARANATHA, TOOLS } from '../data/content'
 export type Route =
   | { kind: 'home' }
   | { kind: 'about' }
-  | { kind: 'store' }
+  /**
+   * The Store, and optionally the one shelf on it that was asked for. A link
+   * that says "Veditor packs are in the Store" has named a place, and landing
+   * the reader at the top of a page with somebody else's shelf on it makes
+   * them do the finding the link already did.
+   */
+  | { kind: 'store'; app?: string }
   | { kind: 'dev' }
   | { kind: 'app'; slug: string }
 
@@ -33,6 +46,14 @@ export const DEV_HASH = '#/dev'
 
 /** The hash that opens one app's own page. */
 export const appHash = (slug: string) => `#/app/${slug}`
+
+/**
+ * The DOM id of one app's shelf on the Store, so the route and the page agree
+ * on the target without either of them writing the string twice. The hash that
+ * asks for one is `#/store/<the same id>`, written as a literal wherever a
+ * page links to a shelf, the way every other in-site href on this site is.
+ */
+export const storeShelfId = (appId: string) => `shelf-${appId}`
 
 /**
  * The slugs the router will accept, taken from the CARDS rather than from the
@@ -53,6 +74,13 @@ export function routeFromHash(hash: string): Route {
   const key = hash.replace(/^#/, '').replace(/^\/+/, '').toLowerCase()
   if (key === 'about') return { kind: 'about' }
   if (key === 'store') return { kind: 'store' }
+  if (key.startsWith('store/')) {
+    const app = key.slice(6)
+    // A shelf we do not have still lands on the Store rather than on the home
+    // page, because `#/store/banana` is unmistakably a request for the shop.
+    // Only the part naming a shelf is dropped.
+    return STORE_APPS.some((a) => a.id === app) ? { kind: 'store', app } : { kind: 'store' }
+  }
   if (key === 'dev') return { kind: 'dev' }
   if (key.startsWith('app/')) {
     const slug = key.slice(4)
@@ -63,8 +91,15 @@ export function routeFromHash(hash: string): Route {
   return HOME
 }
 
-const same = (a: Route, b: Route) =>
-  a.kind === b.kind && (a.kind !== 'app' || b.kind !== 'app' || a.slug === b.slug)
+const same = (a: Route, b: Route) => {
+  if (a.kind !== b.kind) return false
+  if (a.kind === 'app' && b.kind === 'app') return a.slug === b.slug
+  // Two Store routes naming different shelves are two different journeys, and
+  // treating them as one would leave a reader who clicked the second link
+  // standing at the first shelf.
+  if (a.kind === 'store' && b.kind === 'store') return a.app === b.app
+  return true
+}
 
 export function useRoute(): Route {
   const [route, setRoute] = useState<Route>(() => routeFromHash(window.location.hash))

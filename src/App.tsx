@@ -13,7 +13,7 @@ import { Store } from './components/Store'
 import { AuthModal } from './components/AuthModal'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
-import { takeOrigin, useRoute } from './lib/route'
+import { storeShelfId, takeOrigin, useRoute } from './lib/route'
 
 /**
  * The Developer console, in its own chunk.
@@ -70,6 +70,17 @@ export default function App() {
   // commit, so by here it does.
   useEffect(() => {
     if (route.kind === 'store' || route.kind === 'app' || route.kind === 'about' || showDev) {
+      // A page can be opened AT something rather than at its top. `#/store/veditor`
+      // is a link that already named the shelf, and landing its reader at the
+      // top of a shop with somebody else's shelf on it makes them do the
+      // finding twice. `scroll-margin-top` on the target is what keeps it clear
+      // of the fixed nav; see Store.css.
+      const at = route.kind === 'store' && route.app ? storeShelfId(route.app) : null
+      const target = at ? document.getElementById(at) : null
+      if (target) {
+        target.scrollIntoView({ behavior: 'instant', block: 'start' })
+        return
+      }
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
       // change, and `auto` resolves to smooth here, so arriving at the Store
       // from halfway down the home page slid the new page up under you instead

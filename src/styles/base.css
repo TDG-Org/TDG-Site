@@ -5,6 +5,13 @@
 }
 
 html {
+  /* The nav is fixed, so anything scrolled to its own top edge lands underneath
+     it. Most of this site never notices, because every landing section carries
+     150px or more of its own lead-in, but a target that begins at its own top
+     edge does, and that is what `scroll-margin-top` on the target is for. It is
+     written here so the number is stated once: measured, the bar is 70px at
+     every width it is drawn at. */
+  --nav-h: 70px;
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: var(--sb) transparent;

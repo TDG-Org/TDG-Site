@@ -6,7 +6,7 @@ import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
 import { useOwnedPacks } from '../store/useOwnedPacks'
 import { SectionsProvider } from '../lib/sections'
-import { appHash, rememberOrigin } from '../lib/route'
+import { appHash, rememberOrigin, storeShelfId } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { iconForPage } from '../data/appPages'
 import { Fold, FoldControls } from './Folded'
@@ -198,7 +198,14 @@ function AppSection({
   const icon = iconForPage(app.page)
 
   return (
-    <section className="store__app" aria-labelledby={`store-${app.id}`}>
+    /* The id is what `#/store/<app>` lands on, and it is on the SECTION rather
+       than on the title, so arriving here brings the packs with it instead of
+       putting a heading on screen with its shelf below the fold. */
+    <section
+      id={storeShelfId(app.id)}
+      className="store__app"
+      aria-labelledby={`store-${app.id}`}
+    >
       {/* The head of a shelf is a card that opens the app's own page, the same
           way every card under Apps and Tools does. Somebody weighing up a pack
           for an app they have not seen should be one click from what the app

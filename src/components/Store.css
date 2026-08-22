@@ -97,7 +97,12 @@
 
 /* ── one app's shelf ──────────────────────────────────────────────────── */
 
+/* A shelf is a landing place: `#/store/<app>` scrolls to it, so it clears the
+   fixed nav by the same gap wherever it is opened from. At the smallest desktop
+   height this puts a one-pack shelf on screen whole, head and packs together,
+   which is the entire point of the link naming it. */
 .store__app {
+  scroll-margin-top: calc(var(--nav-h) + 14px);
   margin-bottom: clamp(48px, 6vw, 80px);
 }
 

@@ -825,7 +825,7 @@ const DEVFLEET: AppPage = {
     { label: 'Your repositories', value: 'Everything it writes goes through one verified path' },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
-  links: [{ label: 'The DevFleet Theme Pack is in the Store', href: '#/store' }],
+  links: [{ label: 'The DevFleet Theme Pack is in the Store', href: '#/store/devfleet' }],
   sections: [
     {
       id: 'guide',
@@ -1336,7 +1336,7 @@ const VEDITOR: AppPage = {
     { label: 'Themes', value: 'Nine, and you can write your own as a JSON file' },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
-  links: [{ label: 'Veditor packs are in the Store', href: '#/store' }],
+  links: [{ label: 'Veditor packs are in the Store', href: '#/store/veditor' }],
   sections: [
     {
       id: 'guide',
