@@ -46,23 +46,6 @@ export function fmtRelative(iso: string | null | undefined, never = 'never'): st
   return say(Math.round(abs / (365 * DAY)), 'year')
 }
 
-/**
- * How long ago, in two or three characters: `now`, `2m`, `3h`, `1d`.
- *
- * For the Refresh rail, where the number sits under a 40px button and its only
- * job is to answer "is what I am looking at old?" at a glance. `fmtRelative`
- * says the same thing in words and is what the tooltip uses; this is the
- * version that fits.
- */
-export function fmtAgeShort(at: number | null): string {
-  if (at == null) return '—'
-  const abs = Math.max(0, Date.now() - at)
-  if (abs < MINUTE) return 'now'
-  if (abs < HOUR) return `${Math.floor(abs / MINUTE)}m`
-  if (abs < DAY) return `${Math.floor(abs / HOUR)}h`
-  return `${Math.floor(abs / DAY)}d`
-}
-
 export function fmtUsd(cents: number | null | undefined): string {
   if (cents == null) return 'none'
   return `$${(cents / 100).toFixed(2)}`

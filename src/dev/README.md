@@ -46,14 +46,21 @@ comparing two accounts bearable.
 ## Refreshing without losing your place
 
 The data goes stale while you read it — a payment lands, somebody else grants a
-pack, you are watching a suspension take. **The Refresh button is pinned to the
-right edge of the screen**, halfway down, so it is reachable from anywhere on a
-page that is several screens long. It is on every tab, and it re-reads
-everything: the overview numbers, the roster, both whole-project ledgers and the
-open account's own history. Under it is how old the page is — `now`, `4m`, `2h` —
-which is usually the answer to whether it is worth pressing at all. That stamp
-only moves when a read actually came back, so it cannot say "fresh" while every
-call is being refused.
+pack, you are watching a suspension take. **The Refresh button floats halfway
+down the right-hand side**, so it is reachable from anywhere on a page that is
+several screens long. It is on every tab, and it re-reads everything: the
+overview numbers, the roster, both whole-project ledgers and the open account's
+own history.
+
+It is a labelled pill, not a bare icon: it says **Refresh**, and under that it
+says how old the page is in words — *Read 4 minutes ago* — which is usually the
+answer to whether it is worth pressing at all. That line only moves when a read
+actually came back, so it cannot say "fresh" while every call is being refused.
+It tracks the right edge of the **content**, not of the window: the shell stops
+at 1440px and a wide monitor does not, and a button parked out in that margin is
+half a screen away from anything anybody is reading. On a narrow screen the age
+line drops and the word stays, because the word is the part that has to
+survive.
 
 **It is not a reload, and it does not cost you your place.** The element at the
 top of your screen is measured before the reads go out and put back where it was
@@ -114,7 +121,7 @@ in every app).
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
 | `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. |
-| `format.ts` | Dates, money, the derived one-line **standing** for an account, the ban/hide durations, and the two-character age on the Refresh rail. |
+| `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
 

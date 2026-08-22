@@ -1367,71 +1367,56 @@
 }
 
 /* ── the refresh rail ─────────────────────────────────────────────────────
-   Pinned to the right edge, halfway down, because the page it re-reads is
-   several screens long and a Refresh you have to scroll to find is a Refresh
-   you reload the browser instead of using. It sits BELOW the toasts (z-index
-   200) and above everything else, and clear of them: they stack from the
-   bottom-right corner and this is centred.                                   */
+   A labelled pill, at the size of a real control. A floating circle with a
+   glyph in it is a puzzle you have to hover to solve, and this is the one
+   button on the page somebody reaches for without thinking.
+
+   It tracks the right edge of the CONTENT, not of the window: the shell stops
+   at 1440px and a wide monitor does not, and a control parked out in that
+   margin is half a screen from anything anybody is reading. 712px is half the
+   shell minus the 8px it tucks inside that edge; below 1424px the calc goes
+   negative and the window inset takes over, which is the same place.
+
+   Vertically centred, so it is in view from any scroll position and can never
+   meet the toasts (z-index 200) — those stack from the bottom-right corner,
+   this one never leaves the middle.                                           */
 
 .dev__rail {
   position: fixed;
-  right: clamp(10px, 1.4vw, 18px);
+  right: max(clamp(14px, 2vw, 26px), calc(50vw - 712px));
   top: 50%;
   transform: translateY(-50%);
   z-index: 190;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
 }
 
 .dev__rail-btn {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  height: 42px;
-  padding: 0;
+  gap: 12px;
+  padding: 11px 20px 11px 15px;
   border-radius: 999px;
-  border: 1px solid var(--border-hover);
-  background-color: var(--bg2);
+  border: 1px solid transparent;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
   box-shadow: var(--card-shadow);
-  color: var(--text);
+  text-align: left;
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
+    filter 0.2s ease,
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 0.2s ease,
     var(--t-theme);
 }
-.dev__rail-btn:hover:not(:disabled),
+.dev__rail-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateX(-2px);
+}
 .dev__rail-btn:focus-visible {
-  background-color: var(--accent-soft);
-  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 .dev__rail-btn:disabled {
   cursor: progress;
-}
-
-/* The word lives LEFT of the icon and opens leftwards: the rail is against the
-   right edge, so a label that grew rightwards would grow off the screen. It is
-   a max-width rather than a display swap so it can actually animate. */
-.dev__rail-word {
-  display: block;
-  max-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  opacity: 0;
-  font: 600 12.5px var(--font-body);
-  transition:
-    max-width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 0.18s ease,
-    padding-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.dev__rail-btn:hover .dev__rail-word,
-.dev__rail-btn:focus-visible .dev__rail-word,
-.dev__rail-btn[data-busy] .dev__rail-word {
-  max-width: 110px;
-  padding-left: 15px;
-  opacity: 1;
+  filter: brightness(0.94);
 }
 
 .dev__rail-icon {
@@ -1439,46 +1424,68 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 42px;
-  height: 42px;
-  color: var(--accent-2);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  /* A ring of the label colour at low alpha: the icon reads as a thing rather
+     than as decoration, in both themes, without a second token. */
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
 }
-.dev__rail-btn:hover .dev__rail-icon {
-  color: var(--text);
-}
-.dev__rail-btn[data-busy] .dev__rail-icon {
+.dev__rail-btn[data-busy] .dev__rail-icon svg {
   animation: devSpin 0.9s linear infinite;
 }
 
-/* Two characters saying how old the page is, so most of the time the button
-   does not have to be pressed to answer that. */
+.dev__rail-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.dev__rail-word {
+  font: 700 14.5px/1.2 var(--font-body);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+/* How stale the page is, in words, so the usual answer to "do I need to press
+   this?" is already on screen and it never gets pressed. */
 .dev__rail-age {
-  padding: 0 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  font: 600 9px/16px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  transition: var(--t-theme);
+  font: 500 10.5px/1.3 var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0.72;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 760px) {
   .dev__rail-btn {
-    height: 38px;
+    gap: 9px;
+    padding: 9px 16px 9px 12px;
   }
   .dev__rail-icon {
-    width: 38px;
-    height: 38px;
+    width: 28px;
+    height: 28px;
+  }
+  .dev__rail-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .dev__rail-word {
+    font-size: 13px;
+  }
+  /* The word is the part that has to survive a narrow screen. The age is also
+     in the button's own label, so nothing is lost by dropping it here. */
+  .dev__rail-age {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dev__rail-word {
-    transition: none;
+  .dev__rail-btn {
+    transition: var(--t-theme);
   }
-  .dev__rail-btn[data-busy] .dev__rail-icon {
+  .dev__rail-btn:hover:not(:disabled) {
+    transform: none;
+  }
+  .dev__rail-btn[data-busy] .dev__rail-icon svg {
     animation: none;
   }
 }

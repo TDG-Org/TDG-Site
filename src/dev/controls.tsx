@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
-import { fmtAgeShort, fmtRelative } from './format'
+import { fmtRelative } from './format'
 import { hay, useSearch } from './search'
 
 /**
@@ -768,7 +768,7 @@ export function Toasts({
 /**
  * Re-read the page, from wherever you are standing on it.
  *
- * ## Why it is pinned to the edge
+ * ## Why it is pinned, and why it is loud
  *
  * The console is a long page and the data on it goes stale while you read it:
  * a payment lands, somebody else grants a pack, you are watching a suspension
@@ -778,18 +778,28 @@ export function Toasts({
  * the overview numbers, the roster, both ledgers and the open account's own
  * history.
  *
+ * It is a labelled pill rather than a bare icon, at the size of a real control
+ * rather than a hint. A floating circle with a glyph in it is a puzzle: you
+ * have to hover it to find out what it does, which is exactly the hesitation a
+ * button this useful should not cost. It says **Refresh**, and under that it
+ * says how old the page is in words, so most of the time the answer to "do I
+ * need this?" is already on screen and it never gets pressed.
+ *
+ * ## Where it sits
+ *
+ * Against the right edge of the CONTENT, not of the window. On a wide monitor
+ * the shell stops at 1440px and the window does not, and a control parked in
+ * that empty margin is half a screen away from the thing anybody is looking at.
+ * `right` therefore tracks the shell and only falls back to a window inset once
+ * the two are the same thing. Vertically centred, so it is in view from any
+ * scroll position and never meets the toasts, which stack from the corner.
+ *
  * ## Why it is not a reload
  *
  * `location.reload()` would answer the same question and cost you your place,
  * your open sections, your search and the account you had open. This swaps the
  * DATA and holds the page still around it; `viewState.ts` is the half that
  * keeps the thing you were looking at exactly where it was.
- *
- * ## Why it says how old the page is
- *
- * A refresh button with nothing beside it makes you press it to find out
- * whether you needed to. The age under the icon is the answer to that question,
- * so most of the time the button does not get pressed at all.
  */
 export function RefreshRail({
   onRefresh,
@@ -803,9 +813,9 @@ export function RefreshRail({
 }) {
   /*
    * The clock lives here rather than on the page, so the thing that re-renders
-   * every thirty seconds is a button and a two-character chip, not a console
-   * holding three lists and nine panels. An age that never ticks is worse than
-   * no age at all: it says "2m" for an hour.
+   * every thirty seconds is one button, not a console holding three lists and
+   * nine panels. An age that never ticks is worse than no age at all: it says
+   * "2m" for an hour.
    */
   const [, tick] = useState(0)
   useEffect(() => {
@@ -814,13 +824,11 @@ export function RefreshRail({
     return () => window.clearInterval(t)
   }, [readAt])
 
+  const age =
+    readAt == null ? 'Not read yet' : `Read ${fmtRelative(new Date(readAt).toISOString())}`
   const label = busy
     ? 'Re-reading everything on this page…'
-    : readAt == null
-      ? 'Refresh: re-read everything on this page without losing your place.'
-      : `Refresh: re-read everything on this page without losing your place. Read ${fmtRelative(
-          new Date(readAt).toISOString(),
-        )}.`
+    : `Refresh: re-read everything on this page without losing your place. ${age}.`
 
   return (
     <div className="dev__rail">
@@ -831,17 +839,14 @@ export function RefreshRail({
         onClick={onRefresh}
         disabled={busy}
         title={label}
+        // The visible text says Refresh; the label says what refreshing costs
+        // you, which is the part worth hearing before pressing it.
         aria-label={label}
       >
-        {/* Left of the icon, because the rail is pinned to the right edge and a
-            label that grew rightwards would grow off the screen. */}
-        <span className="dev__rail-word" aria-hidden="true">
-          {busy ? 'Reading…' : 'Refresh'}
-        </span>
         <span className="dev__rail-icon" aria-hidden="true">
           <svg
-            width="17"
-            height="17"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -853,12 +858,11 @@ export function RefreshRail({
             <path d="M20.5 4.5v5h-5" />
           </svg>
         </span>
+        <span className="dev__rail-text" aria-hidden="true">
+          <span className="dev__rail-word">{busy ? 'Reading…' : 'Refresh'}</span>
+          <span className="dev__rail-age">{busy ? 'Holding your place' : age}</span>
+        </span>
       </button>
-      {/* aria-hidden: the same fact is already in the button's own label, in
-          words, and a bare "2m" read out on its own says nothing. */}
-      <span className="dev__rail-age" aria-hidden="true">
-        {busy ? '···' : fmtAgeShort(readAt)}
-      </span>
     </div>
   )
 }
