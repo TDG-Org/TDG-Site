@@ -95,6 +95,31 @@ answer yet it says so. It shares its folding and its blocks with the app pages
 
 ---
 
+## 🧭 Building on this
+
+**Working on this repo — human or AI? Read [`AGENTS.md`](AGENTS.md) first.** It is
+the written standard for how this site is built: the fifteen rules, the five jobs
+you will actually be asked to do, what is deliberately not up for redesign, and
+what "done" means when a project has no test suite.
+
+Every significant folder then carries its own README, and that README is
+authoritative for its folder:
+
+| | | |
+|:--|:--|:--|
+| [`src/`](src/README.md) · the shape of it | [`src/data/`](src/data/README.md) · every word a visitor reads | [`src/components/`](src/components/README.md) · every rendered surface |
+| [`src/styles/`](src/styles/README.md) · palette & primitives | [`src/lib/`](src/lib/README.md) · router, frame loop, machinery | [`src/hooks/`](src/hooks/README.md) · the motion hooks |
+| [`src/auth/`](src/auth/README.md) · signing in to TDG Core | [`src/store/`](src/store/README.md) · what an account owns | [`src/theme/`](src/theme/README.md) · two worlds and the wave |
+| [`src/dev/`](src/dev/README.md) · the Developer console | [`supabase/`](supabase/README.md) · the part that runs on a server | |
+
+```bash
+npm install && npm run dev
+```
+
+Copy `.env.example` to `.env.local` first. Push to `main` deploys to GitHub Pages.
+
+---
+
 ## 📄 License
 
 **TDG Source-Available License.** Read it, run it, learn from it, fork it privately.

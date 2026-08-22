@@ -1,0 +1,71 @@
+# `src/` · the site
+
+A React 19 + TypeScript single page, hand-written CSS, no framework. Start at
+[`AGENTS.md`](../AGENTS.md) in the repo root for the rules; this file is the map.
+
+---
+
+## The shape of it
+
+`main.tsx` mounts three providers and nothing else:
+
+```
+ThemeProvider  →  AuthProvider  →  App
+```
+
+Globals are imported first (`styles/tokens.css`, then `styles/base.css`) so they
+land ahead of component CSS in the bundle. Component overrides are written as
+compound selectors anyway, so the order is belt-and-braces rather than the only
+thing holding the cascade together.
+
+`guardChrome()` runs **before** the first render, so an extension that repaints a
+field never gets a frame where its version is the one on screen.
+
+## What App.tsx does
+
+One `useRoute()` call decides which of five things is on screen:
+
+| Route | What renders |
+| --- | --- |
+| `home` | Hero, Story, Apps, Tools, Building, Faith, Outro — the one-page scroll |
+| `#/about` | `About`, lazily |
+| `#/store` · `#/store/<app>` | `Store`, landed at that app's shelf when one is named |
+| `#/app/<slug>` | `AppPage`, lazily |
+| `#/dev` | `DevConsole`, lazily, **and only for a signed-in TDG developer** |
+
+Nav, Footer, Cursor and AuthModal render on every route.
+
+**Three lazy chunks, for two different reasons.** `AppPage` and `About` are a
+lot of prose, and a visitor who reads the landing page and leaves should not
+download a word of it. `DevConsole` is lazy so its panels, labels and table
+names are never in the bundle everyone gets — tidiness, not a lock; the lock is
+in Postgres. See [`dev/README.md`](dev/README.md).
+
+**Scroll restoration lives in one effect in `App.tsx`.** A page change scrolls
+`instant`, never smooth: the document's own `scroll-behavior: smooth` makes
+arriving at the Store from halfway down the home page look like the new page
+sliding up under you rather than like opening a page. Returning from an app page
+lands back at the exact scroll position the card was clicked from, and only when
+the hash is the one that was left — see `lib/route.ts`.
+
+## The folders
+
+| Folder | What it owns | README |
+| --- | --- | --- |
+| `data/` | Every word a visitor reads, and the shop catalogue | [→](data/README.md) |
+| `components/` | Every rendered surface, one `.tsx` + one `.css` each | [→](components/README.md) |
+| `styles/` | The palette (`tokens.css`) and the primitives (`base.css`) | [→](styles/README.md) |
+| `lib/` | Routing, the frame loop, sections state, Supabase, asset paths | [→](lib/README.md) |
+| `hooks/` | Reveal, tilt, parallax, offscreen pause | [→](hooks/README.md) |
+| `auth/` | Sign-in, the profile, session revocation, refusal wording | [→](auth/README.md) |
+| `store/` | Which packs an account owns | [→](store/README.md) |
+| `theme/` | The theme wave and `data-theme` | [→](theme/README.md) |
+| `dev/` | The internal Developer console | [→](dev/README.md) |
+
+## Two rules that decide most edits
+
+**Content is data.** If you are typing a sentence a visitor will read into a
+`.tsx` file, stop — it belongs in `data/`.
+
+**Colour is a token.** If you are typing a `#hex` into a `.css` file, stop — it
+belongs in `styles/tokens.css`, and it needs a light value too.

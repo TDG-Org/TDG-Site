@@ -7,6 +7,9 @@ the money and moderation trail behind it.
 Bible Educator has its own Developer tab and it stays what it is: it manages
 Bible Educator. This one manages the shared project all four apps sign into.
 
+> The house rules for building anything on this site are in
+> [`AGENTS.md`](../../AGENTS.md). This file is authoritative for `src/dev/`.
+
 ---
 
 ## Getting to it

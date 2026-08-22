@@ -31,6 +31,15 @@ AGENTS.md
 [Aa]gents.md
 GEMINI.md
 [Gg]emini.md
+
+# ...except this ONE. AGENTS.md is not assistant scratch: it is the written
+# standard for how this site is built, reviewed the same way any other file
+# here is, and the file every AI tool loads before it touches a line. Keeping
+# it out would mean every new assistant re-deriving the house rules from
+# scratch and getting them wrong, which is the exact cost the rest of this
+# block was written to avoid. The rule it names still holds: private notes,
+# handoffs and per-tool config stay out.
+!/AGENTS.md
 .claude/
 .claude-*/
 .codex/
