@@ -113,7 +113,7 @@ function PackCard({
         {state.kind === 'error' && (
           <>
             <p className="store__note store__note--warn">
-              We could not check your purchases just now — nothing is wrong with your account.
+              We couldn't check your purchases just now. Nothing is wrong with your account.
             </p>
             <button type="button" className="store__ghost" onClick={onCheck}>
               Try again
@@ -131,7 +131,7 @@ function PackCard({
             </p>
             <p className="store__note">
               {state.justLanded
-                ? `Payment received — it is on your account now. Open ${appTitle} and it is there.`
+                ? `Payment received. It is on your account now, so open ${appTitle} and it is there.`
                 : `On your TDG Account. Sign in inside ${appTitle} and it unlocks.`}
             </p>
           </>
@@ -155,14 +155,14 @@ function PackCard({
         {state.kind === 'buy' && (
           <>
             <button type="button" className="store__buy" onClick={onBuy}>
-              Buy {pack.name} — {formatUsd(pack.priceCents)}
+              Buy {pack.name} · {formatUsd(pack.priceCents)}
             </button>
             {/* A test-mode link is a real checkout that refuses every real card,
                 and Stripe's own refusal says nothing about why. Better to say it
                 here than to take somebody to a page that cannot serve them. */}
             {testMode ? (
               <p className="store__note store__note--warn">
-                Not on sale yet — this opens a Stripe test checkout, which only takes test cards.
+                Not on sale yet. This opens a Stripe test checkout, which only takes test cards.
               </p>
             ) : (
               <p className="store__note">Secure checkout by Stripe. Opens in a new tab.</p>
@@ -307,9 +307,9 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
           </div>
           <h2 className="h2 store__heading">Buy once. It follows your account.</h2>
           <p className="lede store__lede">
-            A few paid extras for the apps we build. Everything else stays free — these are the
-            pieces that pay for the nights they took. One payment, no subscription, and it is
-            attached to your TDG Account rather than to a machine.
+            A few paid extras for the apps we build. Everything else stays free. These are the
+            pieces that pay for the nights they took. One payment, no subscription, and it sits on
+            your TDG Account rather than on a machine.
           </p>
 
           <div className="store__account" data-signed-in={status === 'signedIn' || undefined}>
@@ -317,7 +317,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
               <>
                 <span className="store__account-dot" aria-hidden="true" />
                 <span className="store__account-text">
-                  Buying as <strong>{who}</strong> — purchases land here.
+                  Buying as <strong>{who}</strong>, so purchases land here.
                 </span>
               </>
             ) : status === 'loading' ? (
@@ -352,26 +352,26 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
             <li>
               <span className="store__step-num">01</span>
               <span className="store__step-text">
-                <strong>Sign in</strong> with your TDG Account — the same one the apps use.
+                <strong>Sign in</strong> with your TDG Account, the same one the apps use.
               </span>
             </li>
             <li>
               <span className="store__step-num">02</span>
               <span className="store__step-text">
-                <strong>Pay through Stripe.</strong> We never see your card — Stripe handles the
+                <strong>Pay through Stripe.</strong> We never see your card. Stripe handles the
                 payment, the tax and the receipt.
               </span>
             </li>
             <li>
               <span className="store__step-num">03</span>
               <span className="store__step-text">
-                <strong>Open the app.</strong> The pack is on your account within a minute — press
-                Check Again on its Account page if you beat it there.
+                <strong>Open the app.</strong> The pack is on your account within a minute. Press
+                Check Again on its Account page if you get there first.
               </span>
             </li>
           </ol>
           <p className="store__fine">
-            Bought a pack and cannot see it in the app? Sign in on this page. If it says Owned here,
+            Bought a pack and can't see it in the app? Sign in on this page. If it says Owned here,
             the app will see it too the next time it can reach the server.
           </p>
         </div>

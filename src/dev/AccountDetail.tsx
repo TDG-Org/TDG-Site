@@ -69,7 +69,7 @@ export function AccountDetail(props: Props) {
       </header>
 
       <p className="dev__standing" data-tone={standing.tone}>
-        <strong>{standing.label}</strong> — {standing.meaning}
+        <strong>{standing.label}:</strong> {standing.meaning}
       </p>
 
       <WhoPanel account={account} />
@@ -91,7 +91,7 @@ function WhoPanel({ account: a }: { account: DevAccount }) {
   return (
     <Panel
       title="At A Glance"
-      what="Read-only facts about the account itself. Nothing here can be edited from this console — the email and the password belong to GoTrue, and the id is fixed for life."
+      what="Read-only facts about the account itself. Nothing here can be edited from this console: the email and the password belong to GoTrue, and the id is fixed for life."
       writes="auth.users + public.profiles"
       right={
         a.email_confirmed_at ? (
@@ -107,7 +107,7 @@ function WhoPanel({ account: a }: { account: DevAccount }) {
           label="Email"
           value={
             <>
-              {a.email ?? '—'}{' '}
+              {a.email ?? 'none'}{' '}
               {a.email_confirmed_at ? (
                 <Tag tone="ok">CONFIRMED</Tag>
               ) : (
@@ -117,7 +117,7 @@ function WhoPanel({ account: a }: { account: DevAccount }) {
           }
           copy={a.email ?? undefined}
         />
-        <Fact label="Recovery email" value={a.recovery_email ?? '—'} />
+        <Fact label="Recovery email" value={a.recovery_email ?? 'none'} />
         <Fact label="Joined" value={`${fmtDate(a.created_at)} · ${fmtRelative(a.created_at)}`} />
         <Fact
           label="Last signed in"
@@ -208,7 +208,7 @@ function IdentityPanel({ account: a, run, busy }: Props) {
         checked={publicProfile}
         onChange={setPublicProfile}
         label="Public Profile"
-        hint="Off means only they and a developer can see the profile. This is the account owner's own privacy setting — change it for them only when they have asked."
+        hint="Off means only they and a developer can see the profile. This is the account owner's own privacy setting, so change it for them only when they have asked."
       />
       <Switch
         checked={publicFriendList}
@@ -252,7 +252,7 @@ function PermissionsPanel({ account: a, run, busy, isSelf }: Props & { isSelf: b
         label="Developer"
         hint={
           isSelf
-            ? 'You cannot change your own — that is the rule that stops the last developer locking everyone out. Ask the other developer to do it.'
+            ? "You can't change your own. That rule is what stops the last developer locking everyone out, so ask the other one to do it."
             : 'Grants full read and write over every account, purchase and subscription in TDG Core. Give it to nobody who is not one of us.'
         }
       />
@@ -276,7 +276,7 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
   return (
     <Panel
       title="TDG Core Subscription"
-      what="The one tier every TDG app can gate on. Setting it here is a free grant — no Stripe, no charge, effective the next time the app reads it."
+      what="The one tier every TDG app can gate on. Setting it here is a free grant: no Stripe, no charge, and it takes effect the next time the app reads it."
       writes="public.subscriptions"
       right={
         <Tag tone={a.core_tier === 'free' ? 'plain' : 'ok'}>{a.core_tier.toUpperCase()}</Tag>
@@ -293,7 +293,7 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
       <div className="dev__grid2">
         <Field
           label="Tier"
-          hint="Bible Educator ranks these free → plus → pro → lifetime and treats anything it does not recognise as at least the top paid tier."
+          hint="Bible Educator ranks these free → plus → pro → lifetime, and treats anything it does not recognise as at least the top paid tier."
         >
           {/* Keyed by account: Combo holds its own "showing the free-text box"
               state, and without this, picking Other… on one person would leave
@@ -310,7 +310,7 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
       </div>
 
       <div className="dev__facts dev__facts--tight">
-        <Fact label="Stripe customer" value={a.core_stripe_customer_id ?? '— (never paid)'} mono />
+        <Fact label="Stripe customer" value={a.core_stripe_customer_id ?? 'none (never paid)'} mono />
         <Fact label="Last changed" value={fmtRelative(a.core_renewed_at, 'never')} />
       </div>
 
@@ -349,7 +349,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
   return (
     <Panel
       title="Makullveny"
-      what="Makullveny's own ladder, separate from the core one — the app uses whichever of the two is higher."
+      what="Makullveny's own ladder, separate from the core one. The app uses whichever of the two is higher."
       writes="public.mak_subscriptions"
       right={<Tag tone={a.mak_tier === 'free' ? 'plain' : 'ok'}>{a.mak_tier.toUpperCase()}</Tag>}
     >
@@ -396,7 +396,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
           )
         }
         label="Candle Bundle"
-        hint="The whole marketplace in one switch — the app reads this as owning every theme below, including any added later. Granting Candle needs no individual themes."
+        hint="The whole marketplace in one switch. The app reads it as owning every theme below, including any added later, so granting Candle needs no individual themes."
       />
       <Switch
         checked={a.mak_support_badge_at != null}
@@ -439,7 +439,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       </Field>
 
       <div className="dev__facts dev__facts--tight">
-        <Fact label="Stripe customer" value={a.mak_stripe_customer_id ?? '— (never paid)'} mono />
+        <Fact label="Stripe customer" value={a.mak_stripe_customer_id ?? 'none (never paid)'} mono />
         <Fact label="Period ends" value={fmtDate(a.mak_period_end)} />
         <Fact label="Cancels at period end" value={a.mak_cancel_at_period_end ? 'yes' : 'no'} />
       </div>
@@ -463,7 +463,7 @@ function PacksPanel({
   return (
     <Panel
       title={title}
-      what="One-time Store packs. Switching one on is a free grant and switching it off is a revoke — both land in the same ledger a real Stripe payment does."
+      what="One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does."
       writes={`public.${app}_entitlements`}
       right={<Tag tone={owned.length ? 'ok' : 'plain'}>{owned.length} OWNED</Tag>}
     >
@@ -492,7 +492,7 @@ function PacksPanel({
       {owned.filter((p) => !packs.includes(p)).length > 0 && (
         <p className="dev__warn">
           This account also owns {owned.filter((p) => !packs.includes(p)).join(', ')}, which this
-          console does not know about. Switch it off below if it should not be there.
+          console doesn't know about. Switch it off below if it shouldn't be there.
           <span className="dev__tiles">
             {owned
               .filter((p) => !packs.includes(p))
@@ -514,7 +514,7 @@ function PacksPanel({
       )}
 
       <div className="dev__facts dev__facts--tight">
-        <Fact label="Stripe customer" value={customer ?? '— (never paid)'} mono />
+        <Fact label="Stripe customer" value={customer ?? 'none (never paid)'} mono />
       </div>
     </Panel>
   )
@@ -539,7 +539,7 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
     return (
       <Panel
         title="Standing & Access"
-        what="Suspending, hiding and deleting. None of it can be aimed at your own account — the server refuses, so there are no buttons here to mislead you."
+        what="Suspending, hiding and deleting. None of it can be aimed at your own account. The server refuses, so there are no buttons here to mislead you."
         writes="public.bea_profile_state + auth.users"
         tone="danger"
         right={<Tag>THIS IS YOU</Tag>}
@@ -663,7 +663,7 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
         <div className="dev__action-text">
           <h4 className="dev__action-title">Sign Out Everywhere</h4>
           <p className="dev__hint">
-            Ends every live session on every device. They can sign straight back in — this is for a
+            Ends every live session on every device. They can sign straight back in. This is for a
             password that may have leaked, not a punishment.
           </p>
         </div>
@@ -685,7 +685,7 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
         <div className="dev__action-text">
           <h4 className="dev__action-title">Soft Delete</h4>
           <p className="dev__hint">
-            Locks the account out and hides it, but keeps every row — profile, purchases, friends,
+            Locks the account out and hides it, but keeps every row: profile, purchases, friends,
             streak. Restore puts it all back exactly as it was.
             {a.deleted_by_admin && (
               <>
@@ -774,7 +774,7 @@ function HistoryPanel({ events, audit, historyState }: Props) {
     >
       {historyState === 'loading' && <p className="dev__panel-quiet">Reading the ledger…</p>}
       {historyState === 'error' && (
-        <p className="dev__warn">Could not read the history. Nothing is wrong with the account.</p>
+        <p className="dev__warn">Couldn't read the history. Nothing is wrong with the account.</p>
       )}
 
       {historyState === 'ready' && (

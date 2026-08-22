@@ -31,7 +31,7 @@ export function authMessage(code: string | null | undefined, fallback?: string):
     case 'invalid_credentials':
       return 'That username or email and password do not match an account.'
     case 'email_not_confirmed':
-      return 'Confirm your email first — the link is in the message we sent when you signed up.'
+      return 'Confirm your email first. The link is in the message we sent when you signed up.'
     case 'rate_limited':
     case 'over_request_rate_limit':
     case 'over_email_send_rate_limit':
@@ -48,15 +48,15 @@ export function authMessage(code: string | null | undefined, fallback?: string):
       // with no build here, so a length quoted in this file goes stale in the
       // worst direction — telling somebody a password is fine that the server
       // will refuse. The server's own sentence is passed through instead.
-      return fallback ?? 'That password is not strong enough.'
+      return fallback ?? "That password isn't strong enough."
     case 'same_password':
-      return 'That is already your password. Choose a different one.'
+      return "That's already your password. Choose a different one."
     case 'validation_failed':
-      return 'Check the details above — something there is not in a form we can use.'
+      return "Check the details above. Something there isn't in a form we can use."
     case 'signup_disabled':
       return 'New accounts are switched off at the moment.'
     case 'user_banned':
-      return 'That account is suspended. Get in touch if you think that is wrong.'
+      return "That account is suspended. Get in touch if you think that's wrong."
     case 'session_not_found':
     case 'refresh_token_not_found':
       return 'That session has ended. Log in again.'
@@ -71,7 +71,7 @@ export function authMessage(code: string | null | undefined, fallback?: string):
 
 /** Sentence case, for a request that never reached the server at all. */
 export const OFFLINE_MESSAGE =
-  'Could not reach the account server. Check your connection and try again.'
+  "Couldn't reach the account server. Check your connection and try again."
 
 /**
  * The one place the site decides what a username may look like.

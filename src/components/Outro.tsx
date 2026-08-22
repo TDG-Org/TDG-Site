@@ -18,8 +18,8 @@ export function Outro() {
           </div>
           <h2 className="h2 h2--serif outro__heading">Brothers, one calling.</h2>
           <p className="outro__copy">
-            We build together — nights, weekends, and the hours in between — trying to make things
-            that are genuinely good, and that we'd be proud to put His name on.
+            We build together on nights, weekends, and the hours in between, trying to make things
+            that are actually good, and that we'd be proud to put His name on.
           </p>
         </div>
       </section>
@@ -31,8 +31,8 @@ export function Outro() {
             <div>
               <div className="outro__gh-title">Open on GitHub</div>
               <p className="outro__gh-copy">
-                Most of what we build lives in private repos while it's in the oven — but you can
-                watch what's public.
+                Most of what we build sits in private repos until it is ready, but you can watch
+                what's public.
               </p>
             </div>
           </div>

@@ -471,7 +471,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setUsernameStatus(checkError ? 'idle' : 'taken')
       setFormError(
         checkError
-          ? 'Could not check that username just now. Try again in a moment.'
+          ? "Couldn't check that username just now. Try again in a moment."
           : 'That username was taken a moment ago. Choose another.',
       )
       return
@@ -523,7 +523,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   async function handleForgotPassword() {
     const identifier = loginId.trim()
     if (!identifier) {
-      setFormError('Enter your username or email above, then tap "Forgot password?" again.')
+      setFormError('Type your username or email above first, then hit "Forgot password?" again.')
       return
     }
     setFormError(null)
@@ -556,7 +556,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setFormError(error)
       return
     }
-    setNotice('Password updated. You can close this and keep browsing.')
+    setNotice('Password updated. Close this and carry on.')
     setNewPassword('')
     setNewPasswordConfirm('')
   }
@@ -648,7 +648,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
           </h1>
           <p className="authmodal__subtitle">
             {recovery
-              ? "You're signed in from the reset link — set a new password to finish."
+              ? "You're signed in from the reset link. Set a new password to finish."
               : tab === 'signup'
                 ? 'One account for everything TDG builds.'
                 : 'Good to see you again.'}

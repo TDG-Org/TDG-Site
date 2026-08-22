@@ -41,10 +41,10 @@ export function Faith() {
         <blockquote className="faith__quote">
           “The light shines in the darkness, and the darkness hasn't overcome it.”
         </blockquote>
-        <div className="faith__cite">— JOHN 1:5</div>
+        <div className="faith__cite">JOHN 1:5</div>
         <p className="faith__copy">
-          Everything we make is meant to be genuinely useful — and to quietly point back to Him.
-          That's the whole reason we kept the name.
+          Everything we make is meant to be useful, and to point back to Him. That's the whole
+          reason we kept the name.
         </p>
       </div>
     </section>

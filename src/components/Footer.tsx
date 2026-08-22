@@ -26,7 +26,7 @@ export function Footer() {
             </picture>
             <div className="footer__name">THE DISCIPLES OF GOD</div>
             <p className="footer__blurb">
-              Brothers building software, games, and tools — for the glory of Jesus.
+              Brothers building software, games, and tools for the glory of Jesus.
             </p>
           </div>
 

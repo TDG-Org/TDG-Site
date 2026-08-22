@@ -150,9 +150,9 @@ export class DevError extends Error {
 function toDevError(error: { message?: string; code?: string; details?: string } | null): DevError {
   const raw = (error?.message ?? '').trim()
   const code = error?.code ?? null
-  if (!raw) return new DevError('Something went wrong, and the server did not say what.', code)
+  if (!raw) return new DevError("Something went wrong, and the server didn't say what.", code)
   if (/failed to fetch|networkerror|load failed/i.test(raw)) {
-    return new DevError('Could not reach the server — check the connection and try again.', code)
+    return new DevError("Couldn't reach the server. Check the connection and try again.", code)
   }
   const clean = raw.replace(/^tdg:\s*/i, '')
   return new DevError(clean.charAt(0).toUpperCase() + clean.slice(1), code)

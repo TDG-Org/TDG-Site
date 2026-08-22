@@ -93,7 +93,7 @@ export const STORE_APPS: StoreApp[] = [
     id: 'devfleet',
     title: 'DevFleet',
     entitlementsTable: 'devfleet_entitlements',
-    copy: 'Every git repo on your machine as a live card — up to sixteen panes at once, each with its own terminal, diff review and notebook. DevFleet itself is free and every feature in it stays free; this one pack is purely a change of scenery.',
+    copy: 'Every git repo on your machine as a live card, up to sixteen panes at once, each with its own terminal, diff review and notebook. DevFleet itself is free and every feature in it stays free. This one pack is only a change of scenery.',
     status: 'IN DEVELOPMENT',
     availability: 'A pack bought now sits on your account and unlocks the moment the first build lands.',
     packs: [
@@ -104,7 +104,7 @@ export const STORE_APPS: StoreApp[] = [
         tagline: 'Five more palettes for the whole app, each in a full light and a full dark.',
         unlocks: [
           'Cozy Cabin, Neon City, Cherry Blossom, Nebula and Cotton Candy',
-          'A full light and a full dark of every one — the palette holds when you switch',
+          'A full light and a full dark of every one, so the palette holds when you switch',
           'Every card, pane, dialog and control, not just the background',
         ],
         paymentLink: 'https://buy.stripe.com/00w7sK98q1PYctA70T4ZG0d',
@@ -115,7 +115,7 @@ export const STORE_APPS: StoreApp[] = [
     id: 'veditor',
     title: 'TDG Veditor',
     entitlementsTable: 'veditor_entitlements',
-    copy: 'A desktop video editor — timeline, effects, colour and audio, with a fully customizable export and format-conversion pipeline. The editor itself is free, and importing anything is free. These two packs unlock the extras.',
+    copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it. The editor itself is free, and importing anything is free. These two packs unlock the extras.',
     status: 'IN DEVELOPMENT',
     availability: 'Packs bought now sit on your account and unlock the moment the first build lands.',
     packs: [
@@ -126,7 +126,7 @@ export const STORE_APPS: StoreApp[] = [
         tagline: 'Five more looks for the whole editor, each in light and dark.',
         unlocks: [
           'Cozy Cabin, Neon City, Cherry Blossom, Nebula and Cotton Candy',
-          'Both schemes of every one — the app keeps the look when you switch',
+          'Both schemes of every one, so the app keeps the look when you switch',
           'Every panel, dialog and control, not just the background',
         ],
         paymentLink: 'https://buy.stripe.com/5kQeVc98q7ai79getl4ZG0a',
@@ -137,9 +137,9 @@ export const STORE_APPS: StoreApp[] = [
         priceCents: 1499,
         tagline: 'Everything above 1080p, and one run that writes every shape.',
         unlocks: [
-          'Every resolution above 1080p — QHD, 4K, DCI and vertical 4K',
+          'Every resolution above 1080p: QHD, 4K, DCI and vertical 4K',
           'Video bitrates above 12,000 kbps, target and spike ceiling alike',
-          '“Also Export As” — one render writing the same edit at several shapes',
+          '“Also Export As”, one render writing the same edit at several shapes',
         ],
         paymentLink: 'https://buy.stripe.com/aFa14mfwO2U279g2KD4ZG0b',
       },

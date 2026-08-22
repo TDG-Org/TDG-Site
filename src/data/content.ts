@@ -47,14 +47,14 @@ export const CHAPTERS: Chapter[] = [
     phase: 'NEXT',
     numeral: '02',
     title: 'Game dev',
-    copy: 'We stopped only playing worlds and started building them.',
+    copy: "Playing other people's worlds got old, so we started making our own.",
   },
   {
     chapter: 'CH. 03',
     phase: 'THE TURN',
     numeral: '03',
     title: 'Found the Truth',
-    copy: 'We met Jesus — and TDG became The Disciples of God.',
+    copy: 'We met Jesus, and TDG became The Disciples of God.',
     turn: true,
   },
   {
@@ -62,14 +62,14 @@ export const CHAPTERS: Chapter[] = [
     phase: 'CRAFT',
     numeral: '04',
     title: 'Software',
-    copy: 'Bible tools, student apps, and small utilities we use daily.',
+    copy: 'Bible tools, student apps, and little utilities we use every day.',
   },
   {
     chapter: 'CH. 05',
     phase: 'NOW',
     numeral: '05',
     title: 'Still building',
-    copy: 'Nights and weekends, shipping things meant to outlast us.',
+    copy: 'Nights and weekends, building things we want to last.',
   },
 ]
 
@@ -96,7 +96,7 @@ export const APPS: AppCard[] = [
     id: 'app-bible',
     index: '01',
     title: 'Bible Educator',
-    copy: 'Read, listen, study, highlight and take rich notes on Scripture — 16 public-domain translations, each downloadable for full offline use.',
+    copy: 'Read, listen, study, highlight and take rich notes on Scripture. 16 public-domain translations, and you can download any of them so the whole thing works offline.',
     chips: [
       { label: 'PWA' },
       { label: 'IN DEV', hot: true },
@@ -108,7 +108,7 @@ export const APPS: AppCard[] = [
     shot: {
       slug: 'bible-educator',
       widths: [560, 1120],
-      alt: 'Bible Educator — read, listen, study, and take notes on Scripture',
+      alt: 'Bible Educator: read, listen, study, and take notes on Scripture',
       position: 'left center',
     },
   },
@@ -116,7 +116,7 @@ export const APPS: AppCard[] = [
     id: 'app-say2quill',
     index: '02',
     title: 'Say2Quill',
-    copy: 'Press one key anywhere, speak, and clean formatted text lands in whatever field has focus. Speech runs on your own machine — no cloud, no account.',
+    copy: 'Press one key anywhere, speak, and clean formatted text lands in whatever field has focus. The speech runs on your own machine, so there is no cloud and no account.',
     chips: [
       { label: 'WINDOWS' },
       { label: 'IN DEV', hot: true },
@@ -136,7 +136,7 @@ export const APPS: AppCard[] = [
     id: 'app-makullveny',
     index: '03',
     title: 'Makullveny',
-    copy: 'A calm desk for studying: write and draw in your own books, import a syllabus, convert class files, run flashcards. Nine full themes, all on your machine.',
+    copy: 'A calm desk for studying. Write and draw in your own books, import a syllabus, convert class files, run flashcards. Nine full themes, and none of it leaves your machine.',
     chips: [
       { label: 'WINDOWS' },
       { label: 'EARLY BUILD', hot: true },
@@ -177,7 +177,7 @@ export const APPS: AppCard[] = [
     id: 'app-music',
     index: '05',
     title: 'Music Everything',
-    copy: 'Learn music by doing — scales, chords, a playable piano, live pitch tracking, and a note track you can export straight to MIDI.',
+    copy: 'Learn music by doing. Scales, chords, a playable piano, live pitch tracking, and a note track you can export straight to MIDI.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'MIDI + MIC' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a Music Everything screenshot',
@@ -186,7 +186,7 @@ export const APPS: AppCard[] = [
     id: 'app-veditor',
     index: '06',
     title: 'TDG Veditor',
-    copy: 'A desktop video editor — timeline, effects, colour and audio, with a fully customizable export and format-conversion pipeline.',
+    copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'FFMPEG' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a TDG Veditor screenshot',
@@ -214,14 +214,14 @@ export const TOOLS: ToolCard[] = [
   {
     index: '08',
     title: 'VidHelper',
-    copy: 'A local video downloader — the extension spots the video, a small backend on 127.0.0.1 grabs it and serves your own library.',
+    copy: 'A local video downloader. The extension spots the video, a small backend on 127.0.0.1 grabs it and serves your own library.',
     chips: [{ label: 'EXTENSION' }, { label: 'WIP', hot: true }, { label: 'LOCAL' }],
     cta: 'Coming soon',
   },
   {
     index: '09',
     title: 'N8-Tools',
-    copy: 'A browser workspace for music and sound — transcripts, a melody reader that exports MIDI, tuner, metronome, key and BPM detection.',
+    copy: 'A browser workspace for music and sound. Transcripts, a melody reader that exports MIDI, tuner, metronome, key and BPM detection.',
     chips: [{ label: 'BROWSER' }, { label: 'WIP', hot: true }, { label: 'MIC' }],
     cta: 'Coming soon',
   },
@@ -230,7 +230,7 @@ export const TOOLS: ToolCard[] = [
 /** The Building-now feature: MARANATHA. */
 export const MARANATHA = {
   heading: 'A calm walk through Scripture.',
-  copy: 'Walk the real events of Scripture in a hand-drawn world — the World English Bible on screen and read aloud on every beat. No install, no login.',
+  copy: 'Walk the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
   note: 'Runs in the browser',
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',

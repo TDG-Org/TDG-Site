@@ -17,9 +17,9 @@ const dateTime = new Intl.DateTimeFormat(undefined, {
 })
 
 export function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
+  if (!iso) return 'not set'
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '—' : dateTime.format(d)
+  return Number.isNaN(d.getTime()) ? 'not set' : dateTime.format(d)
 }
 
 const MINUTE = 60_000
@@ -47,7 +47,7 @@ export function fmtRelative(iso: string | null | undefined, never = 'never'): st
 }
 
 export function fmtUsd(cents: number | null | undefined): string {
-  if (cents == null) return '—'
+  if (cents == null) return 'none'
   return `$${(cents / 100).toFixed(2)}`
 }
 
@@ -82,7 +82,7 @@ export function standingOf(a: DevAccount): Standing {
     return {
       label: 'Soft Deleted',
       tone: 'bad',
-      meaning: 'hidden and locked out everywhere, but every row is still here — Restore brings it all back.',
+      meaning: 'hidden and locked out everywhere, but every row is still here, and Restore brings it all back.',
     }
   }
   const authLocked = a.auth_banned_until != null && stillInForce(a.auth_banned_until)
@@ -98,7 +98,7 @@ export function standingOf(a: DevAccount): Standing {
       label: 'Sign-In Locked',
       tone: 'bad',
       meaning:
-        'GoTrue is refusing this account even though Bible Educator does not think it is banned — lift it with Unsuspend.',
+        "GoTrue is refusing this account even though Bible Educator doesn't think it is banned. Lift it with Unsuspend.",
     }
   }
   if (a.hidden_by_admin && stillInForce(a.hidden_until)) {

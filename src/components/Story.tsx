@@ -84,8 +84,8 @@ export function Story() {
           </div>
           <h2 className="h2 h2--serif story__heading">It started with a clan tag.</h2>
           <p className="story__lede">
-            Nine years ago, we picked three letters for a gaming clan. We got older, we found God,
-            and we kept the letters — because by then they meant something far bigger. Today we
+            Nine years ago we picked three letters for a gaming clan. We got older, we found God,
+            and we kept the letters, because by then they meant something much bigger. We still
             build the same way we used to play: together, late, and all in.
           </p>
         </div>

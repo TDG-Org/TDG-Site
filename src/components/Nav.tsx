@@ -221,7 +221,7 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
       <nav className="nav" data-scrolled={scrolled} data-over-dark={overDark}>
         <div className="nav__veil" aria-hidden="true" />
 
-        <a href="#top" className="nav__mark" aria-label="TDG — home">
+        <a href="#top" className="nav__mark" aria-label="TDG home">
           <span className="nav__mark-bar" />
           <span className="nav__mark-bar" />
         </a>

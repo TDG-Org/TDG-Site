@@ -76,7 +76,7 @@ export function Hero() {
           </h1>
 
           <p className="hero__tagline">
-            Brothers building software, games, and tools — for the glory of Jesus.
+            Brothers building software, games, and tools for the glory of Jesus.
           </p>
 
           <div className="hero__ctas">

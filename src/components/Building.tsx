@@ -37,7 +37,7 @@ export function Building() {
             </div>
             <h2 className="h2 building__heading">Works in progress.</h2>
             <p className="lede building__lede">
-              What's on our screens right now — one close to done, the rest just getting started.
+              What's on our screens right now. One is nearly done, the rest are just getting going.
             </p>
           </div>
           <span className="building__count">{MARANATHA.count}</span>

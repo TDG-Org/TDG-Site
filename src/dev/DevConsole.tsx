@@ -95,7 +95,7 @@ function DevConsoleBody() {
   )
 
   const message = (e: unknown) =>
-    e instanceof Error ? e.message : 'Something went wrong, and it did not say what.'
+    e instanceof Error ? e.message : "Something went wrong, and it didn't say what."
 
   /* ── boot: the numbers and the dropdown lists ─────────────────────────── */
 
@@ -252,9 +252,9 @@ function DevConsoleBody() {
 
           <p className="dev__live">
             <span className="dev__live-dot" aria-hidden="true" />
-            This is the <strong>live</strong> tdg-core project. There is no staging copy and no undo
-            — every switch below changes a real person's account the moment you press it. Everything
-            you do is written to the audit log with your name on it.
+            This is the <strong>live</strong> tdg-core project. There is no staging copy and no
+            undo. Every switch below changes a real person's account the moment you press it, and
+            everything you do is written to the audit log with your name on it.
           </p>
 
           <div className="dev__tabvis">
@@ -264,7 +264,7 @@ function DevConsoleBody() {
               label="Show The Developer Tab"
               hint={
                 devMode
-                  ? 'The Developer link is in the nav. Turn this off to hide it — handy before sharing a screen.'
+                  ? 'The Developer link is in the nav. Turn it off to hide the link before you share a screen.'
                   : 'The tab is hidden. This page still works, and the same switch in your account menu brings the tab back.'
               }
             />
@@ -274,7 +274,7 @@ function DevConsoleBody() {
         {bootError && (
           <p className="dev__warn dev__warn--wide">
             {bootError} If that says the console is limited to developer accounts, the flag on your
-            profile is off — the page is showing because this browser thinks otherwise, and the
+            profile is off. The page is showing because this browser thinks otherwise, and the
             server is the one that decides.
           </p>
         )}
@@ -317,7 +317,7 @@ function DevConsoleBody() {
                 {listState === 'loading'
                   ? 'Looking…'
                   : listState === 'error'
-                    ? 'Could not read the accounts.'
+                    ? "Couldn't read the accounts."
                     : `${rows.length} account${rows.length === 1 ? '' : 's'}${query.trim() ? ' matching' : ''}`}
               </p>
 
@@ -353,8 +353,8 @@ function DevConsoleBody() {
                 <div className="dev__placeholder">
                   <h2 className="dev__placeholder-title">Pick an account</h2>
                   <p className="dev__placeholder-copy">
-                    Everything about one person — their identity, what they have paid for, what we
-                    have given them, and whether anything is limiting the account — opens here.
+                    Everything about one person opens here: who they are, what they have paid for,
+                    what we have given them, and whether anything is limiting the account.
                   </p>
                 </div>
               )}
@@ -381,7 +381,7 @@ function DevConsoleBody() {
               {ledgerState === 'loading'
                 ? 'Reading the ledger…'
                 : ledgerState === 'error'
-                  ? 'Could not read the ledger.'
+                  ? "Couldn't read the ledger."
                   : `${shownEvents.length} entr${shownEvents.length === 1 ? 'y' : 'ies'} · PAID came from Stripe, GRANTED came from this console`}
             </p>
             <Panel
@@ -447,7 +447,7 @@ function DevConsoleBody() {
               {ledgerState === 'loading'
                 ? 'Reading the log…'
                 : ledgerState === 'error'
-                  ? 'Could not read the log.'
+                  ? "Couldn't read the log."
                   : `${allAudit.length} action${allAudit.length === 1 ? '' : 's'} · tdg-core is this console, the rest are each app's own tools`}
             </p>
             <Panel

@@ -72,9 +72,9 @@ export function Apps() {
               <span className="kicker__rule" />
               <span className="kicker__label">Apps</span>
             </div>
-            <h2 className="h2 apps__heading">Apps we're crafting.</h2>
+            <h2 className="h2 apps__heading">Apps we're building.</h2>
             <p className="lede apps__lede">
-              The bigger desktop and installable apps we're pouring time into.
+              The bigger desktop and installable apps, the ones most of our hours go into.
             </p>
           </div>
           <div className="apps__nudge">↳ hover a card</div>
