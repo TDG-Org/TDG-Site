@@ -126,8 +126,8 @@ function AccountMenu() {
 
 /** Only a ROUTE can be the current page; the rest are anchors on this one. */
 function isCurrent(href: string, route: Route): boolean {
-  if (href === STORE_HASH) return route === 'store'
-  if (href === DEV_HASH) return route === 'dev'
+  if (href === STORE_HASH) return route.kind === 'store'
+  if (href === DEV_HASH) return route.kind === 'dev'
   return false
 }
 

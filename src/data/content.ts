@@ -76,6 +76,11 @@ export const CHAPTERS: Chapter[] = [
 export type AppCard = {
   id: string
   index: string
+  /**
+   * The slug of this app's own page, in `src/data/appPages.ts`. It is what
+   * turns the card into a link, so a card without one goes nowhere.
+   */
+  page: string
   title: string
   copy: string
   chips: { label: string; hot?: boolean }[]
@@ -95,6 +100,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-bible',
     index: '01',
+    page: 'bible-educator',
     title: 'Bible Educator',
     copy: 'Read, listen, study, highlight and take rich notes on Scripture. 16 public-domain translations, and you can download any of them so the whole thing works offline.',
     chips: [
@@ -115,6 +121,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-say2quill',
     index: '02',
+    page: 'say2quill',
     title: 'Say2Quill',
     copy: 'Press one key anywhere, speak, and clean formatted text lands in whatever field has focus. The speech runs on your own machine, so there is no cloud and no account.',
     chips: [
@@ -135,6 +142,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-makullveny',
     index: '03',
+    page: 'makullveny',
     title: 'Makullveny',
     copy: 'A calm desk for studying. Write and draw in your own books, import a syllabus, convert class files, run flashcards. Nine full themes, and none of it leaves your machine.',
     chips: [
@@ -161,6 +169,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-devfleet',
     index: '04',
+    page: 'devfleet',
     title: 'DevFleet',
     copy: 'Point it at a folder and every git repo becomes a live card. Open up to sixteen panes, each with its own terminal, diff review and notebook.',
     chips: [{ label: 'WINDOWS' }, { label: 'IN DEV', hot: true }, { label: 'GIT' }, { label: 'ELECTRON' }],
@@ -176,6 +185,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-music',
     index: '05',
+    page: 'music-everything',
     title: 'Music Everything',
     copy: 'Learn music by doing. Scales, chords, a playable piano, live pitch tracking, and a note track you can export straight to MIDI.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'MIDI + MIC' }],
@@ -185,6 +195,7 @@ export const APPS: AppCard[] = [
   {
     id: 'app-veditor',
     index: '06',
+    page: 'veditor',
     title: 'TDG Veditor',
     copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'FFMPEG' }],
@@ -195,6 +206,8 @@ export const APPS: AppCard[] = [
 
 export type ToolCard = {
   index: string
+  /** The slug of this tool's own page, in `src/data/appPages.ts`. */
+  page: string
   title: string
   copy: string
   chips: { label: string; hot?: boolean }[]
@@ -205,6 +218,7 @@ export type ToolCard = {
 export const TOOLS: ToolCard[] = [
   {
     index: '07',
+    page: 'volume-controller',
     title: 'Volume Controller',
     copy: 'Global and per-site volume from 0 to 600%, with a 2–10 band EQ, loudness normalize, and per-site memory.',
     chips: [{ label: 'EXTENSION' }, { label: 'LIVE', hot: true }, { label: 'FREE' }],
@@ -213,6 +227,7 @@ export const TOOLS: ToolCard[] = [
   },
   {
     index: '08',
+    page: 'vidhelper',
     title: 'VidHelper',
     copy: 'A local video downloader. The extension spots the video, a small backend on 127.0.0.1 grabs it and serves your own library.',
     chips: [{ label: 'EXTENSION' }, { label: 'WIP', hot: true }, { label: 'LOCAL' }],
@@ -220,6 +235,7 @@ export const TOOLS: ToolCard[] = [
   },
   {
     index: '09',
+    page: 'n8-tools',
     title: 'N8-Tools',
     copy: 'A browser workspace for music and sound. Transcripts, a melody reader that exports MIDI, tuner, metronome, key and BPM detection.',
     chips: [{ label: 'BROWSER' }, { label: 'WIP', hot: true }, { label: 'MIC' }],
@@ -229,6 +245,8 @@ export const TOOLS: ToolCard[] = [
 
 /** The Building-now feature: MARANATHA. */
 export const MARANATHA = {
+  /** Its own page, same as every card under Apps and Tools. */
+  page: 'maranatha',
   heading: 'A calm walk through Scripture.',
   copy: 'Walk the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
   note: 'Runs in the browser',

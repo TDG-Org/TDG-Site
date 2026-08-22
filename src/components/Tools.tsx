@@ -3,16 +3,26 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
+import { appHash, rememberOrigin } from '../lib/route'
 import './Tools.css'
 
 function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
   const reveal = useReveal<HTMLElement>('slideL', index)
   const tilt = useTilt<HTMLElement>()
 
-  const body = (
-    <>
+  return (
+    <article ref={mergeRefs(reveal, tilt)} className="card tools__card">
       <span className="card__spot" aria-hidden="true" />
       <span className="card__edge" aria-hidden="true" />
+
+      {/* The card opens the tool's own page. The card used to BE the store
+          link for the one tool that has one; that link is still here, below,
+          as its own control, because a card that can only go to a store
+          cannot also explain itself. */}
+      <a className="card__cover" href={appHash(tool.page)} onClick={rememberOrigin}>
+        <span className="sr-only">Open the {tool.title} page</span>
+      </a>
+
       <div className="tools__top">
         <span className="badge tools__index">{tool.index}</span>
         <div className="chips tools__chips">
@@ -24,27 +34,22 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
         </div>
       </div>
       <div>
-        <h3 className="tools__title">{tool.title}</h3>
+        <h3 className="tools__title">
+          {tool.title}
+          <span className="tools__title-arrow" aria-hidden="true">
+            →
+          </span>
+        </h3>
         <p className="tools__copy">{tool.copy}</p>
       </div>
-      <span className={tool.href ? 'tools__cta' : 'tools__cta tools__cta--muted'}>{tool.cta}</span>
-    </>
-  )
-
-  return tool.href ? (
-    <a
-      ref={mergeRefs(reveal, tilt)}
-      className="card tools__card"
-      href={tool.href}
-      target="_blank"
-      rel="noopener"
-    >
-      {body}
-    </a>
-  ) : (
-    <div ref={mergeRefs(reveal, tilt)} className="card tools__card">
-      {body}
-    </div>
+      {tool.href ? (
+        <a className="tools__cta tools__cta--link" href={tool.href} target="_blank" rel="noopener">
+          {tool.cta}
+        </a>
+      ) : (
+        <span className="tools__cta tools__cta--muted">{tool.cta}</span>
+      )}
+    </article>
   )
 }
 

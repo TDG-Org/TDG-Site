@@ -14,7 +14,7 @@ import {
   Toasts,
   useToasts,
 } from './controls'
-import { SectionsProvider } from './sections'
+import { SectionsProvider } from '../lib/sections'
 import { setDevMode, useDevMode } from './devMode'
 import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
 import './DevConsole.css'
@@ -25,7 +25,7 @@ import './DevConsole.css'
  * ## Reaching this file at all
  *
  * App imports it with a dynamic `import()`, and only once `useAuth().isAdmin`
- * is true — so for everybody else the chunk is never even fetched, and `#/dev`
+ * is true, so for everybody else the chunk is never even fetched, and `#/dev`
  * renders the home page exactly the way `#/banana` does. That is camouflage,
  * not security: the security is that every function this page calls refuses a
  * non-admin in Postgres. See src/dev/README.md for the honest threat model.
@@ -36,7 +36,7 @@ import './DevConsole.css'
  * identity, the developer permission, the TDG-wide subscription, Makullveny's
  * own ladder and themes, the Veditor and DevFleet Store packs, suspensions, and
  * the whole money-and-moderation trail behind it. Bible Educator's own
- * Developer tab is deliberately narrower — it manages Bible Educator.
+ * Developer tab is deliberately narrower: it manages Bible Educator.
  */
 
 type Tab = 'accounts' | 'purchases' | 'audit'
@@ -49,7 +49,7 @@ const TABS: { id: Tab; label: string; what: string }[] = [
 
 /**
  * The provider has to sit OUTSIDE the component that renders the panels, so it
- * survives every re-render one of them causes — a provider mounted inside would
+ * survives every re-render one of them causes. A provider mounted inside would
  * reset every section to shut each time a write landed.
  */
 export default function DevConsole() {
@@ -195,7 +195,7 @@ function DevConsoleBody() {
               // Patch the roster row too, so its chips agree with the panel.
               setRows((list) => list.map((r) => (r.user_id === id ? fresh : r)))
             } else {
-              // Gone — a delete-forever. Drop it and clear the selection.
+              // Gone, a delete-forever. Drop it and clear the selection.
               setRows((list) => list.filter((r) => r.user_id !== id))
               setSelectedId(null)
             }

@@ -30,6 +30,13 @@ Two brothers, Nate & Luke. This is our landing page.
 | <img src="docs/story.webp" alt="The story timeline"> **Our story** · five chapters on a timeline that fills as you read | <img src="docs/apps.webp" alt="The apps grid"> **Apps** · cards that tilt toward your cursor and light their edge nearest it |
 | <img src="docs/building.webp" alt="The MARANATHA feature"> **Building now** · what's on our screens right now | <img src="docs/faith.webp" alt="The faith section"> **Faith** · a slow gradient field and one verse |
 
+**📄 Every card opens its own page.** Each app, tool and the game has a page of its own:
+what it is in two sentences, a guide written for somebody who has not installed it yet, and
+every feature with a real explanation beside it. It starts folded shut, one row per part with
+a line saying what is inside, so a closed page reads as an index. Back returns you to the exact
+place in the list you left. The copy lives in [`src/data/appPages.ts`](src/data/appPages.ts),
+so adding an app is a content edit rather than a component.
+
 <div align="center">
 
 **🌗 One toggle, two worlds.** Colour crosses the page as a wave, not a snap.

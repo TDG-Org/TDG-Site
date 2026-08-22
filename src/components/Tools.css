@@ -156,8 +156,23 @@
 }
 
 .tools__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin: 0 0 7px;
   font: 700 18px var(--font-display);
+  color: var(--text);
+}
+/* The card opens a page, and it should say so before it is hovered. */
+.tools__title-arrow {
+  font-size: 13px;
+  color: var(--faint);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.3s ease;
+}
+.tools__card[data-lit='true'] .tools__title-arrow {
+  transform: translateX(4px);
   color: var(--text);
 }
 .tools__copy {
@@ -171,4 +186,21 @@
 }
 .tools__cta.tools__cta--muted {
   color: var(--faint);
+}
+/* The store link, above the card's own cover link so it still takes the
+   click. It is its own control now rather than the whole card. */
+.tools__cta.tools__cta--link {
+  /* The layer, not a z-index: this is a direct child of the card, and
+     base.css's own rule for those would win on specificity. */
+  --card-layer: 5;
+  align-self: flex-start;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-hover);
+  padding-bottom: 2px;
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.tools__cta.tools__cta--link:hover {
+  border-bottom-color: var(--edge-hi);
 }

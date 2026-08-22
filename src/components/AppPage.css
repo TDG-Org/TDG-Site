@@ -1,0 +1,554 @@
+/* ── An app's own page ────────────────────────────────────────────────────
+   Its own page rather than a section of the scroll, so it owns its blend
+   tints the way each section id does in base.css. It sits where Apps sits in
+   temperature, because that is the list it was opened from and coming back
+   should not feel like leaving a different site.
+
+   The fold below is the Developer console's, in the site's own clothes: same
+   behaviour, same keyboard and screen-reader contract, different surface. See
+   src/lib/sections.tsx.                                                     */
+
+.appview {
+  --tint-top: #08080c;
+  --tint-mid: #090a10;
+  --tint-bot: #08080c;
+  min-height: 100vh;
+  min-height: 100svh;
+  /* The nav sits over the top of the page; without this the Back control
+     starts underneath it on a page that has no hero to absorb the overlap. */
+  padding-top: clamp(96px, 11vw, 140px);
+}
+
+[data-theme='light'] .appview {
+  --tint-top: #f6f6f8;
+  --tint-mid: #f1f2f6;
+  --tint-bot: #f8f8fa;
+}
+
+.appview__grid {
+  opacity: 0.45;
+  background-image:
+    repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 92px),
+    repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 92px);
+  -webkit-mask-image: radial-gradient(72% 54% at 50% 0%, #000, transparent 74%);
+  mask-image: radial-gradient(72% 54% at 50% 0%, #000, transparent 74%);
+}
+
+.appview__blob {
+  top: -8%;
+  right: -8%;
+  width: 480px;
+  height: 480px;
+  filter: blur(34px);
+}
+
+.shell.appview__shell {
+  max-width: 900px;
+}
+
+/* ── back ─────────────────────────────────────────────────────────────── */
+
+.appview__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 15px 9px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.appview__back:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.appview__back-arrow {
+  display: inline-block;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.appview__back:hover .appview__back-arrow {
+  transform: translateX(-3px);
+}
+.appview__back[data-tone='quiet'] {
+  border-color: transparent;
+  background-color: transparent;
+  padding-left: 0;
+}
+.appview__back[data-tone='quiet']:hover {
+  color: var(--text);
+}
+
+.appview__foot {
+  margin-top: clamp(36px, 5vw, 56px);
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── head ─────────────────────────────────────────────────────────────── */
+
+.appview__head {
+  margin-top: clamp(26px, 4vw, 40px);
+}
+.h2.appview__title {
+  margin-top: 18px;
+}
+/* The two sentences that decide whether this app is for you. Bigger than the
+   paragraph under it on purpose. */
+.lede.appview__lede {
+  max-width: 62ch;
+  font-size: 18px;
+  color: var(--text);
+}
+.appview__intro {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  font: 400 15.5px/1.65 var(--font-body);
+  color: var(--muted);
+}
+
+.chips.appview__chips {
+  margin-top: 22px;
+}
+
+/* at a glance */
+.appview__glance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1px;
+  margin: 26px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.appview__glance-row {
+  padding: 13px 15px;
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.appview__glance-label {
+  margin: 0 0 5px;
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.appview__glance-value {
+  margin: 0;
+  font: 400 13.5px/1.55 var(--font-body);
+  color: var(--text);
+}
+
+.appview__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.appview__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 17px;
+  border-radius: 2px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--surface);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    var(--t-theme);
+}
+.appview__link:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--edge-hi);
+}
+.appview__link-arrow {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.appview__link:hover .appview__link-arrow {
+  transform: translateX(3px);
+}
+
+.appview__art {
+  margin: clamp(30px, 4vw, 46px) 0 0;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.appview__art-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* ── expand / collapse all ────────────────────────────────────────────── */
+
+.appview__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: clamp(34px, 5vw, 54px) 0 14px;
+}
+.appview__controls-count {
+  margin: 0;
+  font: 400 12px var(--font-body);
+  color: var(--faint);
+}
+.appview__controls-btns {
+  display: flex;
+  gap: 8px;
+}
+.appview__ghost {
+  padding: 7px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.appview__ghost:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+/* ── the folds ────────────────────────────────────────────────────────── */
+
+.appview__folds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fold {
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.fold:hover {
+  border-color: var(--border-hover);
+}
+
+.fold__heading {
+  margin: 0;
+  font: inherit;
+}
+
+/* The whole row is the toggle. A 12px chevron is a 12px target, and the row
+   is the width of the page. */
+.fold__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  width: 100%;
+  padding: 16px 18px;
+  text-align: left;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.fold__head:hover {
+  background-color: var(--accent-soft);
+}
+.fold__head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* Only an open row draws the rule, or a shut one ends on a stray line. */
+.fold[data-open] .fold__head {
+  border-bottom-color: var(--border);
+}
+
+.fold__chevron {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  margin-top: 2px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.fold__head:hover .fold__chevron {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.fold[data-open] .fold__chevron {
+  transform: rotate(90deg);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.fold__titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.fold__title {
+  display: block;
+  margin: 0 0 5px;
+  font: 700 15px/1.25 var(--font-display);
+  color: var(--text);
+}
+/* The line that makes a shut page readable. */
+.fold__what {
+  display: block;
+  margin: 0;
+  max-width: 62ch;
+  font: 400 13px/1.55 var(--font-body);
+  color: var(--faint);
+}
+.chip.fold__tag {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fold__region {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fold[data-open] .fold__region {
+  grid-template-rows: 1fr;
+}
+.fold__region-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.fold__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 18px 22px;
+}
+
+/* ── blocks ───────────────────────────────────────────────────────────── */
+
+.appview__text {
+  margin: 0;
+  max-width: 68ch;
+  font: 400 14.5px/1.75 var(--font-body);
+  color: var(--muted);
+}
+
+.appview__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 0;
+  padding: 13px 15px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--warm) 42%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 9%, transparent);
+  font: 400 14px/1.7 var(--font-body);
+  color: var(--text);
+}
+.appview__note-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--warm) 60%, transparent);
+  font: 700 11px var(--font-mono);
+  color: var(--warm);
+}
+
+.appview__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+.appview__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.badge.appview__step-num {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  background-color: var(--accent-soft);
+}
+.appview__step-text {
+  display: block;
+  max-width: 66ch;
+  font: 400 14.5px/1.7 var(--font-body);
+  color: var(--muted);
+}
+.appview__step-title {
+  display: block;
+  margin-bottom: 3px;
+  font: 600 14.5px/1.4 var(--font-body);
+  color: var(--text);
+}
+
+.appview__features {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appview__feature {
+  padding-left: 15px;
+  border-left: 2px solid var(--border);
+  transition: var(--t-theme);
+}
+.appview__feature:hover {
+  border-left-color: var(--border-hover);
+}
+.appview__feature-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 4px;
+}
+.appview__feature-name {
+  font: 600 14.5px/1.4 var(--font-body);
+  color: var(--text);
+}
+.chip.appview__soon {
+  border-color: color-mix(in srgb, var(--warm) 50%, transparent);
+  color: var(--warm);
+}
+.appview__feature[data-soon] {
+  border-left-color: color-mix(in srgb, var(--warm) 42%, transparent);
+}
+.appview__feature-text {
+  display: block;
+  max-width: 66ch;
+  font: 400 14.5px/1.7 var(--font-body);
+  color: var(--muted);
+}
+
+.appview__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.appview__fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding: 11px 14px;
+  background-color: var(--bg);
+  transition: var(--t-theme);
+}
+.appview__fact-label {
+  flex: 0 0 180px;
+  margin: 0;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 2px;
+}
+.appview__fact-value {
+  flex: 1 1 220px;
+  margin: 0;
+  font: 400 14px/1.6 var(--font-body);
+  color: var(--text);
+}
+
+/* ── narrow ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .fold__head {
+    flex-wrap: wrap;
+    padding: 14px 14px;
+  }
+  /* The tag drops under the title rather than squeezing it to two words. */
+  .chip.fold__tag {
+    order: 3;
+    margin-left: 32px;
+  }
+  /* The line under each title is three lines at this width, and eight rows of
+     it is the whole index. A little tighter keeps the shut page scannable. */
+  .fold__what {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .fold__body {
+    padding: 18px 14px 20px;
+  }
+  .appview__fact-label {
+    flex: 1 1 100%;
+  }
+  .appview__step {
+    gap: 11px;
+  }
+  .badge.appview__step-num {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: 380px) {
+  .appview__links,
+  .appview__controls-btns {
+    width: 100%;
+  }
+  .appview__link {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold__region,
+  .fold__chevron,
+  .appview__back-arrow,
+  .appview__link-arrow {
+    transition: none;
+  }
+}

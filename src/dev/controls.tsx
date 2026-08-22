@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { sectionDomId, useSections } from './sections'
+import { sectionDomId, useSections } from '../lib/sections'
 
 /**
  * The Developer console's control set.
  *
- * Every one of these is custom-styled down to its states — the site's rule is
+ * Every one of these is custom-styled down to its states. The site's rule is
  * that nothing ships wearing the browser's default look, and a console full of
  * raw checkboxes and grey `<select>`s would be the loudest possible exception.
  * They live here rather than beside each panel so that the fifteen switches on
@@ -23,13 +23,13 @@ import { sectionDomId, useSections } from './sections'
  * shut page still reads as an index rather than as a stack of nine mystery
  * headings.
  *
- * Collapsed by default — see `sections.tsx` for why, and for how Expand All
+ * Collapsed by default. See `sections.tsx` for why, and for how Expand All
  * finds panels it never rendered itself.
  *
  * `right` sits inside the header BUTTON, so whatever goes there must be
  * non-interactive: a Tag or a span, never a control. It is the summary a shut
- * panel is judged on — the tier, the pack count, whether there are unsaved
- * edits — so keep putting one there.
+ * panel is judged on: the tier, the pack count, whether there are unsaved
+ * edits. So keep putting one there.
  */
 export function Panel({
   id,
@@ -54,7 +54,7 @@ export function Panel({
   useEffect(() => register(sectionId), [register, sectionId])
 
   const open = isOpen(sectionId)
-  const regionId = sectionDomId(sectionId)
+  const regionId = sectionDomId(sectionId, 'dev-sec')
 
   return (
     <section className="dev__panel" data-tone={tone} data-open={open || undefined}>
@@ -268,8 +268,8 @@ export function TextArea({
 /**
  * A `<select>` with the native chrome removed and the site's own put back.
  *
- * The popup list itself is drawn by the operating system and cannot be styled —
- * that is true of every select on the web, and replacing it with a div listbox
+ * The popup list itself is drawn by the operating system and cannot be styled.
+ * That is true of every select on the web, and replacing it with a div listbox
  * would cost the keyboard and screen-reader behaviour the browser gives free.
  * The control, its chevron, its focus ring and its disabled state are all ours.
  */
@@ -473,7 +473,7 @@ export function Tag({
 }
 
 /**
- * A checkbox drawn as a claimable tile — the shape used for packs and themes.
+ * A checkbox drawn as a claimable tile, the shape used for packs and themes.
  *
  * Ownership is the thing being edited, so the tile SAYS whether it is owned
  * rather than relying on a tick alone; "Owned" and "Not owned" is the

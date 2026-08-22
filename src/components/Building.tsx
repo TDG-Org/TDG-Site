@@ -4,6 +4,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { MARANATHA, NEXT_UP } from '../data/content'
 import { asset } from '../lib/asset'
+import { appHash, rememberOrigin } from '../lib/route'
 import './Building.css'
 
 function NextUpPill({ label, index }: { label: string; index: number }) {
@@ -47,6 +48,12 @@ export function Building() {
           <span className="card__spot" aria-hidden="true" />
           <span className="card__edge" aria-hidden="true" />
 
+          {/* The game gets its own page too, opened the same way every app
+              card is opened. */}
+          <a className="card__cover" href={appHash(MARANATHA.page)} onClick={rememberOrigin}>
+            <span className="sr-only">Open the MARANATHA page</span>
+          </a>
+
           <div className="building__art">
             <picture>
               <source
@@ -82,7 +89,12 @@ export function Building() {
                 <span aria-hidden="true">● </span>IN PLAYTEST
               </span>
             </div>
-            <h3 className="building__title">{MARANATHA.heading}</h3>
+            <h3 className="building__title">
+              {MARANATHA.heading}
+              <span className="building__title-arrow" aria-hidden="true">
+                →
+              </span>
+            </h3>
             <p className="building__copy">{MARANATHA.copy}</p>
             <div className="building__actions">
               <span className="building__play building__play--soon">{MARANATHA.status}</span>

@@ -13,7 +13,7 @@ import { Store } from './components/Store'
 import { AuthModal } from './components/AuthModal'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
-import { useRoute } from './lib/route'
+import { takeOrigin, useRoute } from './lib/route'
 
 /**
  * The Developer console, in its own chunk.
@@ -29,6 +29,16 @@ import { useRoute } from './lib/route'
  */
 const DevConsole = lazy(() => import('./dev/DevConsole'))
 
+/**
+ * An app's own page, in its own chunk.
+ *
+ * The ten pages are a lot of prose, and a visitor who reads the landing page
+ * and leaves should not download a word of it. The router recognises the
+ * routes without this file, from the cards themselves, so the request is only
+ * made once somebody actually opens a card. See src/lib/route.ts.
+ */
+const AppPage = lazy(() => import('./components/AppPage'))
+
 export default function App() {
   useOffscreenPause()
   const { oauthError, recovery, isAdmin } = useAuth()
@@ -41,7 +51,7 @@ export default function App() {
    * redirect. Both of those answer the question "is there something here?",
    * and the answer a stranger should get is the one an unknown anchor gets.
    */
-  const showDev = route === 'dev' && isAdmin
+  const showDev = route.kind === 'dev' && isAdmin
 
   // A provider redirect (e.g. GitHub/Google) or a clicked password-reset
   // link can land back here with the modal unmounted, so reopen it and give
@@ -56,7 +66,7 @@ export default function App() {
   // an element that did not exist when it was clicked. Effects run after the
   // commit, so by here it does.
   useEffect(() => {
-    if (route === 'store' || showDev) {
+    if (route.kind === 'store' || route.kind === 'app' || showDev) {
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
       // change, and `auto` resolves to smooth here, so arriving at the Store
       // from halfway down the home page slid the new page up under you instead
@@ -64,7 +74,17 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' })
       return
     }
-    const id = window.location.hash.replace(/^#/, '')
+    const hash = window.location.hash
+    // Coming back from an app page, to the exact place the card was clicked
+    // from. Only when the hash is the one that was left: somebody who leaves an
+    // app page by clicking Story in the nav is not returning to the list, and
+    // this must not land on top of their anchor. See src/lib/route.ts.
+    const y = takeOrigin(hash)
+    if (y !== null) {
+      window.scrollTo({ top: y, behavior: 'instant' })
+      return
+    }
+    const id = hash.replace(/^#/, '')
     if (!id || id.startsWith('/')) return
     document.getElementById(id)?.scrollIntoView()
   }, [route, showDev])
@@ -80,9 +100,17 @@ export default function App() {
             <DevConsole />
           </Suspense>
         </main>
-      ) : route === 'store' ? (
+      ) : route.kind === 'store' ? (
         <main>
           <Store onOpenAuth={() => setAuthOpen(true)} />
+        </main>
+      ) : route.kind === 'app' ? (
+        <main>
+          {/* The chunk is local and small; the placeholder only stops the
+              footer flying up to meet the nav for one frame. */}
+          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+            <AppPage slug={route.slug} />
+          </Suspense>
         </main>
       ) : (
         <main>

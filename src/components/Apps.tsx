@@ -4,6 +4,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ImageSlot } from './ImageSlot'
 import { APPS, GITHUB_ORG, type AppCard } from '../data/content'
+import { appHash, rememberOrigin } from '../lib/route'
 import './Apps.css'
 
 function AppTile({ app, index }: { app: AppCard; index: number }) {
@@ -14,6 +15,14 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
     <article ref={mergeRefs(reveal, tilt)} className="card apps__card">
       <span className="card__spot" aria-hidden="true" />
       <span className="card__edge" aria-hidden="true" />
+
+      {/* The whole card opens the app's own page. It is first in the card so
+          it is also first in the tab order, ahead of a download link that a
+          card may also carry. `rememberOrigin` is what lets Back return to
+          this exact spot in the list rather than to the top of the page. */}
+      <a className="card__cover" href={appHash(app.page)} onClick={rememberOrigin}>
+        <span className="sr-only">Open the {app.title} page</span>
+      </a>
 
       <div className="apps__shot">
         <ImageSlot
@@ -37,7 +46,12 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
             </span>
           ))}
         </div>
-        <h3 className="apps__title">{app.title}</h3>
+        <h3 className="apps__title">
+          {app.title}
+          <span className="apps__title-arrow" aria-hidden="true">
+            →
+          </span>
+        </h3>
         <p className="apps__copy">{app.copy}</p>
         {app.download ? (
           <a className="apps__download" href={app.download.href} target="_blank" rel="noopener">

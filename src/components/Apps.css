@@ -73,6 +73,13 @@
 
 .apps__body {
   padding: 24px 28px 28px;
+  /* NOT its own stacking context. base.css gives every card child
+     `position: relative; z-index: 1`, and that z-index is what stopped the
+     download link inside here from rising above the card's own cover link, so
+     a click on Download Makullveny opened the page instead of the download.
+     `auto` keeps the body above the spotlight (same level, later in the DOM)
+     while letting its own links compete with the cover. */
+  --card-layer: auto;
 }
 
 .badge.apps__index {
@@ -87,8 +94,24 @@
 }
 
 .apps__title {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
   margin: 0 0 10px;
   font: 700 21px var(--font-display);
+  color: var(--text);
+}
+/* The card is a link now, and a card that opens something should look like
+   it does before it is hovered, not only afterwards. */
+.apps__title-arrow {
+  font-size: 15px;
+  color: var(--faint);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.3s ease;
+}
+.apps__card[data-lit='true'] .apps__title-arrow {
+  transform: translateX(4px);
   color: var(--text);
 }
 .apps__copy {
@@ -109,6 +132,11 @@
    Focus comes from the shared a:focus-visible ring in base.css, which clears
    the card's overflow clip inside .apps__body's 28px padding. */
 .apps__download {
+  /* Above .card__cover, so the one link inside a link-card still gets the
+     click. Makullveny's own site owns its download, and losing that would
+     lose the only real action on this card. */
+  position: relative;
+  z-index: 5;
   display: inline-flex;
   align-items: center;
   gap: 8px;

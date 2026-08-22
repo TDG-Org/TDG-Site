@@ -8,28 +8,35 @@ import {
 } from 'react'
 
 /**
- * Which sections of the Developer console are open.
+ * Which collapsible sections of a page are open.
+ *
+ * Shared by the Developer console and by the public app pages, because both
+ * want the same thing: a long page that opens as an index rather than as ten
+ * screens of content, and one pair of buttons that can reach every section on
+ * it including ones this file never sees.
  *
  * ## Why this is shared state rather than a `useState` per panel
  *
  * Expand All and Collapse All have to reach every section on screen, including
- * the nine inside an account's detail — panels this file never sees and that
- * mount and unmount as you click between people. So each Panel registers its id
- * here on mount, and the two buttons work from that register rather than from a
- * list somebody has to remember to update when a panel is added.
+ * the nine inside a Developer console account detail: panels that page never
+ * renders directly and that mount and unmount as you click between people. So
+ * each section registers its id here on mount, and the two buttons work from
+ * that register rather than from a list somebody has to remember to update
+ * when a section is added.
  *
  * ## Everything starts collapsed
  *
- * The page is long and most of it is not what you came for. Opening with twelve
- * expanded sections means scrolling past eight of them to reach the one you
- * wanted; opening with none means the whole page is an index you can read in a
- * glance and one click gets you in.
+ * The page is long and most of it is not what you came for. Opening with
+ * twelve expanded sections means scrolling past eight of them to reach the one
+ * you wanted; opening with none means the whole page is an index you can read
+ * in a glance and one click gets you in. That is why every closed row carries
+ * a line saying what is inside it.
  *
  * ## Open sections survive an unmount, on purpose
  *
  * A section leaves the register when it unmounts but keeps its open state. So
  * expanding Identity and then clicking a different account shows Identity open
- * again — the shape you set up follows you between people instead of resetting
+ * again: the shape you set up follows you between people instead of resetting
  * every time, which is what makes comparing two accounts bearable. Nothing is
  * persisted across a reload: every visit starts collapsed, as above.
  */
@@ -40,7 +47,7 @@ type SectionsValue = {
   register: (id: string) => () => void
   expandAll: () => void
   collapseAll: () => void
-  /** Open AND currently on screen — the count the buttons are about. */
+  /** Open AND currently on screen: the count the buttons are about. */
   openCount: number
   /** How many sections are on screen at all. */
   total: number
@@ -95,6 +102,6 @@ export function SectionsProvider({ children }: { children: ReactNode }) {
 }
 
 /** A section id as something safe to put in an `id` attribute. */
-export function sectionDomId(id: string): string {
-  return `dev-sec-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+export function sectionDomId(id: string, prefix = 'sec'): string {
+  return `${prefix}-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
 }

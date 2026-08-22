@@ -91,6 +91,21 @@
   font: 700 26px var(--font-display);
   color: var(--text);
 }
+/* The panel opens the game's own page. Inline rather than on its own line, so
+   a two-line heading keeps the arrow with its last word. */
+.building__title-arrow {
+  display: inline-block;
+  margin-left: 9px;
+  font-size: 18px;
+  color: var(--faint);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.3s ease;
+}
+.building__feature[data-lit='true'] .building__title-arrow {
+  transform: translateX(4px);
+  color: var(--text);
+}
 .building__copy {
   margin: 0 0 24px;
   font: 400 15.5px/1.7 var(--font-body);

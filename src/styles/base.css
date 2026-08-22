@@ -305,9 +305,41 @@ stop {
 .card[data-lit='true'] .card__edge {
   opacity: 1;
 }
-.card > *:not(.card__spot):not(.card__edge) {
+/* Card content sits above the spotlight. The layer is a variable so a part of
+   a card can opt out of being its OWN stacking context: a link inside such a
+   part could otherwise never rise above .card__cover, whatever z-index it was
+   given, which is how Makullveny's download button stopped being clickable. */
+.card > *:not(.card__spot):not(.card__edge):not(.card__cover) {
   position: relative;
-  z-index: 1;
+  z-index: var(--card-layer, 1);
+}
+
+/* A card that opens a page. One anchor over the whole card, so the click
+   target is the card rather than its title, and the focus ring is drawn
+   around the card the way a keyboard reader expects. Anything inside the card
+   that is its own link (a download, a store listing) sits above this one. */
+.card__cover {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+}
+.card__cover:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Text for a screen reader that has no business taking up room. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .badge {
