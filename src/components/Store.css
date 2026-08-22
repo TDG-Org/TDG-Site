@@ -292,6 +292,13 @@
 }
 
 .store__buy {
+  /* A flex row rather than centred text, so a button that OPENS something can
+     carry its chevron as a real item beside the label instead of a glyph
+     glued into the string. A button with no chevron looks identical. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   padding: 13px 18px;
   border: 1px solid transparent;
@@ -336,6 +343,222 @@
 .store__ghost:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ── choosing between plans ───────────────────────────────────────────────
+
+   The Pro Export Pack is sold monthly, yearly and outright. It used to print
+   a button per way, which gave its card a taller action row than the one-time
+   pack beside it: same shelf, same card, and buy buttons that did not line up.
+   So the card keeps ONE button — the same button, the same size, in the same
+   place as its neighbour's — and the three ways open over the card when it is
+   pressed.
+
+   The panel is drawn OVER the card, never pushed into it. A grid row stretches
+   its siblings to the tallest of them, so an expansion in the flow would grow
+   BOTH cards and leave a hole under the other one's button, which is the same
+   unevenness wearing a different hat.                                        */
+
+/* The anchor for both. base.css already makes every card child position:
+   relative, and this says out loud that the panel depends on it. */
+.store__pack .store__action {
+  position: relative;
+}
+
+.store__buy-caret {
+  display: inline-flex;
+  /* Points UP, at where the chooser opens; flips to point down at the way out
+     of it once it is open. */
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.store__buy[aria-expanded='true'] .store__buy-caret {
+  transform: rotate(180deg);
+}
+
+/* Out to the card's own edges rather than the padding box: a chooser that
+   dims the copy behind it but leaves a lit margin around it reads as a panel
+   dropped on the wrong card. The card's `overflow: hidden` trims it, and the
+   2000px is simply "the rest of the card, whatever it is". */
+.store__plans-scrim {
+  position: absolute;
+  top: -2000px;
+  right: -24px;
+  bottom: -24px;
+  left: -24px;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: color-mix(in srgb, var(--bg) 58%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  cursor: default;
+  animation: storeScrimIn 0.22s ease both;
+}
+
+.store__plans {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  padding: 14px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  /* Opaque, unlike the card's own translucent surface: the unlocks list sits
+     directly behind this and must not read through the prices. */
+  background-color: var(--bg2);
+  box-shadow: var(--card-shadow);
+  animation: storePlansIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: var(--t-theme);
+}
+
+.store__plans-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+.store__plans-title {
+  margin: 0;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.store__plans-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    var(--t-theme);
+}
+.store__plans-close:hover {
+  border-color: var(--border-hover);
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+.store__plans-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.store__plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Every way weighted the same. One of them dressed as the primary button
+   would be the silent pick this chooser exists to avoid; the yearly row earns
+   its emphasis from the saving it can prove instead. */
+.store__plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    var(--t-theme);
+}
+.store__plan:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+}
+.store__plan:active {
+  transform: translateY(0);
+}
+.store__plan:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.store__plan-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.store__plan-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font: 600 14px var(--font-body);
+  color: var(--text);
+}
+/* Sized to fit INSIDE the label's own line box, not to stand beside it: at
+   the chip's default padding the yearly row was 3px taller than the two
+   without a chip, and three rows in a chooser that do not match is the same
+   unevenness this panel exists to fix, one level down. */
+.store__plan-save {
+  padding: 3px 7px;
+  border-color: var(--live-border);
+  background-color: var(--live-bg);
+  color: var(--live-fg);
+  line-height: 1;
+}
+.store__plan-note {
+  font: 400 11.5px/1.45 var(--font-body);
+  color: var(--faint);
+}
+.store__plan-price {
+  flex: none;
+  font: 700 17px/1 var(--font-display);
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.store__plan-cadence {
+  margin-left: 1px;
+  font: 600 0.6em/1 var(--font-display);
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+@keyframes storeScrimIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes storePlansIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .store__note {
@@ -431,6 +654,12 @@
   .store__pack {
     padding: 20px;
   }
+  /* Follows the card's own padding, or the scrim leaves a lit 4px rim. */
+  .store__plans-scrim {
+    right: -20px;
+    bottom: -20px;
+    left: -20px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -440,5 +669,15 @@
   }
   .store__buy:hover {
     transform: none;
+  }
+  .store__plan:hover {
+    transform: none;
+  }
+  .store__plans,
+  .store__plans-scrim {
+    animation-duration: 0.01ms;
+  }
+  .store__buy-caret {
+    transition: none;
   }
 }

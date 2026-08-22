@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
@@ -13,6 +13,7 @@ import { Fold, FoldControls } from './Folded'
 import { STORE_ANSWERS } from '../data/storeAnswers'
 import {
   STORE_APPS,
+  annualSavingCents,
   buyUrl,
   formatUsd,
   isTestLink,
@@ -54,6 +55,55 @@ function Tick() {
   )
 }
 
+/** The chevron on a button that opens something. Points at where it opens. */
+function Caret() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 15 6-6 6 6" />
+    </svg>
+  )
+}
+
+function Cross() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+/**
+ * The one line under a plan's name, in the words the money is actually in.
+ *
+ * Written off the plan's KIND rather than its id-by-id, so a fourth plan on
+ * some future pack still gets a sentence instead of a blank. Nothing here
+ * names an amount: the row beside it already carries the only copy of that.
+ */
+function planNote(plan: StorePlan): string {
+  if (plan.id === 'monthly') return 'Billed every month. Cancel any time.'
+  if (plan.id === 'annual') return 'Billed once a year. Cancel any time.'
+  return 'Paid once. Yours for good, no renewal.'
+}
+
 function PackCard({
   pack,
   appTitle,
@@ -79,6 +129,45 @@ function PackCard({
   const subscription = isSubscription(pack)
   const plans = pack.plans ?? []
   const primaryPlan = plans[0] ?? null
+  const multiPlan = plans.length > 1
+  const saving = multiPlan ? annualSavingCents(plans) : null
+
+  /**
+   * Is the plan chooser open over this card?
+   *
+   * Per CARD, never per page: two cards on a shelf are two independent shops
+   * as far as this is concerned, and a single shared flag would open the wrong
+   * one the first time a second pack gained plans.
+   */
+  const [choosing, setChoosing] = useState(false)
+  const buyRef = useRef<HTMLButtonElement>(null)
+  const firstPlanRef = useRef<HTMLButtonElement>(null)
+
+  const closeChooser = (refocus = true) => {
+    setChoosing(false)
+    if (refocus) buyRef.current?.focus()
+  }
+
+  // The chooser belongs to the Buy state and to nothing else. A card that
+  // flips to Waiting mid-choice must not leave it hanging over the wait, and
+  // a card whose wait times out must not find it still open underneath.
+  useEffect(() => {
+    if (state.kind !== 'buy') setChoosing(false)
+  }, [state.kind])
+
+  // Open: put the keyboard where the choice is, and let Escape back out of it
+  // the way it backs out of every other thing that opens on this site.
+  useEffect(() => {
+    if (!choosing) return
+    firstPlanRef.current?.focus({ preventScroll: true })
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setChoosing(false)
+      buyRef.current?.focus()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [choosing])
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card store__pack" data-owned={owned || undefined}>
@@ -184,23 +273,31 @@ function PackCard({
         {state.kind === 'buy' && (
           <>
             {/*
-              A pack sold several ways gets a button per way, because the
-              alternative is a single "Buy" that silently picks one — and the
-              one it picks is the one the buyer did not read the price of.
-              A pack sold one way keeps exactly the button it always had.
+              ONE button, whatever the pack costs and however many ways it is
+              sold. A pack sold three ways used to print three buttons, which
+              gave its card a taller, differently-shaped action row than the
+              one-time pack beside it: the same shelf, the same size card, and
+              two buttons that did not line up. So the several ways moved into
+              a chooser that opens OVER the card when the one button is
+              pressed, and the button itself stayed exactly what its neighbour
+              has. Nothing is picked silently — the chooser prices every way
+              before anything opens.
             */}
-            {plans.length > 1 ? (
-              plans.map((plan, index) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  className={index === 0 ? 'store__buy' : 'store__ghost'}
-                  onClick={() => onBuy(plan)}
-                >
-                  {plan.label} · {formatUsd(plan.priceCents)}
-                  {plan.cadence}
-                </button>
-              ))
+            {multiPlan && primaryPlan ? (
+              <button
+                ref={buyRef}
+                type="button"
+                className="store__buy"
+                aria-haspopup="dialog"
+                aria-expanded={choosing}
+                onClick={() => (choosing ? closeChooser() : setChoosing(true))}
+              >
+                Buy {pack.name} · From {formatUsd(primaryPlan.priceCents)}
+                {primaryPlan.cadence}
+                <span className="store__buy-caret">
+                  <Caret />
+                </span>
+              </button>
             ) : (
               <button type="button" className="store__buy" onClick={() => onBuy()}>
                 Buy {pack.name} · {formatUsd(pack.priceCents)}
@@ -215,6 +312,80 @@ function PackCard({
               </p>
             ) : (
               <p className="store__note">Secure checkout by Stripe. Opens in a new tab.</p>
+            )}
+
+            {/*
+              Drawn OVER the card rather than pushed into it. An expansion in
+              the flow would grow this card, and a grid row stretches its
+              siblings to the tallest of them, so opening one card's chooser
+              would leave a hole under the other card's button — which is the
+              unevenness this whole change is about, moved somewhere else.
+            */}
+            {choosing && (
+              <>
+                {/* A press anywhere else closes it. A button rather than a bare
+                    div so it is a real click target with real semantics, and
+                    hidden from a screen reader because Escape is its keyboard
+                    equivalent and a second "close" in the tab order is noise. */}
+                <button
+                  type="button"
+                  className="store__plans-scrim"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onClick={() => closeChooser()}
+                />
+                <div
+                  className="store__plans"
+                  role="dialog"
+                  aria-label={`Choose a plan for ${pack.name}`}
+                >
+                  <div className="store__plans-head">
+                    <p className="store__plans-title">Choose a Plan</p>
+                    <button
+                      type="button"
+                      className="store__plans-close"
+                      onClick={() => closeChooser()}
+                    >
+                      <span className="sr-only">Close the plan chooser</span>
+                      <Cross />
+                    </button>
+                  </div>
+
+                  <ul className="store__plan-list">
+                    {plans.map((plan, planIndex) => (
+                      <li key={plan.id}>
+                        <button
+                          ref={planIndex === 0 ? firstPlanRef : undefined}
+                          type="button"
+                          className="store__plan"
+                          onClick={() => {
+                            setChoosing(false)
+                            onBuy(plan)
+                          }}
+                        >
+                          <span className="store__plan-text">
+                            <span className="store__plan-label">
+                              {plan.label}
+                              {plan.id === 'annual' && saving !== null && (
+                                <span className="chip store__plan-save">
+                                  SAVE {formatUsd(saving)}
+                                </span>
+                              )}
+                            </span>
+                            <span className="store__plan-note">{planNote(plan)}</span>
+                          </span>
+                          <span className="store__plan-price">
+                            {formatUsd(plan.priceCents)}
+                            {plan.cadence ? (
+                              <span className="store__plan-cadence">{plan.cadence}</span>
+                            ) : null}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
             )}
           </>
         )}

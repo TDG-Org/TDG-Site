@@ -245,6 +245,25 @@ export function isSubscription(pack: StorePack): boolean {
   return (pack.plans ?? []).some((plan) => plan.id === 'monthly' || plan.id === 'annual')
 }
 
+/**
+ * What a yearly plan saves against paying monthly for the same year, in cents.
+ *
+ * DERIVED, never written down, so it can never disagree with the two amounts
+ * it is about: change either price above and this moves with it. A saving is
+ * the one claim a shop makes that is arithmetic rather than opinion, and the
+ * only way to get it wrong is to state it twice.
+ *
+ * `null` when there is nothing honest to say — no monthly plan to measure
+ * against, or a yearly price that saves nothing.
+ */
+export function annualSavingCents(plans: readonly StorePlan[]): number | null {
+  const monthly = plans.find((plan) => plan.id === 'monthly')
+  const annual = plans.find((plan) => plan.id === 'annual')
+  if (!monthly || !annual) return null
+  const saved = monthly.priceCents * 12 - annual.priceCents
+  return saved > 0 ? saved : null
+}
+
 export function isTestLink(pack: StorePack): boolean {
   return new URL(pack.paymentLink).pathname.startsWith('/test_')
 }
