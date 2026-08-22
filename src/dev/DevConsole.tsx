@@ -10,11 +10,11 @@ import {
   Select,
   Switch,
   Tag,
-  TextInput,
   Toasts,
   useToasts,
 } from './controls'
 import { SectionsProvider } from '../lib/sections'
+import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
 import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
 import './DevConsole.css'
@@ -39,6 +39,9 @@ import './DevConsole.css'
  * Developer tab is deliberately narrower: it manages Bible Educator.
  */
 
+/** The server clamps every ledger read to this, so asking for more is a lie. */
+const LEDGER_CAP = 1000
+
 type Tab = 'accounts' | 'purchases' | 'audit'
 
 const TABS: { id: Tab; label: string; what: string }[] = [
@@ -53,14 +56,23 @@ const TABS: { id: Tab; label: string; what: string }[] = [
  * reset every section to shut each time a write landed.
  */
 export default function DevConsole() {
+  const [query, setQuery] = useState('')
   return (
     <SectionsProvider>
-      <DevConsoleBody />
+      <SearchProvider query={query} setQuery={setQuery}>
+        <DevConsoleBody query={query} setQuery={setQuery} />
+      </SearchProvider>
     </SectionsProvider>
   )
 }
 
-function DevConsoleBody() {
+function DevConsoleBody({
+  query,
+  setQuery,
+}: {
+  query: string
+  setQuery: (q: string) => void
+}) {
   const { user, profile } = useAuth()
   const devMode = useDevMode()
   const { toasts, push, dismiss } = useToasts()
@@ -70,7 +82,6 @@ function DevConsoleBody() {
   const [catalog, setCatalog] = useState<DevCatalog | null>(null)
   const [bootError, setBootError] = useState<string | null>(null)
 
-  const [query, setQuery] = useState('')
   const [rows, setRows] = useState<DevAccount[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -82,7 +93,6 @@ function DevConsoleBody() {
   const [allEvents, setAllEvents] = useState<DevEvent[]>([])
   const [allAudit, setAllAudit] = useState<DevAuditRow[]>([])
   const [ledgerState, setLedgerState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [auditQuery, setAuditQuery] = useState('')
   const [source, setSource] = useState<'all' | DevEvent['source']>('all')
 
   const [busy, setBusy] = useState<string | null>(null)
@@ -114,11 +124,16 @@ function DevConsoleBody() {
 
   /* ── the roster, debounced ────────────────────────────────────────────── */
 
+  /*
+   * The instant filter below runs on `rows` and never waits for this. This is
+   * the bonus pass: `tdg_admin_accounts` caps what it returns, so a search that
+   * only ever looked at what is already loaded could miss an account this
+   * browser has never seen. Debounced, because it is a round trip and nothing
+   * on screen is waiting for it.
+   */
   useEffect(() => {
     let cancelled = false
     setListState('loading')
-    // 250ms: long enough that typing a username is one query rather than eight,
-    // short enough that it still feels like the list is following you.
     const timer = window.setTimeout(() => {
       api.searchAccounts(query.trim()).then(
         (list) => {
@@ -161,9 +176,16 @@ function DevConsoleBody() {
 
   /* ── the whole-project ledger, for the other two tabs ─────────────────── */
 
-  const loadLedger = useCallback((q: string) => {
+  /*
+   * Both ledgers, unfiltered, once. They used to reload on every keystroke of
+   * the audit box and to be filtered in Postgres; now the page search filters
+   * them in memory, so a keystroke costs nothing and the Purchases tab is
+   * already populated by the time you click it. LEDGER_CAP is the server's own
+   * ceiling, and the count line says so when a list actually reaches it.
+   */
+  const loadLedger = useCallback(() => {
     setLedgerState('loading')
-    Promise.all([api.getEvents(null, 300), api.getAudit(null, q, 300)]).then(
+    Promise.all([api.getEvents(null, LEDGER_CAP), api.getAudit(null, '', LEDGER_CAP)]).then(
       ([e, a]) => {
         setAllEvents(e)
         setAllAudit(a)
@@ -174,10 +196,8 @@ function DevConsoleBody() {
   }, [])
 
   useEffect(() => {
-    if (tab === 'accounts') return
-    const timer = window.setTimeout(() => loadLedger(auditQuery.trim()), 250)
-    return () => window.clearTimeout(timer)
-  }, [tab, auditQuery, loadLedger])
+    loadLedger()
+  }, [loadLedger])
 
   /* ── one write, then re-read what actually landed ─────────────────────── */
 
@@ -230,7 +250,69 @@ function DevConsoleBody() {
     }
   }
 
-  const shownEvents = allEvents.filter((e) => source === 'all' || e.source === source)
+  /* ── the instant filters ───────────────────────────────────────────────
+   *
+   * Every one of these is a plain array filter over data already in memory.
+   * That is the whole search: no debounce, no request, nothing to wait for.
+   * The haystacks include the things you would half-remember about a row, not
+   * only the words it happens to print, so a purchase is findable by its
+   * amount, its pack id, the buyer's email, or the raw Stripe event id.
+   */
+  const terms = useMemo(() => searchTerms(query), [query])
+  const searching = terms.length > 0
+
+  const shownRows = useMemo(
+    () =>
+      rows.filter((r) =>
+        matchesTerms(
+          hay(
+            r.display_name, r.username, r.email, r.recovery_email, r.user_id,
+            r.core_tier, r.core_status, r.mak_tier, r.mak_status,
+            r.mak_themes, r.veditor_packs, r.devfleet_packs,
+            standingOf(r).label,
+            r.is_admin ? 'developer admin' : '',
+          ),
+          terms,
+        ),
+      ),
+    [rows, terms],
+  )
+
+  const shownEvents = useMemo(
+    () =>
+      allEvents
+        .filter((e) => source === 'all' || e.source === source)
+        .filter((e) =>
+          matchesTerms(
+            hay(
+              e.who, e.source, e.event_type, e.item, e.currency, e.event_id, e.user_id,
+              e.amount_cents == null ? '' : fmtUsd(e.amount_cents),
+              e.event_id.startsWith('admin:') ? 'granted free grant' : 'paid stripe payment',
+            ),
+            terms,
+          ),
+        ),
+    [allEvents, source, terms],
+  )
+
+  const shownAudit = useMemo(
+    () =>
+      allAudit.filter((r) =>
+        matchesTerms(hay(r.app, r.action, r.detail, r.actor_name, r.target_name), terms),
+      ),
+    [allAudit, terms],
+  )
+
+  /** What the toolbar says while a search is running, across every tab. */
+  const searchHint = (() => {
+    if (!searching) return null
+    const parts = [
+      shownRows.length && `${shownRows.length} account${shownRows.length === 1 ? '' : 's'}`,
+      shownEvents.length && `${shownEvents.length} purchase${shownEvents.length === 1 ? '' : 's'}`,
+      shownAudit.length && `${shownAudit.length} action${shownAudit.length === 1 ? '' : 's'}`,
+    ].filter(Boolean)
+    return parts.length ? `${parts.join(' · ')} match` : 'Nothing matches that'
+  })()
 
   return (
     <section id="top" className="section section--flat dev">
@@ -279,7 +361,7 @@ function DevConsoleBody() {
           </p>
         )}
 
-        <SectionControls />
+        <SectionControls hint={searchHint} />
 
         <Overview overview={overview} />
 
@@ -302,27 +384,18 @@ function DevConsoleBody() {
         {tab === 'accounts' && (
           <div className="dev__split">
             <div className="dev__roster">
-              <div className="dev__search">
-                <TextInput
-                  type="search"
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Name, @username, email or user id"
-                />
-                <Button onClick={() => setQuery((q) => q)} title="Re-read the list">
-                  Refresh
-                </Button>
-              </div>
               <p className="dev__roster-count">
-                {listState === 'loading'
+                {listState === 'loading' && rows.length === 0
                   ? 'Looking…'
                   : listState === 'error'
                     ? "Couldn't read the accounts."
-                    : `${rows.length} account${rows.length === 1 ? '' : 's'}${query.trim() ? ' matching' : ''}`}
+                    : searching
+                      ? `${shownRows.length} of ${rows.length} account${rows.length === 1 ? '' : 's'} match${shownRows.length === 1 ? 'es' : ''}`
+                      : `${rows.length} account${rows.length === 1 ? '' : 's'} · search at the top of the page`}
               </p>
 
               <ul className="dev__list">
-                {rows.map((r) => (
+                {shownRows.map((r) => (
                   <RosterRow
                     key={r.user_id}
                     account={r}
@@ -331,8 +404,10 @@ function DevConsoleBody() {
                     onSelect={() => select(r.user_id)}
                   />
                 ))}
-                {listState === 'ready' && rows.length === 0 && (
-                  <li className="dev__empty">Nothing matches that.</li>
+                {listState !== 'error' && shownRows.length === 0 && (
+                  <li className="dev__empty">
+                    {searching ? 'No account matches that.' : 'No accounts yet.'}
+                  </li>
                 )}
               </ul>
             </div>
@@ -375,19 +450,20 @@ function DevConsoleBody() {
                   { value: 'makullveny', label: 'Makullveny' },
                 ]}
               />
-              <Button onClick={() => loadLedger(auditQuery.trim())}>Refresh</Button>
+              <Button onClick={loadLedger}>Refresh</Button>
             </div>
             <p className="dev__roster-count">
-              {ledgerState === 'loading'
+              {ledgerState === 'loading' && allEvents.length === 0
                 ? 'Reading the ledger…'
                 : ledgerState === 'error'
                   ? "Couldn't read the ledger."
-                  : `${shownEvents.length} entr${shownEvents.length === 1 ? 'y' : 'ies'} · PAID came from Stripe, GRANTED came from this console`}
+                  : `${shownEvents.length}${searching ? ` of ${allEvents.length}` : ''} entr${(searching ? allEvents.length : shownEvents.length) === 1 ? 'y' : 'ies'} · PAID came from Stripe, GRANTED came from this console${allEvents.length >= LEDGER_CAP ? ` · newest ${LEDGER_CAP} loaded` : ''}`}
             </p>
             <Panel
               title="Every Payment And Grant"
-              what="All three Stripe ledgers merged, newest first. PAID is a real payment; GRANTED is somebody switching a pack on from this console."
+              what="All three Stripe ledgers merged, newest first. PAID is a real payment; GRANTED is somebody switching a pack on from this console. The page search filters this list as you type: try a pack id, an amount, or who bought it."
               writes="veditor_purchase_events + devfleet_purchase_events + mak_subscription_events"
+              matchCount={shownEvents.length}
               right={<LedgerTag state={ledgerState} n={shownEvents.length} noun="ENTRIES" />}
             >
             <ul className="dev__log dev__log--wide">
@@ -405,27 +481,43 @@ function DevConsoleBody() {
                       <button
                         type="button"
                         className="dev__link"
+                        // Open them; do not filter the page down to their
+                        // id. A uuid in the search box would hide most of the
+                        // very detail this click is asking to see.
                         onClick={() => {
                           setTab('accounts')
-                          setQuery(e.user_id ?? '')
+                          setQuery('')
                           setSelectedId(e.user_id)
                         }}
                       >
-                        {e.who}
+                        <Highlight text={e.who} />
                       </button>
                     ) : (
                       <span className="dev__panel-quiet">nobody (account deleted)</span>
                     )}
                   </span>
                   <span className="dev__log-what">
-                    <code className="dev__code">{e.event_type}</code>
-                    {e.item ? ` · ${e.item}` : ''}
+                    <code className="dev__code">
+                      <Highlight text={e.event_type} />
+                    </code>
+                    {e.item ? (
+                      <>
+                        {' · '}
+                        <Highlight text={e.item} />
+                      </>
+                    ) : null}
                   </span>
-                  <span className="dev__log-amount">{fmtUsd(e.amount_cents)}</span>
+                  <span className="dev__log-amount">
+                    <Highlight text={fmtUsd(e.amount_cents)} />
+                  </span>
                 </li>
               ))}
-              {ledgerState === 'ready' && shownEvents.length === 0 && (
-                <li className="dev__empty">Nothing recorded yet.</li>
+              {ledgerState !== 'error' && shownEvents.length === 0 && (
+                <li className="dev__empty">
+                  {searching || source !== 'all'
+                    ? 'No entry matches that.'
+                    : 'Nothing recorded yet.'}
+                </li>
               )}
             </ul>
             </Panel>
@@ -435,44 +527,52 @@ function DevConsoleBody() {
         {tab === 'audit' && (
           <div className="dev__wide">
             <div className="dev__search">
-              <TextInput
-                type="search"
-                value={auditQuery}
-                onChange={setAuditQuery}
-                placeholder="Action, reason, app or a person's name"
-              />
-              <Button onClick={() => loadLedger(auditQuery.trim())}>Refresh</Button>
+              <Button onClick={loadLedger}>Refresh</Button>
             </div>
             <p className="dev__roster-count">
-              {ledgerState === 'loading'
+              {ledgerState === 'loading' && allAudit.length === 0
                 ? 'Reading the log…'
                 : ledgerState === 'error'
                   ? "Couldn't read the log."
-                  : `${allAudit.length} action${allAudit.length === 1 ? '' : 's'} · tdg-core is this console, the rest are each app's own tools`}
+                  : `${shownAudit.length}${searching ? ` of ${allAudit.length}` : ''} action${(searching ? allAudit.length : shownAudit.length) === 1 ? '' : 's'} · tdg-core is this console, the rest are each app's own tools${allAudit.length >= LEDGER_CAP ? ` · newest ${LEDGER_CAP} loaded` : ''}`}
             </p>
             <Panel
               title="Every Developer Action"
-              what="Moderation and permission changes from every TDG app, newest first. Rows tagged tdg-core came from this console; the rest came from an app's own tools."
+              what="Moderation and permission changes from every TDG app, newest first. Rows tagged tdg-core came from this console; the rest came from an app's own tools. The page search filters this list as you type."
               writes="bea_moderation_audit"
-              right={<LedgerTag state={ledgerState} n={allAudit.length} noun="ACTIONS" />}
+              matchCount={shownAudit.length}
+              right={<LedgerTag state={ledgerState} n={shownAudit.length} noun="ACTIONS" />}
             >
             <ul className="dev__log dev__log--wide">
-              {allAudit.map((r) => (
+              {shownAudit.map((r) => (
                 <li key={r.id} className="dev__log-row">
                   <span className="dev__log-when" title={fmtDate(r.at)}>
                     {fmtRelative(r.at)}
                   </span>
                   <Tag tone={r.app === 'tdg-core' ? 'hot' : 'plain'}>{r.app}</Tag>
-                  <span className="dev__log-who">{r.target_name}</span>
-                  <span className="dev__log-what">
-                    <strong>{r.action}</strong>
-                    {r.detail ? ` · ${r.detail}` : ''}
+                  <span className="dev__log-who">
+                    <Highlight text={r.target_name} />
                   </span>
-                  <span className="dev__log-amount">by {r.actor_name}</span>
+                  <span className="dev__log-what">
+                    <strong>
+                      <Highlight text={r.action} />
+                    </strong>
+                    {r.detail ? (
+                      <>
+                        {' · '}
+                        <Highlight text={r.detail} />
+                      </>
+                    ) : null}
+                  </span>
+                  <span className="dev__log-amount">
+                    by <Highlight text={r.actor_name} />
+                  </span>
                 </li>
               ))}
-              {ledgerState === 'ready' && allAudit.length === 0 && (
-                <li className="dev__empty">No developer has done anything yet.</li>
+              {ledgerState !== 'error' && shownAudit.length === 0 && (
+                <li className="dev__empty">
+                  {searching ? 'No action matches that.' : 'No developer has done anything yet.'}
+                </li>
               )}
             </ul>
             </Panel>
@@ -538,6 +638,7 @@ function Overview({ overview: o }: { overview: DevOverview | null }) {
     <Panel
       title="Overview"
       what="The whole project in numbers, re-read after every change you make below."
+      terms={stats.map((x) => `${x.label} ${x.what} ${x.value}`)}
       right={<Tag tone={o ? 'plain' : undefined}>{o ? `${o.accounts} ACCOUNTS` : 'READING'}</Tag>}
     >
       <div className="dev__stats">
@@ -585,7 +686,9 @@ function RosterRow({
         onClick={onSelect}
       >
         <span className="dev__row-top">
-          <span className="dev__row-name">{nameOf(a)}</span>
+          <span className="dev__row-name">
+            <Highlight text={nameOf(a)} />
+          </span>
           <span className="dev__row-tags">
             {a.is_admin && <Tag tone="hot">DEV</Tag>}
             {isSelf && <Tag tone="hot">YOU</Tag>}
@@ -593,7 +696,8 @@ function RosterRow({
           </span>
         </span>
         <span className="dev__row-mid">
-          {a.username ? `@${a.username}` : 'no username'} · {a.email ?? 'no email'}
+          {a.username ? <Highlight text={`@${a.username}`} /> : 'no username'} ·{' '}
+          {a.email ? <Highlight text={a.email} /> : 'no email'}
         </span>
         <span className="dev__row-bot">
           <Tag tone={a.core_tier === 'free' ? 'plain' : 'ok'}>CORE {a.core_tier}</Tag>

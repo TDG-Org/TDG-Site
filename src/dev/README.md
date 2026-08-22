@@ -73,6 +73,7 @@ in every app).
 | `DevConsole.tsx` | The page: header, the overview numbers, the three tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The nine panels for one account. Each states what it is and names the table it writes. |
 | `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts. Shared so fifteen switches cannot drift into fifteen switches. |
+| `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail, panels the page itself never renders. |
 | `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
@@ -189,8 +190,10 @@ add anything here that relies on the page being secret.
 2. Add the column to `tdg_admin_accounts`'s `returns table` **and** to
    `DevAccount` in `api.ts`, in the same sitting. There is no generated types
    package to catch a drift.
-3. Give it a panel with a `what` sentence, a `writes` table name, and a `right`
-   summary tag. A control whose effect a tired developer at midnight cannot
+3. Give it a panel with a `what` sentence, a `writes` table name, a `right`
+   summary tag, and `terms` naming the data it is about so the page search can
+   find it. A list section passes `matchCount` instead, so its header can say
+   how many of its rows matched. A control whose effect a tired developer at midnight cannot
    name is a bug, and a section that says nothing while shut is one too. Keep
    `right` non-interactive, because it renders inside the header button.
    Collapsing comes free from `Panel`; nothing to wire up.

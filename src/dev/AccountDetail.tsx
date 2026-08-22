@@ -26,6 +26,7 @@ import {
   stillInForce,
   untilFromHours,
 } from './format'
+import { Highlight, hay, matchesTerms, useSearch } from './search'
 
 /** What DevConsole hands every panel: run one write, then re-read the account. */
 export type Run = (key: string, okMessage: string, fn: () => Promise<unknown>) => void
@@ -119,6 +120,7 @@ function WhoPanel({ account: a }: { account: DevAccount }) {
       title="At A Glance"
       what="Read-only facts about the account itself. Nothing here can be edited from this console: the email and the password belong to GoTrue, and the id is fixed for life."
       writes="auth.users + public.profiles"
+      terms={[a.user_id, a.email, a.recovery_email, a.username, a.display_name]}
       right={
         a.email_confirmed_at ? (
           <Tag tone="ok">CONFIRMED</Tag>
@@ -209,6 +211,7 @@ function IdentityPanel({ account: a, run, busy }: Props) {
       title="Identity"
       what="The name and handle this account shows under, everywhere in TDG. Leave a field blank to clear it."
       writes="public.profiles"
+      terms={[a.display_name, a.username, a.bio, 'name handle privacy']}
       right={
         dirty ? <Tag tone="warn">UNSAVED</Tag> : <span className="dev__panel-quiet">Saved</span>
       }
@@ -266,6 +269,7 @@ function PermissionsPanel({
       title="Permissions"
       what="Developer is the only permission TDG has. It unlocks this console and Bible Educator's moderation tools, for every TDG app at once."
       writes="public.profiles.is_admin"
+      terms={[a.is_admin ? 'developer admin' : 'standard', 'permission role']}
       tone={a.is_admin ? 'danger' : 'plain'}
       right={
         isProtected ? (
@@ -320,6 +324,7 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
       title="TDG Core Subscription"
       what="The one tier every TDG app can gate on. Setting it here is a free grant: no Stripe, no charge, and it takes effect the next time the app reads it."
       writes="public.subscriptions"
+      terms={[a.core_tier, a.core_status, a.core_stripe_customer_id, 'tier plan free grant']}
       right={
         <Tag tone={a.core_tier === 'free' ? 'plain' : 'ok'}>{a.core_tier.toUpperCase()}</Tag>
       }
@@ -393,6 +398,15 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       title="Makullveny"
       what="Makullveny's own ladder, separate from the core one. The app uses whichever of the two is higher."
       writes="public.mak_subscriptions"
+      terms={[
+        a.mak_tier,
+        a.mak_status,
+        a.mak_themes,
+        a.mak_stripe_customer_id,
+        candle ? 'candle bundle' : '',
+        a.mak_support_badge_at ? 'supporter badge' : '',
+        'theme market',
+      ]}
       right={<Tag tone={a.mak_tier === 'free' ? 'plain' : 'ok'}>{a.mak_tier.toUpperCase()}</Tag>}
     >
       <div className="dev__grid2">
@@ -507,6 +521,7 @@ function PacksPanel({
       title={title}
       what="One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does."
       writes={`public.${app}_entitlements`}
+      terms={[app, owned, packs, customer, 'pack store grant revoke']}
       right={<Tag tone={owned.length ? 'ok' : 'plain'}>{owned.length} OWNED</Tag>}
     >
       {packs.length === 0 ? (
@@ -589,6 +604,7 @@ function StandingPanel({
         title="Standing & Access"
         what="Suspending, hiding and deleting. None of it can be aimed at your own account. The server refuses, so there are no buttons here to mislead you."
         writes="public.bea_profile_state + auth.users"
+        terms={['suspend ban hide delete restore sign out everywhere']}
         tone="danger"
         right={<Tag>THIS IS YOU</Tag>}
       >
@@ -604,6 +620,7 @@ function StandingPanel({
       title="Standing & Access"
       what="Everything that limits an account. Suspending locks sign-in for every TDG app at once; hiding only affects how they appear inside Bible Educator."
       writes="public.bea_profile_state + auth.users"
+      terms={[standing.label, 'suspend ban hide delete restore sign out everywhere']}
       tone="danger"
       right={<Tag tone={standing.tone}>{standing.label.toUpperCase()}</Tag>}
     >
@@ -814,16 +831,35 @@ function StandingPanel({
 /* ── history ───────────────────────────────────────────────────────────── */
 
 function HistoryPanel({ events, audit, historyState }: Props) {
+  const { terms, active } = useSearch()
+
+  /*
+   * Filtered here rather than by the caller, because this panel is the only
+   * thing that renders these two lists and its own match count has to be the
+   * number of rows it will actually show. A header promising three matches
+   * over an empty list is worse than no count at all.
+   */
+  // `e.who` is deliberately NOT in this haystack. Every row here already
+  // belongs to the account on screen, so matching their name would light up
+  // the whole list with nothing in any row visibly matching, which reads as a
+  // broken search rather than a scoped one.
+  const shownEvents = events.filter((e) =>
+    matchesTerms(hay(e.source, e.event_type, e.item, e.event_id, fmtUsd(e.amount_cents)), terms),
+  )
+  const shownAudit = audit.filter((r) =>
+    matchesTerms(hay(r.app, r.action, r.detail, r.actor_name), terms),
+  )
+  const shown = shownEvents.length + shownAudit.length
+
   return (
     <Panel
       title="This Account's History"
       what="Every payment, grant and moderation action recorded against them, newest first."
       writes="*_purchase_events + mak_subscription_events + bea_moderation_audit"
+      matchCount={historyState === 'ready' ? shown : 0}
       right={
         historyState === 'ready' ? (
-          <Tag tone={events.length + audit.length ? 'ok' : 'plain'}>
-            {events.length + audit.length} ENTRIES
-          </Tag>
+          <Tag tone={shown ? 'ok' : 'plain'}>{shown} ENTRIES</Tag>
         ) : (
           <Tag tone={historyState === 'error' ? 'bad' : 'plain'}>
             {historyState === 'error' ? 'UNREADABLE' : 'READING'}
@@ -839,11 +875,15 @@ function HistoryPanel({ events, audit, historyState }: Props) {
       {historyState === 'ready' && (
         <>
           <h4 className="dev__sub">Purchases And Grants</h4>
-          {events.length === 0 ? (
-            <p className="dev__panel-quiet">Nothing has ever changed this account's entitlements.</p>
+          {shownEvents.length === 0 ? (
+            <p className="dev__panel-quiet">
+              {active
+                ? 'No purchase or grant matches that.'
+                : "Nothing has ever changed this account's entitlements."}
+            </p>
           ) : (
             <ul className="dev__log">
-              {events.map((e) => (
+              {shownEvents.map((e) => (
                 <li key={e.event_id} className="dev__log-row">
                   <span className="dev__log-when" title={fmtDate(e.at)}>
                     {fmtRelative(e.at)}
@@ -852,31 +892,51 @@ function HistoryPanel({ events, audit, historyState }: Props) {
                     {e.event_id.startsWith('admin:') ? 'GRANTED' : 'PAID'}
                   </Tag>
                   <span className="dev__log-what">
-                    <code className="dev__code">{e.event_type}</code>
-                    {e.item ? ` · ${e.item}` : ''}
+                    <code className="dev__code">
+                      <Highlight text={e.event_type} />
+                    </code>
+                    {e.item ? (
+                      <>
+                        {' · '}
+                        <Highlight text={e.item} />
+                      </>
+                    ) : null}
                   </span>
-                  <span className="dev__log-amount">{fmtUsd(e.amount_cents)}</span>
+                  <span className="dev__log-amount">
+                    <Highlight text={fmtUsd(e.amount_cents)} />
+                  </span>
                 </li>
               ))}
             </ul>
           )}
 
           <h4 className="dev__sub">Moderation And Permissions</h4>
-          {audit.length === 0 ? (
-            <p className="dev__panel-quiet">No developer has ever acted on this account.</p>
+          {shownAudit.length === 0 ? (
+            <p className="dev__panel-quiet">
+              {active ? 'No action matches that.' : 'No developer has ever acted on this account.'}
+            </p>
           ) : (
             <ul className="dev__log">
-              {audit.map((r) => (
+              {shownAudit.map((r) => (
                 <li key={r.id} className="dev__log-row">
                   <span className="dev__log-when" title={fmtDate(r.at)}>
                     {fmtRelative(r.at)}
                   </span>
                   <Tag>{r.app}</Tag>
                   <span className="dev__log-what">
-                    <strong>{r.action}</strong>
-                    {r.detail ? ` · ${r.detail}` : ''}
+                    <strong>
+                      <Highlight text={r.action} />
+                    </strong>
+                    {r.detail ? (
+                      <>
+                        {' · '}
+                        <Highlight text={r.detail} />
+                      </>
+                    ) : null}
                   </span>
-                  <span className="dev__log-amount">by {r.actor_name}</span>
+                  <span className="dev__log-amount">
+                    by <Highlight text={r.actor_name} />
+                  </span>
                 </li>
               ))}
             </ul>

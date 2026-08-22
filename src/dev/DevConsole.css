@@ -509,9 +509,13 @@
   min-height: 0;
 }
 
-/* ── expand / collapse all ────────────────────────────────────────────── */
+/* ── the page toolbar: search, and expand / collapse all ──────────────────
+   One search box for the whole page, sitting above everything it filters. It
+   is wide on purpose: what you type into it is a name, an email or a Stripe
+   event id, and a box that shows eight characters of a uuid is a box you
+   cannot check your own typing in.                                          */
 
-.dev__sections {
+.dev__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -524,17 +528,52 @@
   background-color: var(--surface);
   transition: var(--t-theme);
 }
-.dev__sections-text {
+
+.dev__toolbar-search {
+  position: relative;
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  flex: 1 1 340px;
   min-width: 0;
 }
-.dev__sections-label {
-  font: 600 10px var(--font-mono);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+.dev__search-icon {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  pointer-events: none;
+  color: var(--faint);
+}
+.dev__input.dev__search-input {
+  padding-left: 34px;
+  padding-right: 32px;
+}
+.dev__toolbar-search:focus-within .dev__search-icon {
   color: var(--accent);
+}
+.dev__search-clear {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--muted);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.dev__search-clear:hover {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+
+.dev__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .dev__sections-count {
   font: 400 12px var(--font-body);
@@ -543,6 +582,42 @@
 .dev__sections-btns {
   display: flex;
   gap: 8px;
+}
+
+/* How many rows inside a section matched. Sits before the summary tag, because
+   while you are searching it is the more urgent of the two. */
+.dev__panel-hits {
+  flex: none;
+  margin-top: 2px;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warm);
+  white-space: nowrap;
+}
+
+/* What matched, inside a row. Tinted rather than the browser's yellow slab,
+   which is unreadable on the dark scene and does not belong to this page. */
+.dev__mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--warm) 30%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* A label that only a screen reader needs. The search box is obvious to look
+   at and would be a duplicated word to everybody else. */
+.dev__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 .dev__panel-quiet {
   margin: 0;
@@ -1258,6 +1333,13 @@
 @media (max-width: 720px) {
   .dev {
     --dev-pad: 15px;
+  }
+  .dev__toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .dev__toolbar-right {
+    justify-content: space-between;
   }
   .dev__log-row,
   .dev__log--wide .dev__log-row {

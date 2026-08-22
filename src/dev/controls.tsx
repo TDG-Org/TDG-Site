@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
+import { hay, useSearch } from './search'
 
 /**
  * The Developer console's control set.
@@ -38,6 +39,8 @@ export function Panel({
   writes,
   tone = 'plain',
   right,
+  terms,
+  matchCount,
   children,
 }: {
   /** Stable section id. Defaults to the title, which is unique per page. */
@@ -47,13 +50,45 @@ export function Panel({
   writes?: string
   tone?: 'plain' | 'danger'
   right?: ReactNode
+  /**
+   * What this section is ABOUT, for the page search: the account's email, the
+   * tier, the pack ids, whatever a person would type looking for it. The title
+   * and the `what` sentence are searched anyway, so this is only the data.
+   */
+  terms?: (string | number | null | undefined | readonly string[])[]
+  /**
+   * For a section holding a list: how many of its rows match. A section with
+   * matching rows is a hit even when none of its own words are, which is what
+   * makes searching a ledger by an amount work.
+   */
+  matchCount?: number
   children: ReactNode
 }) {
   const sectionId = id ?? title
   const { isOpen, toggle, register } = useSections()
+  const search = useSearch()
   useEffect(() => register(sectionId), [register, sectionId])
 
-  const open = isOpen(sectionId)
+  /*
+   * A search overrides the manual open state rather than replacing it: hits
+   * render open, and `override` lets you shut one anyway. Both reset the moment
+   * the query changes, and neither touches the shared open set, so clearing the
+   * box puts the page back exactly as you had arranged it.
+   */
+  const [override, setOverride] = useState<boolean | null>(null)
+  useEffect(() => setOverride(null), [search.query])
+
+  const hit =
+    !search.active ||
+    (matchCount ?? 0) > 0 ||
+    search.matches(hay(title, what, writes, ...(terms ?? [])))
+
+  // A section nothing matched is not dimmed, it is gone. Twelve greyed headings
+  // around the one you wanted is the noise the search was meant to remove.
+  if (search.active && !hit) return null
+
+  const open = search.active ? (override ?? true) : isOpen(sectionId)
+  const onToggle = () => (search.active ? setOverride(!open) : toggle(sectionId))
   const regionId = sectionDomId(sectionId, 'dev-sec')
 
   return (
@@ -66,7 +101,7 @@ export function Panel({
           className="dev__panel-head"
           aria-expanded={open}
           aria-controls={regionId}
-          onClick={() => toggle(sectionId)}
+          onClick={onToggle}
         >
           <span className="dev__panel-chevron" aria-hidden="true">
             <svg
@@ -86,6 +121,11 @@ export function Panel({
             <span className="dev__panel-title">{title}</span>
             <span className="dev__panel-what">{what}</span>
           </span>
+          {search.active && matchCount != null && (
+            <span className="dev__panel-hits">
+              {matchCount} match{matchCount === 1 ? '' : 'es'}
+            </span>
+          )}
           {right && <span className="dev__panel-right">{right}</span>}
         </button>
       </h3>
@@ -109,28 +149,92 @@ export function Panel({
 }
 
 /**
- * Expand All / Collapse All, plus how many sections are open right now.
+ * The page toolbar: one search box, and Expand All / Collapse All.
  *
- * The count is the honest one: sections currently ON SCREEN. Switching tabs
- * changes it, because the buttons only ever act on what you can see.
+ * The search filters every section on the page at once, and the rows inside
+ * them, with no debounce anywhere. See `search.tsx`.
+ *
+ * The two section buttons go quiet while a search is running, because a search
+ * is already deciding what is open: pressing Expand All would change the shared
+ * open set and you would see nothing happen, which is worse than a button that
+ * says it is not for now. Clearing the box hands the page back exactly as you
+ * had arranged it.
  */
-export function SectionControls() {
+export function SectionControls({ hint }: { hint?: ReactNode }) {
   const { expandAll, collapseAll, openCount, total } = useSections()
+  const { query, setQuery, active } = useSearch()
+  const id = useId()
+
   return (
-    <div className="dev__sections">
-      <div className="dev__sections-text">
-        <span className="dev__sections-label">Sections</span>
-        <span className="dev__sections-count">
-          {openCount} of {total} open
+    <div className="dev__toolbar">
+      <div className="dev__toolbar-search">
+        <label className="dev__sr-only" htmlFor={id}>
+          Search the whole page
+        </label>
+        <span className="dev__search-icon" aria-hidden="true">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.6-3.6" />
+          </svg>
         </span>
+        <input
+          id={id}
+          type="text"
+          className="dev__input dev__search-input"
+          value={query}
+          placeholder="Search everything: a name, an email, a pack, an amount, an action"
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(e) => setQuery(e.target.value)}
+          // Escape clears rather than blurring, which is what every search box
+          // that has ever been useful does.
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && query) {
+              e.preventDefault()
+              setQuery('')
+            }
+          }}
+        />
+        {active && (
+          <button
+            type="button"
+            className="dev__search-clear"
+            aria-label="Clear the search"
+            onClick={() => setQuery('')}
+          >
+            ×
+          </button>
+        )}
       </div>
-      <div className="dev__sections-btns">
-        <Button onClick={expandAll} disabled={total === 0 || openCount === total}>
-          Expand All
-        </Button>
-        <Button onClick={collapseAll} disabled={openCount === 0}>
-          Collapse All
-        </Button>
+
+      <div className="dev__toolbar-right">
+        <span className="dev__sections-count">
+          {active ? hint : `${openCount} of ${total} sections open`}
+        </span>
+        <div className="dev__sections-btns">
+          <Button
+            onClick={expandAll}
+            disabled={active || total === 0 || openCount === total}
+            title={active ? 'The search is choosing what is open' : undefined}
+          >
+            Expand All
+          </Button>
+          <Button
+            onClick={collapseAll}
+            disabled={active || openCount === 0}
+            title={active ? 'The search is choosing what is open' : undefined}
+          >
+            Collapse All
+          </Button>
+        </div>
       </div>
     </div>
   )
