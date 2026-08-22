@@ -26,6 +26,10 @@
  *
  * TDG Veditor's two packs work the same way against its own repo.
  *
+ * The Store page's own prose is `storeAnswers.ts`, and it is deliberately not
+ * on that list: it explains the money side without ever naming an amount, so
+ * changing a price here can never leave a sentence there saying the old one.
+ *
  * ## Ownership is never decided here
  *
  * It lives in `<app>_entitlements` on the TDG Core project, written only by

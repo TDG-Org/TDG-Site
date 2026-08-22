@@ -5,6 +5,9 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
 import { useOwnedPacks } from '../store/useOwnedPacks'
+import { SectionsProvider } from '../lib/sections'
+import { Fold, FoldControls } from './Folded'
+import { STORE_ANSWERS } from '../data/storeAnswers'
 import {
   STORE_APPS,
   buyUrl,
@@ -308,8 +311,9 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
           <h2 className="h2 store__heading">Buy once. It follows your account.</h2>
           <p className="lede store__lede">
             A few paid extras for the apps we build. Everything else stays free. These are the
-            pieces that pay for the nights they took. One payment, no subscription, and it sits on
-            your TDG Account rather than on a machine.
+            pieces that pay for the nights they took. Every pack on this shelf is charged once and
+            sits on your TDG Account rather than on a machine. Neither app has shipped yet, and
+            what that means for buying today is under the shelf, along with the rest of it.
           </p>
 
           <div className="store__account" data-signed-in={status === 'signedIn' || undefined}>
@@ -346,34 +350,24 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
           />
         ))}
 
-        <div ref={how} className="store__how">
-          <h3 className="store__how-title">How it works</h3>
-          <ol className="store__steps">
-            <li>
-              <span className="store__step-num">01</span>
-              <span className="store__step-text">
-                <strong>Sign in</strong> with your TDG Account, the same one the apps use.
-              </span>
-            </li>
-            <li>
-              <span className="store__step-num">02</span>
-              <span className="store__step-text">
-                <strong>Pay through Stripe.</strong> We never see your card. Stripe handles the
-                payment, the tax and the receipt.
-              </span>
-            </li>
-            <li>
-              <span className="store__step-num">03</span>
-              <span className="store__step-text">
-                <strong>Open the app.</strong> The pack is on your account within a minute. Press
-                Check Again on its Account page if you get there first.
-              </span>
-            </li>
-          </ol>
-          <p className="store__fine">
-            Bought a pack and can't see it in the app? Sign in on this page. If it says Owned here,
-            the app will see it too the next time it can reach the server.
+        {/* Everything about the money, folded shut the way an app page is, and
+            for the same reason: the shelf is what somebody came for, and seven
+            expanded sections between it and the footer would bury it. The two
+            longest are the ones about a purchase going wrong, because the one
+            that works needs no explaining. */}
+        <div ref={how} className="store__answers">
+          <h3 className="store__answers-title">Before you buy</h3>
+          <p className="store__answers-lede">
+            The whole money side, so none of it has to be guessed at. Open the one you want.
           </p>
+          <SectionsProvider>
+            <FoldControls />
+            <div className="store__folds">
+              {STORE_ANSWERS.map((section) => (
+                <Fold key={section.id} section={section} prefix="store-sec" level={4} />
+              ))}
+            </div>
+          </SectionsProvider>
         </div>
       </div>
     </section>

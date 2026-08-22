@@ -353,56 +353,36 @@
   }
 }
 
-/* ── how it works ─────────────────────────────────────────────────────── */
+/* ── before you buy ───────────────────────────────────────────────────── */
 
-.store__how {
-  padding: clamp(26px, 3.5vw, 38px);
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+/* The whole money side, in the app pages' own folds. It is deliberately not a
+   panel wrapped around them: a card inside a card inside a card is what the
+   shelf above already spends its border budget on, so this block is a heading
+   and a rule, and the rows carry their own edges. */
+
+.store__answers {
+  margin-top: clamp(10px, 2vw, 22px);
+  padding-top: clamp(26px, 3.5vw, 38px);
+  border-top: 1px solid var(--border);
   transition: var(--t-theme);
 }
-.store__how-title {
-  margin: 0 0 22px;
+.store__answers-title {
+  margin: 0 0 10px;
   font: 600 11px var(--font-mono);
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--accent);
 }
-.store__steps {
-  list-style: none;
-  margin: 0 0 22px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 22px;
-}
-.store__steps li {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-.store__step-num {
-  flex: none;
-  font: 500 10px var(--font-mono);
-  letter-spacing: 0.2em;
-  color: var(--faint);
-  padding-top: 3px;
-}
-.store__step-text {
-  font: 400 13.5px/1.6 var(--font-body);
+.store__answers-lede {
+  margin: 0;
+  max-width: 60ch;
+  font: 400 14.5px/1.7 var(--font-body);
   color: var(--muted);
 }
-.store__step-text strong {
-  font-weight: 600;
-  color: var(--text);
-}
-.store__fine {
-  margin: 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-  font: 400 12.5px/1.6 var(--font-body);
-  color: var(--faint);
+.store__folds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 @media (max-width: 620px) {

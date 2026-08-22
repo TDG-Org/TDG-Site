@@ -132,18 +132,34 @@ export function Block({ block }: { block: PageBlock }) {
   )
 }
 
-export function Fold({ section, prefix }: { section: PageSection; prefix: string }) {
+export function Fold({
+  section,
+  prefix,
+  level = 2,
+}: {
+  section: PageSection
+  prefix: string
+  /**
+   * The heading level for this row, so the outline nests where the page puts
+   * it. The app pages open on an `h1` and these are their sections, so 2 is
+   * the default; on the Store they sit under a heading of their own inside a
+   * page whose title is already an `h2`, and a row that announced itself as a
+   * top-level section there would be lying about where it is.
+   */
+  level?: 2 | 3 | 4
+}) {
   const { isOpen, toggle, register } = useSections()
   useEffect(() => register(section.id), [register, section.id])
 
   const open = isOpen(section.id)
   const regionId = sectionDomId(section.id, prefix)
+  const Heading = `h${level}` as 'h2' | 'h3' | 'h4'
 
   return (
     <section className="fold" data-open={open || undefined}>
       {/* The button is inside the heading rather than around it, so the section
           still has a heading in the document outline while it is shut. */}
-      <h2 className="fold__heading">
+      <Heading className="fold__heading">
         <button
           type="button"
           className="fold__head"
@@ -160,7 +176,7 @@ export function Fold({ section, prefix }: { section: PageSection; prefix: string
           </span>
           {section.tag && <span className="chip fold__tag">{section.tag}</span>}
         </button>
-      </h2>
+      </Heading>
 
       {/* A 0fr to 1fr grid row rather than a measured max-height: what is inside
           is prose whose height depends on the width it is read at, and a
