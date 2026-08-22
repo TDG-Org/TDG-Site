@@ -1,17 +1,9 @@
-import { useEffect } from 'react'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
-import { SectionsProvider, sectionDomId, useSections } from '../lib/sections'
-import { hasOrigin } from '../lib/route'
+import { SectionsProvider } from '../lib/sections'
 import { asset } from '../lib/asset'
-import {
-  chipsForPage,
-  pageForSlug,
-  shotForPage,
-  type AppPage as AppPageData,
-  type PageBlock,
-  type PageSection,
-} from '../data/appPages'
+import { BackButton, Fold, FoldControls } from './Folded'
+import { chipsForPage, pageForSlug, shotForPage, type AppPage as AppPageData } from '../data/appPages'
 import './AppPage.css'
 
 /**
@@ -19,186 +11,15 @@ import './AppPage.css'
  *
  * It knows nothing about any particular app: everything a reader sees comes
  * from `src/data/appPages.ts`, so adding an app is a content edit and fixing a
- * line of a guide is one string. The folding is the Developer console's, from
- * `src/lib/sections.tsx`, because a reader should not have to learn a second
- * idea about how a long page opens.
+ * line of a guide is one string. The folding and the blocks are `Folded.tsx`,
+ * shared with the About page, over the Developer console's own open/closed
+ * state in `src/lib/sections.tsx`: nobody reading this site should have to
+ * learn a second idea about how a long page opens.
  *
  * Everything starts shut. Each closed row carries its title, one line saying
  * what is inside it, and a tag, so a page that has not been opened still reads
  * as an index rather than as ten mystery headings.
  */
-
-function Chevron() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  )
-}
-
-function Block({ block }: { block: PageBlock }) {
-  if (block.kind === 'text') return <p className="appview__text">{block.text}</p>
-
-  if (block.kind === 'note') {
-    return (
-      <p className="appview__note">
-        <span className="appview__note-mark" aria-hidden="true">
-          !
-        </span>
-        {block.text}
-      </p>
-    )
-  }
-
-  if (block.kind === 'steps') {
-    return (
-      <ol className="appview__steps">
-        {block.steps.map((step, i) => (
-          <li key={step.title} className="appview__step">
-            <span className="badge appview__step-num" aria-hidden="true">
-              {String(i + 1).padStart(2, '0')}
-            </span>
-            <span className="appview__step-text">
-              <strong className="appview__step-title">{step.title}</strong>
-              {step.text}
-            </span>
-          </li>
-        ))}
-      </ol>
-    )
-  }
-
-  if (block.kind === 'features') {
-    return (
-      <ul className="appview__features">
-        {block.items.map((item) => (
-          <li key={item.name} className="appview__feature" data-soon={item.soon || undefined}>
-            <span className="appview__feature-head">
-              <strong className="appview__feature-name">{item.name}</strong>
-              {/* Said in the word the reader asked for. A planned feature that
-                  reads like a shipped one is the one lie this site cannot tell. */}
-              {item.soon && <span className="chip appview__soon">COMING</span>}
-            </span>
-            <span className="appview__feature-text">{item.text}</span>
-          </li>
-        ))}
-      </ul>
-    )
-  }
-
-  return (
-    <dl className="appview__facts">
-      {block.items.map((fact) => (
-        <div key={fact.label} className="appview__fact">
-          <dt className="appview__fact-label">{fact.label}</dt>
-          <dd className="appview__fact-value">{fact.value}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-function Fold({ section }: { section: PageSection }) {
-  const { isOpen, toggle, register } = useSections()
-  useEffect(() => register(section.id), [register, section.id])
-
-  const open = isOpen(section.id)
-  const regionId = sectionDomId(section.id, 'app-sec')
-
-  return (
-    <section className="fold" data-open={open || undefined}>
-      {/* The button is inside the heading rather than around it, so the section
-          still has a heading in the document outline while it is shut. */}
-      <h2 className="fold__heading">
-        <button
-          type="button"
-          className="fold__head"
-          aria-expanded={open}
-          aria-controls={regionId}
-          onClick={() => toggle(section.id)}
-        >
-          <span className="fold__chevron" aria-hidden="true">
-            <Chevron />
-          </span>
-          <span className="fold__titles">
-            <span className="fold__title">{section.title}</span>
-            <span className="fold__what">{section.what}</span>
-          </span>
-          {section.tag && <span className="chip fold__tag">{section.tag}</span>}
-        </button>
-      </h2>
-
-      {/* A 0fr to 1fr grid row rather than a measured max-height: what is inside
-          is prose whose height depends on the width it is read at, and a
-          measured height would be wrong on the next resize. */}
-      <div className="fold__region" id={regionId} inert={!open}>
-        <div className="fold__region-inner">
-          <div className="fold__body">
-            {section.blocks.map((block, i) => (
-              <Block key={i} block={block} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function FoldControls() {
-  const { expandAll, collapseAll, openCount, total } = useSections()
-
-  return (
-    <div className="appview__controls">
-      <p className="appview__controls-count">
-        {openCount === 0
-          ? `${total} sections, all closed`
-          : `${openCount} of ${total} sections open`}
-      </p>
-      <div className="appview__controls-btns">
-        <button type="button" className="appview__ghost" onClick={expandAll}>
-          Expand All
-        </button>
-        <button type="button" className="appview__ghost" onClick={collapseAll}>
-          Collapse All
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function BackButton({ page, tone }: { page: AppPageData; tone?: 'quiet' }) {
-  /*
-   * One control, one behaviour, whichever way the reader arrived.
-   *
-   * Opening the page from a card pushed a history entry, so going back is
-   * exactly what the browser's own Back button does, and routing this through
-   * `history.back()` is what stops the two landing in different places. Only a
-   * page opened cold, from a shared link, has nothing behind it; that one goes
-   * to the list the card lives in.
-   */
-  const goBack = () => {
-    if (hasOrigin()) window.history.back()
-    else window.location.hash = page.backHash
-  }
-
-  return (
-    <button type="button" className="appview__back" data-tone={tone} onClick={goBack}>
-      <span className="appview__back-arrow" aria-hidden="true">
-        ←
-      </span>
-      Back to {page.backLabel}
-    </button>
-  )
-}
 
 function AppPageBody({ page }: { page: AppPageData }) {
   const blob = useParallax<HTMLDivElement>(-0.12)
@@ -214,7 +35,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
       <div ref={blob} className="blob appview__blob" aria-hidden="true" />
 
       <div className="shell appview__shell">
-        <BackButton page={page} />
+        <BackButton label={`Back to ${page.backLabel}`} fallbackHash={page.backHash} />
 
         <div ref={head} className="appview__head">
           <div className="kicker">
@@ -305,12 +126,12 @@ function AppPageBody({ page }: { page: AppPageData }) {
 
         <div className="appview__folds">
           {page.sections.map((section) => (
-            <Fold key={section.id} section={section} />
+            <Fold key={section.id} section={section} prefix="app-sec" />
           ))}
         </div>
 
         <div className="appview__foot">
-          <BackButton page={page} tone="quiet" />
+          <BackButton label={`Back to ${page.backLabel}`} fallbackHash={page.backHash} tone="quiet" />
         </div>
       </div>
     </section>

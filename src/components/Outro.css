@@ -25,6 +25,39 @@
   text-wrap: pretty;
 }
 
+/* The way to the About page from the one paragraph that makes somebody want
+   it. Quiet by design: this block is a note, not a call to action. */
+.outro__about {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border);
+  font: 600 13px var(--font-body);
+  color: var(--accent-2);
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    var(--t-theme);
+}
+.outro__about:hover {
+  border-bottom-color: var(--border-hover);
+  color: var(--text);
+}
+.outro__about-arrow {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.outro__about:hover .outro__about-arrow {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outro__about-arrow {
+    transition: none;
+  }
+}
+
 .outro__gh-section {
   position: relative;
   overflow: hidden;

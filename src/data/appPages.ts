@@ -1,4 +1,5 @@
 import { APPS, MARANATHA, TOOLS, type Shot } from './content'
+import type { PageLink, PageSection } from './pageBlocks'
 
 /**
  * One page per app, tool and game, as content rather than as components.
@@ -27,40 +28,6 @@ import { APPS, MARANATHA, TOOLS, type Shot } from './content'
  * **Closed rows are informative.** Every section carries a `what`, one line
  * saying what is inside it, because a shut page is meant to read as an index.
  */
-
-/** A block of content inside a section. Keep the set small; the renderer draws each one. */
-export type PageBlock =
-  /** A paragraph. */
-  | { kind: 'text'; text: string }
-  /** A numbered walkthrough. */
-  | { kind: 'steps'; steps: { title: string; text: string }[] }
-  /**
-   * A list of things it can do, each with a real explanation beside it.
-   * `soon: true` marks something that is not built yet, and the row says so.
-   */
-  | { kind: 'features'; items: { name: string; text: string; soon?: boolean }[] }
-  /** A label/value table, for the facts a list of prose would bury. */
-  | { kind: 'facts'; items: { label: string; value: string }[] }
-  /** One sentence that needs to stand apart, usually a limit or a warning. */
-  | { kind: 'note'; text: string }
-
-export type PageSection = {
-  /** Stable id. Used for the open/closed register and the region's DOM id. */
-  id: string
-  title: string
-  /** The one line the closed row carries. */
-  what: string
-  /** The tag on the right of the closed row. */
-  tag?: string
-  blocks: PageBlock[]
-}
-
-export type PageLink = {
-  label: string
-  href: string
-  /** Off this site. Opens in a new tab and says so to a screen reader. */
-  external?: boolean
-}
 
 export type AppPage = {
   slug: string

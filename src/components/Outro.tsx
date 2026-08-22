@@ -1,5 +1,6 @@
 import { useReveal } from '../hooks/useReveal'
 import { GITHUB_ORG } from '../data/content'
+import { ABOUT_HASH, rememberOrigin } from '../lib/route'
 import './Outro.css'
 
 /** The makers note and the GitHub card that close the page before the footer. */
@@ -21,6 +22,15 @@ export function Outro() {
             We build together on nights, weekends, and the hours in between, trying to make things
             that are actually good, and that we'd be proud to put His name on.
           </p>
+          {/* The longer answer, for the reader who got this far and wanted it.
+              `rememberOrigin` is what brings them back to this paragraph rather
+              than to the top of the page. */}
+          <a className="outro__about" href={ABOUT_HASH} onClick={rememberOrigin}>
+            More about us, and the questions people ask
+            <span className="outro__about-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
         </div>
       </section>
 

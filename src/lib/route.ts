@@ -22,10 +22,12 @@ import { APPS, MARANATHA, TOOLS } from '../data/content'
  */
 export type Route =
   | { kind: 'home' }
+  | { kind: 'about' }
   | { kind: 'store' }
   | { kind: 'dev' }
   | { kind: 'app'; slug: string }
 
+export const ABOUT_HASH = '#/about'
 export const STORE_HASH = '#/store'
 export const DEV_HASH = '#/dev'
 
@@ -49,6 +51,7 @@ const HOME: Route = { kind: 'home' }
 
 export function routeFromHash(hash: string): Route {
   const key = hash.replace(/^#/, '').replace(/^\/+/, '').toLowerCase()
+  if (key === 'about') return { kind: 'about' }
   if (key === 'store') return { kind: 'store' }
   if (key === 'dev') return { kind: 'dev' }
   if (key.startsWith('app/')) {

@@ -39,6 +39,9 @@ const DevConsole = lazy(() => import('./dev/DevConsole'))
  */
 const AppPage = lazy(() => import('./components/AppPage'))
 
+/** About, in its own chunk for the same reason: prose nobody has asked for. */
+const About = lazy(() => import('./components/About'))
+
 export default function App() {
   useOffscreenPause()
   const { oauthError, recovery, isAdmin } = useAuth()
@@ -66,7 +69,7 @@ export default function App() {
   // an element that did not exist when it was clicked. Effects run after the
   // commit, so by here it does.
   useEffect(() => {
-    if (route.kind === 'store' || route.kind === 'app' || showDev) {
+    if (route.kind === 'store' || route.kind === 'app' || route.kind === 'about' || showDev) {
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
       // change, and `auto` resolves to smooth here, so arriving at the Store
       // from halfway down the home page slid the new page up under you instead
@@ -103,6 +106,12 @@ export default function App() {
       ) : route.kind === 'store' ? (
         <main>
           <Store onOpenAuth={() => setAuthOpen(true)} />
+        </main>
+      ) : route.kind === 'about' ? (
+        <main>
+          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+            <About />
+          </Suspense>
         </main>
       ) : route.kind === 'app' ? (
         <main>

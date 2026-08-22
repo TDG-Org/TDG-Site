@@ -37,6 +37,13 @@ a line saying what is inside, so a closed page reads as an index. Back returns y
 place in the list you left. The copy lives in [`src/data/appPages.ts`](src/data/appPages.ts),
 so adding an app is a content edit rather than a component.
 
+**🧭 [About](src/data/about.ts) is the same page, for us rather than an app.** Who we are,
+why we build what we build, a line on each app with a link to its own page, and a Q&A that takes
+the awkward questions: what is free, who handles the card details, what happens to your things if
+we stop. Every answer is checkable against something in this repo, and where we do not have an
+answer yet it says so. It shares its folding and its blocks with the app pages
+([`src/components/Folded.tsx`](src/components/Folded.tsx)), so the two cannot drift apart.
+
 <div align="center">
 
 **🌗 One toggle, two worlds.** Colour crosses the page as a wave, not a snap.

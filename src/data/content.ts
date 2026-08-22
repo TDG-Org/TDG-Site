@@ -9,9 +9,11 @@ export const NAV_LINKS = [
   { href: '#tools', label: 'Tools' },
   { href: '#building', label: 'Building' },
   { href: '#faith', label: 'Faith' },
-  // Last, and a ROUTE rather than a section anchor, because the Store is its own page.
-  // The slash is what keeps '#/store' from colliding with '#story', which is
-  // one letter away and would otherwise be a coin flip for whoever matched first.
+  // The last two are ROUTES rather than section anchors, because each is its
+  // own page. The slash is what keeps '#/store' from colliding with '#story',
+  // which is one letter away and would otherwise be a coin flip for whoever
+  // matched first; every route since carries it for the same reason.
+  { href: '#/about', label: 'About' },
   { href: '#/store', label: 'Store' },
 ] as const
 

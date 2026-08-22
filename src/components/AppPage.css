@@ -500,6 +500,86 @@
   color: var(--text);
 }
 
+/* ── the Q&A ──────────────────────────────────────────────────────────── */
+
+/* A description list: the question is the term, the answer is its description,
+   so a screen reader announces the pairing instead of a run of loose
+   paragraphs. The rule between items does the work a card would, without
+   putting ten more boxes inside a box. */
+.appview__qa {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+.appview__qa-item + .appview__qa-item {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.appview__qa-q {
+  margin: 0 0 7px;
+  max-width: 62ch;
+  font: 700 15.5px/1.4 var(--font-display);
+  color: var(--text);
+}
+.appview__qa-a {
+  margin: 0;
+  max-width: 66ch;
+  font: 400 14.5px/1.75 var(--font-body);
+  color: var(--muted);
+}
+
+/* ── signposts ────────────────────────────────────────────────────────── */
+
+/* One line each and a link into the page that has the detail, so the same
+   sentence is never written in two places that can disagree. */
+.appview__signposts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.appview__signpost {
+  padding-left: 15px;
+  border-left: 2px solid var(--border);
+  transition: var(--t-theme);
+}
+.appview__signpost:hover {
+  border-left-color: var(--border-hover);
+}
+.appview__signpost-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font: 700 15px var(--font-display);
+  color: var(--text);
+}
+.appview__signpost-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.appview__signpost-arrow {
+  font-size: 12px;
+  color: var(--faint);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.3s ease;
+}
+.appview__signpost-link:hover .appview__signpost-arrow {
+  transform: translateX(4px);
+  color: var(--text);
+}
+.appview__signpost-text {
+  display: block;
+  max-width: 66ch;
+  font: 400 14px/1.7 var(--font-body);
+  color: var(--muted);
+}
+
 /* ── narrow ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 560px) {
@@ -548,7 +628,8 @@
   .fold__region,
   .fold__chevron,
   .appview__back-arrow,
-  .appview__link-arrow {
+  .appview__link-arrow,
+  .appview__signpost-arrow {
     transition: none;
   }
 }
