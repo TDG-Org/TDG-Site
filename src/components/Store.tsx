@@ -16,6 +16,8 @@ import {
   buyUrl,
   formatUsd,
   isTestLink,
+  isSubscription,
+  type StorePlan,
   packKey,
   type StoreApp,
   type StorePack,
@@ -66,7 +68,7 @@ function PackCard({
   appTitle: string
   index: number
   state: CardState
-  onBuy: () => void
+  onBuy: (plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
 }) {
@@ -74,18 +76,39 @@ function PackCard({
   const tilt = useTilt<HTMLElement>()
   const owned = state.kind === 'owned'
   const testMode = isTestLink(pack)
+  const subscription = isSubscription(pack)
+  const plans = pack.plans ?? []
+  const primaryPlan = plans[0] ?? null
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card store__pack" data-owned={owned || undefined}>
       <span className="card__spot" aria-hidden="true" />
       <span className="card__edge" aria-hidden="true" />
 
+      {/*
+        The chips and the amount have to agree with the PLAN. Printing
+        "ONE-TIME / YOURS FOR GOOD" over a monthly subscription is a shop
+        telling somebody the wrong thing about their own money, which is the
+        one mistake this file's header says a shop may not make.
+      */}
       <div className="store__pack-head">
         <div className="chips">
-          <span className="chip">ONE-TIME</span>
-          <span className="chip">YOURS FOR GOOD</span>
+          {subscription ? (
+            <>
+              <span className="chip">SUBSCRIPTION</span>
+              <span className="chip">CANCEL ANY TIME</span>
+            </>
+          ) : (
+            <>
+              <span className="chip">ONE-TIME</span>
+              <span className="chip">YOURS FOR GOOD</span>
+            </>
+          )}
         </div>
-        <div className="store__price">{formatUsd(pack.priceCents)}</div>
+        <div className="store__price">
+          {formatUsd(pack.priceCents)}
+          {primaryPlan?.cadence ? <span className="store__cadence">{primaryPlan.cadence}</span> : null}
+        </div>
       </div>
 
       <h4 className="store__pack-name">{pack.name}</h4>
@@ -160,9 +183,29 @@ function PackCard({
 
         {state.kind === 'buy' && (
           <>
-            <button type="button" className="store__buy" onClick={onBuy}>
-              Buy {pack.name} · {formatUsd(pack.priceCents)}
-            </button>
+            {/*
+              A pack sold several ways gets a button per way, because the
+              alternative is a single "Buy" that silently picks one — and the
+              one it picks is the one the buyer did not read the price of.
+              A pack sold one way keeps exactly the button it always had.
+            */}
+            {plans.length > 1 ? (
+              plans.map((plan, index) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  className={index === 0 ? 'store__buy' : 'store__ghost'}
+                  onClick={() => onBuy(plan)}
+                >
+                  {plan.label} · {formatUsd(plan.priceCents)}
+                  {plan.cadence}
+                </button>
+              ))
+            ) : (
+              <button type="button" className="store__buy" onClick={() => onBuy()}>
+                Buy {pack.name} · {formatUsd(pack.priceCents)}
+              </button>
+            )}
             {/* A test-mode link is a real checkout that refuses every real card,
                 and Stripe's own refusal says nothing about why. Better to say it
                 here than to take somebody to a page that cannot serve them. */}
@@ -189,7 +232,7 @@ function AppSection({
 }: {
   app: StoreApp
   cardState: (app: StoreApp, pack: StorePack) => CardState
-  onBuy: (app: StoreApp, pack: StorePack) => void
+  onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
 }) {
@@ -245,7 +288,7 @@ function AppSection({
             appTitle={app.title}
             index={i}
             state={cardState(app, pack)}
-            onBuy={() => onBuy(app, pack)}
+            onBuy={(plan) => onBuy(app, pack, plan)}
             onSignIn={onSignIn}
             onCheck={onCheck}
           />
@@ -312,7 +355,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     return { kind: 'buy' }
   }
 
-  const buy = (app: StoreApp, pack: StorePack) => {
+  const buy = (app: StoreApp, pack: StorePack, plan?: StorePlan) => {
     if (!user) {
       onOpenAuth()
       return
@@ -320,7 +363,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     // A new tab, not this one: navigating away would throw the wait away, and
     // coming back to a shop that has already flipped to Owned is the whole
     // point of watching for it.
-    window.open(buyUrl(pack, user.id, user.email), '_blank', 'noopener,noreferrer')
+    window.open(buyUrl(pack, user.id, user.email, plan), '_blank', 'noopener,noreferrer')
     setPending(packKey(app.id, pack.id))
   }
 

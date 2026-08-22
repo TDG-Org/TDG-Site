@@ -217,6 +217,16 @@
   letter-spacing: -0.02em;
 }
 
+/* The `/mo` after an amount. Deliberately smaller and quieter than the number
+   it follows: it is a unit, not a second price, and at the amount's own weight
+   it reads as part of the figure. */
+.store__cadence {
+  margin-left: 2px;
+  font: 600 0.42em/1 var(--font-display);
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
 .store__pack-name {
   margin: 0 0 8px;
   font: 600 19px/1.2 var(--font-display);

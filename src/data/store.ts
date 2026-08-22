@@ -37,6 +37,27 @@
  * file only names the things ownership is about.
  */
 
+/**
+ * One way to buy one pack.
+ *
+ * A pack used to be a single price and a single link, which was true while
+ * everything on this shelf was bought outright. TDG Veditor's Pro Export Pack
+ * is a subscription now — monthly, yearly, or once — so the shelf has to be
+ * able to SAY which, and "ONE-TIME / YOURS FOR GOOD" printed over a monthly
+ * plan is the one mistake a shop may not make.
+ */
+export type StorePlan = {
+  id: 'monthly' | 'annual' | 'lifetime' | 'one-time'
+  /** Title Case: the plan's name on its button. */
+  label: string
+  /** USD cents, exactly as Stripe charges. */
+  priceCents: number
+  /** Sentence case, appended after the amount: `/mo`, `/yr`, or empty. */
+  cadence: string
+  /** The live Stripe Payment Link for THIS plan. */
+  paymentLink: string
+}
+
 export type StorePack = {
   /** Matches `metadata.pack` on the Stripe link AND the pack id the app gates on. */
   id: string
@@ -44,6 +65,15 @@ export type StorePack = {
   name: string
   /** USD cents, exactly as Stripe charges. Formatted for display, never typed twice. */
   priceCents: number
+  /**
+   * Every way this pack can be bought, when there is more than one.
+   *
+   * Absent for a pack sold a single way, so every pack that has not changed
+   * reads exactly as it did. When present, the FIRST entry is the one the card
+   * leads with and must match `priceCents` and `paymentLink` above — those two
+   * stay the primary plan rather than becoming a fourth place to state it.
+   */
+  plans?: StorePlan[]
   /** Sentence case: one line on what it is. */
   tagline: string
   /** What buying it unlocks, in the words the app itself uses. */
@@ -148,14 +178,43 @@ export const STORE_APPS: StoreApp[] = [
       {
         id: 'pro-export',
         name: 'Pro Export Pack',
-        priceCents: 1499,
-        tagline: 'Everything above 1080p, and one run that writes every shape.',
+        // The MONTHLY plan is the primary one, so these two fields and
+        // `plans[0]` are the same price and the same link rather than a second
+        // place to state them. The old $14.99 one-time link this pack used to
+        // carry is deactivated in Stripe: it undercut both the subscription
+        // and Lifetime for anybody who still had the URL.
+        priceCents: 599,
+        tagline: 'Everything above 1080p, every shape in one run, and more than one Timeline.',
         unlocks: [
           'Every resolution above 1080p: QHD, 4K, DCI and vertical 4K',
           'Video bitrates above 12,000 kbps, target and spike ceiling alike',
           '“Also Export As”, one render writing the same edit at several shapes',
+          'More than one Timeline in a project, side by side in the tab strip',
         ],
-        paymentLink: 'https://buy.stripe.com/aFa14mfwO2U279g2KD4ZG0b',
+        paymentLink: 'https://buy.stripe.com/bJe9ASfwOcuCeBI1Gz4ZG0h',
+        plans: [
+          {
+            id: 'monthly',
+            label: 'Monthly',
+            priceCents: 599,
+            cadence: '/mo',
+            paymentLink: 'https://buy.stripe.com/bJe9ASfwOcuCeBI1Gz4ZG0h',
+          },
+          {
+            id: 'annual',
+            label: 'Yearly',
+            priceCents: 4900,
+            cadence: '/yr',
+            paymentLink: 'https://buy.stripe.com/aFadR81FYeCK51884X4ZG0i',
+          },
+          {
+            id: 'lifetime',
+            label: 'Lifetime',
+            priceCents: 12900,
+            cadence: '',
+            paymentLink: 'https://buy.stripe.com/7sYbJ070i9iqfFMgBt4ZG0j',
+          },
+        ],
       },
     ],
   },
@@ -175,6 +234,17 @@ export function formatUsd(cents: number): string {
  * real checkout page that simply refuses every real card, and a customer who
  * meets one is told nothing about why. The card says it plainly instead.
  */
+/**
+ * Is this pack RENTED rather than bought?
+ *
+ * Asked of the plans rather than of the pack id, so the answer stays true if
+ * another pack ever gains a subscription. A pack with no plans is one-time,
+ * which is what every pack on this shelf was until the Pro Export Pack moved.
+ */
+export function isSubscription(pack: StorePack): boolean {
+  return (pack.plans ?? []).some((plan) => plan.id === 'monthly' || plan.id === 'annual')
+}
+
 export function isTestLink(pack: StorePack): boolean {
   return new URL(pack.paymentLink).pathname.startsWith('/test_')
 }
@@ -188,8 +258,13 @@ export function isTestLink(pack: StorePack): boolean {
  * granted to nobody, so this function is never called with an empty id: the
  * button says "Sign in to buy" until there is one.
  */
-export function buyUrl(pack: StorePack, userId: string, email?: string | null): string {
-  const url = new URL(pack.paymentLink)
+export function buyUrl(
+  pack: StorePack,
+  userId: string,
+  email?: string | null,
+  plan?: StorePlan,
+): string {
+  const url = new URL(plan?.paymentLink ?? pack.paymentLink)
   url.searchParams.set('client_reference_id', userId)
   if (email) url.searchParams.set('prefilled_email', email)
   return url.toString()
