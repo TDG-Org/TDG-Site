@@ -4,8 +4,8 @@ import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevOverview } from './api'
 import {
-  Button,
   Panel,
+  RefreshRail,
   SectionControls,
   Select,
   Switch,
@@ -13,10 +13,11 @@ import {
   Toasts,
   useToasts,
 } from './controls'
-import { SectionsProvider } from '../lib/sections'
+import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
 import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
+import { captureAnchor, holdAnchor, readView, useRememberView, useRestoreView } from './viewState'
 import './DevConsole.css'
 
 /**
@@ -54,13 +55,19 @@ const TABS: { id: Tab; label: string; what: string }[] = [
  * The provider has to sit OUTSIDE the component that renders the panels, so it
  * survives every re-render one of them causes. A provider mounted inside would
  * reset every section to shut each time a write landed.
+ *
+ * The remembered view is read ONCE, here, before anything renders. It is what a
+ * real page reload gets put back from: the tab, the account, the search, the
+ * open sections and the place on the page. See `viewState.ts` for why the
+ * arrangement has to come back before the scroll position can mean anything.
  */
 export default function DevConsole() {
-  const [query, setQuery] = useState('')
+  const [saved] = useState(readView)
+  const [query, setQuery] = useState(() => saved?.query ?? '')
   return (
-    <SectionsProvider>
+    <SectionsProvider initialOpen={saved?.open}>
       <SearchProvider query={query} setQuery={setQuery}>
-        <DevConsoleBody query={query} setQuery={setQuery} />
+        <DevConsoleBody query={query} setQuery={setQuery} saved={saved} />
       </SearchProvider>
     </SectionsProvider>
   )
@@ -69,22 +76,26 @@ export default function DevConsole() {
 function DevConsoleBody({
   query,
   setQuery,
+  saved,
 }: {
   query: string
   setQuery: (q: string) => void
+  saved: ReturnType<typeof readView>
 }) {
   const { user, profile } = useAuth()
   const devMode = useDevMode()
   const { toasts, push, dismiss } = useToasts()
 
-  const [tab, setTab] = useState<Tab>('accounts')
+  const [tab, setTab] = useState<Tab>(() =>
+    TABS.some((t) => t.id === saved?.tab) ? (saved!.tab as Tab) : 'accounts',
+  )
   const [overview, setOverview] = useState<DevOverview | null>(null)
   const [catalog, setCatalog] = useState<DevCatalog | null>(null)
   const [bootError, setBootError] = useState<string | null>(null)
 
   const [rows, setRows] = useState<DevAccount[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(saved?.selectedId ?? null)
 
   const [events, setEvents] = useState<DevEvent[]>([])
   const [audit, setAudit] = useState<DevAuditRow[]>([])
@@ -98,6 +109,10 @@ function DevConsoleBody({
   const [busy, setBusy] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
 
+  /** When the page last finished reading everything, and whether it is now. */
+  const [readAt, setReadAt] = useState<number | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
   const meId = user?.id ?? ''
   const selected = useMemo(
     () => rows.find((r) => r.user_id === selectedId) ?? null,
@@ -107,103 +122,170 @@ function DevConsoleBody({
   const message = (e: unknown) =>
     e instanceof Error ? e.message : "Something went wrong, and it didn't say what."
 
-  /* ── boot: the numbers and the dropdown lists ─────────────────────────── */
+  /* ── the five reads, each on its own ──────────────────────────────────
+   *
+   * One function per thing the page shows, so Refresh can run all five and
+   * every other caller can run the one it means. Each holds a sequence number
+   * rather than a cancelled flag: a refresh fired while a debounced search is
+   * still in flight must not have the older answer land on top of it.
+   */
 
   const loadOverview = useCallback(async () => {
     try {
       setOverview(await api.getOverview())
+      return true
     } catch (e) {
       setBootError(message(e))
+      return false
     }
   }, [])
 
-  useEffect(() => {
-    void loadOverview()
-    api.getCatalog().then(setCatalog, (e) => setBootError(message(e)))
-  }, [loadOverview])
-
-  /* ── the roster, debounced ────────────────────────────────────────────── */
+  const loadCatalog = useCallback(async () => {
+    try {
+      setCatalog(await api.getCatalog())
+      return true
+    } catch (e) {
+      setBootError(message(e))
+      return false
+    }
+  }, [])
 
   /*
-   * The instant filter below runs on `rows` and never waits for this. This is
+   * The instant filter renders from `rows` and never waits for this. This is
    * the bonus pass: `tdg_admin_accounts` caps what it returns, so a search that
    * only ever looked at what is already loaded could miss an account this
-   * browser has never seen. Debounced, because it is a round trip and nothing
-   * on screen is waiting for it.
+   * browser has never seen.
    */
-  useEffect(() => {
-    let cancelled = false
+  const rosterSeq = useRef(0)
+  const loadRoster = useCallback(async (q: string) => {
+    const seq = ++rosterSeq.current
     setListState('loading')
-    const timer = window.setTimeout(() => {
-      api.searchAccounts(query.trim()).then(
-        (list) => {
-          if (cancelled) return
-          setRows(list)
-          setListState('ready')
-        },
-        () => {
-          if (!cancelled) setListState('error')
-        },
-      )
-    }, 250)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
+    try {
+      const list = await api.searchAccounts(q.trim())
+      if (seq !== rosterSeq.current) return false
+      setRows(list)
+      setListState('ready')
+      return true
+    } catch {
+      if (seq === rosterSeq.current) setListState('error')
+      return false
     }
-  }, [query])
-
-  /* ── the selected account's own history ───────────────────────────────── */
-
-  useEffect(() => {
-    if (!selectedId) return
-    let cancelled = false
-    setHistoryState('loading')
-    Promise.all([api.getEvents(selectedId, 100), api.getAudit(selectedId, '', 100)]).then(
-      ([e, a]) => {
-        if (cancelled) return
-        setEvents(e)
-        setAudit(a)
-        setHistoryState('ready')
-      },
-      () => {
-        if (!cancelled) setHistoryState('error')
-      },
-    )
-    return () => {
-      cancelled = true
-    }
-  }, [selectedId])
-
-  /* ── the whole-project ledger, for the other two tabs ─────────────────── */
-
-  /*
-   * Both ledgers, unfiltered, once. They used to reload on every keystroke of
-   * the audit box and to be filtered in Postgres; now the page search filters
-   * them in memory, so a keystroke costs nothing and the Purchases tab is
-   * already populated by the time you click it. LEDGER_CAP is the server's own
-   * ceiling, and the count line says so when a list actually reaches it.
-   */
-  const loadLedger = useCallback(() => {
-    setLedgerState('loading')
-    Promise.all([api.getEvents(null, LEDGER_CAP), api.getAudit(null, '', LEDGER_CAP)]).then(
-      ([e, a]) => {
-        setAllEvents(e)
-        setAllAudit(a)
-        setLedgerState('ready')
-      },
-      () => setLedgerState('error'),
-    )
   }, [])
 
+  const historySeq = useRef(0)
+  const loadHistory = useCallback(async (id: string | null) => {
+    if (!id) return false
+    const seq = ++historySeq.current
+    setHistoryState('loading')
+    try {
+      const [e, a] = await Promise.all([api.getEvents(id, 100), api.getAudit(id, '', 100)])
+      if (seq !== historySeq.current) return false
+      setEvents(e)
+      setAudit(a)
+      setHistoryState('ready')
+      return true
+    } catch {
+      if (seq === historySeq.current) setHistoryState('error')
+      return false
+    }
+  }, [])
+
+  /*
+   * Both whole-project ledgers, unfiltered, once. They used to reload on every
+   * keystroke of the audit box and to be filtered in Postgres; now the page
+   * search filters them in memory, so a keystroke costs nothing and the
+   * Purchases tab is already populated by the time you click it. LEDGER_CAP is
+   * the server's own ceiling, and the count line says so when a list reaches it.
+   */
+  const ledgerSeq = useRef(0)
+  const loadLedger = useCallback(async () => {
+    const seq = ++ledgerSeq.current
+    setLedgerState('loading')
+    try {
+      const [e, a] = await Promise.all([
+        api.getEvents(null, LEDGER_CAP),
+        api.getAudit(null, '', LEDGER_CAP),
+      ])
+      if (seq !== ledgerSeq.current) return false
+      setAllEvents(e)
+      setAllAudit(a)
+      setLedgerState('ready')
+      return true
+    } catch {
+      if (seq === ledgerSeq.current) setLedgerState('error')
+      return false
+    }
+  }, [])
+
+  /* ── Refresh: the whole page, without losing the page ─────────────────
+   *
+   * The five reads above, together, and NOT a reload. A reload would answer the
+   * same question and charge you your place on a very long page, the account
+   * you had open, your search and every section you had expanded.
+   *
+   * The place is kept by holding an anchor rather than a scroll offset: the
+   * element at the top of your screen is measured before the reads go out and
+   * put back where it was as they land, so a roster that comes back four rows
+   * shorter moves nothing you were looking at. See viewState.ts.
+   *
+   * `boot` leaves the roster and the history to the two effects below, which
+   * run on mount anyway, so opening the page does not ask for either twice.
+   */
+  const readAll = useCallback(
+    async (scope: 'boot' | 'again') => {
+      const here = scope === 'again' ? captureAnchor() : null
+      if (scope === 'again') setRefreshing(true)
+      const reads: Promise<boolean>[] = [loadOverview(), loadCatalog(), loadLedger()]
+      if (scope === 'again') reads.push(loadRoster(query), loadHistory(selectedId))
+      const landed = await Promise.all(reads)
+      // Only when something actually came back. A rail that says "read 1m ago"
+      // after five refused reads is telling you the page is fresh at the exact
+      // moment it is stale, which is the one lie a freshness stamp can tell.
+      if (landed.some(Boolean)) setReadAt(Date.now())
+      if (scope === 'again') {
+        setRefreshing(false)
+        // After the commit, and then for a moment longer: five reads land in
+        // more than one frame and each of them can move what is above you.
+        holdAnchor(here, { ms: 900 })
+      }
+    },
+    [loadOverview, loadCatalog, loadLedger, loadRoster, loadHistory, query, selectedId],
+  )
+
+  const refresh = useCallback(() => {
+    void readAll('again')
+  }, [readAll])
+
+  /* ── boot, and the two reads with a life of their own ─────────────────── */
+
+  const booted = useRef(false)
   useEffect(() => {
-    loadLedger()
-  }, [loadLedger])
+    if (booted.current) return
+    booted.current = true
+    void readAll('boot')
+  }, [readAll])
+
+  /** The roster follows the search box, debounced: it is a round trip, and
+   *  nothing on screen is waiting for it. */
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadRoster(query), 250)
+    return () => window.clearTimeout(timer)
+  }, [query, loadRoster])
+
+  /** The open account's own history follows the selection. */
+  useEffect(() => {
+    void loadHistory(selectedId)
+  }, [selectedId, loadHistory])
 
   /* ── one write, then re-read what actually landed ─────────────────────── */
 
   const run: Run = useCallback(
     (key, okMessage, fn) => {
       const id = selectedId
+      // A write re-reads the account under you, and a panel that grows a
+      // warning or loses a row moves everything below it. Same treatment as
+      // Refresh: hold the thing you were looking at still.
+      const here = captureAnchor()
       setBusy(key)
       void (async () => {
         try {
@@ -219,22 +301,20 @@ function DevConsoleBody({
               setRows((list) => list.filter((r) => r.user_id !== id))
               setSelectedId(null)
             }
-            const [e, a] = await Promise.all([
-              api.getEvents(id, 100),
-              api.getAudit(id, '', 100),
-            ])
-            setEvents(e)
-            setAudit(a)
+            await loadHistory(id)
           }
           void loadOverview()
+          setReadAt(Date.now())
+
         } catch (e) {
           push('bad', message(e))
         } finally {
           setBusy(null)
+          holdAnchor(here, { ms: 600 })
         }
       })()
     },
-    [selectedId, push, loadOverview],
+    [selectedId, push, loadOverview, loadHistory],
   )
 
   /* ── selecting on a narrow screen should show the thing you selected ──── */
@@ -303,6 +383,16 @@ function DevConsoleBody({
     [allAudit, terms],
   )
 
+  /* ── keeping the page you were reading ────────────────────────────────
+   *
+   * The restore runs first and the saving waits for it: writing the view while
+   * the page is still assembling itself would record the top of a page it has
+   * not finished arriving at, and that is the record the NEXT reload would use.
+   */
+  const { openIds } = useSections()
+  const restored = useRestoreView(saved?.anchor ?? null)
+  useRememberView({ tab, selectedId, query, open: openIds }, restored)
+
   /** What the toolbar says while a search is running, across every tab. */
   const searchHint = (() => {
     if (!searching) return null
@@ -319,7 +409,7 @@ function DevConsoleBody({
       <div className="texture dev__grid" aria-hidden="true" />
 
       <div className="shell dev__shell">
-        <header className="dev__head">
+        <header className="dev__head" data-dev-anchor="head">
           <div className="kicker">
             <span className="kicker__num">00</span>
             <span className="kicker__rule" />
@@ -365,7 +455,7 @@ function DevConsoleBody({
 
         <Overview overview={overview} />
 
-        <nav className="dev__tabs" aria-label="Developer sections">
+        <nav className="dev__tabs" aria-label="Developer sections" data-dev-anchor="tabs">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -412,7 +502,7 @@ function DevConsoleBody({
               </ul>
             </div>
 
-            <div className="dev__pane" ref={detailRef}>
+            <div className="dev__pane" ref={detailRef} data-dev-anchor="pane">
               {selected && catalog ? (
                 <AccountDetail
                   account={selected}
@@ -450,7 +540,6 @@ function DevConsoleBody({
                   { value: 'makullveny', label: 'Makullveny' },
                 ]}
               />
-              <Button onClick={loadLedger}>Refresh</Button>
             </div>
             <p className="dev__roster-count">
               {ledgerState === 'loading' && allEvents.length === 0
@@ -526,9 +615,6 @@ function DevConsoleBody({
 
         {tab === 'audit' && (
           <div className="dev__wide">
-            <div className="dev__search">
-              <Button onClick={loadLedger}>Refresh</Button>
-            </div>
             <p className="dev__roster-count">
               {ledgerState === 'loading' && allAudit.length === 0
                 ? 'Reading the log…'
@@ -579,6 +665,8 @@ function DevConsoleBody({
           </div>
         )}
       </div>
+
+      <RefreshRail onRefresh={refresh} busy={refreshing} readAt={readAt} />
 
       <Toasts toasts={toasts} onDismiss={dismiss} />
     </section>
@@ -677,7 +765,9 @@ function RosterRow({
     (a.mak_candle_purchased_at ? 1 : 0)
 
   return (
-    <li>
+    // Anchored on the account rather than on its place in the list: a refresh
+    // that returns a shorter roster must not slide the row you were reading.
+    <li data-dev-anchor={`acct-${a.user_id}`}>
       <button
         type="button"
         className="dev__row-btn"

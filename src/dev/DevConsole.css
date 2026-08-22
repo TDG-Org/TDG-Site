@@ -1366,6 +1366,123 @@
   }
 }
 
+/* ── the refresh rail ─────────────────────────────────────────────────────
+   Pinned to the right edge, halfway down, because the page it re-reads is
+   several screens long and a Refresh you have to scroll to find is a Refresh
+   you reload the browser instead of using. It sits BELOW the toasts (z-index
+   200) and above everything else, and clear of them: they stack from the
+   bottom-right corner and this is centred.                                   */
+
+.dev__rail {
+  position: fixed;
+  right: clamp(10px, 1.4vw, 18px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 190;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.dev__rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--bg2);
+  box-shadow: var(--card-shadow);
+  color: var(--text);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.dev__rail-btn:hover:not(:disabled),
+.dev__rail-btn:focus-visible {
+  background-color: var(--accent-soft);
+  border-color: var(--accent);
+}
+.dev__rail-btn:disabled {
+  cursor: progress;
+}
+
+/* The word lives LEFT of the icon and opens leftwards: the rail is against the
+   right edge, so a label that grew rightwards would grow off the screen. It is
+   a max-width rather than a display swap so it can actually animate. */
+.dev__rail-word {
+  display: block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font: 600 12.5px var(--font-body);
+  transition:
+    max-width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s ease,
+    padding-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dev__rail-btn:hover .dev__rail-word,
+.dev__rail-btn:focus-visible .dev__rail-word,
+.dev__rail-btn[data-busy] .dev__rail-word {
+  max-width: 110px;
+  padding-left: 15px;
+  opacity: 1;
+}
+
+.dev__rail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  color: var(--accent-2);
+}
+.dev__rail-btn:hover .dev__rail-icon {
+  color: var(--text);
+}
+.dev__rail-btn[data-busy] .dev__rail-icon {
+  animation: devSpin 0.9s linear infinite;
+}
+
+/* Two characters saying how old the page is, so most of the time the button
+   does not have to be pressed to answer that. */
+.dev__rail-age {
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  font: 600 9px/16px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: var(--t-theme);
+}
+
+@media (max-width: 700px) {
+  .dev__rail-btn {
+    height: 38px;
+  }
+  .dev__rail-icon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dev__rail-word {
+    transition: none;
+  }
+  .dev__rail-btn[data-busy] .dev__rail-icon {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dev__panel-region,
   .dev__panel-chevron {

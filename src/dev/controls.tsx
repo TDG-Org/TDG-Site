@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
+import { fmtAgeShort, fmtRelative } from './format'
 import { hay, useSearch } from './search'
 
 /**
@@ -92,7 +93,15 @@ export function Panel({
   const regionId = sectionDomId(sectionId, 'dev-sec')
 
   return (
-    <section className="dev__panel" data-tone={tone} data-open={open || undefined}>
+    <section
+      className="dev__panel"
+      data-tone={tone}
+      data-open={open || undefined}
+      // What Refresh and a reload hold still. Keyed on the section rather than
+      // on the account, so the DevFleet Store panel stays the thing you were
+      // looking at even after its contents are re-read. See viewState.ts.
+      data-dev-anchor={regionId}
+    >
       {/* The button lives inside the heading rather than around it, so the
           section still has a heading in the outline when it is shut. */}
       <h3 className="dev__panel-heading">
@@ -750,6 +759,106 @@ export function Toasts({
           </button>
         </div>
       ))}
+    </div>
+  )
+}
+
+/* ── the refresh rail ──────────────────────────────────────────────────── */
+
+/**
+ * Re-read the page, from wherever you are standing on it.
+ *
+ * ## Why it is pinned to the edge
+ *
+ * The console is a long page and the data on it goes stale while you read it:
+ * a payment lands, somebody else grants a pack, you are watching a suspension
+ * take effect. The answer to that used to be scrolling back to a Refresh button
+ * that only existed on two of the three tabs and only re-read the ledger. So
+ * this one is fixed to the side, is on every tab, and re-reads everything —
+ * the overview numbers, the roster, both ledgers and the open account's own
+ * history.
+ *
+ * ## Why it is not a reload
+ *
+ * `location.reload()` would answer the same question and cost you your place,
+ * your open sections, your search and the account you had open. This swaps the
+ * DATA and holds the page still around it; `viewState.ts` is the half that
+ * keeps the thing you were looking at exactly where it was.
+ *
+ * ## Why it says how old the page is
+ *
+ * A refresh button with nothing beside it makes you press it to find out
+ * whether you needed to. The age under the icon is the answer to that question,
+ * so most of the time the button does not get pressed at all.
+ */
+export function RefreshRail({
+  onRefresh,
+  busy,
+  readAt,
+}: {
+  onRefresh: () => void
+  busy: boolean
+  /** When the page last successfully read anything, or null for not yet. */
+  readAt: number | null
+}) {
+  /*
+   * The clock lives here rather than on the page, so the thing that re-renders
+   * every thirty seconds is a button and a two-character chip, not a console
+   * holding three lists and nine panels. An age that never ticks is worse than
+   * no age at all: it says "2m" for an hour.
+   */
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (readAt == null) return
+    const t = window.setInterval(() => tick((n) => n + 1), 30_000)
+    return () => window.clearInterval(t)
+  }, [readAt])
+
+  const label = busy
+    ? 'Re-reading everything on this page…'
+    : readAt == null
+      ? 'Refresh: re-read everything on this page without losing your place.'
+      : `Refresh: re-read everything on this page without losing your place. Read ${fmtRelative(
+          new Date(readAt).toISOString(),
+        )}.`
+
+  return (
+    <div className="dev__rail">
+      <button
+        type="button"
+        className="dev__rail-btn"
+        data-busy={busy || undefined}
+        onClick={onRefresh}
+        disabled={busy}
+        title={label}
+        aria-label={label}
+      >
+        {/* Left of the icon, because the rail is pinned to the right edge and a
+            label that grew rightwards would grow off the screen. */}
+        <span className="dev__rail-word" aria-hidden="true">
+          {busy ? 'Reading…' : 'Refresh'}
+        </span>
+        <span className="dev__rail-icon" aria-hidden="true">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01" />
+            <path d="M20.5 4.5v5h-5" />
+          </svg>
+        </span>
+      </button>
+      {/* aria-hidden: the same fact is already in the button's own label, in
+          words, and a bare "2m" read out on its own says nothing. */}
+      <span className="dev__rail-age" aria-hidden="true">
+        {busy ? '···' : fmtAgeShort(readAt)}
+      </span>
     </div>
   )
 }

@@ -41,8 +41,42 @@ you wanted instead of scrolling past eight you did not.
 
 Which sections are open follows you between accounts. Expanding Makullveny and
 then clicking the next person shows Makullveny open again, which is what makes
-comparing two accounts bearable. Nothing persists across a reload, so every visit
-starts shut.
+comparing two accounts bearable.
+
+## Refreshing without losing your place
+
+The data goes stale while you read it — a payment lands, somebody else grants a
+pack, you are watching a suspension take. **The Refresh button is pinned to the
+right edge of the screen**, halfway down, so it is reachable from anywhere on a
+page that is several screens long. It is on every tab, and it re-reads
+everything: the overview numbers, the roster, both whole-project ledgers and the
+open account's own history. Under it is how old the page is — `now`, `4m`, `2h` —
+which is usually the answer to whether it is worth pressing at all. That stamp
+only moves when a read actually came back, so it cannot say "fresh" while every
+call is being refused.
+
+**It is not a reload, and it does not cost you your place.** The element at the
+top of your screen is measured before the reads go out and put back where it was
+as they land, so a roster that returns four rows shorter moves nothing you were
+looking at. If you are reading somebody's DevFleet Store packs when you press it,
+you are still reading them afterwards, at the same offset, with the same sections
+open. A write does the same thing, for the same reason.
+
+**And when you really do press F5.** A page cannot intercept that, so instead the
+whole arrangement — the tab, the account, what is in the search box, which
+sections are open, and the anchor — is written to `sessionStorage` and put back
+on the next boot. The arrangement has to come back first: the panel you were
+looking at only exists once the right account is selected and the right section
+is open. Restoring gives up the instant you touch the wheel, a key or the
+scrollbar, because a page that scrolls itself back under somebody who is
+scrolling away from it is worse than one that never tried.
+
+`sessionStorage`, deliberately: it dies with the browser tab, so tomorrow starts
+clean and shut, the way this page always has. And only the first console mount
+of a page load reads it, so **clicking Developer in the nav still opens at the
+top with nothing selected** — a reload is the case being fixed, not a habit being
+installed. See `viewState.ts` for the anchor algorithm and why it is anchors
+rather than scroll offsets.
 
 ## What it can do
 
@@ -75,11 +109,12 @@ in every app).
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the three tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The nine panels for one account. Each states what it is and names the table it writes. |
-| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts. Shared so fifteen switches cannot drift into fifteen switches. |
+| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
-| `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail, panels the page itself never renders. |
+| `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
+| `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
 | `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. |
-| `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
+| `format.ts` | Dates, money, the derived one-line **standing** for an account, the ban/hide durations, and the two-character age on the Refresh rail. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
 
@@ -201,3 +236,11 @@ add anything here that relies on the page being secret.
    `right` non-interactive, because it renders inside the header button.
    Collapsing comes free from `Panel`; nothing to wire up.
 4. Reuse `controls.tsx`. Nothing here ships wearing the browser's default look.
+5. If it re-reads anything, hang it off `readAll` rather than giving it its own
+   button. One Refresh for the whole page is the point of the rail; a second
+   button six inches away that refreshes LESS than it does is a bug in the
+   interface, which is what the two per-tab Refresh buttons it replaced were.
+6. Anything long enough to scroll past wants a `data-dev-anchor`. `Panel` and the
+   roster rows already carry one, so a new section gets it free — but a bespoke
+   surface that is not a `Panel` needs to say so, or Refresh will hold the wrong
+   thing still. See `viewState.ts`.

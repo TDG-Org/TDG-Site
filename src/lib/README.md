@@ -104,6 +104,18 @@ page never renders directly and that mount and unmount as you click between
 people. Each section registers its id on mount, so the buttons work from that
 register rather than from a list somebody has to remember to update.
 
+**Everything starts collapsed unless the page says otherwise.** `initialOpen`
+seeds the set once, on mount, and is how a page that remembers its own
+arrangement hands it back: the Developer console restores it from the session so
+a reload lands on the page you were reading rather than on a collapsed copy of
+it (`src/dev/viewState.ts`). Nothing is persisted here. Every other page passes
+nothing and opens shut.
+
+`openIds` is the counterpart: every open id, including ones nothing is currently
+rendering. That is the set a page would persist — what you arranged, not what
+happens to be mounted at the moment you ask. `openCount` and `total` stay about
+what is on screen, because that is what the two buttons act on.
+
 ## `supabase.ts`
 
 The shared TDG Core project — the same `profiles` / `auth.users` every TDG app

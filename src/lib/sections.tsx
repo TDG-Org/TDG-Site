@@ -37,8 +37,15 @@ import {
  * A section leaves the register when it unmounts but keeps its open state. So
  * expanding Identity and then clicking a different account shows Identity open
  * again: the shape you set up follows you between people instead of resetting
- * every time, which is what makes comparing two accounts bearable. Nothing is
- * persisted across a reload: every visit starts collapsed, as above.
+ * every time, which is what makes comparing two accounts bearable.
+ *
+ * ## Who decides what is open at the start
+ *
+ * Nothing here is persisted. `initialOpen` is how a page that DOES remember
+ * hands its remembered set back: the Developer console restores it from the
+ * session so that a reload lands you on the same page you were reading, not on
+ * a collapsed copy of it (see `src/dev/viewState.ts`). Every other page passes
+ * nothing and therefore opens collapsed, as above.
  */
 type SectionsValue = {
   isOpen: (id: string) => boolean
@@ -51,6 +58,12 @@ type SectionsValue = {
   openCount: number
   /** How many sections are on screen at all. */
   total: number
+  /**
+   * Every open id, including ones nothing is currently rendering. This is the
+   * set a page would persist: what you had arranged, not what happens to be
+   * mounted at the moment you are asked.
+   */
+  openIds: readonly string[]
 }
 
 const SectionsContext = createContext<SectionsValue | null>(null)
@@ -61,8 +74,17 @@ export function useSections(): SectionsValue {
   return ctx
 }
 
-export function SectionsProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set())
+export function SectionsProvider({
+  initialOpen,
+  children,
+}: {
+  /** Sections to start open. Read ONCE, on mount: this seeds the state, it
+   *  does not drive it, so a later change to the array is not a command to
+   *  re-open anything the reader has since shut. */
+  initialOpen?: readonly string[]
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(initialOpen ?? []))
   /** Ids currently mounted, in mount order. */
   const [ids, setIds] = useState<readonly string[]>([])
 
@@ -95,6 +117,7 @@ export function SectionsProvider({ children }: { children: ReactNode }) {
         }),
       openCount: onScreenOpen.length,
       total: ids.length,
+      openIds: [...open],
     }
   }, [open, ids, register])
 
