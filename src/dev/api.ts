@@ -208,7 +208,7 @@ export const getAudit = (
 
 /**
  * The accounts whose Developer permission cannot be removed, and which cannot
- * be deleted. See supabase/migrations/20260821200000_protected_developer_accounts.sql.
+ * be deleted. See supabase/migrations/20260822015840_protected_developer_accounts.sql.
  *
  * Fetched once per page load and held, rather than threaded down from
  * DevConsole like the catalog is. The list is two rows that change about never

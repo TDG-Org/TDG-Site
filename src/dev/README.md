@@ -109,7 +109,7 @@ The list lives in `public.tdg_protected_account(uuid)` and matches on
 with the name. There is no button and no admin function for editing the list,
 on purpose. Changing who is protected costs a migration, which is a decision
 with a paper trail. See
-`supabase/migrations/20260821200000_protected_developer_accounts.sql`.
+`supabase/migrations/20260822015840_protected_developer_accounts.sql`.
 
 **What this does not cover.** Suspend, hide and soft delete still work on a
 protected account, because none of them touch the permission. A developer can
