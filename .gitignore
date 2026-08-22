@@ -67,7 +67,7 @@ ROADMAP*.md
 *.dc.html
 public/ref/
 
-# never commit raw source art or exports — public/shots holds the encoded ones
+# never commit raw source art or exports; public/shots holds the encoded ones
 /design/
 /raw-assets/
 *.psd
