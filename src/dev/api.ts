@@ -206,6 +206,25 @@ export const getAudit = (
 ): Promise<DevAuditRow[]> =>
   rpc<DevAuditRow[]>('tdg_admin_audit', { p_target: userId, p_q: q, p_max_rows: maxRows })
 
+/**
+ * The accounts whose Developer permission cannot be removed, and which cannot
+ * be deleted. See supabase/migrations/20260821200000_protected_developer_accounts.sql.
+ *
+ * Fetched once per page load and held, rather than threaded down from
+ * DevConsole like the catalog is. The list is two rows that change about never
+ * and only the Permissions panel and one header tag read it, so a prop through
+ * three components buys nothing. If a third caller ever appears, hoist it.
+ *
+ * This is for DISPLAY. It is what lets the page render the switch as locked
+ * instead of offering a control the server will refuse, which is the one thing
+ * a console must never do. Nothing here decides anything: a BEFORE trigger on
+ * public.profiles is what actually refuses, whichever path the write came from.
+ */
+let protectedIds: Promise<readonly string[]> | null = null
+
+export const getProtectedAccounts = (): Promise<readonly string[]> =>
+  (protectedIds ??= rpc<string[] | null>('tdg_admin_protected_accounts').then((ids) => ids ?? []))
+
 /* ── writes ────────────────────────────────────────────────────────────── */
 
 export const setDeveloper = (userId: string, isDeveloper: boolean): Promise<null> =>

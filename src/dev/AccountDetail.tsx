@@ -42,10 +42,35 @@ type Props = {
   historyState: 'loading' | 'ready' | 'error'
 }
 
+/**
+ * The accounts the database will not let anybody demote or delete.
+ *
+ * Read once and held for the page. A panel asks so it can render a locked
+ * switch rather than a live one the server is going to refuse; the refusing
+ * itself happens in Postgres either way. An empty answer, from a read that
+ * failed, therefore costs nothing worse than a switch that looks available
+ * until you press it, which is what the page did before this existed.
+ */
+function useProtectedAccounts(): ReadonlySet<string> {
+  const [ids, setIds] = useState<ReadonlySet<string>>(() => new Set())
+  useEffect(() => {
+    let live = true
+    api.getProtectedAccounts().then(
+      (list) => live && setIds(new Set(list)),
+      () => {},
+    )
+    return () => {
+      live = false
+    }
+  }, [])
+  return ids
+}
+
 export function AccountDetail(props: Props) {
   const { account, meId } = props
   const isSelf = account.user_id === meId
   const standing = standingOf(account)
+  const isProtected = useProtectedAccounts().has(account.user_id)
 
   return (
     <div className="dev__detail">
@@ -63,6 +88,7 @@ export function AccountDetail(props: Props) {
         </div>
         <div className="dev__detail-tags">
           {account.is_admin && <Tag tone="hot">DEVELOPER</Tag>}
+          {isProtected && <Tag tone="ok">PROTECTED</Tag>}
           {isSelf && <Tag tone="hot">YOU</Tag>}
           <Tag tone={standing.tone}>{standing.label.toUpperCase()}</Tag>
         </div>
@@ -74,12 +100,12 @@ export function AccountDetail(props: Props) {
 
       <WhoPanel account={account} />
       <IdentityPanel {...props} />
-      <PermissionsPanel {...props} isSelf={isSelf} />
+      <PermissionsPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <CorePanel {...props} />
       <MakullvenyPanel {...props} />
       <PacksPanel {...props} app="veditor" title="TDG Veditor Store" packs={props.catalog.veditor_packs} />
       <PacksPanel {...props} app="devfleet" title="DevFleet Store" packs={props.catalog.devfleet_packs} />
-      <StandingPanel {...props} isSelf={isSelf} />
+      <StandingPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <HistoryPanel {...props} />
     </div>
   )
@@ -228,19 +254,33 @@ function IdentityPanel({ account: a, run, busy }: Props) {
 
 /* ── permissions ───────────────────────────────────────────────────────── */
 
-function PermissionsPanel({ account: a, run, busy, isSelf }: Props & { isSelf: boolean }) {
+function PermissionsPanel({
+  account: a,
+  run,
+  busy,
+  isSelf,
+  isProtected,
+}: Props & { isSelf: boolean; isProtected: boolean }) {
   return (
     <Panel
       title="Permissions"
       what="Developer is the only permission TDG has. It unlocks this console and Bible Educator's moderation tools, for every TDG app at once."
       writes="public.profiles.is_admin"
       tone={a.is_admin ? 'danger' : 'plain'}
-      right={a.is_admin ? <Tag tone="hot">DEVELOPER</Tag> : <Tag>STANDARD</Tag>}
+      right={
+        isProtected ? (
+          <Tag tone="ok">PROTECTED</Tag>
+        ) : a.is_admin ? (
+          <Tag tone="hot">DEVELOPER</Tag>
+        ) : (
+          <Tag>STANDARD</Tag>
+        )
+      }
     >
       <Switch
         tone="danger"
         checked={a.is_admin}
-        disabled={isSelf}
+        disabled={isSelf || isProtected}
         busy={busy === 'developer'}
         onChange={(next) =>
           run(
@@ -251,9 +291,11 @@ function PermissionsPanel({ account: a, run, busy, isSelf }: Props & { isSelf: b
         }
         label="Developer"
         hint={
-          isSelf
-            ? "You can't change your own. That rule is what stops the last developer locking everyone out, so ask the other one to do it."
-            : 'Grants full read and write over every account, purchase and subscription in TDG Core. Give it to nobody who is not one of us.'
+          isProtected
+            ? 'This is one of the two TDG owner accounts. Its Developer permission is fixed in the database and cannot be removed from here, or from anywhere else the apps can reach. Changing that list takes a migration.'
+            : isSelf
+              ? "You can't change your own. That rule is what stops the last developer locking everyone out, so ask the other one to do it."
+              : 'Grants full read and write over every account, purchase and subscription in TDG Core. Give it to nobody who is not one of us.'
         }
       />
     </Panel>
@@ -522,7 +564,13 @@ function PacksPanel({
 
 /* ── standing ──────────────────────────────────────────────────────────── */
 
-function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: boolean }) {
+function StandingPanel({
+  account: a,
+  run,
+  busy,
+  isSelf,
+  isProtected,
+}: Props & { isSelf: boolean; isProtected: boolean }) {
   const [banHours, setBanHours] = useState<string>('168')
   const [hideHours, setHideHours] = useState<string>('168')
   const [reason, setReason] = useState('')
@@ -726,10 +774,21 @@ function StandingPanel({ account: a, run, busy, isSelf }: Props & { isSelf: bool
             Erases the account, its profile, its purchases and its place in everyone else's friend
             lists. There is no undo and no backup of it. The account has to be soft-deleted first,
             and the ledger keeps the payment rows with nobody attached.
+            {isProtected && (
+              <>
+                {' '}
+                <strong>
+                  Not this one. Deleting a protected owner account is how you would take its
+                  Developer permission away by the back door, so the database refuses it.
+                </strong>
+              </>
+            )}
           </p>
         </div>
         <div className="dev__action-controls">
-          {a.deleted_by_admin ? (
+          {isProtected ? (
+            <p className="dev__panel-quiet">Protected account.</p>
+          ) : a.deleted_by_admin ? (
             <TypeToConfirm
               phrase={a.username || a.email || a.user_id}
               actionLabel="Delete Forever"

@@ -49,6 +49,7 @@ Search by name, `@username`, email or user id, then for the account you pick:
   flags. Blank clears a field; anything you do not touch is left alone.
 - **Permissions:** grant or revoke Developer. Never on yourself, in either
   direction: that rule is what stops the last developer locking everyone out.
+  Never on `@luke` or `@nm8` either, in the revoking direction (see below).
 - **TDG Core Subscription:** the tier every TDG app can gate on. Free grants,
   no Stripe. Flags duplicate `subscriptions` rows, which apps read as a fault.
 - **Makullveny:** its own tier and status, the Candle bundle, the supporter
@@ -77,6 +78,45 @@ in every app).
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
+
+## The two accounts nobody can demote
+
+`@luke` and `@nm8` keep Developer for good. Their profile row cannot be deleted
+either, because deleting the row is the slower way of doing the same thing. The
+console shows both as **PROTECTED**, renders the Developer switch locked with
+the reason on it, and replaces Delete Forever with a sentence.
+
+`@tdgl` is deliberately not on the list. Leaving one revocable developer means
+the demote path stays exercised rather than becoming code nobody has run since
+the day it was written.
+
+**The refusing happens in a `BEFORE UPDATE OR DELETE` trigger on
+`public.profiles`, not in the admin functions.** That distinction is the whole
+point. Today `tdg_admin_set_admin` is the only thing in the database that
+writes `is_admin`, and `authenticated` has no column grant on it, so a check
+inside that one function would in fact hold. It holds because of two things
+that are true right now and are not guaranteed to stay true: nobody has added a
+second writer, and nobody has widened the grant. `service_role` bypasses RLS and
+column grants completely, so any edge function added later is one line from
+being a second writer and would not know this rule exists. A trigger does not
+care which path the write came from. The guards inside `tdg_admin_set_admin`
+and `tdg_admin_delete_forever` stay as well, because a trigger's error message
+is a worse thing to read than a sentence written for the person reading it.
+
+The list lives in `public.tdg_protected_account(uuid)` and matches on
+`user_id`, never on the handle: `tdg_admin_set_profile` will happily rename
+`@luke` from this very page, and a protection keyed on the name would come off
+with the name. There is no button and no admin function for editing the list,
+on purpose. Changing who is protected costs a migration, which is a decision
+with a paper trail. See
+`supabase/migrations/20260821200000_protected_developer_accounts.sql`.
+
+**What this does not cover.** Suspend, hide and soft delete still work on a
+protected account, because none of them touch the permission. A developer can
+still lock `@luke` out for a week; they just cannot stop him being a developer
+when he comes back, and any other developer can lift it. If you want those
+blocked too, say so, because that is a different rule and it has a cost: the
+suspend path is how you would deal with a genuinely compromised owner account.
 
 ## Sign Out Everywhere, and the hour it cannot reach into
 
