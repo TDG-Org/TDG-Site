@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
-import { fmtRelative } from './format'
+import { fmtAgeShort, fmtRelative } from './format'
 import { hay, useSearch } from './search'
 
 /**
@@ -768,7 +768,7 @@ export function Toasts({
 /**
  * Re-read the page, from wherever you are standing on it.
  *
- * ## Why it is pinned, and why it is loud
+ * ## Why it is pinned
  *
  * The console is a long page and the data on it goes stale while you read it:
  * a payment lands, somebody else grants a pack, you are watching a suspension
@@ -778,21 +778,24 @@ export function Toasts({
  * the overview numbers, the roster, both ledgers and the open account's own
  * history.
  *
- * It is a labelled pill rather than a bare icon, at the size of a real control
- * rather than a hint. A floating circle with a glyph in it is a puzzle: you
- * have to hover it to find out what it does, which is exactly the hesitation a
- * button this useful should not cost. It says **Refresh**, and under that it
- * says how old the page is in words, so most of the time the answer to "do I
- * need this?" is already on screen and it never gets pressed.
+ * ## It has a lane, it does not float over the page
  *
- * ## Where it sits
+ * A labelled control big enough to read is also big enough to hide a switch
+ * somebody was about to press, and this page is nothing but switches. So the
+ * console reserves a strip down its right-hand side and the rail lives in it:
+ * fixed, always in view, and never on top of a panel. Below 761px there is no
+ * width to spare for a strip, so it shrinks to the icon alone and the sentence
+ * lives in its label — a phone is not where anybody suspends an account.
  *
- * Against the right edge of the CONTENT, not of the window. On a wide monitor
- * the shell stops at 1440px and the window does not, and a control parked in
- * that empty margin is half a screen away from the thing anybody is looking at.
- * `right` therefore tracks the shell and only falls back to a window inset once
- * the two are the same thing. Vertically centred, so it is in view from any
- * scroll position and never meets the toasts, which stack from the corner.
+ * See `--dev-refresh-lane` in DevConsole.css for how the strip is reserved.
+ *
+ * ## Why it is a tile and not a glyph
+ *
+ * It says **Refresh**, and under that how old the page is, because a floating
+ * circle with a symbol in it is a puzzle you have to hover to solve. And it is
+ * built from the console's own surface, border and accent tokens rather than
+ * the inverted primary fill — a white slab on a dark page reads as something
+ * that has landed on the console rather than something that belongs to it.
  *
  * ## Why it is not a reload
  *
@@ -824,33 +827,37 @@ export function RefreshRail({
     return () => window.clearInterval(t)
   }, [readAt])
 
-  const age =
+  const short = fmtAgeShort(readAt)
+  /** Two lines of a 74px tile: short enough to fit, long enough to mean something. */
+  const age = readAt == null ? 'not yet' : short === 'now' ? 'just now' : `${short} ago`
+  const spoken =
     readAt == null ? 'Not read yet' : `Read ${fmtRelative(new Date(readAt).toISOString())}`
   const label = busy
     ? 'Re-reading everything on this page…'
-    : `Refresh: re-read everything on this page without losing your place. ${age}.`
+    : `Refresh: re-read everything on this page without losing your place. ${spoken}.`
 
   return (
-    <div className="dev__rail">
+    <div className="dev__refresh">
       <button
         type="button"
-        className="dev__rail-btn"
+        className="dev__refresh-btn"
         data-busy={busy || undefined}
         onClick={onRefresh}
         disabled={busy}
         title={label}
         // The visible text says Refresh; the label says what refreshing costs
-        // you, which is the part worth hearing before pressing it.
+        // you, which is the part worth hearing before pressing it. It is also
+        // the only version a phone gets, where the tile is the icon alone.
         aria-label={label}
       >
-        <span className="dev__rail-icon" aria-hidden="true">
+        <span className="dev__refresh-icon" aria-hidden="true">
           <svg
-            width="22"
-            height="22"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.2"
+            strokeWidth="2.3"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -858,9 +865,11 @@ export function RefreshRail({
             <path d="M20.5 4.5v5h-5" />
           </svg>
         </span>
-        <span className="dev__rail-text" aria-hidden="true">
-          <span className="dev__rail-word">{busy ? 'Reading…' : 'Refresh'}</span>
-          <span className="dev__rail-age">{busy ? 'Holding your place' : age}</span>
+        <span className="dev__refresh-word" aria-hidden="true">
+          {busy ? 'Reading' : 'Refresh'}
+        </span>
+        <span className="dev__refresh-age" aria-hidden="true">
+          {age}
         </span>
       </button>
     </div>

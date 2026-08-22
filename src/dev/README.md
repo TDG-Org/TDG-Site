@@ -52,15 +52,25 @@ several screens long. It is on every tab, and it re-reads everything: the
 overview numbers, the roster, both whole-project ledgers and the open account's
 own history.
 
-It is a labelled pill, not a bare icon: it says **Refresh**, and under that it
-says how old the page is in words — *Read 4 minutes ago* — which is usually the
-answer to whether it is worth pressing at all. That line only moves when a read
-actually came back, so it cannot say "fresh" while every call is being refused.
-It tracks the right edge of the **content**, not of the window: the shell stops
-at 1440px and a wide monitor does not, and a button parked out in that margin is
-half a screen away from anything anybody is reading. On a narrow screen the age
-line drops and the word stays, because the word is the part that has to
-survive.
+It is a labelled tile, not a bare icon: it says **Refresh**, and under that how
+old the page is — `4m ago` — which is usually the answer to whether it is worth
+pressing at all. That line only moves when a read actually came back, so it
+cannot say "fresh" while every call is being refused.
+
+**It has a lane; it does not float over the page.** This page is nothing but
+switches, and a control big enough to read is big enough to hide one somebody
+was about to press. So the section reserves a strip down its right-hand side as
+its own `padding-right`, and the tile rides the shell's right edge one gap
+inside it — measured at 1094, 1920 and 2560px wide, the gap between the content
+and the tile stays 9–14px and never goes negative. Below 761px there is no width
+to give away: the lane goes back to the page and the tile shrinks to a 46px
+circle, floating, with the whole sentence in its label.
+
+It is built from the console's own `--bg2` / `--border` / `--accent` tokens, the
+same ones the panels and toasts use, **not** the inverted primary fill. A white
+slab on a dark console reads as something that has landed on the page rather
+than part of it, and it was wrong in exactly one of the two themes at any given
+moment.
 
 **It is not a reload, and it does not cost you your place.** The element at the
 top of your screen is measured before the reads go out and put back where it was

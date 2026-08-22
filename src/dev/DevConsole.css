@@ -15,6 +15,23 @@
   --dev-radius: 3px;
   --dev-rail: 360px;
 
+  /* The strip down the right that the Refresh tile owns, reserved as this
+     section's own padding-right so no content can ever reach into it. The tile
+     then rides the shell's right edge: `slack` is how far the 1440px shell
+     floats from the right of its padded box, so adding it to the gap keeps the
+     tile exactly one gap from the content at EVERY width instead of drifting
+     out into the margin on a big monitor. See the tile's rules at the bottom. */
+  --dev-pad-x: clamp(18px, 4vw, 40px);
+  --dev-refresh-w: 74px;
+  --dev-refresh-gap: 14px;
+  --dev-refresh-lane: calc(var(--dev-refresh-w) + var(--dev-refresh-gap) * 2);
+  --dev-refresh-slack: max(
+    0px,
+    calc((100vw - var(--dev-pad-x) - var(--dev-refresh-lane) - 1440px) / 2)
+  );
+
+  padding-right: var(--dev-refresh-lane);
+
   --tint-mid: #08080c;
   min-height: 100vh;
   min-height: 100svh;
@@ -1366,126 +1383,134 @@
   }
 }
 
-/* ── the refresh rail ─────────────────────────────────────────────────────
-   A labelled pill, at the size of a real control. A floating circle with a
-   glyph in it is a puzzle you have to hover to solve, and this is the one
-   button on the page somebody reaches for without thinking.
+/* ── the refresh tile ─────────────────────────────────────────────────────
+   Fixed to the right so it is reachable from any scroll position, and given a
+   LANE so that being reachable never means being on top of something. A page
+   that is nothing but switches cannot afford a floating control parked over
+   one of them, and a control big enough to read is big enough to hide one.
 
-   It tracks the right edge of the CONTENT, not of the window: the shell stops
-   at 1440px and a wide monitor does not, and a control parked out in that
-   margin is half a screen from anything anybody is reading. 712px is half the
-   shell minus the 8px it tucks inside that edge; below 1424px the calc goes
-   negative and the window inset takes over, which is the same place.
+   The lane is reserved as `padding-right` on the section, so the content
+   column stops short of the tile rather than running under it. Above 1704px
+   the window's own margin is already wider than the lane, so nothing is
+   reserved and the page keeps its symmetric padding. Below 761px there is no
+   width to give away, so the tile drops to the icon alone.
 
-   Vertically centred, so it is in view from any scroll position and can never
-   meet the toasts (z-index 200) — those stack from the bottom-right corner,
-   this one never leaves the middle.                                           */
+   Built from --bg2 / --border / --accent like every other surface here, NOT
+   from the inverted primary fill: a white slab on a dark console reads as
+   something that has landed on the page rather than part of it.               */
 
-.dev__rail {
+.dev__refresh {
   position: fixed;
-  right: max(clamp(14px, 2vw, 26px), calc(50vw - 712px));
   top: 50%;
+  /* One gap from the content's right edge, wherever that edge happens to be.
+     The lane guarantees the edge is at least `lane` from the window; `slack`
+     adds however much further in it sits once the shell stops growing at
+     1440px. `100vw` counts the scrollbar and the layout viewport does not, so
+     slack runs a few px generous — which moves the tile TOWARDS the content
+     and shrinks this gap, never past it. That is why the gap is 14 and not 8. */
+  right: calc(var(--dev-refresh-gap) + var(--dev-refresh-slack));
   transform: translateY(-50%);
   z-index: 190;
 }
 
-.dev__rail-btn {
+.dev__refresh-btn {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 11px 20px 11px 15px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background-color: var(--invert-bg);
-  color: var(--invert-fg);
+  gap: 5px;
+  width: var(--dev-refresh-w);
+  padding: 10px 5px 9px;
+  border-radius: var(--dev-radius);
+  /* An accent-tinted border at rest: enough to read as the one thing on this
+     page you press without thinking, without shouting in either theme. */
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background-color: var(--bg2);
   box-shadow: var(--card-shadow);
-  text-align: left;
+  color: var(--text);
   transition:
-    filter 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
     transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.2s ease,
     var(--t-theme);
 }
-.dev__rail-btn:hover:not(:disabled) {
-  filter: brightness(1.1);
+.dev__refresh-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 9%, var(--bg2));
   transform: translateX(-2px);
 }
-.dev__rail-btn:focus-visible {
+.dev__refresh-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-.dev__rail-btn:disabled {
+.dev__refresh-btn:disabled {
   cursor: progress;
-  filter: brightness(0.94);
 }
 
-.dev__rail-icon {
+.dev__refresh-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  /* A ring of the label colour at low alpha: the icon reads as a thing rather
-     than as decoration, in both themes, without a second token. */
-  background-color: color-mix(in srgb, currentColor 14%, transparent);
+  background-color: var(--accent-soft);
+  color: var(--accent-2);
+  transition: color 0.2s ease, var(--t-theme);
 }
-.dev__rail-btn[data-busy] .dev__rail-icon svg {
+.dev__refresh-btn:hover:not(:disabled) .dev__refresh-icon {
+  color: var(--text);
+}
+.dev__refresh-btn[data-busy] .dev__refresh-icon svg {
   animation: devSpin 0.9s linear infinite;
 }
 
-.dev__rail-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.dev__rail-word {
-  font: 700 14.5px/1.2 var(--font-body);
+.dev__refresh-word {
+  font: 600 11px/1.2 var(--font-body);
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
-/* How stale the page is, in words, so the usual answer to "do I need to press
-   this?" is already on screen and it never gets pressed. */
-.dev__rail-age {
-  font: 500 10.5px/1.3 var(--font-mono);
+/* How stale the page is, so the usual answer to "do I need to press this?" is
+   already on screen and it never gets pressed. */
+.dev__refresh-age {
+  font: 500 9px/1.2 var(--font-mono);
   letter-spacing: 0.04em;
   white-space: nowrap;
-  opacity: 0.72;
+  color: var(--faint);
 }
 
 @media (max-width: 760px) {
-  .dev__rail-btn {
-    gap: 9px;
-    padding: 9px 16px 9px 12px;
+  /* No width to give away at this size, so the lane goes back to the page and
+     the tile becomes the smallest thing that is still a real touch target. It
+     floats over the content here, which is what a phone always does with a
+     button like this. The sentence is in its label, which is what a screen
+     reader and a long-press both read. */
+  .dev {
+    padding-right: var(--dev-pad-x);
   }
-  .dev__rail-icon {
-    width: 28px;
-    height: 28px;
+  .dev__refresh-btn {
+    width: 46px;
+    padding: 8px 0;
+    border-radius: 999px;
   }
-  .dev__rail-icon svg {
-    width: 18px;
-    height: 18px;
+  .dev__refresh-icon {
+    width: 30px;
+    height: 30px;
   }
-  .dev__rail-word {
-    font-size: 13px;
-  }
-  /* The word is the part that has to survive a narrow screen. The age is also
-     in the button's own label, so nothing is lost by dropping it here. */
-  .dev__rail-age {
+  .dev__refresh-word,
+  .dev__refresh-age {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dev__rail-btn {
+  .dev__refresh-btn {
     transition: var(--t-theme);
   }
-  .dev__rail-btn:hover:not(:disabled) {
+  .dev__refresh-btn:hover:not(:disabled) {
     transform: none;
   }
-  .dev__rail-btn[data-busy] .dev__rail-icon svg {
+  .dev__refresh-btn[data-busy] .dev__refresh-icon svg {
     animation: none;
   }
 }
