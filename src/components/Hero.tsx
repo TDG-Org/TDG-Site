@@ -93,7 +93,7 @@ export function Hero() {
       <div className="hero__strip">
         <div className="hero__strip-inner">
           <div className="hero__meta">
-            <span>Est. 2017</span>
+            <span>Est. 2016</span>
             <span className="hero__meta-div" />
             <span>Apps · Tools · Games</span>
             <span className="hero__meta-div" />

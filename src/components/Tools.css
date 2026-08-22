@@ -163,6 +163,20 @@
   font: 700 18px var(--font-display);
   color: var(--text);
 }
+/* The app's own icon, sized to the cap height of the title beside it rather
+   than to a round number, so the row reads as one line and not as a tile with
+   a word after it. `baseline` on the flex row would hang it off the text's
+   baseline, so this one child centres itself against the line box instead. */
+.tools__icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  align-self: center;
+  border-radius: 7px;
+  /* Every one of these is already a rounded tile of its own; the ring is what
+     keeps the darkest of them off the card in the light theme. */
+  box-shadow: 0 0 0 1px var(--border);
+}
 /* The card opens a page, and it should say so before it is hovered. */
 .tools__title-arrow {
   font-size: 13px;

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="VidHelper">
+  <!-- VidHelper's own extension icon, redrawn as vector from the geometry in
+       its repo (extension/icons/generate-icons.js): a rounded tile carrying the
+       TDG gradient, with a white download arrow dropping into a tray. -->
+  <defs>
+    <linearGradient id="vidhelperTile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="1" stop-color="#b06dff"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28.16" fill="url(#vidhelperTile)"/>
+  <path d="M55.552 23.04H72.448V56.32H90.24L64 88.32L37.76 56.32H55.552Z" fill="#fff"/>
+  <rect x="34.56" y="97.152" width="58.88" height="9.216" rx="4.608" fill="#fff"/>
+</svg>

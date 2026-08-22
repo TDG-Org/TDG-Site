@@ -67,6 +67,11 @@
   color: var(--muted);
   text-wrap: pretty;
 }
+/* The lede runs to two paragraphs: the tag's own history, then what happened
+   to it. The gap between them is the only thing that separates the two. */
+.story__lede + .story__lede {
+  margin-top: 18px;
+}
 
 .story__timeline {
   position: relative;

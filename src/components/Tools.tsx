@@ -4,6 +4,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
+import { asset } from '../lib/asset'
 import './Tools.css'
 
 function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
@@ -35,6 +36,17 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
       </div>
       <div>
         <h3 className="tools__title">
+          {/* The tool's own icon, decorative: the title beside it already
+              names it, so a screen reader would only hear it twice. */}
+          <img
+            className="tools__icon"
+            src={asset(`assets/${tool.icon}`)}
+            alt=""
+            width="30"
+            height="30"
+            loading="lazy"
+            decoding="async"
+          />
           {tool.title}
           <span className="tools__title-arrow" aria-hidden="true">
             →

@@ -82,11 +82,17 @@ export function Story() {
             <span className="kicker__rule" />
             <span className="kicker__label">Our story</span>
           </div>
-          <h2 className="h2 h2--serif story__heading">It started with a clan tag.</h2>
+          <h2 className="h2 h2--serif story__heading">It started on a Minecraft server.</h2>
           <p className="story__lede">
-            Nine years ago we picked three letters for a gaming clan. We got older, we found God,
-            and we kept the letters, because by then they meant something much bigger. We still
-            build the same way we used to play: together, late, and all in.
+            TDG stood for The Diamond Gamers. Don’t tell anyone. We picked the tag in 2016 for a
+            Black Ops II clan, and it was second-hand even then: we lifted it off a Minecraft
+            server the two of us had built and named years before that.
+          </p>
+          <p className="story__lede">
+            The clan thinned out when everyone else moved to the next generation of consoles and we
+            were still on our Xbox 360s, but the three letters stayed, because they were never
+            really about the games. In 2024 they were given a new meaning, and we are still growing
+            into it. We build the same way we used to play: together, late, and all in.
           </p>
         </div>
 

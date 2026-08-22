@@ -38,40 +38,54 @@ export type Chapter = {
 
 export const CHAPTERS: Chapter[] = [
   {
-    chapter: 'CH. 01 · 2017',
-    phase: 'THEN',
+    chapter: 'CH. 01 · BEFORE',
+    phase: 'ORIGIN',
     numeral: '01',
-    title: 'Gaming',
-    copy: 'One clan tag, late-night lobbies, and a name that stuck.',
+    title: 'The Diamond Staff',
+    copy: 'Before any of this we ran a Minecraft: Pocket Edition server of our own, and we called it TDS, short for The Diamond Staff. Every server we had played on called the people in charge Staff, and Black Ops II had just handed us four elemental staffs to fight with, so the word stuck.',
   },
   {
-    chapter: 'CH. 02',
-    phase: 'NEXT',
+    chapter: 'CH. 02 · 2016',
+    phase: 'THEN',
     numeral: '02',
-    title: 'Game dev',
-    copy: "Playing other people's worlds got old, so we started making our own.",
+    title: 'The clan tag',
+    copy: 'When we started a Black Ops II clan we could not think of anything better, so we reached back for the name we already had. TDS became TDG, The Diamond Gamers.',
   },
   {
     chapter: 'CH. 03',
-    phase: 'THE TURN',
+    phase: 'DRIFT',
     numeral: '03',
-    title: 'Found the Truth',
-    copy: 'We met Jesus, and TDG became The Disciples of God.',
-    turn: true,
+    title: 'The lobbies emptied',
+    copy: 'The clan grew, and then our friends bought the next generation of consoles while we were still on our Xbox 360s. The lobbies emptied out. We wore the tag anyway, because by then it was a brother thing more than a gaming one.',
   },
   {
     chapter: 'CH. 04',
-    phase: 'CRAFT',
+    phase: 'NEXT',
     numeral: '04',
-    title: 'Software',
-    copy: 'Bible tools, student apps, and little utilities we use every day.',
+    title: 'Game dev',
+    copy: "Playing in other people's worlds got old before we did, so we started building our own instead.",
   },
   {
-    chapter: 'CH. 05',
-    phase: 'NOW',
+    chapter: 'CH. 05 · 2024',
+    phase: 'THE TURN',
     numeral: '05',
+    title: 'Found the Truth',
+    copy: 'Then we were called out of that life and into a far greater one. The three letters never changed; what they stood for did. TDG became The Disciples of God.',
+    turn: true,
+  },
+  {
+    chapter: 'CH. 06',
+    phase: 'CRAFT',
+    numeral: '06',
+    title: 'Making what we needed',
+    copy: 'Everything since has come from the same question: what do we wish existed? Scripture you can read with the internet off. A game you walk the Bible through. A desk for a student drowning in browser tabs. The small utilities came after, because our own days kept needing them.',
+  },
+  {
+    chapter: 'CH. 07',
+    phase: 'NOW',
+    numeral: '07',
     title: 'Still building',
-    copy: 'Nights and weekends, building things we want to last.',
+    copy: 'The trials came, and we are still growing through them. Nights and weekends, on things we want to outlast us.',
   },
 ]
 
@@ -104,7 +118,7 @@ export const APPS: AppCard[] = [
     index: '01',
     page: 'bible-educator',
     title: 'Bible Educator',
-    copy: 'Read, listen, study, highlight and take rich notes on Scripture. 16 public-domain translations, and you can download any of them so the whole thing works offline.',
+    copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Download any of the 16 translations once and the whole thing keeps working with the internet off.',
     chips: [
       { label: 'PWA' },
       { label: 'IN DEV', hot: true },
@@ -146,7 +160,7 @@ export const APPS: AppCard[] = [
     index: '03',
     page: 'makullveny',
     title: 'Makullveny',
-    copy: 'A calm desk for studying. Write and draw in your own books, import a syllabus, convert class files, run flashcards. Nine full themes, and none of it leaves your machine.',
+    copy: 'A calm desk for studying. Write and draw straight into books of your own, hand it a syllabus and get the dates back, and drill the hard parts with flashcards. None of it leaves your machine.',
     chips: [
       { label: 'WINDOWS' },
       { label: 'EARLY BUILD', hot: true },
@@ -189,7 +203,7 @@ export const APPS: AppCard[] = [
     index: '05',
     page: 'music-everything',
     title: 'Music Everything',
-    copy: 'Learn music by doing. Scales, chords, a playable piano, live pitch tracking, and a note track you can export straight to MIDI.',
+    copy: 'Learn music by playing it, not by reading about it. Scales and chords on a piano you can play, your own singing drawn back at you as pitch, and a note track you can export as MIDI.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'MIDI + MIC' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a Music Everything screenshot',
@@ -199,7 +213,7 @@ export const APPS: AppCard[] = [
     index: '06',
     page: 'veditor',
     title: 'TDG Veditor',
-    copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it.',
+    copy: 'A desktop video editor: cut on a timeline, grade the colour, mix the audio, then hand it an export pipeline you set up yourself instead of one somebody else chose for you.',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'FFMPEG' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a TDG Veditor screenshot',
@@ -212,6 +226,13 @@ export type ToolCard = {
   page: string
   title: string
   copy: string
+  /**
+   * The tool's own app icon, as a filename in `public/assets/`. The extension
+   * is part of it on purpose: two of these are vector, because we have the
+   * geometry that drew them, and Volume Controller's is a raster icon we
+   * already shipped to the Chrome Web Store and would rather not redraw.
+   */
+  icon: string
   chips: { label: string; hot?: boolean }[]
   cta: string
   href?: string
@@ -222,7 +243,8 @@ export const TOOLS: ToolCard[] = [
     index: '07',
     page: 'volume-controller',
     title: 'Volume Controller',
-    copy: 'Global and per-site volume from 0 to 600%, with a 2–10 band EQ, loudness normalize, and per-site memory.',
+    icon: 'icon-volume-controller.webp',
+    copy: 'For the video that is too quiet to hear. Any site up to six times louder, shaped with an equalizer and levelled out, and it remembers what you set for each one.',
     chips: [{ label: 'EXTENSION' }, { label: 'LIVE', hot: true }, { label: 'FREE' }],
     cta: 'Add to Chrome →',
     href: VOLUME_CONTROLLER,
@@ -231,7 +253,8 @@ export const TOOLS: ToolCard[] = [
     index: '08',
     page: 'vidhelper',
     title: 'VidHelper',
-    copy: 'A local video downloader. The extension spots the video, a small backend on 127.0.0.1 grabs it and serves your own library.',
+    icon: 'icon-vidhelper.svg',
+    copy: 'Keep your own copy of the video you are watching. The extension spots it, a small server on your own machine downloads it, and your library lives there.',
     chips: [{ label: 'EXTENSION' }, { label: 'WIP', hot: true }, { label: 'LOCAL' }],
     cta: 'Coming soon',
   },
@@ -239,19 +262,20 @@ export const TOOLS: ToolCard[] = [
     index: '09',
     page: 'n8-tools',
     title: 'N8-Tools',
-    copy: 'A browser workspace for music and sound. Transcripts, a melody reader that exports MIDI, tuner, metronome, key and BPM detection.',
+    icon: 'icon-n8-tools.svg',
+    copy: 'Hum a tune and get the notes back as a MIDI file you can keep. There is a tuner and a metronome too, and it will name the key and tempo of whatever you play at it.',
     chips: [{ label: 'BROWSER' }, { label: 'WIP', hot: true }, { label: 'MIC' }],
     cta: 'Coming soon',
   },
 ]
 
-/** The Building-now feature: MARANATHA. */
+/** The Building-now feature: MARANATHA, the game. */
 export const MARANATHA = {
   /** Its own page, same as every card under Apps and Tools. */
   page: 'maranatha',
-  heading: 'A calm walk through Scripture.',
-  copy: 'Walk the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
-  note: 'Runs in the browser',
+  heading: 'A Bible game you walk through.',
+  copy: 'A video game that runs in a browser tab. You walk a character through the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
+  note: 'Plays in the browser',
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',
   // The game's own home screen. It carries the wordmark, so the panel does not

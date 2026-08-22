@@ -6,7 +6,7 @@ import { CONTACT, GITHUB_ORG } from './content'
  *
  * ## What this page is for, and what it is not
  *
- * The home page already tells the story as five chapters on a timeline, and the
+ * The home page already tells the story as seven chapters on a timeline, and the
  * Faith section already says the one thing it needs to. This is the longer
  * answer for somebody who read those and wanted more, so it picks up where they
  * stop rather than saying them again.
@@ -44,7 +44,7 @@ export const ABOUT: AboutPage = {
   title: 'About TDG',
   lede: 'TDG is two brothers, Nate and Luke, who build software on nights and weekends. This is the longer answer to who we are, why we build what we build, and the questions worth asking before you install something from two people you have never met.',
   intro:
-    'The home page tells the story in five chapters. This page picks up where that one stops, and it tries to answer the awkward questions rather than the comfortable ones.',
+    'The home page tells the story in seven chapters. This page picks up where that one stops, and it tries to answer the awkward questions rather than the comfortable ones.',
   facts: [
     { label: 'Who', value: 'Nate and Luke, two brothers' },
     { label: 'What TDG is', value: 'Not a company. No funding, no staff, no support desk' },
@@ -88,7 +88,7 @@ export const ABOUT: AboutPage = {
         },
         {
           kind: 'text',
-          text: 'The rest is Scripture and study. Bible Educator and MARANATHA are there because we wanted them to exist, and Makullveny and Music Everything because learning something is easier at a desk that is not twelve browser tabs.',
+          text: 'The rest is Scripture and study. Bible Educator and MARANATHA, the game, are there because we wanted them to exist, and Makullveny and Music Everything because learning something is easier at a desk that is not twelve browser tabs.',
         },
         {
           kind: 'features',
@@ -177,7 +177,7 @@ export const ABOUT: AboutPage = {
             },
             {
               name: 'MARANATHA',
-              text: 'Walking through the events of Scripture in a browser, with the verse on screen and read aloud. No install and no login.',
+              text: 'A video game that walks you through the Bible in a browser tab, with the verse on screen and read aloud. No install and no login.',
               href: '#/app/maranatha',
             },
           ],
@@ -282,7 +282,7 @@ export const ABOUT: AboutPage = {
           items: [
             {
               q: 'Why is it Christian software?',
-              a: 'Because we are Christians, and TDG is what we go by. In practice it means two things and not a third. Some of what we build is about Scripture directly, which is Bible Educator and MARANATHA. Everything else is just software: a volume slider has no theology and a video editor does not preach at you. Where the faith actually shows up is in how the things are sold and what we are willing to claim about them.',
+              a: 'Because we are Christians, and TDG is what we go by. In practice it means two things and not a third. Some of what we build is about Scripture directly: Bible Educator, and MARANATHA, a video game that walks you through the Bible. Everything else is just software: a volume slider has no theology and a video editor does not preach at you. Where the faith actually shows up is in how the things are sold and what we are willing to claim about them.',
             },
             {
               q: 'Do I have to be a Christian to use any of this?',

@@ -27,7 +27,7 @@ Two brothers, Nate & Luke. This is our landing page.
 
 |  |  |
 |:--|:--|
-| <img src="docs/story.webp" alt="The story timeline"> **Our story** · five chapters on a timeline that fills as you read | <img src="docs/apps.webp" alt="The apps grid"> **Apps** · cards that tilt toward your cursor and light their edge nearest it |
+| <img src="docs/story.webp" alt="The story timeline"> **Our story** · seven chapters on a timeline that fills as you read | <img src="docs/apps.webp" alt="The apps grid"> **Apps** · cards that tilt toward your cursor and light their edge nearest it |
 | <img src="docs/building.webp" alt="The MARANATHA feature"> **Building now** · what's on our screens right now | <img src="docs/faith.webp" alt="The faith section"> **Faith** · a slow gradient field and one verse |
 
 **📄 Every card opens its own page.** Each app, tool and the game has a page of its own:
