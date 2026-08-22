@@ -62,7 +62,7 @@ fix the README.
 
 ---
 
-## 2 · The fifteen rules
+## 2 · The sixteen rules
 
 ### 1. Content is data. It is never a component.
 
@@ -189,7 +189,65 @@ two prices above it.
 make.** Every chip, label and cadence on a card must agree with the plan it
 describes.
 
-### 11. The security boundary is in Postgres, and only in Postgres.
+### 11. Every pack sold more than one way looks the same, in every app.
+
+This is a fixed pattern, not a per-app design decision. TDG Veditor's Pro Export
+Pack is the reference implementation; anything that sells a second plan copies
+it rather than inventing beside it. A shop that looks different on each shelf
+makes a reader re-learn how to buy.
+
+**One button on the card, whatever the plan count.** The same `store__buy` a
+one-time pack has, full width, in the same place — so two cards on a shelf line
+up. Label it `Buy <Pack Name> · From <cheapest amount><cadence>` with a chevron.
+Never a button per plan: unequal action rows on a shelf are visible immediately,
+and the grid stretches the sibling card to match whichever grew.
+
+**The plans open in a chooser drawn OVER the card, never expanded into it.**
+Packs sit in a grid row and a grid row stretches its siblings to the tallest, so
+an inline expansion grows *both* cards and leaves a hole under the other one's
+button. The panel anchors to the card's action row — a grandchild, per rule 4 —
+with a scrim out to the card's real edges.
+
+**Every plan is priced before anything opens.** No plan is picked silently, and
+no plan is dressed as the primary one: three identical rows, ordered cheapest
+entry first. The row's own weight must not be what recommends it.
+
+**One row, three parts:**
+
+| Part | What it is |
+| --- | --- |
+| Name | Title Case, the plan's own name — `Monthly`, `Yearly`, `Lifetime`. |
+| Note | Sentence case, one line, what the billing actually is: `Billed once a year. Cancel any time.` It never names an amount. |
+| Money | The amount and its cadence, right-aligned, **with the saving directly under it**. |
+
+**The saving sits under the amount it is about, and is set at reading size.**
+
+It is a fact about the money, and a reader comparing plans reads *down* the
+right-hand column — a saving printed over beside the plan's name is a number
+they have to go and find. It is also the thing that decides the sale, so it is
+**not** a `.chip`: the site's chips are 9px mono tags for a status nobody reads
+twice. This is `700 12.5px` in the body face, in the `--live-*` green, in a 2px
+pill. Sentence case with the amount: `Save $22.88`.
+
+**And it is always computed, never typed** — `annualSavingCents()` derives it
+from the two prices above it, so it cannot go stale when one of them moves. See
+rule 10.
+
+**The saving's box is reserved in every row.** A badge on one row alone makes
+that row taller than the other two, which is the same unevenness the chooser
+exists to remove, one level down. So the element renders in *all* rows whenever
+the chooser has a saving to state — empty and `visibility: hidden` where there is
+nothing to say — and it carries an explicit `height` so the reservation cannot
+drift with the text. `display: none` gives the space back and defeats the point.
+A chooser with no saving anywhere reserves nothing.
+
+**The floor for the panel:** `role="dialog"` with an `aria-label` naming the
+pack, `aria-expanded` and `aria-haspopup` on the button, focus into the first
+plan on open, Escape closes and returns focus to the button, a click on the
+scrim closes, and the chevron flips. Both themes, reduced-motion handled, and
+the rows measured equal — see §7.
+
+### 12. The security boundary is in Postgres, and only in Postgres.
 
 Every privileged read and write goes through a `tdg_admin_*` function that opens
 with `bea_is_admin()` and raises `42501` otherwise. Entitlement tables have no
@@ -200,7 +258,7 @@ Hiding the Developer tab, lazy-loading its chunk and hashing its filename are
 relies on a page being secret, and never move a permission check into the
 client. If you need a new privileged verb, it is a migration first.
 
-### 12. Comments explain *why*, and say what does not work.
+### 13. Comments explain *why*, and say what does not work.
 
 This codebase documents reasoning, not syntax. Look at any file header before
 you write one. A comment here names the alternative that was tried, the failure
@@ -212,7 +270,7 @@ Do not strip these comments to "clean up". Do not replace them with restatements
 of the code. When you change behaviour a comment describes, change the comment
 in the same edit.
 
-### 13. Accessibility is a floor, not a finish.
+### 14. Accessibility is a floor, not a finish.
 
 Keyboard reachable, visible `:focus-visible` outlines (`2px solid var(--accent)`
 with an offset, everywhere), real ARIA on anything that opens (`aria-expanded`,
@@ -220,7 +278,7 @@ with an offset, everywhere), real ARIA on anything that opens (`aria-expanded`,
 returns focus to whatever opened it, `.sr-only` for text a screen reader needs
 and a sighted reader does not, and `aria-hidden` on decorative SVG.
 
-### 14. Assets go through `asset()`.
+### 15. Assets go through `asset()`.
 
 The site is served from a subpath. Vite rewrites paths it can see in HTML and
 CSS, but not strings assembled at runtime — which is every `srcSet` here. Use
@@ -228,7 +286,7 @@ CSS, but not strings assembled at runtime — which is every `srcSet` here. Use
 against the origin and 404s in production while working perfectly in dev, so
 this breaks *only* after deploy.
 
-### 15. Down to 320px, and up to 300% zoom.
+### 16. Down to 320px, and up to 300% zoom.
 
 Grid tracks use `minmax(min(100%, Npx), 1fr)` — a track whose minimum is wider
 than its container overflows it, and at 320px the shell is 284px wide. Long
@@ -362,16 +420,22 @@ The fix shows most of this document at once:
   one's button. The unevenness would have moved, not gone.
 - The panel is a **grandchild** of the card, anchored to `.store__action`,
   because `base.css` forces every direct card child to `position: relative`.
-- The saving chip is **computed** from the two prices, so it cannot go stale.
+- The saving is **computed** from the two prices, so it cannot go stale, and it
+  sits under the amount it is about rather than beside the plan's name.
 - Nothing is picked silently: the chooser prices every plan before anything
   opens.
 - `role="dialog"`, `aria-expanded`, Escape closes and refocuses the button,
   scrim click closes, first plan takes focus on open.
-- Both themes, reduced-motion handled, and the three plan rows were made
-  **exactly** equal — a chip at its default padding made one row 3 px taller,
-  which is the same bug one level down.
+- Both themes, reduced-motion handled, and the three plan rows made **exactly**
+  equal — the saving's box is reserved in every row, because a badge on one row
+  alone makes that row taller than the other two, which is the same bug one
+  level down.
 - Verified by measurement: card 419 px open and shut, buttons 507×45 px each,
-  rows 63 px each.
+  rows 69 px each, and the price and the saving sharing one right edge to the
+  pixel in all three rows.
+
+**Rule 11 is that pattern written down.** Any future app selling a second plan
+copies it rather than designing beside it.
 
 Read `src/components/Store.tsx`, `Store.css` and `src/data/store.ts` together
 before touching the shop. Between them they demonstrate the data/component

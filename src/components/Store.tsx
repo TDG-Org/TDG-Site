@@ -364,21 +364,39 @@ function PackCard({
                           }}
                         >
                           <span className="store__plan-text">
-                            <span className="store__plan-label">
-                              {plan.label}
-                              {plan.id === 'annual' && saving !== null && (
-                                <span className="chip store__plan-save">
-                                  SAVE {formatUsd(saving)}
-                                </span>
-                              )}
-                            </span>
+                            <span className="store__plan-label">{plan.label}</span>
                             <span className="store__plan-note">{planNote(plan)}</span>
                           </span>
-                          <span className="store__plan-price">
-                            {formatUsd(plan.priceCents)}
-                            {plan.cadence ? (
-                              <span className="store__plan-cadence">{plan.cadence}</span>
-                            ) : null}
+                          {/*
+                            The saving belongs UNDER THE AMOUNT it is about, not
+                            beside the plan's name: it is a fact about the money,
+                            and a reader comparing three prices is looking down
+                            the right-hand column when they need it. It is also
+                            the thing that decides the sale, so it is set at
+                            reading size rather than in the site's 9px tag mono.
+
+                            Rendered in EVERY row whenever the chooser has a
+                            saving to state, empty where there is nothing to
+                            say. A badge on one row alone would make that row
+                            taller than the other two, which is the same
+                            unevenness this chooser was built to remove — so the
+                            space is reserved by the same element in all of
+                            them, and hidden rather than absent where it is
+                            blank. A chooser with no saving anywhere reserves
+                            nothing.
+                          */}
+                          <span className="store__plan-money">
+                            <span className="store__plan-price">
+                              {formatUsd(plan.priceCents)}
+                              {plan.cadence ? (
+                                <span className="store__plan-cadence">{plan.cadence}</span>
+                              ) : null}
+                            </span>
+                            {saving !== null && (
+                              <span className="store__plan-save">
+                                {plan.id === 'annual' ? `Save ${formatUsd(saving)}` : ''}
+                              </span>
+                            )}
                           </span>
                         </button>
                       </li>

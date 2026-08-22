@@ -69,8 +69,10 @@ Read the header. It is long because the situation is:
 - A pack sold several ways carries `plans[]`, and **the first entry must match
   the pack's own `priceCents` and `paymentLink`** — the primary plan stays those
   two fields rather than becoming a fifth place to state them.
-- Anything derived is computed. `annualSavingCents()` exists so `SAVE $22.88`
-  cannot disagree with the two prices it is about.
+- Anything derived is computed. `annualSavingCents()` exists so `Save $22.88`
+  cannot disagree with the two prices it is about. **How a multi-plan pack is
+  presented is not a design choice either** — it is rule 11 of
+  [`AGENTS.md`](../../AGENTS.md), and it is the same in every app.
 - Ownership is never decided here. It lives in `<app>_entitlements` on TDG Core,
   written only by that app's Stripe webhook, read back over RLS by
   `store/useOwnedPacks.ts`. This file only names the things ownership is about.

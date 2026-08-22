@@ -109,7 +109,10 @@ are checking layout.
 
 ## Store.tsx is the worked example
 
-It is the file to read before you build anything new here. In one component:
+It is the file to read before you build anything new here, and its plan chooser
+is a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it down,
+and any future app that sells a second plan copies it rather than designing
+beside it. In one component:
 
 - A **state machine** with six states, each with its own copy, and a fixed floor
   so the card never resizes between them.
@@ -118,8 +121,10 @@ It is the file to read before you build anything new here. In one component:
   packs sit in a grid row and unequal action rows are visible immediately.
 - Chips and cadence that **agree with the plan**. Printing `ONE-TIME · YOURS FOR
   GOOD` over a monthly subscription is the one mistake a shop may not make.
-- A **derived** saving, so `SAVE $22.88` cannot disagree with the two prices it
-  is computed from.
+- A **derived** saving, so `Save $22.88` cannot disagree with the two prices it
+  is computed from — sitting under the amount it is about, in the body face at
+  reading size, with its box reserved in every row so three rows stay one
+  height.
 - The full accessibility floor: `role="dialog"`, `aria-expanded`,
   `aria-haspopup`, Escape closing and returning focus, a scrim that closes on
   click and is hidden from screen readers because Escape is its equivalent.

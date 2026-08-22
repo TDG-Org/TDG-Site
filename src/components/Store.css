@@ -507,30 +507,26 @@
   min-width: 0;
 }
 .store__plan-label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font: 600 14px var(--font-body);
+  font: 600 14px/1.35 var(--font-body);
   color: var(--text);
-}
-/* Sized to fit INSIDE the label's own line box, not to stand beside it: at
-   the chip's default padding the yearly row was 3px taller than the two
-   without a chip, and three rows in a chooser that do not match is the same
-   unevenness this panel exists to fix, one level down. */
-.store__plan-save {
-  padding: 3px 7px;
-  border-color: var(--live-border);
-  background-color: var(--live-bg);
-  color: var(--live-fg);
-  line-height: 1;
 }
 .store__plan-note {
   font: 400 11.5px/1.45 var(--font-body);
   color: var(--faint);
 }
-.store__plan-price {
+
+/* The money column. The amount and what it saves are one fact about one plan,
+   so they stack together on the right rather than being split across the row:
+   a reader comparing three prices reads DOWN this column, and a saving printed
+   over beside the plan's name is a number they have to go and find. */
+.store__plan-money {
+  display: flex;
   flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.store__plan-price {
   font: 700 17px/1 var(--font-display);
   color: var(--text);
   letter-spacing: -0.01em;
@@ -540,6 +536,34 @@
   font: 600 0.6em/1 var(--font-display);
   color: var(--muted);
   letter-spacing: 0;
+}
+
+/* Deliberately NOT a `.chip`. The site's chips are 9px mono tags for a status
+   nobody has to read twice; this is the number that decides between three
+   plans, so it is set in the body face at reading size. Only the green is
+   borrowed, because "you keep this" is what that colour already means here.
+
+   The explicit `height` is what keeps three rows one height: it reserves the
+   same box in every row whatever the text, so the row without a saving cannot
+   end up shorter than the row with one. `:empty` hides the reserved ones —
+   `display: none` would give the space back and undo the point of reserving
+   it. */
+.store__plan-save {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--live-border);
+  border-radius: 2px;
+  background-color: var(--live-bg);
+  color: var(--live-fg);
+  font: 700 12.5px/1 var(--font-body);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: var(--t-theme);
+}
+.store__plan-save:empty {
+  visibility: hidden;
 }
 
 @keyframes storeScrimIn {
