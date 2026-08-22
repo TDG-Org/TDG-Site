@@ -9,7 +9,7 @@ export const NAV_LINKS = [
   { href: '#tools', label: 'Tools' },
   { href: '#building', label: 'Building' },
   { href: '#faith', label: 'Faith' },
-  // Last, and a ROUTE rather than a section anchor — the Store is its own page.
+  // Last, and a ROUTE rather than a section anchor, because the Store is its own page.
   // The slash is what keeps '#/store' from colliding with '#story', which is
   // one letter away and would otherwise be a coin flip for whoever matched first.
   { href: '#/store', label: 'Store' },
@@ -83,8 +83,8 @@ export type AppCard = {
   /**
    * Optional real action. When it is present the card renders this link where
    * the plain status caption would go; when it is absent the card is exactly
-   * what it was. The linked page owns everything about the download itself —
-   * per-OS builds, version, install notes — so nothing here restates it.
+   * what it was. The linked page owns everything about the download itself:
+   * per-OS builds, version, install notes. Nothing here restates it.
    */
   download?: { href: string; label: string }
   slotPlaceholder: string
@@ -234,7 +234,7 @@ export const MARANATHA = {
   note: 'Runs in the browser',
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',
-  // The game's own home screen — it carries the wordmark, so the panel does not
+  // The game's own home screen. It carries the wordmark, so the panel does not
   // overlay a second one.
   shot: {
     slug: 'maranatha',

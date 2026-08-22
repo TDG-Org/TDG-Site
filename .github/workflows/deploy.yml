@@ -30,7 +30,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # Publishable key — safe in a public repo/workflow, gated by RLS
+          # Publishable key, safe in a public repo/workflow, gated by RLS
           # server-side. Configured as repo Variables, not Secrets.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}

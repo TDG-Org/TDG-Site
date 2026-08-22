@@ -15,7 +15,7 @@ const MAX_DPR = 1.5
 
 /**
  * Dust motes, visible only where the hero's light shaft rakes the frame.
- * Not a starfield in the literal sense — the beam is what makes them read.
+ * Not a starfield in the literal sense. The beam is what makes them read.
  */
 export function Starfield() {
   const { theme } = useTheme()
@@ -63,7 +63,7 @@ export function Starfield() {
     let pending = 0
     let settled = false
     const stop = onFrame(({ now, mi, dt, hold }) => {
-      // the hero is the only place these are visible — stop once it scrolls away
+      // the hero is the only place these are visible, so stop once it scrolls away
       if (cv.getBoundingClientRect().bottom <= 0) return
       // Reduced motion: paint the field once and let the loop park. The motes
       // freeze in place already, but their brightness used to keep oscillating.
@@ -88,7 +88,7 @@ export function Starfield() {
         const d = Math.abs(px - beamX) / (w * 0.17)
         const inBeam = Math.max(0, 1 - d * d)
         if (inBeam < 0.02) continue
-        // the third motion term — gated like y and sway, or reduced motion still twinkles
+        // the third motion term, gated like y and sway, or reduced motion still twinkles
         const flicker = mi === 0 ? 0.85 : 0.55 + 0.45 * Math.sin(t * 1.1 + m.phase)
         ctx.globalAlpha =
           Math.min(1, inBeam * flicker * (0.18 + m.z * 0.62)) *

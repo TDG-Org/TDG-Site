@@ -28,7 +28,7 @@ export function useParallax<T extends HTMLElement>(factor: number) {
       current += (target - current) * settle(0.16, dt)
       const next = `0 ${current.toFixed(2)}px`
       // A style write the browser has to recalculate is not free. Once the lerp
-      // has settled this is the same string every frame — do not write it again.
+      // has settled this is the same string every frame, so do not write it again.
       if (next === painted) return
       painted = next
       return () => {
@@ -41,7 +41,7 @@ export function useParallax<T extends HTMLElement>(factor: number) {
 }
 
 /**
- * Layers that ride the hero's own displacement rather than their own — the
+ * Layers that ride the hero's own displacement rather than their own. The
  * hero sinks as you scroll and these follow it at their own rate.
  */
 export function useHeroParallax<T extends HTMLElement>(factor: number) {

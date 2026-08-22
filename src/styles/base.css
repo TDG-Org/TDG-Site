@@ -192,7 +192,7 @@ stop {
   will-change: translate;
 }
 
-/* kicker: 0N —— LABEL */
+/* kicker: 0N ── LABEL */
 .kicker {
   display: flex;
   align-items: center;
@@ -318,7 +318,7 @@ stop {
   font: 500 10px var(--font-mono);
   letter-spacing: 0.1em;
   color: var(--accent-2);
-  /* append, do not replace — a bare shorthand here dropped --t-theme and made
+  /* append, do not replace. A bare shorthand here dropped --t-theme and made
      the index badges snap colour while everything around them eased */
   transition:
     transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1),
@@ -378,7 +378,7 @@ stop {
     transform: translateX(120%);
   }
 }
-/* see .story__pulse — these replace an animated box-shadow with two
+/* see .story__pulse: these replace an animated box-shadow with two
    compositor-only layers */
 @keyframes pulseRing {
   0%,
@@ -400,7 +400,7 @@ stop {
     transform: scale(1.593);
   }
 }
-/* one gradient period, so the wrap is seamless — see .tools__road-run */
+/* one gradient period, so the wrap is seamless. See .tools__road-run */
 @keyframes roadRun {
   from {
     transform: translate3d(0, 0, 0);
@@ -536,7 +536,7 @@ stop {
   }
 
   /* Pausing pins each animation at its 0% frame, and for these that frame is
-     the dimmest one, not a resting state — the scroll cue faded to 0.4 and the
+     the dimmest one, not a resting state. The scroll cue faded to 0.4 and the
      light shafts to their darkest. An !important author declaration is the one
      thing that outranks a running animation. (The story pulse is deliberately
      left pinned: its 0% frame is the ring tucked behind the dot.) */

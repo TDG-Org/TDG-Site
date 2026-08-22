@@ -21,7 +21,7 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           placeholder={app.slotPlaceholder}
           shot={app.shot}
           /* Breakpoints track the real column count of the auto-fit grid
-             (1 col <613px, 2 to 929, 3 to 1227, 4 above) — the shot now
+             (1 col <613px, 2 to 929, 3 to 1227, 4 above). The shot now
              bleeds to the card's own edges, so no padding to subtract.
              Over-declaring made retina readers pull the 1120w candidate
              into a too-small slot. */

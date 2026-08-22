@@ -229,9 +229,9 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const how = useReveal<HTMLDivElement>('scale', 1)
 
-  /** The pack whose Stripe tab is open, if any — a `packKey`, never a pack id. */
+  /** The pack whose Stripe tab is open, if any. A `packKey`, never a pack id. */
   const [pending, setPending] = useState<string | null>(null)
-  /** Packs that arrived while this page was open — worth saying so. */
+  /** Packs that arrived while this page was open, which is worth saying. */
   const [justLanded, setJustLanded] = useState<readonly string[]>([])
 
   // It landed. Stop waiting, and remember to say so on the card.
@@ -257,7 +257,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
       refresh()
     }, POLL_MS)
     // Coming back to this tab is the strongest signal there is that something
-    // happened in the other one — ask at once rather than up to four seconds later.
+    // happened in the other one, so ask at once rather than up to four seconds later.
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }

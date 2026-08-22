@@ -9,5 +9,5 @@ if (!url || !publishableKey) {
   )
 }
 
-/** The shared TDG Core project — the same `profiles`/`auth.users` every TDG app reads. */
+/** The shared TDG Core project: the same `profiles`/`auth.users` every TDG app reads. */
 export const supabase = createClient(url, publishableKey)

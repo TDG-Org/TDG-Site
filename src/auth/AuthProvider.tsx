@@ -14,7 +14,7 @@ import { OFFLINE_MESSAGE, authMessage } from './wording'
 /**
  * The site's own sign-in endpoint. GoTrue only knows email and password, so
  * turning a USERNAME into a session needs a server that may call
- * `bea_login_identity` — a browser may not, because a function that turns a
+ * `bea_login_identity`. A browser may not, because a function that turns a
  * public handle into somebody's email address is an email-harvesting endpoint.
  */
 const ACCOUNT_FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tdg-site-account`
@@ -43,7 +43,7 @@ export type Profile = {
   username: string | null
   display_name: string | null
   /**
-   * The TDG developer flag on the shared `profiles` table — the same column
+   * The TDG developer flag on the shared `profiles` table, the same column
    * `bea_is_admin()` reads, so this and the server always agree about who is a
    * developer. Readable here only because `profiles_select_own` lets an account
    * read its OWN row: nobody learns anybody else's.
@@ -56,7 +56,7 @@ export type Profile = {
 }
 
 type SignUpInput = { email: string; password: string; username: string; displayName: string }
-/** Username OR email — the whole point of the endpoint above. */
+/** Username OR email, which is the whole point of the endpoint above. */
 type SignInInput = { identifier: string; password: string }
 type OAuthProvider = 'github' | 'google'
 
@@ -90,7 +90,7 @@ export function useAuth() {
   return ctx
 }
 
-/** Columns the UI actually reads — never select('*') against a shared table. */
+/** Columns the UI actually reads. Never select('*') against a shared table. */
 const PROFILE_COLUMNS = 'user_id,username,display_name,is_admin'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [oauthError, setOauthError] = useState<string | null>(null)
 
   // A provider that isn't enabled yet redirects back here with ?error=…
-  // instead of raising synchronously — this is the only place that lands.
+  // instead of raising synchronously, and this is the only place that lands.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const err = params.get('error_description') || params.get('error')
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       // A clicked reset-password link lands here as a real session, not as
-      // a normal sign-in — hold it in "recovery" until a new password is set,
+      // a normal sign-in, so hold it in "recovery" until a new password is set,
       // so the UI shows "choose a new password" instead of flipping to Account.
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setUser(session?.user ?? null)
@@ -160,8 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /*
-   * A session can be ended somewhere else — the Developer console's Sign Out
-   * Everywhere, or a ban. Neither can expire the access token already in this
+   * A session can be ended somewhere else, by the Developer console's Sign Out
+   * Everywhere, or by a ban. Neither can expire the access token already in this
    * browser, and supabase-js restores that token from storage without asking
    * anybody, so without this the tab stays signed in for up to an hour of
    * reloads after the account was signed out. See sessionGuard.ts.
@@ -192,8 +192,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          * A duplicate email does NOT come back as an error.
          *
          * With confirmation required, GoTrue answers a sign-up for an address it
-         * already knows with a success shaped exactly like a new one — a user
-         * object, no session — so that a stranger cannot use the form to learn
+         * already knows with a success shaped exactly like a new one: a user
+         * object and no session, so that a stranger cannot use the form to learn
          * who has an account here. The one thing that differs is the identities array,
          * which is empty in that case and holds the new identity otherwise.
          *
@@ -227,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: authMessage('server_error') }
         }
         // Adopting the session through supabase-js is what puts it in
-        // localStorage and starts the refresh timer — the session is not
+        // localStorage and starts the refresh timer. The session is not
         // "signed in" to this tab until the library owns it.
         const { error } = await supabase.auth.setSession({
           access_token: session.access_token,
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signOut() {
         setRecovery(false)
                 // LOCAL scope, deliberately. supabase-js defaults signOut() to GLOBAL, which
-        // revokes every session this user has — every other device, and every other
+        // revokes every session this user has: every other device, and every other
         // TDG app sharing this auth project. Signing out here was signing them out of
         // everything, which reached the user as "my apps keep signing me out".
         // Signing out everywhere is a separate feature and would need its own button.

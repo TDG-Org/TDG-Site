@@ -1,19 +1,19 @@
-# `supabase/` — the part of TDG-Site that runs on the server
+# `supabase/` · the part of TDG-Site that runs on the server
 
 Not part of the site bundle. Vite never sees it and GitHub Pages never serves
-it; it is Deno source that runs on Supabase, kept here because the alternative —
-code that exists only on a server — is a login nobody can restore when somebody
+it; it is Deno source that runs on Supabase, kept here because the alternative,
+code that exists only on a server, is a login nobody can restore when somebody
 deletes it in a dashboard.
 
 | Path | What it is |
 | --- | --- |
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
-| `migrations/` | SQL already applied to the shared project — today, the `tdg_admin_*` family behind the site's Developer console (`src/dev/`). See its own README. |
+| `migrations/` | SQL already applied to the shared project. Today that is the `tdg_admin_*` family behind the site's Developer console (`src/dev/`). See its own README. |
 
 ## Why the site cannot do this itself
 
 GoTrue only knows email and password. Signing in with a USERNAME needs
-something to turn a handle into an address first — and that something may not be
+something to turn a handle into an address first, and that something may not be
 callable by a browser, because a function that turns a public username into
 somebody's email address is an email-harvesting endpoint.
 
@@ -25,7 +25,7 @@ or a refusal.
 ## Why it is its own endpoint
 
 `bea-account`, `mak-account` and `veditor-account` do the same job for the other
-TDG apps. Each app owns its own so that no app's login can break another's — a
+TDG apps. Each app owns its own so that no app's login can break another's. A
 shared one would be a single point of failure across four products. The
 genuinely shared piece is the SQL resolver, which is app-neutral despite its
 `bea_` prefix.
@@ -45,7 +45,7 @@ Three things about that command, each of which bites:
   and "deploy failed" on a machine that has no Docker is a confusing way to find
   that out.
 - **Never add `--prune`.** It deletes functions that exist in the project but not
-  in this folder — and this project also hosts `bea-account`, `mak-account`,
+  in this folder, and this project also hosts `bea-account`, `mak-account`,
   `mak-checkout`, `mak-billing-portal`, `mak-stripe-webhook`, `veditor-account`
   and `veditor-stripe-webhook`, none of which are here. Pruning from this repo
   would take out Bible Educator's and Makullveny's logins and Makullveny's
@@ -63,6 +63,6 @@ curl -s -X POST https://ddbksawvchsauiuiwvrl.supabase.co/functions/v1/tdg-site-a
 ```
 
 It answers `SOURCE_STAMP`. Unlike the Veditor's copy there is no script that
-digests the file, so that stamp is only as honest as whoever last edited it —
-bump it by hand when you change this function, or it will confidently name a
+digests the file, so that stamp is only as honest as whoever last edited it.
+Bump it by hand when you change this function, or it will confidently name a
 version that is not deployed.

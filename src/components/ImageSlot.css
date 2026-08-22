@@ -31,7 +31,7 @@
   transition: background-color 0.3s ease;
 }
 /* dashed ring, drawn inside the frame so a drop target reads as one.
-   Authoring only — a visitor just sees a quiet empty frame. */
+   Authoring only. A visitor just sees a quiet empty frame. */
 .slot[data-authoring][data-filled='false'] .slot__drop::after {
   content: '';
   position: absolute;

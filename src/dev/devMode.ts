@@ -1,12 +1,12 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * Developer Mode — the switch that shows or hides the Developer tab.
+ * Developer Mode: the switch that shows or hides the Developer tab.
  *
  * ## What it does, and what it deliberately does not
  *
  * It controls ONE thing: whether "Developer" appears in the nav. It is not a
- * permission and it never was — `profiles.is_admin` decides who may open the
+ * permission and it never was. `profiles.is_admin` decides who may open the
  * console, and Postgres re-checks that on every single read and write (see
  * supabase/migrations/20260821090000_tdg_core_admin_console.sql). Turning this
  * on in a browser that is not signed in as a developer changes nothing at all:
@@ -23,7 +23,7 @@ import { useSyncExternalStore } from 'react'
  * ## Getting the tab back after turning it off
  *
  * The switch lives in the account menu, which a developer always has, so it can
- * always be turned back on. `#/dev` also keeps working while it is off — the
+ * always be turned back on. `#/dev` also keeps working while it is off. The
  * hidden tab is about tidiness and shoulder-surfing, not about locking yourself
  * out of your own tools.
  */
@@ -57,7 +57,7 @@ export function setDevMode(on: boolean): void {
 }
 
 /** `read()` hits localStorage, and useSyncExternalStore calls the snapshot on
- *  every render — cache it so the switch is not a synchronous disk read per
+ *  every render, so cache it and the switch is not a synchronous disk read per
  *  frame. Another tab's change arrives through the `storage` event below. */
 let cached = read()
 

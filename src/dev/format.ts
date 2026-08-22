@@ -67,7 +67,7 @@ export type Standing = {
   /** Title Case, because it is a state name shown as a tag. */
   label: string
   tone: 'ok' | 'warn' | 'bad'
-  /** Sentence case — what it means for the person, in one line. */
+  /** Sentence case: what it means for the person, in one line. */
   meaning: string
 }
 

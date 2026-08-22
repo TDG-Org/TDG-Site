@@ -230,12 +230,12 @@
 
 /* A soft highlight sweeps across "DG" every so often. This is a second
    background layer on the SAME element that's already clipped to the glyph
-   shapes via background-clip: text — unlike an overlay positioned on top of
+   shapes via background-clip: text. Unlike an overlay positioned on top of
    the wordmark, a background layer literally cannot paint outside the
    letterforms, so there is no risk of it washing over the space around the
    cross or between the letters the way a box-shaped overlay did.
    background-position is a paint-triggering property, but this is a small,
-   isolated element that repaints only for the ~2s sweep out of every 11s —
+   isolated element that repaints only for the ~2s sweep out of every 11s,
    a different order of magnitude from the continuous, page-wide animations
    the rest of this codebase keeps off the paint path. It still parks fully
    off-frame at rest, which is where the site-wide

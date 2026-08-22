@@ -411,7 +411,7 @@
 }
 .authmodal__input:-webkit-autofill {
   /* Autofill doesn't reliably fire onChange, so the glow overlay may never
-     see these characters — keep the real text visible as a fallback. */
+     see these characters, so keep the real text visible as a fallback. */
   -webkit-text-fill-color: #f2f2f5;
   -webkit-box-shadow: 0 0 0 1000px #16161c inset;
   transition: background-color 9999s ease-in-out 0s;
@@ -532,7 +532,7 @@
   color: #b9b9c4;
 }
 
-/* ── feedback banners (not in the mockup — real submissions need them) ── */
+/* ── feedback banners (not in the mockup, but real submissions need them) ── */
 
 .authmodal__error,
 .authmodal__notice {
@@ -750,7 +750,7 @@
   }
 }
 
-/* authmodalCharGlow's 0% frame is the bright flash, not a resting state — the
+/* authmodalCharGlow's 0% frame is the bright flash, not a resting state. The
    sitewide reduced-motion rule in base.css pins every animation there, so
    without this the typed text would sit permanently lit instead of calm. */
 @media (prefers-reduced-motion: reduce) {

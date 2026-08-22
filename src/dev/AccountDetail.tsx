@@ -167,7 +167,7 @@ function IdentityPanel({ account: a, run, busy }: Props) {
 
   const save = () =>
     run('identity', 'Profile saved.', () =>
-      // Only what actually changed goes over the wire — `undefined` tells the
+      // Only what actually changed goes over the wire. `undefined` tells the
       // function to leave a field alone, and '' tells it to clear one.
       api.setProfile(a.user_id, {
         displayName: displayName !== (a.display_name ?? '') ? displayName : undefined,

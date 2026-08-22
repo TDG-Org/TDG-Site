@@ -1,7 +1,7 @@
 /* ── Store ────────────────────────────────────────────────────────────────
    Its own page rather than a section of the scroll, so it owns the blend
    tints the way each section id does in base.css. It sits between Faith and
-   the page floor in temperature — the shop is not a mood piece, and a heavy
+   the page floor in temperature. The shop is not a mood piece, and a heavy
    scene behind a price is the wrong kind of persuasion.                     */
 
 .store {
@@ -132,7 +132,7 @@
   font: 400 13px/1.6 var(--font-body);
   color: var(--faint);
 }
-/* A tag, and therefore short — a sentence in a 9px mono chip reads as a code
+/* A tag, and therefore short. A sentence in a 9px mono chip reads as a code
    block bolted to the side of the shelf, which is what the first pass shipped. */
 .chip.store__app-status {
   flex: none;
@@ -244,7 +244,7 @@
   padding-top: 20px;
   border-top: 1px solid var(--border);
   /* One floor for every state, so a card does not change height when it flips
-     from Buy to Waiting to Owned — a shelf that jumps as answers arrive reads
+     from Buy to Waiting to Owned. A shelf that jumps as answers arrive reads
      as a page still loading. */
   min-height: 104px;
 }

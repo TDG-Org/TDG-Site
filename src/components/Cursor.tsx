@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { onFrame } from '../lib/motion'
 import './Cursor.css'
 
-/** What the pointer is currently over — drives the ring's shape. */
+/** What the pointer is currently over. It drives the ring's shape. */
 type Kind = 'default' | 'link' | 'grab' | 'wide'
 
 const LINK = 'a,button,[role="button"],summary,label,input,select,textarea,[tabindex]:not([tabindex="-1"])'
@@ -11,7 +11,7 @@ const WIDE = '.card,.story__row'
 
 /**
  * A two-part cursor: a dot that tracks the pointer exactly and a ring that
- * trails it. The ring is the part that reacts — it opens up over anything
+ * trails it. The ring is the part that reacts: it opens up over anything
  * interactive, goes dashed over the draggable hero model, and pinches on press.
  *
  * Fine pointers only. Coarse pointers keep their native behaviour and this
@@ -65,7 +65,7 @@ export function Cursor() {
       if (!awake) wakeCursor()
     }
     const over = (e: PointerEvent) => {
-      // pointerover also carries a real position — a click without a preceding
+      // pointerover also carries a real position, so a click without a preceding
       // move should still bring the cursor up
       if (!awake) {
         x = e.clientX
@@ -92,11 +92,11 @@ export function Cursor() {
     let painted = ''
     const stop = onFrame(({ dt, mi, hold }) => {
       // Once the ring has caught the pointer there is nothing left to compute
-      // until the pointer moves again — no lerp, no string, no allocation.
+      // until the pointer moves again. No lerp, no string, no allocation.
       if (rx === x && ry === y) return
       // still catching up
       hold()
-      // Reduced motion gets a ring locked to the pointer — still a custom
+      // Reduced motion gets a ring locked to the pointer. Still a custom
       // cursor, just without the trailing.
       const ease = mi === 0 ? 1 : 1 - Math.pow(1 - 0.19, dt * 60)
       rx += (x - rx) * ease

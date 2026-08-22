@@ -3,7 +3,7 @@
  *
  * Every fact here is checkable against Stripe: the price is the `unit_amount`
  * on the live price, and the link is the live Payment Link with
- * `metadata.app=<app id>, kind=pack, pack=<pack id>` on it — which is what that
+ * `metadata.app=<app id>, kind=pack, pack=<pack id>` on it, which is what that
  * app's own `<app>-stripe-webhook` Edge Function reads to decide whose account
  * a payment lands on. Change a price in Stripe and change it here in the same
  * sitting: a page that advertises one number and charges another is the one
@@ -11,8 +11,8 @@
  *
  * ## Where else an amount is written down
  *
- * A static page cannot ask Stripe what a price is — the Prices API needs a
- * secret key, and a public site may never hold one — so the literal below is
+ * A static page cannot ask Stripe what a price is. The Prices API needs a
+ * secret key and a public site may never hold one, so the literal below is
  * the only option this page has, and this is where the rest of the chain is
  * written down. DevFleet's Theme Pack states its amount in three more places,
  * and DevFleet's own `verify:store-catalog` only holds the first two against
@@ -36,11 +36,11 @@
 export type StorePack = {
   /** Matches `metadata.pack` on the Stripe link AND the pack id the app gates on. */
   id: string
-  /** Title Case — the pack's name everywhere it appears. */
+  /** Title Case: the pack's name everywhere it appears. */
   name: string
   /** USD cents, exactly as Stripe charges. Formatted for display, never typed twice. */
   priceCents: number
-  /** Sentence case — one line on what it is. */
+  /** Sentence case: one line on what it is. */
   tagline: string
   /** What buying it unlocks, in the words the app itself uses. */
   unlocks: string[]
@@ -52,13 +52,13 @@ export type StoreApp = {
   id: string
   /** The app this section is for. */
   title: string
-  /** Sentence case — what the app is, for somebody who has not seen it. */
+  /** Sentence case: what the app is, for somebody who has not seen it. */
   copy: string
   /** Where to get the app itself, when there is somewhere to send them. */
   appHref?: string
-  /** UPPERCASE, short — a status TAG, the same shape every chip on the site is. */
+  /** UPPERCASE, short: a status TAG, the same shape every chip on the site is. */
   status: string
-  /** Sentence case — the honest note about availability, which is a sentence and
+  /** Sentence case: the honest note about availability, which is a sentence and
    *  therefore never a chip: the site's chips are 9px mono tags, and a sentence
    *  wearing one reads as a code block bolted to the side of the shelf. */
   availability: string
@@ -76,13 +76,13 @@ export type StoreApp = {
 }
 
 /**
- * The identity of one pack ON THE SHELF — never `pack.id` on its own.
+ * The identity of one pack ON THE SHELF. Never `pack.id` on its own.
  *
  * A pack id is only ever unique WITHIN its app: it is the string in that app's
  * `<app>_entitlements.owned_packs`, and `metadata.pack` on that app's own
  * Stripe link. DevFleet and TDG Veditor both sell one called `themes`, so a
  * shop keyed on the pack id alone would light DevFleet's card as Owned the
- * moment somebody bought Veditor's — and sell them nothing.
+ * moment somebody bought Veditor's, and sell them nothing.
  */
 export function packKey(appId: string, packId: string): string {
   return `${appId}:${packId}`
@@ -157,7 +157,7 @@ export function formatUsd(cents: number): string {
  *
  * Stripe's test Payment Links are `buy.stripe.com/test_…` and its live ones are
  * `buy.stripe.com/…`, so the mode is readable straight off the URL with no key
- * and no request. Worth reading, because a test link is not broken — it is a
+ * and no request. Worth reading, because a test link is not broken. It is a
  * real checkout page that simply refuses every real card, and a customer who
  * meets one is told nothing about why. The card says it plainly instead.
  */
@@ -168,7 +168,7 @@ export function isTestLink(pack: StorePack): boolean {
 /**
  * The buy URL for one pack, aimed at one account.
  *
- * `client_reference_id` is how the webhook knows whose account to credit — it
+ * `client_reference_id` is how the webhook knows whose account to credit. It
  * is the FIRST thing it looks at, ahead of `metadata.user_id` and then falling
  * back to resolving the payer's email. Without it a payment is recorded and
  * granted to nobody, so this function is never called with an empty id: the

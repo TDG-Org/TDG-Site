@@ -37,7 +37,7 @@ export function useTilt<T extends HTMLElement>(soft = false) {
     const leave = () => {
       el.removeAttribute('data-lit')
       // Same guard as move: while a reveal is mid-flight it owns `transform`,
-      // and it only repaints on progress — writing REST here would freeze the
+      // and it only repaints on progress, so writing REST here would freeze the
       // card at its final position with a partial opacity.
       if (!('revealing' in el.dataset)) el.style.transform = REST
     }

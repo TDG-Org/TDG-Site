@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 /**
  * Park every decorative animation in a section while that section is off
  * screen. The faith gradient field alone is a rotating conic gradient under a
- * 46px blur — cheap to look at, expensive to keep compositing when nobody can.
+ * 46px blur: cheap to look at, expensive to keep compositing when nobody can.
  */
 export function useOffscreenPause() {
   useEffect(() => {

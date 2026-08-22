@@ -24,8 +24,8 @@ import { useRoute } from './lib/route'
  * is signed in as a TDG developer.
  *
  * That is tidiness, not a lock. The lock is that every read and write the
- * console makes goes through a Postgres function that refuses a non-admin —
- * see src/dev/README.md.
+ * console makes goes through a Postgres function that refuses a non-admin.
+ * See src/dev/README.md.
  */
 const DevConsole = lazy(() => import('./dev/DevConsole'))
 
@@ -38,27 +38,27 @@ export default function App() {
   /*
    * `#/dev` for anybody else behaves EXACTLY like `#/banana`: it renders the
    * home page and leaves the hash alone. Not a "restricted" notice, and not a
-   * redirect — both of those answer the question "is there something here?",
+   * redirect. Both of those answer the question "is there something here?",
    * and the answer a stranger should get is the one an unknown anchor gets.
    */
   const showDev = route === 'dev' && isAdmin
 
   // A provider redirect (e.g. GitHub/Google) or a clicked password-reset
-  // link can land back here with the modal unmounted — reopen it so
-  // AuthModal has a chance to show the error or the reset-password form.
+  // link can land back here with the modal unmounted, so reopen it and give
+  // AuthModal a chance to show the error or the reset-password form.
   useEffect(() => {
     if (oauthError || recovery) setAuthOpen(true)
   }, [oauthError, recovery])
 
   // Leaving or entering a page swaps the whole document, and the browser has
   // already done whatever it was going to do with the hash by the time React
-  // renders the new one — so a section anchor clicked FROM the Store points at
+  // renders the new one, so a section anchor clicked FROM the Store points at
   // an element that did not exist when it was clicked. Effects run after the
   // commit, so by here it does.
   useEffect(() => {
     if (route === 'store' || showDev) {
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
-      // change, and `auto` resolves to smooth here — so arriving at the Store
+      // change, and `auto` resolves to smooth here, so arriving at the Store
       // from halfway down the home page slid the new page up under you instead
       // of simply being at its top, which is what opening a page looks like.
       window.scrollTo({ top: 0, behavior: 'instant' })

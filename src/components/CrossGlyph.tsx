@@ -7,8 +7,8 @@ type Props = {
 }
 
 /**
- * The TDG cross. One path, one continuous gradient across both bars — not two
- * shapes — so the light reads as a single fall across the whole glyph.
+ * The TDG cross. One path and one continuous gradient across both bars, not
+ * two shapes, so the light reads as a single fall across the whole glyph.
  */
 export function CrossGlyph({ variant = 'hero', className }: Props) {
   const id = variant === 'hero' ? 'tdgCrossGrad' : 'faithCrossGrad'

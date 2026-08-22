@@ -4,7 +4,7 @@
    than the marketing pages: no tilt, no reveal-on-scroll, no parallax. A page
    you use for ten minutes at a time should not animate while you read it.
 
-   One set of spacing variables drives every paired edge — a panel's left and
+   One set of spacing variables drives every paired edge: a panel's left and
    right padding, a row's two ends, a split's two columns. Writing a literal on
    one side and a different literal on the other is how a lopsided pair ships,
    so nothing here does that.                                                  */
@@ -405,7 +405,7 @@
 }
 
 /* The whole header row is the toggle. A 12px chevron is a 12px target, and
-   this page is used at speed — the row is 700px of it. */
+   this page is used at speed, and the row is 700px of it. */
 .dev__panel-heading {
   margin: 0;
   font: inherit;
@@ -490,7 +490,7 @@
 
 /* 0fr → 1fr rather than a measured max-height: what is inside changes size
    while it is open (a confirm box, a warning), and a measured height would be
-   wrong the moment it did. `overflow: hidden` stays on while open too — every
+   wrong the moment it did. `overflow: hidden` stays on while open too, because every
    focus ring in here sits inside the panel's own padding, so nothing clips. */
 .dev__panel-region {
   display: grid;

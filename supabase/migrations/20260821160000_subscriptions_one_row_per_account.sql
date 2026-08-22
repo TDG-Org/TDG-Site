@@ -8,7 +8,7 @@
 --  Nothing stopped two rows for one account.
 --
 --  WHY THAT MATTERS MORE THAN IT LOOKS
---  Five apps read this table with `.maybeSingle()` — Bible Educator, Makullveny,
+--  Five apps read this table with `.maybeSingle()`: Bible Educator, Makullveny,
 --  DevFleet, Music Everything and this site. supabase-js THROWS on more than one
 --  row there, and every one of those readers catches a throw and falls back to
 --  the free tier. So a duplicate row would not raise anything anybody would
@@ -30,7 +30,7 @@
 --      mak-account, mak-checkout, mak-billing-portal, mak-stripe-webhook,
 --      veditor-account, veditor-stripe-webhook, devfleet-account,
 --      devfleet-stripe-webhook, music-account, tdg-site-account). Not one of
---      them touches this table — the two that mention "subscriptions" do so in
+--      them touches this table, and the two that mention "subscriptions" do so in
 --      a comment. Makullveny's billing writes `mak_subscriptions`, which is a
 --      different table.
 --    · Every client read across all six repos is a SELECT.
@@ -43,7 +43,7 @@ begin;
 
 -- ── 1 · converge any duplicates ────────────────────────────────────────────
 --  A no-op today: all three accounts have exactly one row, checked immediately
---  before applying. It is here so the file is honest and re-runnable — the
+--  before applying. It is here so the file is honest and re-runnable. The
 --  constraint below cannot be added while a duplicate exists, and the choice of
 --  which row survives should be written down rather than left to whoever is
 --  holding the keyboard when it happens.
@@ -70,7 +70,7 @@ where s.id = r.id and r.rn > 1;
 alter table public.subscriptions
   add constraint subscriptions_user_id_key unique (user_id);
 
---  The plain index is now redundant — the unique one above answers every lookup
+--  The plain index is now redundant. The unique one above answers every lookup
 --  it answered, and a second index on the same column is only write cost.
 drop index if exists public.subscriptions_user_id_idx;
 
@@ -78,15 +78,15 @@ drop index if exists public.subscriptions_user_id_idx;
 --  Unchanged except for the two `on conflict do nothing` clauses. No values
 --  move; a duplicate simply becomes a no-op instead of an exception.
 --
---  It could not have broken signup even without this — the catch-all at the
---  bottom swallows everything — but "safe because an error handler eats it" is
+--  It could not have broken signup even without this, because the catch-all at
+--  the bottom swallows everything, but "safe because an error handler eats it" is
 --  not the same as safe. It also fixes a quieter fault that predates this file:
 --  the two inserts share one exception block, so a profiles insert that raised
 --  (a username claimed between the check and the write) aborted the whole
 --  block and left the account with no subscription row EITHER. With both
 --  inserts idempotent, that path now completes.
 --
---  This function belongs to the project rather than to any repo — it came from
+--  This function belongs to the project rather than to any repo. It came from
 --  the `init_core_schema` / `default_subscription_on_signup` migrations applied
 --  straight to tdg-core, and no repo holds its source. It is redefined here
 --  because this is the change that needs it; Bible Educator's migrations README

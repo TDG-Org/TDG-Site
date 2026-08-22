@@ -1,5 +1,5 @@
 /**
- * One requestAnimationFrame loop drives the whole page — and it parks itself.
+ * One requestAnimationFrame loop drives the whole page, and it parks itself.
  *
  * Everything reads element rects rather than a scroll offset, so the
  * choreography is independent of which element actually owns the scroll.
@@ -24,13 +24,13 @@ export type Frame = {
   now: number
   /** seconds since the previous frame, clamped to 50ms */
   dt: number
-  /** "I am animating — keep the loop running." */
+  /** "I am animating, so keep the loop running." */
   hold: () => void
 }
 
 /**
  * A subscriber may return a write function. Every subscriber is measured
- * first, then every write runs — one layout flush per frame instead of one
+ * first, then every write runs. That is one layout flush per frame instead of one
  * per subscriber.
  */
 type Tick = (frame: Frame) => void | (() => void)
@@ -84,7 +84,7 @@ function markHeld() {
   held = true
 }
 
-// One frame object, mutated in place — a fresh literal every frame is garbage
+// One frame object, mutated in place. A fresh literal every frame is garbage
 // the collector has to come back for sixty times a second.
 const frame: Frame = { vh: 800, mi: 1, now: 0, dt: 0, hold: markHeld }
 
@@ -99,17 +99,17 @@ function run(now: number) {
   frame.dt = dt
 
   // One subscriber throwing must not take the page's motion with it. Without
-  // the finally, the throw escapes before the loop re-arms — and because rafId
+  // the finally, the throw escapes before the loop re-arms, and because rafId
   // still holds the id of the callback we are already inside, nothing can ever
   // restart it. Every animation on the page would stop, silently.
   try {
-    // read phase — subscribers measure and stash their writes
+    // read phase: subscribers measure and stash their writes
     writes.length = 0
     for (const tick of ticks) {
       const write = tick(frame)
       if (write) writes.push(write)
     }
-    // write phase — nothing here reads layout, so nothing forces a re-flow
+    // write phase: nothing here reads layout, so nothing forces a re-flow
     for (let i = 0; i < writes.length; i++) writes[i]()
   } catch (err) {
     console.error('[motion] subscriber threw', err)
@@ -118,7 +118,7 @@ function run(now: number) {
     if (held || now < awakeUntil) {
       rafId = requestAnimationFrame(run)
     } else {
-      // nothing left to do — stop asking the browser for frames
+      // nothing left to do, so stop asking the browser for frames
       rafId = 0
       last = 0
     }
@@ -175,7 +175,7 @@ function wireWakeSources() {
   try {
     document.fonts?.ready.then(() => wake(600))
   } catch {
-    /* no font loading API — the load listener covers it */
+    /* no font loading API, so the load listener covers it */
   }
   try {
     let first = true
@@ -188,7 +188,7 @@ function wireWakeSources() {
       wake()
     }).observe(document.documentElement)
   } catch {
-    /* no ResizeObserver — input events still cover every realistic case */
+    /* no ResizeObserver, and input events still cover every realistic case */
   }
 }
 
@@ -215,7 +215,7 @@ if (typeof window !== 'undefined') {
       wake(1000)
     })
   } catch {
-    /* older Safari — the initial read is good enough */
+    /* older Safari, where the initial read is good enough */
   }
 }
 

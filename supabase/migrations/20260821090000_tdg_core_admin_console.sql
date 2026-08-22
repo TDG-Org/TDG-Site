@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
---  TDG Core Developer Console — the server half
+--  TDG Core Developer Console · the server half
 --  Applied 2026-08-21 to project ddbksawvchsauiuiwvrl (tdg-core).
 -- ═══════════════════════════════════════════════════════════════════════════
 --
@@ -7,7 +7,7 @@
 --  The site's Developer page (src/dev/) is presentation only. Every fact it
 --  shows and every change it makes goes through one of the `tdg_admin_*`
 --  functions below, and every one of them starts by refusing anybody whose
---  profile does not have `is_admin`. That refusal is the security boundary —
+--  profile does not have `is_admin`. That refusal is the security boundary:
 --  not the hidden tab, not the lazy-loaded chunk, not the route. Someone who
 --  reads the built JavaScript and calls these by hand gets 42501 and nothing
 --  else.
@@ -16,13 +16,13 @@
 --  `bea_admin_*` already exists and is deliberately Bible-Educator-shaped: its
 --  account list carries BEA's moderation state, and its audit view filters to
 --  `app = 'bible-educator'`. Bible Educator depends on those shapes. TDG Core
---  needs a SUPERSET — the same account seen across Bible Educator, Makullveny,
---  TDG Veditor and DevFleet at once — so widening the BEA functions would mean
+--  needs a SUPERSET, the same account seen across Bible Educator, Makullveny,
+--  TDG Veditor and DevFleet at once, so widening the BEA functions would mean
 --  changing a signature four products already read. These are new names beside
 --  them, sharing the one thing that must never fork: `bea_is_admin()`.
 --
 --  WHY EVERY WRITE GOES THROUGH A FUNCTION AND NOT RLS
---  The entitlement tables have no client write policies at all, on purpose —
+--  The entitlement tables have no client write policies at all, on purpose:
 --  the Stripe webhooks own them. Granting an admin UPDATE would open a second
 --  door onto money-bearing rows and lose the ledger. Instead each write here is
 --  a narrow verb that also appends to the SAME `*_purchase_events` /
@@ -41,7 +41,7 @@ begin;
 -- ── 0 · catalogs ───────────────────────────────────────────────────────────
 --  The lists the console offers in its dropdowns. They live in SQL rather than
 --  in the site's TypeScript so that the server validates against exactly what
---  the UI offered — a tier the page could pick but the database rejects is the
+--  the UI offered. A tier the page could pick but the database rejects is the
 --  one failure that reads as "the console is broken".
 
 --  Bible Educator gates on this ladder (see its
@@ -69,7 +69,7 @@ $$;
 --  Makullveny's MARKETPLACE_THEMES, verbatim (its src/entitlements.js). Kept in
 --  step by hand: add a theme there and add it here in the same sitting, or the
 --  console cannot grant the thing the app is selling. The Candle bundle does
---  NOT write these — it sets candle_purchased_at, which the app treats as
+--  NOT write these. It sets candle_purchased_at, which the app treats as
 --  every marketplace theme, so granting Candle here needs no theme edits.
 create or replace function public.mak_known_themes()
 returns text[] language sql immutable as $$
@@ -232,7 +232,7 @@ begin
   left join public.bea_profile_state st on st.user_id = p.user_id
   left join public.bea_streaks       sk on sk.user_id = p.user_id
   -- public.subscriptions has no unique index on user_id, so a duplicate row is
-  -- possible. Pick one deterministically and report how many there were —
+  -- possible. Pick one deterministically and report how many there were.
   -- Bible Educator reads that table with .maybeSingle(), which ERRORS on two
   -- rows, so a count above 1 is a real fault the console should show.
   left join lateral (
@@ -379,7 +379,7 @@ begin
 end;
 $$;
 
---  Every moderation / permission action, from EVERY app — unlike
+--  Every moderation / permission action, from EVERY app, unlike
 --  bea_admin_audit, which is scoped to Bible Educator on purpose.
 create or replace function public.tdg_admin_audit(
   p_target   uuid    default null,
@@ -462,7 +462,7 @@ $$;
 --
 --  Changing a username here also stamps username_changed_at, which starts the
 --  account's own 2-week rename cooldown (touch_profile_timestamps). That is
---  the trigger's doing and it is deliberate — a rename is a rename — but the
+--  the trigger's doing and it is deliberate (a rename is a rename), but the
 --  console says so out loud next to the field.
 create or replace function public.tdg_admin_set_profile(
   p_target             uuid,
@@ -500,7 +500,7 @@ begin
   end if;
 
   -- Every element is cast to text explicitly. `v_changed || 'bio'` without one
-  -- parses the untyped literal as an ARRAY literal and raises 22P02 — which is
+  -- parses the untyped literal as an ARRAY literal and raises 22P02, which is
   -- exactly what the first cut of this function did the moment anybody edited
   -- a bio. The neighbours only escaped because their inner `||` had already
   -- produced a typed text.
@@ -542,7 +542,7 @@ $$;
 --
 --  Updates EVERY row this account has rather than one, because that table has
 --  no unique index on user_id and a duplicate pair would otherwise disagree
---  with itself for ever. Inserts one when there is none — an account created
+--  with itself for ever. Inserts one when there is none, because an account created
 --  before handle_new_user existed has no row at all.
 create or replace function public.tdg_admin_set_core_subscription(
   p_target uuid, p_tier text, p_status text
@@ -586,7 +586,7 @@ end;
 $$;
 
 --  Makullveny's own tier (public.mak_subscriptions), independent of the core
---  one — the app takes the greater of the two.
+--  one. The app takes the greater of the two.
 create or replace function public.tdg_admin_set_mak_subscription(
   p_target uuid, p_tier text, p_status text
 )
@@ -685,9 +685,9 @@ end;
 $$;
 
 --  The two Makullveny timestamps that behave like switches:
---    candle_bundle — the Candle bundle, which the app reads as "owns every
+--    candle_bundle · the Candle bundle, which the app reads as "owns every
 --                    marketplace theme" without listing them one by one.
---    support_badge — the permanent "supported Mak" marker.
+--    support_badge · the permanent "supported Mak" marker.
 create or replace function public.tdg_admin_set_mak_flag(
   p_target uuid, p_flag text, p_on boolean
 )
@@ -734,7 +734,7 @@ $$;
 --  A TDG Veditor or DevFleet Store pack, on or off, for ANY account.
 --
 --  veditor_admin_set_pack / devfleet_admin_set_pack already exist but only ever
---  touch auth.uid() — a developer giving THEMSELVES a pack to test with. This
+--  touch auth.uid(), a developer giving THEMSELVES a pack to test with. This
 --  is the other half: giving one to somebody else, which is what a free grant,
 --  a refund, and a "Stripe charged them but the webhook missed it" all need.
 create or replace function public.tdg_admin_set_pack(
@@ -825,7 +825,7 @@ $$;
 --
 --  WHY THIS TOUCHES auth.users AND NOT JUST bea_profile_state
 --  bea_profile_state is Bible Educator's enforcement: BEA reads it at sign-in
---  and refuses. Nothing else does — a "banned" account could still sign into
+--  and refuses. Nothing else does, so a "banned" account could still sign into
 --  TDG Veditor and use its packs, which is not what anybody means by banned on
 --  a TDG-CORE console. So a suspension also sets auth.users.banned_until, which
 --  GoTrue itself honours for every app on this project at once, and deletes the
@@ -925,7 +925,7 @@ begin
 end;
 $$;
 
---  Permanent deletion. Soft-delete first is not politeness — it is the one
+--  Permanent deletion. Soft-delete first is not politeness. It is the one
 --  thing standing between a mis-click and an account that cannot come back.
 create or replace function public.tdg_admin_delete_forever(p_target uuid)
 returns void
@@ -979,7 +979,7 @@ $$;
 
 
 -- ── 6 · grants ─────────────────────────────────────────────────────────────
---  `authenticated` only. `anon` never — a signed-out caller has no admin row to
+--  `authenticated` only. `anon` never: a signed-out caller has no admin row to
 --  check, so letting them reach these would only ever produce a 42501 and a
 --  probe endpoint. The guard inside each function is the real boundary; this
 --  just stops the door being rattled.

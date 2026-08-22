@@ -5,7 +5,7 @@
  *
  * GoTrue ships stable `error_code` values (`@supabase/auth-js`'s
  * `error-codes.d.ts`), and matching those instead of the human sentence is not
- * a style preference — it is the difference between a right answer and a wrong
+ * a style preference. It is the difference between a right answer and a wrong
  * one. The messages OVERLAP: refusing a password you are already using reads
  * "New password should be different from the old password.", which contains
  * the substring "password should be" that a too-short check would look for. A
@@ -27,7 +27,7 @@
 /** The endpoint's own vocabulary, plus GoTrue's codes for the direct calls. */
 export function authMessage(code: string | null | undefined, fallback?: string): string {
   switch (code) {
-    // — from tdg-site-account —
+    // ── from tdg-site-account ──
     case 'invalid_credentials':
       return 'That username or email and password do not match an account.'
     case 'email_not_confirmed':
@@ -39,14 +39,14 @@ export function authMessage(code: string | null | undefined, fallback?: string):
     case 'bad_request':
       return 'Fill in both fields and try again.'
 
-    // — from GoTrue, for the calls the browser makes itself —
+    // ── from GoTrue, for the calls the browser makes itself ──
     case 'user_already_exists':
     case 'email_exists':
       return 'An account already has that email. Log in instead, or reset the password.'
     case 'weak_password':
       // Deliberately no number: the policy lives in the dashboard and can change
       // with no build here, so a length quoted in this file goes stale in the
-      // worst direction — telling somebody a password is fine that the server
+      // worst direction, telling somebody a password is fine that the server
       // will refuse. The server's own sentence is passed through instead.
       return fallback ?? "That password isn't strong enough."
     case 'same_password':
@@ -77,7 +77,7 @@ export const OFFLINE_MESSAGE =
  * The one place the site decides what a username may look like.
  *
  * Kept in step with `bea_username_available` on the server, which is the
- * authority — this only refuses shapes that could never be valid, so a name
+ * authority. This only refuses shapes that could never be valid, so a name
  * that cannot work never costs a round trip. It is NOT the check that decides
  * availability; that answer can only come from the server.
  */

@@ -26,7 +26,7 @@ function getPasswordStrength(pw: string): { percent: number; label: string } {
   return steps[Math.min(score, steps.length) - 1]
 }
 
-/* ── icons — copied from the design canvas's own inline SVGs ─────────────── */
+/* ── icons, copied from the design canvas's own inline SVGs ──────────────── */
 
 function IconUser() {
   return (
@@ -342,7 +342,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  // Fresh slate every time the modal opens — half-typed data from a dismissed
+  // Fresh slate every time the modal opens. Half-typed data from a dismissed
   // attempt should not resurface later.
   useEffect(() => {
     if (!open) return
@@ -453,7 +453,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
      * Ask ONE more time, right here, and refuse on anything but a clear yes.
      *
      * The check that runs while you type is debounced, so a fast typist can
-     * submit before its answer lands — and the cost of missing is invisible:
+     * submit before its answer lands, and the cost of missing is invisible:
      * tdg-core's handle_new_user trigger does not fail on a taken
      * username, it silently stores NULL and creates the account anyway.
      * Somebody would sign up as "clyde", be told it worked, and have no
@@ -509,7 +509,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     }
     setFormError(null)
     setSubmitting(true)
-    // Username OR email — resolved server-side by tdg-site-account, because a
+    // Username OR email, resolved server-side by tdg-site-account, because a
     // browser may not turn a public handle into somebody's email address.
     const { error } = await signIn({ identifier, password: loginPassword })
     setSubmitting(false)

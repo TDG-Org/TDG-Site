@@ -158,7 +158,7 @@
      50%      box-shadow: 0 0 0 7px transparent, 0 0 22px 5px glow
 
    The first is a hard ring growing from the dot's edge (r 5.5 → 12.5) while
-   its alpha falls to zero — exactly a scale plus an opacity fade. The second
+   its alpha falls to zero: exactly a scale plus an opacity fade. The second
    is a soft halo whose extent grows 13.5 → 21.5, which is that same halo
    scaled by 1.593. Both now animate on the compositor and never repaint. */
 .story__pulse {
@@ -182,8 +182,8 @@
   inset: -7px;
   animation: pulseRing 3.4s ease-in-out infinite;
 }
-/* the halo: a 7.5px-radius disc under a static 6px blur — the same Gaussian a
-   12px box-shadow blur draws — then scaled */
+/* the halo: a 7.5px-radius disc under a static 6px blur, the same Gaussian a
+   12px box-shadow blur draws, then scaled */
 .story__pulse::after {
   inset: -2px;
   filter: blur(6px);
@@ -191,7 +191,7 @@
 }
 
 /* the animated shadow used to win over :hover, so the turn's dot never showed
-   the hover glow — keep it that way */
+   the hover glow, so keep it that way */
 .story__row[data-turn]:hover .story__dot,
 .story__row[data-turn]:focus-visible .story__dot {
   box-shadow: none;

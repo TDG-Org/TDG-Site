@@ -5,7 +5,7 @@ import { buildShapes } from './shapes'
 
 /**
  * The reference draws 4200 points. Scale it to what the device can comfortably
- * paint — the form stays legible well below the full count.
+ * paint. The form stays legible well below the full count.
  */
 function pointBudget() {
   if (typeof window === 'undefined') return 4200
@@ -27,7 +27,7 @@ const MAX_PX = 9
 /**
  * The cloud drifts at ~0.16 rad/s and a morph takes 1.45s. Neither needs
  * display refresh rate; at 30Hz the motion is identical to the eye and the
- * work halves. A drag is different — that tracks a hand, so it runs uncapped.
+ * work halves. A drag is different, because it tracks a hand, so it runs uncapped.
  */
 const IDLE_HZ = 30
 
@@ -57,13 +57,13 @@ function packRGB(r: number, g: number, b: number) {
 /**
  * The hero model: a point cloud that morphs between twelve forms on a loop.
  *
- * Interaction contract — it rotates *only* while the left mouse button is held
+ * Interaction contract: it rotates *only* while the left mouse button is held
  * and dragged, never on hover. The drag carries inertia and X rotation is
  * clamped so the form can never tumble past readable.
  *
  * Rendering: every point is splatted into one alpha buffer and the frame is
  * handed to the canvas as a single putImageData over the region that actually
- * changed. The obvious implementation — one drawImage per point — spent 72% of
+ * changed. The obvious implementation, one drawImage per point, spent 72% of
  * the page's entire CPU budget on canvas call overhead alone.
  */
 export function PointCloud() {
@@ -91,7 +91,7 @@ export function PointCloud() {
     const to = new Float32Array(shapes[0].pts)
     const scales = new Float32Array(COUNT)
     // per-point brightness is fixed; the theme's base opacity is applied at
-    // draw time (0.92 additive on dark, 0.72 over on light — the reference's
+    // draw time (0.92 additive on dark, 0.72 over on light, matching the reference's
     // uOpacity uniform)
     const alphas = new Float32Array(COUNT)
     for (let i = 0; i < COUNT; i++) {
@@ -166,7 +166,7 @@ export function PointCloud() {
     const down = (e: PointerEvent) => {
       if (e.button !== 0) return
       // Without this, a drag that crosses the label underneath starts a native
-      // text-selection instead of — or as well as — rotating the model.
+      // text-selection instead of rotating the model, or as well as.
       e.preventDefault()
       drag.on = true
       drag.x = e.clientX
@@ -200,7 +200,7 @@ export function PointCloud() {
     holder.addEventListener('pointermove', move)
     // Release is bound to the window, not the element: pointer capture is
     // best-effort, and a release outside the model would otherwise latch
-    // drag.on true forever — defeating the frame cap and pinning the loop.
+    // drag.on true forever, defeating the frame cap and pinning the loop.
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
     window.addEventListener('blur', up)
@@ -212,7 +212,7 @@ export function PointCloud() {
     let lastGrab = -1
 
     const stop = onFrame(({ vh, mi, dt, now, hold }) => {
-      // Below 640px the wrapper is display:none — never pay for a hidden model.
+      // Below 640px the wrapper is display:none. Never pay for a hidden model.
       if (!W || !H || !holder.offsetParent) return
 
       // the model fades out as the hero sinks; stop grabbing once it is faint
@@ -337,7 +337,7 @@ export function PointCloud() {
         const x0 = pos[k]
         const y0 = pos[k + 1]
         const z0 = pos[k + 2]
-        // rotate Y, then X — matches the reference's Euler order
+        // rotate Y, then X, matching the reference's Euler order
         const x1 = x0 * cosY + z0 * sinY
         const z1 = -x0 * sinY + z0 * cosY
         const y1 = y0 * cosX - z1 * sinX

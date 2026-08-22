@@ -2,7 +2,7 @@
  * The twelve forms the hero point cloud morphs between.
  *
  * Each form is a weighted set of sampler functions. A sampler emits one random
- * point inside a primitive — a box, a shell, a cylinder, an arc, a line
+ * point inside a primitive: a box, a shell, a cylinder, an arc, a line
  * segment, a cone, a quadratic bézier, a polygon edge or fill. `sample` hands
  * each part its share of the point budget, so every form ends up with exactly
  * the same point count and morphing is a straight point-for-point lerp.
@@ -39,7 +39,7 @@ const tube =
     return [cx + l, cy + rr * Math.cos(th), cz + rr * Math.sin(th)]
   }
 
-/** line segment — for drawing glyphs and outlines out of points */
+/** line segment, for drawing glyphs and outlines out of points */
 const seg =
   (x1: number, y1: number, x2: number, y2: number, z = 0, jitter = 0.035): Sampler =>
   () => {

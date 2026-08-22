@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
  *
  * There is no direct table access here on purpose. The console reads and writes
  * ONLY through the `tdg_admin_*` functions, each of which re-checks
- * `profiles.is_admin` in Postgres before it does anything — so this file is a
+ * `profiles.is_admin` in Postgres before it does anything, so this file is a
  * convenience layer, never a permission layer. The full reasoning lives in
  * supabase/migrations/20260821090000_tdg_core_admin_console.sql.
  *
@@ -46,7 +46,7 @@ export type DevAccount = {
   core_status: string
   core_stripe_customer_id: string | null
   core_renewed_at: string | null
-  /** Above 1 means duplicate rows in public.subscriptions — a real fault. */
+  /** Above 1 means duplicate rows in public.subscriptions, which is a real fault. */
   core_row_count: number
   mak_tier: string
   mak_status: string
@@ -215,7 +215,7 @@ export const setDeveloper = (userId: string, isDeveloper: boolean): Promise<null
  * Identity fields.
  *
  * `undefined` leaves a field alone; `''` clears it. That distinction is the
- * whole reason this takes a partial — a save that sent every field would wipe
+ * whole reason this takes a partial. A save that sent every field would wipe
  * the display name every time somebody only edited the bio.
  */
 export const setProfile = (

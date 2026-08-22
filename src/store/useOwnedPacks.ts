@@ -6,7 +6,7 @@ import { STORE_APPS, packKey } from '../data/store'
 /**
  * Which packs the signed-in account owns, across every app on the shelf.
  *
- * Read straight from each app's `<app>_entitlements` over RLS — every one of
+ * Read straight from each app's `<app>_entitlements` over RLS. Every one of
  * those tables grants the owner `select` on their own row and carries no client
  * write policy at all, so this is a read of the same row the app itself reads
  * and the same row that app's Stripe webhook writes. One answer, three readers.
@@ -21,8 +21,8 @@ import { STORE_APPS, packKey } from '../data/store'
  *
  * ## The state is PER APP, because the tables are
  *
- * Each app owns its own ownership table on purpose — isolation on a money path,
- * see `src/data/store.ts` — which means each read can fail on its own. Folded
+ * Each app owns its own ownership table on purpose, for isolation on a money
+ * path (see `src/data/store.ts`), which means each read can fail on its own. Folded
  * into one state, a hiccup reading Veditor's table would hide DevFleet's
  * prices behind a failure that has nothing to do with it, so every shelf
  * answers for itself and speaks for nobody else.
@@ -30,7 +30,7 @@ import { STORE_APPS, packKey } from '../data/store'
  * ## And ownership is keyed per app too
  *
  * Both apps sell a pack whose id is `themes`. `owned` therefore holds
- * `packKey(app, pack)` and never a bare pack id — the alternative is buying one
+ * `packKey(app, pack)` and never a bare pack id. The alternative is buying one
  * Theme Pack and being told you own the other.
  */
 export type OwnedState = 'loading' | 'signedOut' | 'ready' | 'error'
@@ -40,7 +40,7 @@ export type OwnedPacks = {
   readonly stateFor: (appId: string) => OwnedState
   /** `packKey(app, pack)` for every pack owned. Per app, meaningful once ready. */
   readonly owned: ReadonlySet<string>
-  /** Re-ask now — after a purchase, or when the tab comes back to the front. */
+  /** Re-ask now, after a purchase or when the tab comes back to the front. */
   readonly refresh: () => void
 }
 
@@ -93,7 +93,7 @@ export function useOwnedPacks(): OwnedPacks {
     let cancelled = false
 
     // Every shelf at once, each landing on its own: one table refusing must not
-    // hold up — or answer for — another.
+    // hold up another, or answer for it.
     for (const app of STORE_APPS) {
       supabase
         .from(app.entitlementsTable)

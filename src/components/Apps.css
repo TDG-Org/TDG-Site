@@ -61,7 +61,7 @@
 }
 
 /* Bleeds to the card's own edges (top corners clip via the card's radius +
-   overflow:hidden) rather than sitting inset — same idea as .building__art. */
+   overflow:hidden) rather than sitting inset. Same idea as .building__art. */
 .apps__shot {
   position: relative;
   width: 100%;

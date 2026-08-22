@@ -5,7 +5,7 @@ import './ImageSlot.css'
 
 /**
  * Drop-to-fill is an authoring convenience for reviewing the page before the
- * real screenshots land. It must never reach a visitor — a public site does not
+ * real screenshots land. It must never reach a visitor: a public site does not
  * ask people to upload a file, and "Drop a Music Everything screenshot" is not
  * copy anyone outside this repo should read.
  */
@@ -48,7 +48,7 @@ function DropLayer({
 }
 
 type Props = {
-  /** persistence key for a locally dropped image — must be unique per slot */
+  /** persistence key for a locally dropped image, unique per slot */
   id: string
   /** authoring-only prompt; never rendered in a production build */
   placeholder: string
@@ -64,7 +64,7 @@ const srcSet = (shot: Shot, ext: 'avif' | 'webp') =>
   shot.widths.map((w) => `${asset(`shots/${shot.slug}-${w}.${ext}`)} ${w}w`).join(', ')
 
 /**
- * A product screenshot, or — until one exists — a quiet empty frame that keeps
+ * A product screenshot, or a quiet empty frame that keeps
  * the card's proportions. In development the empty frame also accepts a
  * dropped image, kept in that browser only, so the page can be reviewed filled
  * in without a build.
@@ -85,7 +85,7 @@ export function ImageSlot({
       const stored = localStorage.getItem(key(id))
       if (stored) setDropped(stored)
     } catch {
-      /* private mode — the slot just shows whatever shipped */
+      /* private mode, so the slot just shows whatever shipped */
     }
   }, [id])
 
@@ -99,7 +99,7 @@ export function ImageSlot({
         try {
           localStorage.setItem(key(id), url)
         } catch {
-          /* over quota — keep it for this session only */
+          /* over quota, so keep it for this session only */
         }
       }
       reader.readAsDataURL(file)
@@ -133,7 +133,7 @@ export function ImageSlot({
       {AUTHORING ? (
         <>
           {/* A filled slot still accepts a drag-drop replacement, but it is not
-              a button — clicking a screenshot should not open a file dialog. */}
+              a button: clicking a screenshot should not open a file dialog. */}
           <DropLayer
             as={filled ? 'div' : 'button'}
             label={placeholder}

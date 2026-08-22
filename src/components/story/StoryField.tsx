@@ -2,15 +2,15 @@ import { useEffect, useRef } from 'react'
 import { onFrame } from '../../lib/motion'
 
 /**
- * A perspective-projected point field behind the story timeline — same
+ * A perspective-projected point field behind the story timeline. Same
  * hand-rolled 2D-canvas 3D technique as the hero's PointCloud (rotate,
  * project, splat), scaled down to an ambient count instead of a centrepiece.
- * No three.js, no WebGL — this is the site's own proven "reads as 3D"
+ * No three.js, no WebGL. This is the site's own proven "reads as 3D"
  * approach, not the one from the rejected Passage section.
  *
  * The rotation has two parts: a slow ambient drift (like PointCloud's idle
  * spin) plus an offset tied to how far the visitor has scrolled through the
- * section, so the field visibly turns as you read — the "3D scrolling" ask.
+ * section, so the field visibly turns as you read, which is the "3D scrolling" ask.
  */
 const COUNT = 130
 const FOV = 50
@@ -93,7 +93,7 @@ export function StoryField() {
       settled = mi === 0
 
       // 0 as the section's top reaches the viewport bottom, 1 as its bottom
-      // reaches the viewport top — how far the visitor has scrolled through it.
+      // reaches the viewport top. How far the visitor has scrolled through it.
       const scrollP = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)))
       ry = now * 0.00003 * mi + scrollP * 1.4
       rx = Math.sin(now * 0.00002) * 0.1 * mi

@@ -2,8 +2,8 @@
  * A URL for a file in `public/`.
  *
  * The site is served from a subpath on GitHub Pages, so a leading slash would
- * resolve against the origin and 404. Vite rewrites the paths it can see — in
- * HTML and in CSS — but not strings assembled at runtime, which is every
+ * resolve against the origin and 404. Vite rewrites the paths it can see, in
+ * HTML and in CSS, but not strings assembled at runtime, which is every
  * `srcSet` in this codebase. `BASE_URL` is `/` in dev and always ends in a
  * slash, so the argument never takes one.
  *

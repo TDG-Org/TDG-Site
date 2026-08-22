@@ -47,12 +47,12 @@
   --edge-hi: rgba(255, 255, 255, 0.95);
   --edge-mid: rgba(255, 255, 255, 0.3);
 
-  /* the "playable" green, per theme — one hardcoded #4ea36a failed AA in both */
+  /* the "playable" green, per theme. One hardcoded #4ea36a failed AA in both */
   --live-fg: #59b880;
   --live-bg: rgba(74, 222, 128, 0.14);
   --live-border: rgba(74, 222, 128, 0.4);
 
-  /* the one pair the reference calls "invert" — a chip that flips with theme */
+  /* the one pair the reference calls "invert": a chip that flips with theme */
   --invert-bg: #f2f2f5;
   --invert-fg: #07070a;
 

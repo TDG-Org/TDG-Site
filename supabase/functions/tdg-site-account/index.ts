@@ -3,18 +3,18 @@
  *
  * ── Why this exists at all ───────────────────────────────────────────────
  * GoTrue only knows email and password. Signing in with a USERNAME therefore
- * needs something to turn a handle into an address first — and that something
+ * needs something to turn a handle into an address first, and that something
  * may not be callable by a browser, because a function that turns a public
  * username into somebody's email address is an email-harvesting endpoint.
  *
  * `bea_login_identity` is `SECURITY DEFINER` and granted to `service_role` and
  * nothing else. This function is the only thing on this site that reaches it,
- * and it never returns the address it resolved — only a session, or a refusal.
+ * and it never returns the address it resolved: only a session, or a refusal.
  *
  * ── Why it is a copy of the pattern rather than a shared endpoint ────────
  * `bea-account`, `mak-account` and `veditor-account` do the same job for the
  * other TDG apps. Each app owns its own endpoint precisely so that no app's
- * login can break another's — a shared one would be a single point of failure
+ * login can break another's. A shared one would be a single point of failure
  * across four products. The genuinely shared piece is the SQL resolver, which
  * lives in tdg-core and is app-neutral despite its prefix.
  *
@@ -27,14 +27,14 @@
  * A wrong password and an identifier that matches nothing answer the SAME
  * thing. Anything else would make this an account-existence oracle: type a
  * username, learn whether it belongs to somebody. `email_not_confirmed` is the
- * one exception and it is not a leak — the ordinary email path returns it too,
+ * one exception and it is not a leak, because the ordinary email path returns it too,
  * and the reader needs it to know what to do next.
  */
 
 // Set by hand when this file changes, and answered by `action: 'version'` so
 // you can tell which source is deployed without guessing. (The Veditor's copy
 // has a script that digests the file; this one does not, so the stamp is only
-// as honest as whoever last edited it — see supabase/README.md.)
+// as honest as whoever last edited it. See supabase/README.md.)
 const SOURCE_STAMP = '2026-08-21-a';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -57,7 +57,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 /**
- * Any identifier — username, primary email, or recovery email — to the
+ * Any identifier (username, primary email, or recovery email) to the
  * account's primary address. Null when nothing matches, and ALWAYS null on an
  * internal failure: a lookup that broke must not be distinguishable from a
  * name that does not exist.
@@ -140,7 +140,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const email = await primaryEmailFor(identifier);
     if (email) {
       // `redirect_to` is a QUERY parameter on /recover, and GoTrue checks it
-      // against the project's own allow-list — so passing the caller's value
+      // against the project's own allow-list, so passing the caller's value
       // through can only send the reader somewhere this project already trusts.
       const redirectTo = String(payload.redirectTo ?? '');
       const url = `${SUPABASE_URL}/auth/v1/recover`

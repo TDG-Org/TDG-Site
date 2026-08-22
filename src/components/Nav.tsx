@@ -9,7 +9,7 @@ import './Nav.css'
 
 /**
  * The Developer tab, appended to the nav for a signed-in TDG developer with
- * Developer Mode on — and for nobody else, ever.
+ * Developer Mode on, and for nobody else, ever.
  *
  * It is not in NAV_LINKS because that array is the site's public navigation and
  * is read by everything; this is one link with two conditions on it. Hiding it
@@ -93,7 +93,7 @@ function AccountMenu() {
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
         {/* The only way back once the tab is hidden, so it lives here rather
-            than on the console page itself — a switch you can only reach
+            than on the console page itself. A switch you can only reach
             through the thing it hides is a switch you cannot un-flip. */}
         {isAdmin && (
           <button
@@ -269,7 +269,7 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
         </div>
 
         {/* max-height:0 + opacity:0 + pointer-events:none hide the panel from
-            sight but not from the tab order — a closed menu left six invisible
+            sight but not from the tab order, and a closed menu left six invisible
             links between the toggle and the page. `inert` removes the subtree
             from focus and the a11y tree without touching the height animation. */}
         <div

@@ -15,7 +15,7 @@ export function Hero() {
   const shafts = useHeroParallax<HTMLDivElement>(0.06)
   const content = useHeroParallax<HTMLDivElement>(0.14)
 
-  // As the page scrolls, the hero sinks, dims and blurs — it lags behind while
+  // As the page scrolls, the hero sinks, dims and blurs. It lags behind while
   // the next section is pulled up over it.
   useEffect(() => {
     const el = content.current
@@ -54,7 +54,7 @@ export function Hero() {
       <div className="hero__grain" aria-hidden="true" />
       <div className="hero__vignette" aria-hidden="true" />
 
-      {/* The model loads in the background — no fallback UI on mobile or slow networks */}
+      {/* The model loads in the background, with no fallback UI on mobile or slow networks */}
       <Suspense fallback={null}>
         <PointCloud />
       </Suspense>
@@ -66,8 +66,8 @@ export function Hero() {
             <span className="hero__eyebrow">The Disciples of God</span>
           </div>
 
-          {/* the cross glyph is the "T", so the heading's only text is "DG" —
-              name it explicitly or the page's h1 reads as "DG" */}
+          {/* the cross glyph is the "T", so the heading's only text is "DG".
+              Name it explicitly or the page's h1 reads as "DG" */}
           <h1 className="hero__wordmark" aria-label="TDG">
             <span className="hero__cross">
               <CrossGlyph variant="hero" />

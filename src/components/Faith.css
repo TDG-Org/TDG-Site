@@ -21,7 +21,7 @@
 }
 /* A 46px blur across a layer larger than the viewport is far too much work to
    redo every frame. Same look for a ninth of the pixels: paint and blur it at
-   a third of the size, then scale it back up — the blur scales with it. */
+   a third of the size, then scale it back up, and the blur scales with it. */
 .faith__spin {
   position: absolute;
   inset: 23%;
