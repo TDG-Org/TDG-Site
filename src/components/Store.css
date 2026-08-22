@@ -374,7 +374,7 @@
   margin: 0 0 22px;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 22px;
 }
 .store__steps li {

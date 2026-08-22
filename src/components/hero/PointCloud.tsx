@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { onFrame } from '../../lib/motion'
+import { onDprChange } from '../../lib/dpr'
 import { useTheme } from '../../theme/ThemeProvider'
 import { buildShapes } from './shapes'
 
@@ -161,6 +162,9 @@ export function PointCloud() {
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(holder)
+    // Dragged onto a monitor with different OS scaling, the CSS size of the
+    // canvas has not moved, so the observer above never fires. See lib/dpr.ts.
+    const unwatchDpr = onDprChange(resize)
 
     // ── drag ──────────────────────────────────────────────────────────────
     const down = (e: PointerEvent) => {
@@ -434,6 +438,7 @@ export function PointCloud() {
     return () => {
       stop()
       ro.disconnect()
+      unwatchDpr()
       holder.removeEventListener('pointerdown', down)
       holder.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)

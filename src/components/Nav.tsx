@@ -3,7 +3,7 @@ import { onFrame } from '../lib/motion'
 import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '../auth/AuthProvider'
 import { NAV_LINKS } from '../data/content'
-import { useRoute, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
+import { useRoute, ABOUT_HASH, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
 import { setDevMode, useDevMode } from '../dev/devMode'
 import './Nav.css'
 
@@ -55,10 +55,14 @@ function ThemeToggle() {
   )
 }
 
-function AccountMenu() {
+/**
+ * Controlled by the Nav rather than by itself, because the burger panel and
+ * this share one bar and are both open-able at once on a phone. One owner
+ * means opening either closes the other, instead of the two overlapping.
+ */
+function AccountMenu({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   const { user, profile, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
-  const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -75,7 +79,7 @@ function AccountMenu() {
       document.removeEventListener('pointerdown', onDocPointer)
       document.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [open, setOpen])
 
   return (
     <div className="nav__account" ref={ref}>
@@ -84,11 +88,13 @@ function AccountMenu() {
         className="nav__auth-btn"
         aria-haspopup="true"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
       >
         Account
       </button>
-      <div className="nav__account-panel" data-open={open}>
+      {/* Same reason as the burger panel below: a closed menu that is only
+          hidden still hands its buttons to the tab order. */}
+      <div className="nav__account-panel" data-open={open} inert={!open}>
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
@@ -126,6 +132,7 @@ function AccountMenu() {
 
 /** Only a ROUTE can be the current page; the rest are anchors on this one. */
 function isCurrent(href: string, route: Route): boolean {
+  if (href === ABOUT_HASH) return route.kind === 'about'
   if (href === STORE_HASH) return route.kind === 'store'
   if (href === DEV_HASH) return route.kind === 'dev'
   return false
@@ -133,11 +140,15 @@ function isCurrent(href: string, route: Route): boolean {
 
 export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { theme } = useTheme()
-  const { status, profile, signOut, isAdmin } = useAuth()
+  const { status, isAdmin } = useAuth()
   const devMode = useDevMode()
   const route = useRoute()
   const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // One at a time: the two panels hang off the same bar and would otherwise
+  // overlap on a phone, where both are within a thumb's reach of each other.
+  const [openPanel, setOpenPanel] = useState<'menu' | 'account' | null>(null)
+  const menuOpen = openPanel === 'menu'
+  const setMenuOpen = (v: boolean) => setOpenPanel(v ? 'menu' : null)
   const sentinel = useRef<HTMLDivElement | null>(null)
   const indicator = useRef<HTMLSpanElement | null>(null)
   const progress = useRef<HTMLDivElement | null>(null)
@@ -177,10 +188,19 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
   }, [])
 
   // Height has to be measured to animate it; max-height:none will not tween.
+  // The second measurement is the room actually left under a fixed bar: on a
+  // short viewport the full list is taller than the screen, and a panel that
+  // opens past the bottom edge cannot be scrolled to. Capped here, the panel
+  // takes its own scroll instead (see .nav__panel[data-open] in Nav.css).
   useEffect(() => {
     const el = panel.current
     if (!el) return
-    el.style.maxHeight = menuOpen ? `${el.scrollHeight + 40}px` : '0px'
+    if (!menuOpen) {
+      el.style.maxHeight = '0px'
+      return
+    }
+    const room = window.innerHeight - el.getBoundingClientRect().top - 12
+    el.style.maxHeight = `${Math.max(140, Math.min(el.scrollHeight + 40, room))}px`
   }, [menuOpen])
 
   useEffect(() => {
@@ -189,7 +209,17 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
       if (e.key === 'Escape') setMenuOpen(false)
     }
     const onResize = () => {
-      if (window.innerWidth > 820) setMenuOpen(false)
+      if (window.innerWidth > 820) {
+        setOpenPanel((p) => (p === 'menu' ? null : p))
+        return
+      }
+      // Rotating a phone, or dragging a window edge, changes the room under
+      // the bar while the panel is open. Re-measure rather than leave a cap
+      // computed against a viewport that no longer exists.
+      const el = panel.current
+      if (!el) return
+      const room = window.innerHeight - el.getBoundingClientRect().top - 12
+      el.style.maxHeight = `${Math.max(140, Math.min(el.scrollHeight + 40, room))}px`
     }
     document.addEventListener('keydown', onKey)
     window.addEventListener('resize', onResize)
@@ -250,7 +280,7 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
             aria-expanded={menuOpen}
             aria-controls="nav-panel"
             data-open={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() => setOpenPanel(menuOpen ? null : 'menu')}
           >
             <span className="nav__burger-line" />
             <span className="nav__burger-line" />
@@ -260,7 +290,10 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
           <ThemeToggle />
 
           {status === 'signedIn' ? (
-            <AccountMenu />
+            <AccountMenu
+              open={openPanel === 'account'}
+              setOpen={(v) => setOpenPanel(v ? 'account' : null)}
+            />
           ) : (
             <button type="button" className="nav__auth-btn" onClick={onOpenAuth}>
               Sign in
@@ -292,34 +325,6 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
                 {link.label}
               </a>
             ))}
-            {status === 'signedIn' ? (
-              <div className="nav__panel-account">
-                <div className="nav__panel-account-name">
-                  {profile?.display_name || profile?.username || 'Signed in'}
-                </div>
-                <button
-                  type="button"
-                  className="nav__panel-cta"
-                  onClick={() => {
-                    setMenuOpen(false)
-                    signOut()
-                  }}
-                >
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="nav__panel-cta"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onOpenAuth()
-                }}
-              >
-                Sign in
-              </button>
-            )}
           </div>
         </div>
 

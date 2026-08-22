@@ -55,8 +55,80 @@ img {
   max-width: 100%;
 }
 
+/* A single unbroken run of characters is the one thing a fluid layout cannot
+   reflow, and this site renders plenty that a visitor chooses: a display name,
+   a handle, an email, a pasted URL. Breaking one is always better than a
+   column that grows past the edge of a narrow phone or a display at 300%. */
+h1,
+h2,
+h3,
+p,
+li,
+td,
+th,
+label,
+button,
+a {
+  overflow-wrap: break-word;
+}
+
 ::selection {
   background-color: var(--accent-soft);
+}
+
+/* ── form controls: the site's own colours, whoever fills them ─────────────
+   The browser paints an autofilled field in its OWN highlight — a pale, near
+   white wash — and no amount of `background-color` moves it. On a dark glass
+   pill that reads as the box having been bleached, which is exactly what a
+   password manager filling a credential box looked like here.
+
+   Two answers, both needed. `color-scheme` tells the browser which highlight
+   to reach for, so a dark surface gets the dark one; the inset shadow then
+   covers whatever is left, because a shadow paints over the highlight where a
+   background cannot. Each surface names its own pair, so a field on the light
+   Store and a field on the always-dark auth modal each come back as
+   themselves. See src/lib/chromeGuard.ts for the rest of the defence.        */
+
+:root {
+  color-scheme: dark;
+}
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+:where(input, textarea, select) {
+  /* Opaque on purpose: the highlight sits underneath, so anything translucent
+     lets it back through. Overridden per surface. */
+  --field-fill: var(--bg2);
+  --field-fg: var(--text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--field-fg) !important;
+  caret-color: var(--field-fg) !important;
+  -webkit-box-shadow: 0 0 0 100vmax var(--field-fill) inset !important;
+  box-shadow: 0 0 0 100vmax var(--field-fill) inset !important;
+  /* The highlight fades in on a transition of its own. Outrunning it with an
+     absurd duration is the only way to stop the field flashing pale first. */
+  transition: background-color 100000s ease-in-out 0s !important;
+}
+
+/* Widgets a password manager drops INSIDE one of our fields — the little icon
+   sitting on the input, the button parked over its right edge. Its own popup
+   and floating menu are its business and are not touched; these are in our
+   layout, on top of our control, and they are not part of the design. */
+#root [data-lastpass-icon-root],
+#root [data-lastpass-root],
+#root [data-dashlanecreated],
+#root com-1password-button,
+#root [data-bw-inline-menu],
+#root [id^='bitwarden-notification-bar'] {
+  display: none !important;
 }
 
 ::-webkit-scrollbar {

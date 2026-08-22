@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { onFrame } from '../../lib/motion'
+import { onDprChange } from '../../lib/dpr'
 
 /**
  * A perspective-projected point field behind the story timeline. Same
@@ -75,6 +76,8 @@ export function StoryField() {
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(cv)
+    // The observer cannot see a scaling change on its own. See lib/dpr.ts.
+    const unwatchDpr = onDprChange(resize)
 
     const focal = 1 / Math.tan((FOV * Math.PI) / 180 / 2)
     let pending = 0
@@ -138,6 +141,7 @@ export function StoryField() {
     return () => {
       stop()
       ro.disconnect()
+      unwatchDpr()
       mo.disconnect()
     }
   }, [])

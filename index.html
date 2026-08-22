@@ -12,6 +12,11 @@
     <meta name="theme-color" content="#07070a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />
+    <!-- This page ships its own light and dark scenes, so a "dark mode"
+         extension has nothing to add and a great deal to take away. The lock
+         is the documented way to say so; see src/lib/chromeGuard.ts for the
+         rest of the defence. -->
+    <meta name="darkreader-lock" />
 
     <!-- Share cards. og:image must be absolute, because a crawler has no page
          to resolve a relative one against, so these carry the deployed origin.

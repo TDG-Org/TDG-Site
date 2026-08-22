@@ -175,6 +175,14 @@
   top: calc(100% + 10px);
   right: 0;
   min-width: 200px;
+  /* Right-anchored, so it grows leftwards; the cap is what stops it growing
+     past the far edge on a phone or a heavily scaled display. The height cap
+     is the same idea against the bottom edge: this hangs off a fixed bar, so
+     anything past the fold is unreachable rather than merely below. */
+  max-width: min(280px, calc(100vw - 24px));
+  max-height: calc(100svh - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 16px;
   border-radius: 3px;
   background-color: var(--bg2);
@@ -416,6 +424,14 @@
 .nav__panel[data-open='true'] {
   opacity: 1;
   pointer-events: auto;
+  /* The nav is fixed, so nothing below it can be scrolled INTO view: on a
+     short viewport — a phone in landscape, or a 1280x720 monitor at 300% OS
+     scaling, which leaves 240 CSS pixels of height — the last links simply
+     could not be reached. The panel takes its own scroll instead, and the
+     height it is allowed is measured in Nav.tsx against the room actually
+     left under the bar. `contain` keeps that scroll off the page behind. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .nav__panel-inner {
   display: flex;
@@ -432,28 +448,10 @@
   color: var(--text);
   font-weight: 600;
 }
-.nav__panel-cta {
-  margin-top: 16px;
-  align-self: flex-start;
-  padding: 11px 20px;
-  border: 1px solid var(--border-hover);
-  border-radius: 2px;
-  font: 600 14px var(--font-body);
-  color: var(--text);
-}
-.nav__panel-account {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-.nav__panel-account-name {
-  font: 600 15px var(--font-body);
-  color: var(--text);
-}
-.nav__panel-account .nav__panel-cta {
-  margin-top: 0;
+/* The panel is navigation only: the account control lives in the bar at every
+   width, so there is nothing after the last link to rule off from. */
+.nav__panel-link:last-child {
+  border-bottom: none;
 }
 
 /* ── progress ──────────────────────────────────────────────────────────── */
@@ -469,13 +467,46 @@
   pointer-events: none;
 }
 
+/* The bar keeps its Account / Sign in control at EVERY width. Only the link
+   row folds into the burger panel: signing out, and a developer reaching the
+   Developer Tab switch, are not things a phone should have to go without. */
 @media (max-width: 820px) {
-  .nav__links,
-  .nav__auth-btn {
+  .nav__links {
     display: none;
   }
   .nav__burger {
     display: inline-flex;
+  }
+}
+
+/* Three controls plus the wordmark on a 320px phone, or a 1280px monitor at
+   300% OS scaling, which is the same viewport. Everything tightens together
+   rather than one control being singled out. */
+@media (max-width: 420px) {
+  .nav {
+    gap: 10px;
+  }
+  .nav__actions {
+    gap: 9px;
+  }
+  .nav__auth-btn {
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+  .nav__burger {
+    width: 34px;
+    height: 32px;
+  }
+  .nav__toggle {
+    width: 48px;
+    height: 27px;
+  }
+  .nav__knob {
+    width: 21px;
+    height: 21px;
+  }
+  [data-theme='light'] .nav__knob {
+    left: 24px;
   }
 }
 /* the exact complement of the 820px query above. `min-width: 821px` leaves a

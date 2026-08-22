@@ -384,6 +384,14 @@
   pointer-events: none;
 }
 .authmodal__input {
+  /* This modal is the one surface that never reskins for the light theme, so
+     it pins its own scheme rather than inheriting the document's: it is what
+     decides which autofill highlight the browser reaches for, and a light one
+     on this glass is the "the box went white" everyone remembers. The pair
+     below is what base.css paints over the top of it. See src/lib/chromeGuard.ts. */
+  color-scheme: dark;
+  --field-fill: #16161c;
+  --field-fg: #f2f2f5;
   width: 100%;
   height: 46px;
   padding: 0 14px 0 40px;
@@ -409,13 +417,9 @@
   color: rgba(242, 242, 245, 0.4);
   -webkit-text-fill-color: rgba(242, 242, 245, 0.4);
 }
-.authmodal__input:-webkit-autofill {
-  /* Autofill doesn't reliably fire onChange, so the glow overlay may never
-     see these characters, so keep the real text visible as a fallback. */
-  -webkit-text-fill-color: #f2f2f5;
-  -webkit-box-shadow: 0 0 0 1000px #16161c inset;
-  transition: background-color 9999s ease-in-out 0s;
-}
+/* Autofill doesn't reliably fire onChange, so the glow overlay may never see
+   these characters. base.css's shared rule is what puts the real text and
+   caret back for exactly that case, from the pair declared above. */
 .authmodal__input:hover {
   background-position: 200% 0;
   border-color: rgba(255, 255, 255, 0.5);

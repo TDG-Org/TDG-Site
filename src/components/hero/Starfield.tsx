@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { onFrame } from '../../lib/motion'
+import { onDprChange } from '../../lib/dpr'
 import { useTheme } from '../../theme/ThemeProvider'
 
 type Mote = { x: number; y: number; z: number; phase: number; speed: number; sway: number }
@@ -57,6 +58,8 @@ export function Starfield() {
 
     const ro = new ResizeObserver(seed)
     ro.observe(cv)
+    // The observer cannot see a scaling change on its own. See lib/dpr.ts.
+    const unwatchDpr = onDprChange(seed)
 
     const tan = Math.tan((BEAM_ANGLE * Math.PI) / 180)
 
@@ -104,6 +107,7 @@ export function Starfield() {
     return () => {
       stop()
       ro.disconnect()
+      unwatchDpr()
     }
   }, [])
 
