@@ -6,6 +6,9 @@ import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
 import { useOwnedPacks } from '../store/useOwnedPacks'
 import { SectionsProvider } from '../lib/sections'
+import { appHash, rememberOrigin } from '../lib/route'
+import { AppIcon } from './AppIcon'
+import { iconForPage } from '../data/appPages'
 import { Fold, FoldControls } from './Folded'
 import { STORE_ANSWERS } from '../data/storeAnswers'
 import {
@@ -190,20 +193,40 @@ function AppSection({
   onSignIn: () => void
   onCheck: () => void
 }) {
-  const head = useReveal<HTMLDivElement>('wipe', 0)
+  const head = useReveal<HTMLElement>('wipe', 0)
+  const tilt = useTilt<HTMLElement>()
+  const icon = iconForPage(app.page)
 
   return (
     <section className="store__app" aria-labelledby={`store-${app.id}`}>
-      <div ref={head} className="store__app-head">
+      {/* The head of a shelf is a card that opens the app's own page, the same
+          way every card under Apps and Tools does. Somebody weighing up a pack
+          for an app they have not seen should be one click from what the app
+          actually is, and one click back. */}
+      <article ref={mergeRefs(head, tilt)} className="card store__app-head">
+        <span className="card__spot" aria-hidden="true" />
+        <span className="card__edge" aria-hidden="true" />
+        <a
+          className="card__cover"
+          href={appHash(app.page)}
+          onClick={() => rememberOrigin('the Store')}
+        >
+          <span className="sr-only">Open the {app.title} page</span>
+        </a>
+
         <div className="store__app-titles">
           <h3 id={`store-${app.id}`} className="store__app-title">
+            {icon && <AppIcon icon={icon.icon} shape={icon.shape} size={38} />}
             {app.title}
+            <span className="store__app-arrow" aria-hidden="true">
+              →
+            </span>
           </h3>
           <p className="store__app-copy">{app.copy}</p>
           <p className="store__app-availability">{app.availability}</p>
         </div>
         <span className="chip chip--hot store__app-status">{app.status}</span>
-      </div>
+      </article>
 
       {/* A shelf holding ONE pack is told so, because the grid collapses its
           empty tracks and a lone card would otherwise stretch the page. */}

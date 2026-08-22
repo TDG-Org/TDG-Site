@@ -25,7 +25,7 @@ export function Outro() {
           {/* The longer answer, for the reader who got this far and wanted it.
               `rememberOrigin` is what brings them back to this paragraph rather
               than to the top of the page. */}
-          <a className="outro__about" href={ABOUT_HASH} onClick={rememberOrigin}>
+          <a className="outro__about" href={ABOUT_HASH} onClick={() => rememberOrigin('Home')}>
             More about us, and the questions people ask
             <span className="outro__about-arrow" aria-hidden="true">
               →

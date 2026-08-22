@@ -101,24 +101,51 @@
   margin-bottom: clamp(48px, 6vw, 80px);
 }
 
+/* The head of a shelf is a card that opens the app's own page, so it carries
+   the card's own edge and padding rather than the rule it used to sit on. */
 .store__app-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  padding-bottom: 22px;
+  padding: clamp(20px, 2.6vw, 28px);
   margin-bottom: 26px;
-  border-bottom: 1px solid var(--border);
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
 }
 .store__app-titles {
   flex: 1 1 460px;
   min-width: 0;
 }
 .store__app-title {
+  display: flex;
+  /* Centred, so the icon's middle and the title's middle are one line. The
+     same rule every title carrying an icon follows; see AppIcon.css. */
+  align-items: center;
+  gap: 12px;
   margin: 0 0 10px;
   font: 700 clamp(23px, 2.6vw, 30px) / 1.1 var(--font-display);
   color: var(--text);
+}
+/* The head opens a page, and should say so before it is hovered. */
+.store__app-arrow {
+  font-size: 17px;
+  color: var(--faint);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.3s ease;
+}
+.store__app-head[data-lit='true'] .store__app-arrow {
+  transform: translateX(4px);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store__app-arrow {
+    transition: none;
+  }
 }
 .store__app-copy {
   margin: 0;

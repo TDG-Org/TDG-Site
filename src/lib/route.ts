@@ -97,18 +97,31 @@ export function useRoute(): Route {
  * a scroll position over their anchor would drop them somewhere they did not
  * ask to be.
  */
-type Origin = { hash: string; scrollY: number }
+type Origin = { hash: string; scrollY: number; label: string }
 
 let origin: Origin | null = null
 
-/** Called as a card link is followed, before the hash changes. */
-export function rememberOrigin() {
-  origin = { hash: window.location.hash, scrollY: window.scrollY }
+/**
+ * Called as a card link is followed, before the hash changes.
+ *
+ * `from` is what the reader would call the place they are leaving, and it is
+ * what the page they land on puts on its Back control. Without it the Store's
+ * own cards would open an app page whose button said "Back to Apps" while
+ * actually returning to the Store, which is a small lie told at the exact
+ * moment somebody is trying to get back.
+ */
+export function rememberOrigin(from: string) {
+  origin = { hash: window.location.hash, scrollY: window.scrollY, label: from }
 }
 
 /** True while there is a place on this site to go back to. */
 export function hasOrigin() {
   return origin !== null
+}
+
+/** What to call that place, or null when there is no journey to name. */
+export function originLabel(): string | null {
+  return origin?.label ?? null
 }
 
 /**

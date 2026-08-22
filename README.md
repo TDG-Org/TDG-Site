@@ -35,7 +35,10 @@ what it is in two sentences, a guide written for somebody who has not installed 
 every feature with a real explanation beside it. It starts folded shut, one row per part with
 a line saying what is inside, so a closed page reads as an index. Back returns you to the exact
 place in the list you left. The copy lives in [`src/data/appPages.ts`](src/data/appPages.ts),
-so adding an app is a content edit rather than a component.
+so adding an app is a content edit rather than a component. Every card and every page
+carries that app's own icon, from [`AppIcon`](src/components/AppIcon.tsx): one box, the art
+centred in it, a hairline ring around the marks that are rounded tiles and nothing around the
+two that are bare glyphs.
 
 **🧭 [About](src/data/about.ts) is the same page, for us rather than an app.** Who we are,
 why we build what we build, a line on each app with a link to its own page, and a Q&A that takes

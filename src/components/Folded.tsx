@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
-import { hasOrigin } from '../lib/route'
+import { hasOrigin, originLabel } from '../lib/route'
 import type { PageBlock, PageSection } from '../data/pageBlocks'
 // One stylesheet for both folded pages. It is still named for the app pages
 // because that is where it was written and renaming a file another branch is
@@ -224,14 +224,20 @@ export function FoldControls() {
  * nothing behind it on this site, and goes to `fallbackHash` instead.
  */
 export function BackButton({
-  label,
+  fallbackLabel,
   fallbackHash,
   tone,
 }: {
-  label: string
+  /** Where Back goes when this page was opened cold, and what to call it. */
+  fallbackLabel: string
   fallbackHash: string
   tone?: 'quiet'
 }) {
+  // The place the reader actually came from, when they came from one. Read at
+  // render because it is set before this page mounts and cannot change while
+  // it is on screen.
+  const where = originLabel() ?? fallbackLabel
+
   const goBack = () => {
     if (hasOrigin()) window.history.back()
     else window.location.hash = fallbackHash
@@ -242,7 +248,7 @@ export function BackButton({
       <span className="appview__back-arrow" aria-hidden="true">
         ←
       </span>
-      {label}
+      Back to {where}
     </button>
   )
 }

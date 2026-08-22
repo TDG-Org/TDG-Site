@@ -3,6 +3,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ImageSlot } from './ImageSlot'
+import { AppIcon } from './AppIcon'
 import { APPS, GITHUB_ORG, type AppCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
 import './Apps.css'
@@ -20,7 +21,7 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           it is also first in the tab order, ahead of a download link that a
           card may also carry. `rememberOrigin` is what lets Back return to
           this exact spot in the list rather than to the top of the page. */}
-      <a className="card__cover" href={appHash(app.page)} onClick={rememberOrigin}>
+      <a className="card__cover" href={appHash(app.page)} onClick={() => rememberOrigin('Apps')}>
         <span className="sr-only">Open the {app.title} page</span>
       </a>
 
@@ -47,6 +48,7 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           ))}
         </div>
         <h3 className="apps__title">
+          <AppIcon icon={app.icon} shape={app.iconShape} />
           {app.title}
           <span className="apps__title-arrow" aria-hidden="true">
             →

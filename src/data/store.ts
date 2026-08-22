@@ -54,6 +54,14 @@ export type StorePack = {
 
 export type StoreApp = {
   id: string
+  /**
+   * The slug of this app's own page, in `src/data/appPages.ts`. The head of
+   * this shelf is a card, and this is where it opens, so somebody deciding
+   * whether to buy can read what the app actually is first. Named rather than
+   * assumed from `id`: the two happen to match today, and a shop that guessed
+   * a route would break silently the first time they did not.
+   */
+  page: string
   /** The app this section is for. */
   title: string
   /** Sentence case: what the app is, for somebody who has not seen it. */
@@ -95,6 +103,7 @@ export function packKey(appId: string, packId: string): string {
 export const STORE_APPS: StoreApp[] = [
   {
     id: 'devfleet',
+    page: 'devfleet',
     title: 'DevFleet',
     entitlementsTable: 'devfleet_entitlements',
     copy: 'Every git repo on your machine as a live card, up to sixteen panes at once, each with its own terminal, diff review and notebook. DevFleet itself is free and every feature in it stays free. This one pack is only a change of scenery.',
@@ -117,6 +126,7 @@ export const STORE_APPS: StoreApp[] = [
   },
   {
     id: 'veditor',
+    page: 'veditor',
     title: 'TDG Veditor',
     entitlementsTable: 'veditor_entitlements',
     copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it. The editor itself is free, and importing anything is free. These two packs unlock the extras.',

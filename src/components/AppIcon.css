@@ -1,0 +1,34 @@
+/* ── An app's own icon ────────────────────────────────────────────────────
+   One square box, the art contained and centred inside it, so the icon's
+   optical centre is the box's centre whatever the file's proportions are.
+   Every row that carries one centres its items, which is what puts that centre
+   on the middle of the title beside it. See AppIcon.tsx.                     */
+
+.appicon {
+  flex: none;
+  width: var(--icon-size, 30px);
+  height: var(--icon-size, 30px);
+  /* The files are square already; this is the guarantee rather than the hope,
+     and it is what centres a mark that is not. */
+  object-fit: contain;
+  object-position: center;
+  /* Never let a flex row stretch or squash it. `align-self` beats the row's
+     own `align-items`, so a row that forgets cannot break the alignment. */
+  align-self: center;
+}
+
+/* A rounded tile carries its own background, so the radius here only has to
+   agree with the art's own corners, and the hairline keeps the darkest tiles
+   off a light card. */
+.appicon[data-shape='tile'] {
+  border-radius: calc(var(--icon-size, 30px) * 0.22);
+  box-shadow: 0 0 0 1px var(--border);
+  transition: var(--t-theme);
+}
+
+/* A glyph is a mark on nothing. A ring around one is a box drawn about thin
+   air, and a radius has nothing to round. */
+.appicon[data-shape='glyph'] {
+  border-radius: 0;
+  box-shadow: none;
+}

@@ -95,8 +95,10 @@
 
 .apps__title {
   display: flex;
-  align-items: baseline;
-  gap: 9px;
+  /* CENTRE, not baseline: see the same note in Tools.css. The icon's middle
+     and the title's middle have to be one line. */
+  align-items: center;
+  gap: 10px;
   margin: 0 0 10px;
   font: 700 21px var(--font-display);
   color: var(--text);

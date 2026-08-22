@@ -28,7 +28,7 @@ function AboutBody() {
         {/* Home rather than a list, because this page is not opened from one.
             Somebody who arrived from a link that remembered where they were
             still gets that place back; see BackButton. */}
-        <BackButton label="Back to Home" fallbackHash="#top" />
+        <BackButton fallbackLabel="Home" fallbackHash="#top" />
 
         <div ref={head} className="appview__head">
           <div className="kicker">
@@ -84,7 +84,7 @@ function AboutBody() {
         </div>
 
         <div className="appview__foot">
-          <BackButton label="Back to Home" fallbackHash="#top" tone="quiet" />
+          <BackButton fallbackLabel="Home" fallbackHash="#top" tone="quiet" />
         </div>
       </div>
     </section>

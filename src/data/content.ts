@@ -89,6 +89,9 @@ export const CHAPTERS: Chapter[] = [
   },
 ]
 
+/** See the `iconShape` field below. */
+export type IconShape = 'tile' | 'glyph'
+
 export type AppCard = {
   id: string
   index: string
@@ -99,6 +102,22 @@ export type AppCard = {
   page: string
   title: string
   copy: string
+  /**
+   * The app's own icon, as a filename in `public/assets/`.
+   *
+   * Every one is the mark the app itself ships, exported the same way: trimmed
+   * to the art, squared, and written at 128px. Two are drawn by us, in vector,
+   * for apps that have no icon of their own yet, and both say so where they are
+   * drawn. See `IconShape` for why the shape matters.
+   */
+  icon: string
+  /**
+   * A rounded TILE (its own background and corners, filling the square) or a
+   * free GLYPH (a mark on nothing). It decides whether the icon is drawn with
+   * the site's ring and radius around it: a ring belongs on a tile, and around
+   * a glyph it is a box drawn about thin air.
+   */
+  iconShape: IconShape
   chips: { label: string; hot?: boolean }[]
   status: string
   /**
@@ -119,6 +138,8 @@ export const APPS: AppCard[] = [
     page: 'bible-educator',
     title: 'Bible Educator',
     copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Download any of the 16 translations once and the whole thing keeps working with the internet off.',
+    icon: 'icon-bible-educator.webp',
+    iconShape: 'glyph',
     chips: [
       { label: 'PWA' },
       { label: 'IN DEV', hot: true },
@@ -140,6 +161,8 @@ export const APPS: AppCard[] = [
     page: 'say2quill',
     title: 'Say2Quill',
     copy: 'Press one key anywhere, speak, and clean formatted text lands in whatever field has focus. The speech runs on your own machine, so there is no cloud and no account.',
+    icon: 'icon-say2quill.webp',
+    iconShape: 'tile',
     chips: [
       { label: 'WINDOWS' },
       { label: 'IN DEV', hot: true },
@@ -161,6 +184,8 @@ export const APPS: AppCard[] = [
     page: 'makullveny',
     title: 'Makullveny',
     copy: 'A calm desk for studying. Write and draw straight into books of your own, hand it a syllabus and get the dates back, and drill the hard parts with flashcards. None of it leaves your machine.',
+    icon: 'icon-makullveny.webp',
+    iconShape: 'tile',
     chips: [
       { label: 'WINDOWS' },
       { label: 'EARLY BUILD', hot: true },
@@ -188,6 +213,8 @@ export const APPS: AppCard[] = [
     page: 'devfleet',
     title: 'DevFleet',
     copy: 'Point it at a folder and every git repo becomes a live card. Open up to sixteen panes, each with its own terminal, diff review and notebook.',
+    icon: 'icon-devfleet.webp',
+    iconShape: 'glyph',
     chips: [{ label: 'WINDOWS' }, { label: 'IN DEV', hot: true }, { label: 'GIT' }, { label: 'ELECTRON' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a DevFleet screenshot',
@@ -204,6 +231,8 @@ export const APPS: AppCard[] = [
     page: 'music-everything',
     title: 'Music Everything',
     copy: 'Learn music by playing it, not by reading about it. Scales and chords on a piano you can play, your own singing drawn back at you as pitch, and a note track you can export as MIDI.',
+    icon: 'icon-music-everything.webp',
+    iconShape: 'tile',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'MIDI + MIC' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a Music Everything screenshot',
@@ -214,6 +243,8 @@ export const APPS: AppCard[] = [
     page: 'veditor',
     title: 'TDG Veditor',
     copy: 'A desktop video editor: cut on a timeline, grade the colour, mix the audio, then hand it an export pipeline you set up yourself instead of one somebody else chose for you.',
+    icon: 'icon-veditor.webp',
+    iconShape: 'tile',
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'FFMPEG' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a TDG Veditor screenshot',
@@ -233,6 +264,8 @@ export type ToolCard = {
    * already shipped to the Chrome Web Store and would rather not redraw.
    */
   icon: string
+  /** Tile or glyph. See `AppCard`'s own field for what it decides. */
+  iconShape: IconShape
   chips: { label: string; hot?: boolean }[]
   cta: string
   href?: string
@@ -244,6 +277,7 @@ export const TOOLS: ToolCard[] = [
     page: 'volume-controller',
     title: 'Volume Controller',
     icon: 'icon-volume-controller.webp',
+    iconShape: 'tile',
     copy: 'For the video that is too quiet to hear. Any site up to six times louder, shaped with an equalizer and levelled out, and it remembers what you set for each one.',
     chips: [{ label: 'EXTENSION' }, { label: 'LIVE', hot: true }, { label: 'FREE' }],
     cta: 'Add to Chrome →',
@@ -254,6 +288,7 @@ export const TOOLS: ToolCard[] = [
     page: 'vidhelper',
     title: 'VidHelper',
     icon: 'icon-vidhelper.svg',
+    iconShape: 'tile',
     copy: 'Keep your own copy of the video you are watching. The extension spots it, a small server on your own machine downloads it, and your library lives there.',
     chips: [{ label: 'EXTENSION' }, { label: 'WIP', hot: true }, { label: 'LOCAL' }],
     cta: 'Coming soon',
@@ -263,6 +298,7 @@ export const TOOLS: ToolCard[] = [
     page: 'n8-tools',
     title: 'N8-Tools',
     icon: 'icon-n8-tools.svg',
+    iconShape: 'tile',
     copy: 'Hum a tune and get the notes back as a MIDI file you can keep. There is a tuner and a metronome too, and it will name the key and tempo of whatever you play at it.',
     chips: [{ label: 'BROWSER' }, { label: 'WIP', hot: true }, { label: 'MIC' }],
     cta: 'Coming soon',
@@ -273,6 +309,9 @@ export const TOOLS: ToolCard[] = [
 export const MARANATHA = {
   /** Its own page, same as every card under Apps and Tools. */
   page: 'maranatha',
+  /** Drawn by us: the game has no icon of its own. See the file itself. */
+  icon: 'icon-maranatha.svg',
+  iconShape: 'tile' as IconShape,
   heading: 'A Bible game you walk through.',
   copy: 'A video game that runs in a browser tab. You walk a character through the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
   note: 'Plays in the browser',

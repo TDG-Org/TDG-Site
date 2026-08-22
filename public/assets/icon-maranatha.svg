@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="MARANATHA">
+  <!-- MARANATHA has no icon of its own yet, and its loading screen deliberately
+       carries no logo, so this is one drawn in the same house style as the
+       other two placeholders: the same rounded tile, and the game's own night
+       from its story map, a full moon over the three crosses on the hill. The
+       shapes are heavy and the gaps wide because the mark is read at 30px.
+       Worth replacing the day the game has a real one. -->
+  <defs>
+    <linearGradient id="maranathaSky" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#1b2440"/>
+      <stop offset="1" stop-color="#0a0f1f"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28.16" fill="url(#maranathaSky)"/>
+  <!-- clear of the right cross, which starts at y=52 -->
+  <circle cx="97" cy="30" r="13" fill="#f4f0e2"/>
+  <g fill="#e9e6da">
+    <!-- the middle cross is the tall one, as it is on the map -->
+    <rect x="59.5" y="34" width="9" height="60" rx="1.5"/>
+    <rect x="45" y="49" width="38" height="9" rx="1.5"/>
+    <rect x="28.5" y="52" width="7" height="42" rx="1.5"/>
+    <rect x="17" y="63" width="30" height="7" rx="1.5"/>
+    <rect x="92.5" y="52" width="7" height="42" rx="1.5"/>
+    <rect x="81" y="63" width="30" height="7" rx="1.5"/>
+  </g>
+  <!-- the hill they stand on -->
+  <path d="M0 94c26-9 44-9 64-9s38 0 64 9v34H0Z" fill="#161d33"/>
+</svg>

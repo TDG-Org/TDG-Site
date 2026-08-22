@@ -1,4 +1,4 @@
-import { APPS, MARANATHA, TOOLS, type Shot } from './content'
+import { APPS, MARANATHA, TOOLS, type IconShape, type Shot } from './content'
 import type { PageLink, PageSection } from './pageBlocks'
 
 /**
@@ -2321,6 +2321,20 @@ export const pageForSlug = (slug: string): AppPage | undefined =>
 export function shotForPage(slug: string): Shot | undefined {
   if (slug === MARANATHA_PAGE.slug) return MARANATHA.shot
   return APPS.find((app) => app.page === slug)?.shot
+}
+
+/**
+ * The icon a page shows, taken from the card it was opened from.
+ *
+ * Same reason as the screenshot below it: one file, one shape, named once, so a
+ * page and its card can never end up showing different marks for one app.
+ */
+export function iconForPage(slug: string): { icon: string; shape: IconShape } | undefined {
+  if (slug === MARANATHA_PAGE.slug) return { icon: MARANATHA.icon, shape: MARANATHA.iconShape }
+  const app = APPS.find((card) => card.page === slug)
+  if (app) return { icon: app.icon, shape: app.iconShape }
+  const tool = TOOLS.find((card) => card.page === slug)
+  return tool ? { icon: tool.icon, shape: tool.iconShape } : undefined
 }
 
 /** The card a page belongs to, for the chips it should carry. */

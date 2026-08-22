@@ -50,7 +50,7 @@ export function Building() {
 
           {/* The game gets its own page too, opened the same way every app
               card is opened. */}
-          <a className="card__cover" href={appHash(MARANATHA.page)} onClick={rememberOrigin}>
+          <a className="card__cover" href={appHash(MARANATHA.page)} onClick={() => rememberOrigin('Building')}>
             <span className="sr-only">Open the MARANATHA page</span>
           </a>
 

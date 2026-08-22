@@ -4,7 +4,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
-import { asset } from '../lib/asset'
+import { AppIcon } from './AppIcon'
 import './Tools.css'
 
 function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
@@ -20,7 +20,7 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
           link for the one tool that has one; that link is still here, below,
           as its own control, because a card that can only go to a store
           cannot also explain itself. */}
-      <a className="card__cover" href={appHash(tool.page)} onClick={rememberOrigin}>
+      <a className="card__cover" href={appHash(tool.page)} onClick={() => rememberOrigin('Tools')}>
         <span className="sr-only">Open the {tool.title} page</span>
       </a>
 
@@ -36,17 +36,7 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
       </div>
       <div>
         <h3 className="tools__title">
-          {/* The tool's own icon, decorative: the title beside it already
-              names it, so a screen reader would only hear it twice. */}
-          <img
-            className="tools__icon"
-            src={asset(`assets/${tool.icon}`)}
-            alt=""
-            width="30"
-            height="30"
-            loading="lazy"
-            decoding="async"
-          />
+          <AppIcon icon={tool.icon} shape={tool.iconShape} />
           {tool.title}
           <span className="tools__title-arrow" aria-hidden="true">
             →

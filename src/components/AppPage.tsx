@@ -3,7 +3,14 @@ import { useReveal } from '../hooks/useReveal'
 import { SectionsProvider } from '../lib/sections'
 import { asset } from '../lib/asset'
 import { BackButton, Fold, FoldControls } from './Folded'
-import { chipsForPage, pageForSlug, shotForPage, type AppPage as AppPageData } from '../data/appPages'
+import { AppIcon } from './AppIcon'
+import {
+  chipsForPage,
+  iconForPage,
+  pageForSlug,
+  shotForPage,
+  type AppPage as AppPageData,
+} from '../data/appPages'
 import './AppPage.css'
 
 /**
@@ -28,6 +35,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
 
   const shot = shotForPage(page.slug)
   const chips = chipsForPage(page.slug)
+  const icon = iconForPage(page.slug)
 
   return (
     <section id="top" className="section section--blend appview">
@@ -35,7 +43,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
       <div ref={blob} className="blob appview__blob" aria-hidden="true" />
 
       <div className="shell appview__shell">
-        <BackButton label={`Back to ${page.backLabel}`} fallbackHash={page.backHash} />
+        <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} />
 
         <div ref={head} className="appview__head">
           <div className="kicker">
@@ -43,7 +51,10 @@ function AppPageBody({ page }: { page: AppPageData }) {
             <span className="kicker__rule" />
             <span className="kicker__label">{page.group}</span>
           </div>
-          <h1 className="h2 appview__title">{page.title}</h1>
+          <h1 className="h2 appview__title">
+            {icon && <AppIcon icon={icon.icon} shape={icon.shape} className="appview__title-icon" />}
+            {page.title}
+          </h1>
           <p className="lede appview__lede">{page.lede}</p>
           <p className="appview__intro">{page.intro}</p>
 
@@ -131,7 +142,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
         </div>
 
         <div className="appview__foot">
-          <BackButton label={`Back to ${page.backLabel}`} fallbackHash={page.backHash} tone="quiet" />
+          <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} tone="quiet" />
         </div>
       </div>
     </section>
