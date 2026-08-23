@@ -62,7 +62,7 @@ fix the README.
 
 ---
 
-## 2 · The sixteen rules
+## 2 · The seventeen rules
 
 ### 1. Content is data. It is never a component.
 
@@ -293,6 +293,28 @@ than its container overflows it, and at 320px the shell is 284px wide. Long
 unbroken strings (a display name, a handle, a pasted URL) already break via
 `overflow-wrap` in `base.css`. Keep both true.
 
+### 17. A surface that lists our products derives the list. It never types it.
+
+The Apps grid maps `APPS`. The Store shelf maps `STORE_APPS`. The Developer
+console maps whatever tdg-core turns out to have. **Nowhere on this site is
+there a place where adding a product means remembering to also add it here** —
+and the reason is not tidiness, it is that forgetting does not fail loudly. A
+missing card is a product nobody can find. A missing option in the Developer
+console's Purchases filter is an app whose money is quietly left out of a total
+somebody is reading to make a decision.
+
+So when you add a surface that shows "all our apps", "all our packs", "every
+ledger": derive it, and make it render the thing it does not recognise rather
+than dropping it. **An unknown entry gets a face** — a title made from its id, a
+sentence saying which source has not heard of it — because a list that silently
+omits what it cannot name is a list you cannot trust about anything else on it.
+`src/dev/apps.ts` is the worked example; `src/dev/README.md` explains what to do
+instead of writing the app's name down.
+
+The exception is a genuinely different *shape*, not a different instance of one.
+Makullveny keeps a hand-written panel because it sells a tier ladder plus themes
+plus two flags, which is not the pack-Store shape wearing a different name.
+
 ---
 
 ## 3 · The five jobs you will actually be asked to do
@@ -302,6 +324,13 @@ unbroken strings (a display name, a handle, a pasted URL) already break via
 a matching entry in `APP_PAGES` in `src/data/appPages.ts`. The router picks the
 slug up from the card, so a page with no card is unreachable by design. No
 component changes.
+
+If the app sells packs, add it to `STORE_APPS` in `src/data/store.ts` too — and
+**that is the whole job, the Developer console included.** `#/dev` finds apps by
+scanning tdg-core for `public.<app>_entitlements`, so its panel, its grant
+switches, its overview tile, its Purchases filter and its audit trail appear
+from the table the app needed anyway. Do not add a panel or a column for it; see
+[`src/dev/README.md`](src/dev/README.md).
 
 **Add a section to an app or About page.** A `PageSection` in the same file. It
 needs an `id`, a `title`, a `what` (the one line a closed row carries — a

@@ -95,6 +95,53 @@ top with nothing selected** — a reload is the case being fixed, not a habit be
 installed. See `viewState.ts` for the anchor algorithm and why it is anchors
 rather than scroll offsets.
 
+## The page grows its own app panels
+
+**Nothing on this page names an app.** There is no `veditor` panel and no
+`devfleet` panel in the source; there is one Store panel component, rendered
+once per app the database turns out to have. The overview tiles, the Purchases
+filter, the roster's owned count and the page search all derive from the same
+answer.
+
+**An app registers itself by having the table it needs anyway.** To sell
+anything, a TDG app must create:
+
+```sql
+public.<app>_entitlements (user_id uuid, owned_packs text[],
+                           stripe_customer_id text, …)
+```
+
+`tdg_store_apps()` scans for exactly that and reports what it finds. So the
+whole job of adding a product to this console is a job you had already done:
+create the table, and the panel, the grant switches, the ledger, the overview
+tile and the audit trail all appear. **Write no TypeScript and no second
+migration.** Two refinements are picked up the same way if the app offers them —
+`<app>_known_packs()` becomes the list the tiles offer and grants are checked
+against, `<app>_purchase_events` joins the merged Purchases ledger — and neither
+is required to start.
+
+Views are skipped, so `veditor_entitlements_live` does not become a second TDG
+Veditor. And the shape test wants all three columns: a table that merely ends in
+`_entitlements` cannot half-register and render a panel whose switches fail on
+contact.
+
+### Two sources, and the console shows you where they disagree
+
+The database answers *what can be granted*. `src/data/store.ts` answers *what is
+sold*, because prices and prose cannot be derived from a schema. `src/dev/apps.ts`
+merges them, and every way they can disagree has a face rather than a silence:
+
+| What you see | What it means |
+| --- | --- |
+| A panel with names from ids and no prices | On the server, not in the shop. A product being built: grantable, not buyable. |
+| A red **NO TABLE** panel, switches dead | In the shop, not on the server. **An alarm** — the site is selling something a payment has nowhere to land. |
+| A tile marked `not sold` | A pack on the account that neither the app's list nor the shop mentions. Switch it off; revoking is never held to the known list. |
+| A tile with `ends 23 Sep` | A rented pack. `Owned` is not the whole truth about a thing that lapses, so the date is what the tile says. |
+
+An app nobody wrote copy for is titled from its id — `musiceverything` reads as
+`Musiceverything` — which is deliberately a bit ugly. It is legible, it is
+honest, and giving the app an entry in `STORE_APPS` fixes it in one edit.
+
 ## What it can do
 
 Search by name, `@username`, email or user id, then for the account you pick:
@@ -108,8 +155,9 @@ Search by name, `@username`, email or user id, then for the account you pick:
   no Stripe. Flags duplicate `subscriptions` rows, which apps read as a fault.
 - **Makullveny:** its own tier and status, the Candle bundle, the supporter
   badge, and each marketplace theme.
-- **TDG Veditor / DevFleet Store:** each pack on or off, for anybody. (The
-  existing `veditor_admin_set_pack` only ever touched your own account.)
+- **Every pack Store:** each pack on or off, for anybody, in every app that has
+  one — one panel per app, discovered rather than listed. (The existing
+  `veditor_admin_set_pack` only ever touched your own account.)
 - **Standing:** suspend (locks sign-in across every TDG app and ends every live
   session), hide from Bible Educator's public surfaces, sign out everywhere (see
   below for what that does and does not reach), soft delete, restore, and
@@ -125,7 +173,8 @@ in every app).
 | File | What it is |
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the three tabs, the roster, and the one action runner every write goes through. |
-| `AccountDetail.tsx` | The nine panels for one account. Each states what it is and names the table it writes. |
+| `AccountDetail.tsx` | The panels for one account — seven fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
+| `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
 | `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
@@ -238,7 +287,39 @@ console's *existence* is discoverable by anybody determined to look. Its
 `is_admin` the page renders nothing and every call comes back refused. Do not
 add anything here that relies on the page being secret.
 
-## Adding to it
+## Adding an app · there is nothing to do
+
+Read this before you start editing, because the instinct is wrong and it used to
+be right.
+
+**Do not add a panel, a column, a dropdown option or a stat for a new TDG app.**
+Create `public.<app>_entitlements` and this page grows all of them. If you find
+yourself typing a product's name into a file in this folder, stop: that is the
+bug this design removed, and putting one back re-opens it for every app after
+yours.
+
+It used to take eleven edits across two languages — the `returns table` of
+`tdg_admin_accounts`, the `returns table` of `tdg_admin_overview`, the union in
+`tdg_admin_events`, the object in `tdg_admin_catalog`, both arms of
+`tdg_admin_set_pack`, `DevAccount`, `DevCatalog`, a `PacksPanel` line, an
+overview stat, a `Select` option and the roster's search haystack. All eleven
+had to agree and none of them failed loudly. A forgotten dropdown option is a
+filter that hides an app's money; a forgotten panel is a product whose packs
+nobody can grant, found out when a customer writes in.
+
+What is still worth doing, and both are optional:
+
+| | Why |
+| --- | --- |
+| `public.<app>_known_packs()` returning `text[]` | Gives the tiles a catalogue instead of only what an account happens to hold, and holds grants to that list. Without it any well-formed pack id is accepted. |
+| An entry in `STORE_APPS` (`src/data/store.ts`) | Gives the panel the app's real name, its prose and its prices. Without it the console titles the app from its id. |
+
+Neither blocks the other and neither blocks the console. See `apps.ts`.
+
+## Adding a new kind of verb
+
+For something that is *not* another pack Store — a new permission, a new ladder,
+a moderation action:
 
 1. Write the verb as a `tdg_admin_*` function in a new migration, guarded by
    `bea_is_admin()`, appending to the right ledger and calling `tdg_admin_log`.

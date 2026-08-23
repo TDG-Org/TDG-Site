@@ -98,7 +98,7 @@ answer yet it says so. It shares its folding and its blocks with the app pages
 ## 🧭 Building on this
 
 **Working on this repo — human or AI? Read [`AGENTS.md`](AGENTS.md) first.** It is
-the written standard for how this site is built: the sixteen rules, the five jobs
+the written standard for how this site is built: the seventeen rules, the five jobs
 you will actually be asked to do, what is deliberately not up for redesign, and
 what "done" means when a project has no test suite.
 

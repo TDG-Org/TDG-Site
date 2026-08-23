@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, PackApp } from './api'
+import { useEffect, useMemo, useState } from 'react'
+import type { DevAccount, DevAuditRow, DevCatalog, DevEvent } from './api'
 import * as api from './api'
+import { grantNote, storeApps, type DevStoreApp } from './apps'
 import {
   Button,
   Combo,
@@ -68,10 +69,15 @@ function useProtectedAccounts(): ReadonlySet<string> {
 }
 
 export function AccountDetail(props: Props) {
-  const { account, meId } = props
+  const { account, catalog, meId } = props
   const isSelf = account.user_id === meId
   const standing = standingOf(account)
   const isProtected = useProtectedAccounts().has(account.user_id)
+
+  // Every app with a pack Store, merged from what the server found and what
+  // the site sells. Nothing below names an app: add a product and a panel
+  // appears here on its own. See `apps.ts`.
+  const stores = useMemo(() => storeApps(catalog, account), [catalog, account])
 
   return (
     <div className="dev__detail">
@@ -104,8 +110,9 @@ export function AccountDetail(props: Props) {
       <PermissionsPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <CorePanel {...props} />
       <MakullvenyPanel {...props} />
-      <PacksPanel {...props} app="veditor" title="TDG Veditor Store" packs={props.catalog.veditor_packs} />
-      <PacksPanel {...props} app="devfleet" title="DevFleet Store" packs={props.catalog.devfleet_packs} />
+      {stores.map((app) => (
+        <StorePanel key={app.id} {...props} app={app} />
+      ))}
       <StandingPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <HistoryPanel {...props} />
     </div>
@@ -503,42 +510,107 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
   )
 }
 
-/* ── the two pack stores ───────────────────────────────────────────────── */
+/* ── one pack Store, for whichever app this is ─────────────────────────── */
 
-function PacksPanel({
-  account: a,
-  run,
-  busy,
-  app,
-  title,
-  packs,
-}: Props & { app: PackApp; title: string; packs: string[] }) {
-  const owned = app === 'veditor' ? a.veditor_packs : a.devfleet_packs
-  const customer = app === 'veditor' ? a.veditor_stripe_customer_id : a.devfleet_stripe_customer_id
+/**
+ * The Store panel, drawn for every app the console found rather than for two
+ * apps named here.
+ *
+ * `apps.ts` does the merging and the reasoning; this renders the answer. What
+ * it adds is that **every way the two sources can disagree has a face**. An app
+ * the server knows and the shop does not says why it has no prices. An app the
+ * shop sells and the server cannot record is an alarm with its switches turned
+ * off, because offering a grant the database has nowhere to write is the one
+ * thing a console must never do. A pack sitting on an account that neither list
+ * mentions is a real tile you can switch off, not a sentence about a problem.
+ *
+ * A panel that renders nothing for an unrecognised app would be the old bug in
+ * a new costume: silence reading as "there is nothing here".
+ */
+function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }) {
+  const entry = a.store?.[app.id]
+  const customer = entry?.stripe_customer_id ?? null
+  // A pack is only STRAY if there was something for it to be missing from. An
+  // app that publishes no pack list and is not in the shop has no list to fall
+  // off, so its packs are simply its packs — see `hasList` in apps.ts.
+  const strays =
+    app.hasList || app.inShop ? app.packs.filter((p) => !p.onServer && !p.inShop) : []
+
+  const what = !app.onServer
+    ? `The site sells ${app.title}'s packs, but TDG Core has no table to record them in, so nothing here can be granted and a real payment would land nowhere.`
+    : !app.inShop
+      ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
+      : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
 
   return (
     <Panel
-      title={title}
-      what="One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does."
-      writes={`public.${app}_entitlements`}
-      terms={[app, owned, packs, customer, 'pack store grant revoke']}
-      right={<Tag tone={owned.length ? 'ok' : 'plain'}>{owned.length} OWNED</Tag>}
+      // Keyed on the app id, not on the title `Panel` would otherwise default
+      // to. The title comes from the shop and can be rewritten there; the id
+      // is what the database calls this app. A section whose id moves with its
+      // heading loses which-sections-are-open across the rename, and this page
+      // carries that set between accounts and through a reload.
+      id={`store:${app.id}`}
+      title={`${app.title} Store`}
+      what={what}
+      writes={app.entitlementsTable ? `public.${app.entitlementsTable}` : undefined}
+      tone={!app.onServer ? 'danger' : 'plain'}
+      terms={[
+        app.id,
+        app.title,
+        ...app.packs.map((p) => `${p.id} ${p.name}`),
+        customer,
+        'pack store grant revoke',
+      ]}
+      right={
+        !app.onServer ? (
+          <Tag tone="bad">NO TABLE</Tag>
+        ) : (
+          <Tag tone={app.ownedCount ? 'ok' : 'plain'}>{app.ownedCount} OWNED</Tag>
+        )
+      }
     >
-      {packs.length === 0 ? (
-        <p className="dev__panel-quiet">This app has no Store packs yet.</p>
+      {!app.onServer && (
+        <p className="dev__warn">
+          <code className="dev__code">
+            public.{app.entitlementsTable ?? `${app.id}_entitlements`}
+          </code>{' '}
+          does not exist on tdg-core, so this app is not registered and no switch below would take.
+          Create that table — <code className="dev__code">user_id uuid</code>,{' '}
+          <code className="dev__code">owned_packs text[]</code>,{' '}
+          <code className="dev__code">stripe_customer_id text</code> — and this panel starts
+          working, with no other change anywhere.
+        </p>
+      )}
+
+      {app.onServer && app.packs.length === 0 ? (
+        <p className="dev__panel-quiet">
+          No packs yet. This app's list comes from{' '}
+          <code className="dev__code">public.{app.id}_known_packs()</code>, and it has none, so the
+          console will accept any well-formed pack id the moment there is one to grant.
+        </p>
       ) : (
         <div className="dev__tiles">
-          {packs.map((pack) => (
+          {app.packs.map((pack) => (
             <OwnTile
-              key={pack}
-              name={prettyId(pack)}
-              owned={owned.includes(pack)}
-              busy={busy === `${app}:${pack}`}
+              key={pack.id}
+              name={pack.name}
+              owned={pack.owned}
+              disabled={!app.onServer}
+              busy={busy === `${app.id}:${pack.id}`}
+              // Short, and only when it says something. A note repeating what
+              // every tile would say is a note nobody reads, which is how the
+              // one saying `ends 23 Sep` gets missed. The cadence in the price
+              // already tells you a pack is rented, so `grantNote` stays quiet
+              // unless the account's own grant says something the price cannot.
+              note={
+                grantNote(pack.grant) ??
+                (!pack.inShop && app.inShop ? 'not sold' : (pack.price ?? undefined))
+              }
               onChange={(next) =>
                 run(
-                  `${app}:${pack}`,
-                  `${prettyId(pack)} ${next ? 'granted' : 'revoked'}.`,
-                  () => api.setPack(a.user_id, app, pack, next),
+                  `${app.id}:${pack.id}`,
+                  `${pack.name} ${next ? 'granted' : 'revoked'}.`,
+                  () => api.setPack(a.user_id, app.id, pack.id, next),
                 )
               }
             />
@@ -546,27 +618,28 @@ function PacksPanel({
         </div>
       )}
 
-      {owned.filter((p) => !packs.includes(p)).length > 0 && (
+      {app.onServer && !app.hasList && app.packs.length > 0 && (
+        <p className="dev__panel-quiet">
+          {app.id} publishes no <code className="dev__code">{app.id}_known_packs()</code> list, so
+          the tiles above are what this account happens to hold rather than a catalogue. Granting
+          accepts any well-formed pack id until that function exists.
+        </p>
+      )}
+
+      {strays.length > 0 && (
         <p className="dev__warn">
-          This account also owns {owned.filter((p) => !packs.includes(p)).join(', ')}, which this
-          console doesn't know about. Switch it off below if it shouldn't be there.
-          <span className="dev__tiles">
-            {owned
-              .filter((p) => !packs.includes(p))
-              .map((pack) => (
-                <OwnTile
-                  key={pack}
-                  name={pack}
-                  owned
-                  busy={busy === `${app}:${pack}`}
-                  onChange={() =>
-                    run(`${app}:${pack}`, `${pack} revoked.`, () =>
-                      api.setPack(a.user_id, app, pack, false),
-                    )
-                  }
-                />
-              ))}
-          </span>
+          {strays.length === 1 ? 'One pack above is' : `${strays.length} packs above are`} on this
+          account but in neither {app.id}'s own list nor the site's shop:{' '}
+          {strays.map((p) => p.id).join(', ')}. A retired pack id, or a grant made by hand. Switch
+          it off above if it should not be there — revoking is never held to the known list, so it
+          will take.
+        </p>
+      )}
+
+      {app.onServer && !app.eventsTable && (
+        <p className="dev__panel-quiet">
+          This app keeps no <code className="dev__code">{app.id}_purchase_events</code> ledger, so
+          grants made here work but do not appear under Purchases.
         </p>
       )}
 

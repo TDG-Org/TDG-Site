@@ -76,6 +76,12 @@ Read the header. It is long because the situation is:
 - Ownership is never decided here. It lives in `<app>_entitlements` on TDG Core,
   written only by that app's Stripe webhook, read back over RLS by
   `store/useOwnedPacks.ts`. This file only names the things ownership is about.
+- **The Developer console reads this file too**, for the names and prices beside
+  its grant switches. It does not read it for *which apps exist* — it asks the
+  database that — so an app here with no `<app>_entitlements` table shows up at
+  `#/dev` as a red **NO TABLE** panel. That is the shop selling something a
+  payment has nowhere to land, and it is meant to be loud. See
+  [`src/dev/README.md`](../dev/README.md).
 
 `isSubscription()` asks the *plans*, not the pack id, so the answer stays true
 when another pack gains a subscription. `isTestLink()` reads the mode straight
@@ -96,3 +102,10 @@ No component changes, and no router changes: `lib/route.ts` takes its accepted
 slugs from the *cards*, so a page with no card is unreachable and a card with no
 page loses its link visibly. That is deliberate — it means the two lists cannot
 drift silently.
+
+**And no Developer-console changes either.** `#/dev` finds an app by scanning
+tdg-core for `public.<app>_entitlements`, so creating the table the app needs in
+order to sell anything is also what gives it a panel, grant switches, an
+overview tile and a Purchases filter. Step 4 above then supplies the name and
+the prices that panel shows. If you are editing `src/dev/` to make a new product
+appear, you are doing it the old way.

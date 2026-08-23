@@ -14,6 +14,37 @@ import { supabase } from '../lib/supabase'
  * so if you add a column there, add it here in the same sitting.
  */
 
+/**
+ * How ONE account stands in ONE app's pack Store.
+ *
+ * Keyed by app id inside `DevAccount.store`, and the keys are whatever the
+ * server found — never a list written here. See `apps.ts` for why this shape
+ * replaced the four `veditor_*` / `devfleet_*` columns it used to be.
+ */
+export type DevStoreEntry = {
+  packs: string[]
+  stripe_customer_id: string | null
+  /**
+   * How each pack is held, for an app that records it — `veditor_entitlements`
+   * has a `grants` column because its Pro Export Pack is a subscription, and
+   * "Owned" is not the whole truth about a thing that can lapse. `{}` for an
+   * app whose table has no such column, which means every pack is held
+   * outright.
+   */
+  grants: Record<string, DevGrant | undefined>
+}
+
+/** One entry of an app's `grants` column. Every field is optional: this is an
+ *  app's own jsonb, not a shape this project controls. */
+export type DevGrant = {
+  kind?: string | null
+  since?: string | null
+  status?: string | null
+  subscriptionId?: string | null
+  currentPeriodEnd?: string | null
+  cancelAtPeriodEnd?: boolean | null
+}
+
 /** One account, seen across every TDG product at once. */
 export type DevAccount = {
   user_id: string
@@ -56,10 +87,16 @@ export type DevAccount = {
   mak_period_end: string | null
   mak_cancel_at_period_end: boolean
   mak_stripe_customer_id: string | null
-  veditor_packs: string[]
-  veditor_stripe_customer_id: string | null
-  devfleet_packs: string[]
-  devfleet_stripe_customer_id: string | null
+  /**
+   * Every pack Store this account touches, keyed by app id.
+   *
+   * One object rather than a pair of columns per app, because a column per app
+   * is a column somebody has to add — and the day they forget, the roster says
+   * an account owns nothing while the panel below grants it a pack. The server
+   * builds this from whatever `<app>_entitlements` tables exist, so an app that
+   * shipped after this file was last edited is in here anyway.
+   */
+  store: Record<string, DevStoreEntry | undefined>
 }
 
 export type DevOverview = {
@@ -74,15 +111,18 @@ export type DevOverview = {
   active_7d: number
   core_paid: number
   mak_paid: number
-  veditor_owners: number
-  devfleet_owners: number
+  /** App id → how many accounts own at least one of its packs. One key per
+   *  discovered app, so a new app gets a tile in the numbers on its first day. */
+  store_owners: Record<string, number>
   gross_cents: number
 }
 
 /** One row of the merged money/entitlement ledger. */
 export type DevEvent = {
   at: string
-  source: 'veditor' | 'devfleet' | 'makullveny'
+  /** An app id, or `makullveny` for the tier ledger. Open, not a union: the
+   *  server unions in every ledger it finds. */
+  source: string
   event_type: string
   user_id: string | null
   who: string
@@ -105,18 +145,36 @@ export type DevAuditRow = {
   target_name: string
 }
 
+/**
+ * One app with a pack Store, as the SERVER knows it.
+ *
+ * Discovered, not declared: `tdg_store_apps()` finds every
+ * `public.<app>_entitlements` table and reports what it found beside it. So
+ * this list is the honest answer to "what can this console actually grant?",
+ * which is not the same question as "what does the site sell?" — see
+ * `apps.ts`, which holds the two answers against each other.
+ */
+export type DevCatalogApp = {
+  id: string
+  entitlements_table: string
+  /** Its money ledger, if it keeps one. Null means grants work and simply do
+   *  not show up in Purchases. */
+  events_table: string | null
+  /** What `<app>_known_packs()` says it sells. Empty when the app publishes no
+   *  such function, in which case the server accepts any well-formed pack id. */
+  packs: string[]
+  /** Whether its table records HOW each pack is held (rented, and until when). */
+  has_grants: boolean
+}
+
 /** The lists the dropdowns offer, straight from the database that validates them. */
 export type DevCatalog = {
   core_tiers: string[]
   statuses: string[]
   mak_tiers: string[]
   mak_themes: string[]
-  veditor_packs: string[]
-  devfleet_packs: string[]
+  apps: DevCatalogApp[]
 }
-
-/** The two Store apps this console can grant packs for. */
-export type PackApp = 'veditor' | 'devfleet'
 
 /** The verbs tdg_admin_moderate accepts. */
 export type ModerateAction =
@@ -180,8 +238,7 @@ export const getOverview = async (): Promise<DevOverview> =>
     active_7d: 0,
     core_paid: 0,
     mak_paid: 0,
-    veditor_owners: 0,
-    devfleet_owners: 0,
+    store_owners: {},
     gross_cents: 0,
   })
 
@@ -279,9 +336,18 @@ export const setMakFlag = (
   on: boolean,
 ): Promise<null> => rpc<null>('tdg_admin_set_mak_flag', { p_target: userId, p_flag: flag, p_on: on })
 
+/**
+ * One Store pack on or off, for any account, in any app the server knows.
+ *
+ * `app` is a plain string rather than a union of the apps that existed when
+ * this was written. The server matches it against its own discovered list and
+ * refuses anything else with a sentence naming what registers an app, so a typo
+ * is caught by the thing that actually knows — and a product that ships
+ * tomorrow needs no edit here.
+ */
 export const setPack = (
   userId: string,
-  app: PackApp,
+  app: string,
   pack: string,
   owned: boolean,
 ): Promise<string[]> =>

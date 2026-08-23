@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevOverview } from './api'
+import { ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
 import {
   Panel,
   RefreshRail,
@@ -16,7 +17,7 @@ import {
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
-import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
+import { fmtDate, fmtRelative, fmtUsd, nameOf, prettyId, standingOf } from './format'
 import { captureAnchor, holdAnchor, readView, useRememberView, useRestoreView } from './viewState'
 import './DevConsole.css'
 
@@ -104,7 +105,7 @@ function DevConsoleBody({
   const [allEvents, setAllEvents] = useState<DevEvent[]>([])
   const [allAudit, setAllAudit] = useState<DevAuditRow[]>([])
   const [ledgerState, setLedgerState] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [source, setSource] = useState<'all' | DevEvent['source']>('all')
+  const [source, setSource] = useState<string>('all')
 
   const [busy, setBusy] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
@@ -118,6 +119,14 @@ function DevConsoleBody({
     () => rows.find((r) => r.user_id === selectedId) ?? null,
     [rows, selectedId],
   )
+
+  /**
+   * Every app with a pack Store, in one place, for the three surfaces on this
+   * page that used to name their apps by hand: the overview tiles, the
+   * Purchases filter and the account panels. Account-independent here — the
+   * detail pane merges the selected account's own holdings in itself.
+   */
+  const stores = useMemo(() => storeApps(catalog), [catalog])
 
   const message = (e: unknown) =>
     e instanceof Error ? e.message : "Something went wrong, and it didn't say what."
@@ -348,7 +357,10 @@ function DevConsoleBody({
           hay(
             r.display_name, r.username, r.email, r.recovery_email, r.user_id,
             r.core_tier, r.core_status, r.mak_tier, r.mak_status,
-            r.mak_themes, r.veditor_packs, r.devfleet_packs,
+            r.mak_themes,
+            // Every app id and pack id the account holds, derived rather than
+            // listed: a product added tomorrow is searchable the same day.
+            ownedTerms(r),
             standingOf(r).label,
             r.is_admin ? 'developer admin' : '',
           ),
@@ -453,7 +465,7 @@ function DevConsoleBody({
 
         <SectionControls hint={searchHint} />
 
-        <Overview overview={overview} />
+        <Overview overview={overview} stores={stores} />
 
         <nav className="dev__tabs" aria-label="Developer sections" data-dev-anchor="tabs">
           {TABS.map((t) => (
@@ -530,13 +542,18 @@ function DevConsoleBody({
         {tab === 'purchases' && (
           <div className="dev__wide">
             <div className="dev__search">
+              {/* One option per app the console found, plus Makullveny, whose
+                  ledger is tier-shaped rather than pack-shaped and so is not a
+                  discovered Store. A filter that omits an app is a filter that
+                  hides its money, so this list is never typed out. */}
               <Select
                 value={source}
-                onChange={(v) => setSource(v as typeof source)}
+                onChange={setSource}
                 options={[
                   { value: 'all', label: 'Every app' },
-                  { value: 'veditor', label: 'TDG Veditor' },
-                  { value: 'devfleet', label: 'DevFleet' },
+                  ...stores
+                    .filter((s) => s.onServer)
+                    .map((s) => ({ value: s.id, label: s.title })),
                   { value: 'makullveny', label: 'Makullveny' },
                 ]}
               />
@@ -695,7 +712,19 @@ function LedgerTag({
 
 /* ── the numbers ───────────────────────────────────────────────────────── */
 
-function Overview({ overview: o }: { overview: DevOverview | null }) {
+/**
+ * The numbers across the top.
+ *
+ * The fixed ones are written out; the per-app ones are not. `store_owners`
+ * arrives keyed by app id — one key per app the server found — so a product
+ * that ships tomorrow has a tile here the same day, named from the shop if the
+ * shop knows it and from its own id if not.
+ */
+function Overview({ overview: o, stores }: { overview: DevOverview | null; stores: DevStoreApp[] }) {
+  // Its title if the site sells it, its id made readable if this is the first
+  // the shop has heard of it. An app is never shown as a bare key.
+  const titleOf = (id: string) => stores.find((s) => s.id === id)?.title ?? prettyId(id)
+
   const stats: { label: string; value: string; what: string; tone?: 'warn' | 'bad' }[] = o
     ? [
         { label: 'Accounts', value: String(o.accounts), what: 'profiles that exist' },
@@ -716,8 +745,13 @@ function Overview({ overview: o }: { overview: DevOverview | null }) {
         { label: 'Active (7d)', value: String(o.active_7d), what: 'signed in this week' },
         { label: 'Core Paid', value: String(o.core_paid), what: 'above the free tier' },
         { label: 'Makullveny', value: String(o.mak_paid), what: 'own something in Mak' },
-        { label: 'Veditor', value: String(o.veditor_owners), what: 'own a Veditor pack' },
-        { label: 'DevFleet', value: String(o.devfleet_owners), what: 'own a DevFleet pack' },
+        ...Object.entries(o.store_owners ?? {})
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([id, n]) => ({
+            label: titleOf(id),
+            value: String(n),
+            what: `own a ${titleOf(id)} pack`,
+          })),
         { label: 'Taken', value: fmtUsd(o.gross_cents), what: 'across every ledger' },
       ]
     : []
@@ -738,7 +772,12 @@ function Overview({ overview: o }: { overview: DevOverview | null }) {
               <span className="dev__stat-what">{s.what}</span>
             </div>
           ))
-          : Array.from({ length: 11 }, (_, i) => (
+          : // As many placeholders as there will be tiles, so the row does not
+            // reflow when the real numbers land: nine fixed, plus one per app.
+            // Every app, not only the ones confirmed on the server — this
+            // branch runs while the catalog is still in flight, when the shop's
+            // list is the only count available and is the right guess.
+            Array.from({ length: 9 + stores.length }, (_, i) => (
               <div key={i} className="dev__stat dev__stat--skeleton" aria-hidden="true" />
             ))}
       </div>
@@ -760,9 +799,9 @@ function RosterRow({
   onSelect: () => void
 }) {
   const standing = standingOf(a)
-  const owns =
-    a.veditor_packs.length + a.devfleet_packs.length + a.mak_themes.length +
-    (a.mak_candle_purchased_at ? 1 : 0)
+  // Derived from the account's own store object rather than from a list of
+  // apps, so this number cannot go stale when a product is added.
+  const owns = ownedCount(a)
 
   return (
     // Anchored on the account rather than on its place in the list: a refresh

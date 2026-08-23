@@ -598,12 +598,17 @@ export function OwnTile({
   owned,
   onChange,
   busy,
+  disabled,
   note,
 }: {
   name: string
   owned: boolean
   onChange: (next: boolean) => void
   busy?: boolean
+  /** For a tile the server would refuse anyway — an app with no entitlements
+   *  table. Offering a switch that cannot take is worse than showing a dead
+   *  one, because only one of the two tells you something is wrong. */
+  disabled?: boolean
   note?: string
 }) {
   return (
@@ -614,7 +619,8 @@ export function OwnTile({
       className="dev__own"
       data-owned={owned || undefined}
       data-busy={busy || undefined}
-      disabled={busy}
+      data-disabled={disabled || undefined}
+      disabled={busy || disabled}
       onClick={() => onChange(!owned)}
     >
       <span className="dev__own-box" aria-hidden="true">

@@ -1094,6 +1094,13 @@
 .dev__own {
   display: flex;
   align-items: center;
+  /* The note drops to its own line rather than crushing the name. Measured:
+     with the note held on the same row, `Pro Export Pack · ends 23 Sep` in a
+     210px tile wrapped the NAME to four lines and took the tile from 53px to
+     113px — and grid stretches its neighbour to match, so one long note made a
+     whole row twice as tall. See the min-width on .dev__own-text, which is
+     what actually forces the wrap. */
+  flex-wrap: wrap;
   gap: 10px;
   padding: 11px 12px;
   text-align: left;
@@ -1115,6 +1122,22 @@
 .dev__own[data-busy] {
   opacity: 0.6;
   cursor: progress;
+}
+/* A pack for an app with no entitlements table: there is nothing for a grant
+   to write, so the tile is shown and cannot be pressed. Dashed rather than
+   merely faded, because faded reads as "loading" and this is not going to
+   arrive. The panel above it says why in words. */
+.dev__own[data-disabled] {
+  border-style: dashed;
+  background-color: transparent;
+  cursor: not-allowed;
+}
+.dev__own[data-disabled] .dev__own-name,
+.dev__own[data-disabled] .dev__own-state {
+  color: var(--faint);
+}
+.dev__own[data-disabled] .dev__own-box {
+  border-style: dashed;
 }
 .dev__own-box {
   flex: none;
@@ -1141,7 +1164,10 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  min-width: 0;
+  /* Proportional, not a pixel count, so it holds at every tile width the grid
+     produces: the name keeps at least this much of the tile, and a note that
+     cannot fit in what is left wraps below instead of squeezing it. */
+  min-width: 45%;
 }
 .dev__own-name {
   font: 600 12.5px var(--font-body);
@@ -1159,6 +1185,8 @@
 .dev__own-note {
   margin-left: auto;
   flex: none;
+  /* One unit. `ends 23 Sep` broken across two lines reads as two facts. */
+  white-space: nowrap;
   font: 400 10px var(--font-mono);
   color: var(--faint);
 }
