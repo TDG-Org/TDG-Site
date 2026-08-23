@@ -32,6 +32,26 @@ import { STORE_APPS, packKey } from '../data/store'
  * Both apps sell a pack whose id is `themes`. `owned` therefore holds
  * `packKey(app, pack)` and never a bare pack id. The alternative is buying one
  * Theme Pack and being told you own the other.
+ *
+ * ## Ownership can be taken away, so this has to keep asking
+ *
+ * A pack can stop being owned: a refund, a chargeback, a subscription that
+ * lapses, or a developer revoking it from `#/dev`. None of those happen in this
+ * tab, and none of them tell it anything.
+ *
+ * This used to be read once on mount and then only while a checkout was open,
+ * which made ownership one-way for the life of the page: a pack revoked while
+ * the shop sat open went on reading **Owned** until somebody reloaded. Selling
+ * somebody what they already own is the mistake this page guards hardest
+ * against, and it was quietly making the mirror-image one — telling them they
+ * own something the database had already taken back.
+ *
+ * So it asks again at the moments a person would expect an answer, which is the
+ * same set `src/auth/sessionGuard.ts` settled on for the same reason: coming
+ * back to the tab, focusing the window, the network returning, and otherwise
+ * every few minutes. Foreground is the one that matters — clicking back onto
+ * the shop after changing something elsewhere is exactly when it has to be
+ * right.
  */
 export type OwnedState = 'loading' | 'signedOut' | 'ready' | 'error'
 
@@ -43,6 +63,9 @@ export type OwnedPacks = {
   /** Re-ask now, after a purchase or when the tab comes back to the front. */
   readonly refresh: () => void
 }
+
+/** A tab left open with nobody touching it. The events cover somebody who is here. */
+const RECHECK_MS = 5 * 60 * 1000
 
 function everyApp(state: OwnedState): Record<string, OwnedState> {
   return Object.fromEntries(STORE_APPS.map((app) => [app.id, state]))
@@ -60,6 +83,14 @@ export function useOwnedPacks(): OwnedPacks {
   // them until the new ones land; a different account starts from nothing, so a
   // switch can never show the previous person's purchases for a frame.
   const loadedFor = useRef<string | null>(null)
+  // Which shelves have ever answered for the account currently loaded.
+  //
+  // Only the FIRST read of a shelf may turn it red. Once a shelf has answered,
+  // a later read that fails says nothing new — the connection dropped, the tab
+  // woke up mid-suspend — and replacing a settled answer with "we couldn't
+  // check" would punish the reader for our own hiccup. Same rule sessionGuard
+  // keeps: only an answer FROM the server changes anything.
+  const answered = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     live.current = true
@@ -79,6 +110,7 @@ export function useOwnedPacks(): OwnedPacks {
     }
     if (status === 'signedOut' || !userId) {
       loadedFor.current = null
+      answered.current = new Set()
       setOwned(new Set())
       setStates(everyApp('signedOut'))
       return
@@ -86,6 +118,7 @@ export function useOwnedPacks(): OwnedPacks {
 
     if (loadedFor.current !== userId) {
       loadedFor.current = userId
+      answered.current = new Set()
       setOwned(new Set())
       setStates(everyApp('loading'))
     }
@@ -103,9 +136,14 @@ export function useOwnedPacks(): OwnedPacks {
         .then(({ data, error }) => {
           if (cancelled || !live.current) return
           if (error) {
-            setStates((prev) => ({ ...prev, [app.id]: 'error' }))
+            // A re-check that failed is not an answer. Leave the shelf saying
+            // whatever it last actually knew.
+            if (!answered.current.has(app.id)) {
+              setStates((prev) => ({ ...prev, [app.id]: 'error' }))
+            }
             return
           }
+          answered.current.add(app.id)
           const ids = Array.isArray(data?.owned_packs)
             ? (data.owned_packs as unknown[]).filter((id): id is string => typeof id === 'string')
             : []
@@ -125,6 +163,37 @@ export function useOwnedPacks(): OwnedPacks {
       cancelled = true
     }
   }, [status, userId, tick])
+
+  /*
+   * Ask again when something might have changed while this tab was not looking.
+   *
+   * Only while signed in: a signed-out shelf has nothing to re-read, and a timer
+   * firing for every visitor who never signs in is a request per tab per five
+   * minutes to be told the same nothing.
+   *
+   * `refresh` rather than a read of its own, so every answer still arrives
+   * through the one effect above and keeps its rules — the previous answers stay
+   * on screen until the new ones land, and a read for an account that has since
+   * changed cannot revive the last one's packs.
+   */
+  useEffect(() => {
+    if (status !== 'signedIn' || !userId) return
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    const timer = window.setInterval(refresh, RECHECK_MS)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('online', refresh)
+
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('online', refresh)
+    }
+  }, [status, userId, refresh])
 
   const stateFor = useCallback((appId: string): OwnedState => states[appId] ?? 'loading', [states])
 
