@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { STORE_APPS } from '../data/store'
-import { useModal } from '../lib/modal'
+import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import { ackReply, fetchInbox, type InboxReply } from './api'
 import './Feedback.css'
 
@@ -54,6 +54,11 @@ export function ReplyInbox() {
 
   const dismiss = useCallback(() => setOpen(false), [])
 
+  // A press that both started and ended on the scrim. Nothing typed is at
+  // stake here, but a reflex drag that closed the panel would still cost the
+  // reader the reply they were half-way through reading. See src/lib/modal.ts.
+  const backdrop = useBackdropClose(dismiss)
+
   const gotIt = () => {
     for (const r of replies) ackReply(r.reply_id)
     setOpen(false)
@@ -63,19 +68,14 @@ export function ReplyInbox() {
   // on the page rather than owned by this one. See src/lib/modal.ts. Focus
   // lands on the close button, never on Got It: this panel opens by itself, and
   // a stray Enter must not be able to ack a reply nobody has read yet.
-  useModal(open, dismiss, closeRef)
+  useModal(open, dismiss, MODAL_LAYER.feedback, closeRef)
 
   if (!open || replies.length === 0) return null
 
   const one = replies.length === 1
 
   return (
-    <div
-      className="fb__backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) dismiss()
-      }}
-    >
+    <div className="fb__backdrop" {...backdrop}>
       <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-inbox-title">
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>

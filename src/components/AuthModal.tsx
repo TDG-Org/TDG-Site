@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { useModal } from '../lib/modal'
+import { MODAL_LAYER, useModal } from '../lib/modal'
 import { supabase } from '../lib/supabase'
 import './AuthModal.css'
 
@@ -380,7 +380,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
 
   // The scroll lock, Escape and the focus return, counted across every dialog
   // on the page rather than owned by this one. See src/lib/modal.ts.
-  useModal(open, onClose)
+  useModal(open, onClose, MODAL_LAYER.auth)
 
   // Live availability check against the shared profiles table, debounced.
   useEffect(() => {

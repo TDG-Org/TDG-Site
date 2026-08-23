@@ -15,7 +15,7 @@ change one.
 | `chromeGuard.ts` | Keeping extensions from repainting our controls. |
 | `dpr.ts` | Noticing when the display's pixel ratio changes. |
 | `mergeRefs.ts` | Point several refs at one node. |
-| `modal.ts` | One dialog's scroll lock, Escape and focus return — counted across all of them. |
+| `modal.ts` | A dialog's scroll lock, Escape, focus return and scrim — shared by all four. |
 
 ---
 
@@ -171,9 +171,11 @@ behaviour rather than breaking anything.
 
 ## `modal.ts`
 
-`useModal(open, onClose, focusFirst?)`. Every dialog on the site calls it: the
-auth modal, Send Feedback, the reply panel, the Developer console's report
-dialog. **Do not write `document.body.style.overflow` in a component.**
+`useModal(open, onClose, layer, focusFirst?)` and `useBackdropClose(onClose)`.
+Every dialog on the site calls both: the auth modal, Send Feedback, the reply
+panel, the Developer console's report dialog. **Do not write
+`document.body.style.overflow` in a component, and do not write a scrim's
+`onClick` by hand.**
 
 The lock is COUNTED, because the per-dialog version was only correct one dialog
 at a time. Two open at once — the reply panel arriving over an open Send
@@ -182,9 +184,23 @@ Escape closed both in the same commit, the cleanups ran in tree order, and the
 page was left unscrollable with nothing on top of it. Only the last dialog to
 leave restores the page now.
 
-Escape is listened for ONCE and handed to whichever dialog opened last, so a key
-press closes the top layer rather than every layer. Listeners that are not
-dialogs — the account menu's own Escape — are left alone on purpose.
+Escape is listened for ONCE and handed to the dialog that is actually PAINTED
+on top, which is what `layer` is for. Handing it to the last dialog to open is
+what this replaced, and it was wrong in a reachable case: at boot a recovery
+link opens the auth modal from an effect while the reply panel is still waiting
+on its fetch, so the panel opens second at z-index 290 and the modal covering it
+sits at 300. Escape closed the panel nobody could see. `MODAL_LAYER` holds the
+three numbers and names the stylesheet each one mirrors — change one, change
+both. Listeners that are not dialogs — the account menu's own Escape — are left
+alone on purpose.
+
+`useBackdropClose` is the scrim, and it needs a press that both STARTED and
+ended on the backdrop. A drag that begins inside the card and finishes outside
+it fires its `click` on the nearest common ancestor, which IS the backdrop, so
+`onClick={onClose}` and a bare `e.target === e.currentTarget` both read the tail
+of a drag-select as "close". Send Feedback was binning a written report that
+way, and the console's report dialog was binning a written reply — the second
+one because the fix lived in the first component instead of here.
 
 Focus goes to `focusFirst` on open and back to whatever had it on close. What
 does **not** work: an opener that is still mounted but has gone `inert`, which is

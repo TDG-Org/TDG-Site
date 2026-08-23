@@ -221,7 +221,10 @@ needs to join in is `docs/feedback-app-prompt.md`.
   because a bug report's destination is usually a chat or a Claude session,
   and retyping an OS string is how a detail gets lost.
 - **A click opens the report over the page** — Escape, the ×, or the scrim
-  puts you back exactly where you were.
+  puts you back exactly where you were. All three go through `lib/modal.ts`,
+  and the scrim wants a press that starts AND ends on it: a drag-select that
+  finishes outside the card used to close the dialog and take the reply draft
+  with it.
 - **Reply from the dialog and the message is delivered by their own app**: it
   waits in `tdg_feedback_replies` until the app calls `tdg_feedback_inbox()`
   at startup, shows it, and acks it. Until then the console says NOT SEEN

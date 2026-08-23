@@ -59,14 +59,17 @@ server's own refusal lands in the error alert, worded to be read.
   console in everybody's bundle. The one helper both sides want (an app id
   made readable) is four lines and is duplicated on purpose.
 - **Both dialogs' page-level behaviour is `../lib/modal.ts`, not their own.**
-  The scroll lock, Escape and the focus return live there and are counted
-  across every dialog on the site. Two of these used to each save and restore
+  The scroll lock, Escape, the focus return and the scrim live there and are
+  shared by every dialog on the site. Two of these used to each save and restore
   `body.style.overflow`, which left the page unscrollable whenever one opened
-  over the other and a single Escape closed both.
-- **The send form's scrim needs a press that starts AND ends on it.** A drag
-  that begins in the textarea and finishes outside the card is somebody editing,
-  not somebody leaving, and the reset-on-open means a stray close bins the whole
-  report with nothing to undo it with.
+  over the other and a single Escape closed both. Both pass
+  `MODAL_LAYER.feedback`, which is the z-index in `Feedback.css` said again in
+  TypeScript so Escape can find the dialog that is actually in front — the auth
+  modal sits above these two, and a recovery link at boot can open it first.
+- **Both scrims need a press that starts AND ends on them**, via
+  `useBackdropClose`. A drag that begins in the textarea and finishes outside
+  the card is somebody editing, not somebody leaving, and the reset-on-open
+  means a stray close bins the whole report with nothing to undo it with.
 - **The server's refusals are shown, not rewritten.** They are worded to be
   read — "pick what kind of feedback this is" — and a network failure gets
   its own sentence, because "the server said no" and "the server never heard

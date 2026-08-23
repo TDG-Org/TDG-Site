@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useModal } from '../lib/modal'
+import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import * as api from './api'
 import type { DevCatalog, DevFeedback } from './api'
 import {
@@ -524,7 +524,12 @@ function ReportDialog({
   // The scroll lock, Escape and the focus return, counted across every dialog
   // on the page rather than owned by this one. See src/lib/modal.ts. Mounted
   // only while open, so `open` is simply true.
-  useModal(true, onClose, closeRef)
+  useModal(true, onClose, MODAL_LAYER.devReport, closeRef)
+
+  // The same scrim contract the send form has: a press that STARTED and ended
+  // on the backdrop. This dialog holds a reply draft, and a drag-select that
+  // finishes outside the card was closing it and taking the draft with it.
+  const backdrop = useBackdropClose(onClose)
 
   const copy = (text: string, said: string) =>
     void navigator.clipboard?.writeText(text).then(
@@ -541,13 +546,12 @@ function ReportDialog({
     )
 
   return (
-    <div className="dev__fbd-backdrop" onClick={onClose}>
+    <div className="dev__fbd-backdrop" {...backdrop}>
       <div
         className="dev__fbd"
         role="dialog"
         aria-modal="true"
         aria-label={`Feedback report #${f.id}`}
-        onClick={(e) => e.stopPropagation()}
       >
         <header className="dev__fbd-head">
           <div className="dev__fbd-title-row">

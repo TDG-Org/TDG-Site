@@ -1,8 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 --  TDG user feedback · one submit per account at a time
---  NOT YET APPLIED to project ddbksawvchsauiuiwvrl (tdg-core). Everything else
---  in this folder is already running; this one is written and waiting. Apply
---  it, then delete these two lines and restore the folder's usual header.
+--  Applied 2026-08-23 to project ddbksawvchsauiuiwvrl (tdg-core).
 --  Amends 20260823210000_feedback_rate_limits.sql. Read that file first.
 -- ═══════════════════════════════════════════════════════════════════════════
 --

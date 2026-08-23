@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { useModal } from '../lib/modal'
+import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import { FEEDBACK_KINDS, fetchQuota, quotaLine, submitFeedback, type FeedbackQuota } from './api'
 import './Feedback.css'
 
@@ -35,11 +35,11 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   const [tick, setTick] = useState(() => Date.now())
   const messageRef = useRef<HTMLTextAreaElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
-  // Where a mouse press STARTED. A drag that begins in the textarea and
-  // finishes a few pixels outside the card lands its click on the scrim, and
-  // an unguarded scrim would take that as "close" and bin a report somebody
-  // spent five minutes writing.
-  const pressedBackdrop = useRef(false)
+  // A scrim that needs a press which both started and ended on it. A drag that
+  // begins in the textarea and finishes a few pixels outside the card lands its
+  // click on the scrim, and an unguarded one would take that as "close" and bin
+  // a report somebody spent five minutes writing. See src/lib/modal.ts.
+  const backdrop = useBackdropClose(onClose)
 
   // A fresh opening is a fresh report. Reset on open, not on close, so the
   // closing animation never flashes an emptied form.
@@ -98,7 +98,7 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
 
   // The scroll lock, Escape and the focus return, counted across every dialog
   // on the page rather than owned by this one. See src/lib/modal.ts.
-  useModal(open, onClose, closeRef)
+  useModal(open, onClose, MODAL_LAYER.feedback, closeRef)
 
   if (!open) return null
 
@@ -173,18 +173,9 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   }
 
   return (
-    // The scrim closes on a press that both STARTED and ended on it. A click
-    // whose mousedown was inside the card — the tail of a drag-select in the
-    // textarea — is somebody editing, not somebody leaving.
-    <div
-      className="fb__backdrop"
-      onMouseDown={(e) => {
-        pressedBackdrop.current = e.target === e.currentTarget
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && pressedBackdrop.current) onClose()
-      }}
-    >
+    // The scrim closes on a press that both STARTED and ended on it; see the
+    // `backdrop` above and `useBackdropClose`.
+    <div className="fb__backdrop" {...backdrop}>
       <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>

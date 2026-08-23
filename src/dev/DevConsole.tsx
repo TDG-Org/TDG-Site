@@ -498,35 +498,7 @@ function DevConsoleBody({
             <strong>{profile?.display_name || profile?.username || user?.email}</strong>.
           </p>
 
-          {/*
-            Which build you are actually looking at.
-
-            Push to main deploys, GitHub Pages caches index.html, and a tab left
-            open never asks again — so this page can be running a bundle that
-            disagrees with the database it is talking to and look entirely
-            normal doing it. That happened, and it cost most of a day, because
-            there was no way to ask the page which build it was: loading the
-            same URL in another browser proved nothing about what THIS one had
-            loaded.
-
-            The time is here as well as the version because the version only
-            answers if somebody remembered to bump it (AGENTS.md §6), and the
-            case worth catching is the one where a rule got skipped. It reads
-            both ways on purpose: the stamp to compare against package.json and
-            the deploy log, the age to notice at a glance that a page has been
-            open since yesterday.
-
-            Deliberately quiet. The live-project warning below is the loud thing
-            on this page and has to stay the loudest, so this is mono at the
-            size the roster counts use, and it is a fact rather than a notice.
-          */}
-          <p className="dev__build">
-            <span className="dev__build-label">Build</span>
-            <code className="dev__code">{__TDG_SITE_VERSION__}</code>
-            <span className="dev__build-when">
-              {fmtDate(__TDG_SITE_BUILT_AT__)} · {fmtRelative(__TDG_SITE_BUILT_AT__)}
-            </span>
-          </p>
+          <BuildStamp />
 
           <p className="dev__live">
             <span className="dev__live-dot" aria-hidden="true" />
@@ -821,6 +793,61 @@ function DevConsoleBody({
  * that ships tomorrow has a tile here the same day, named from the shop if the
  * shop knows it and from its own id if not.
  */
+/**
+ * Which build you are actually looking at.
+ *
+ * Push to main deploys, GitHub Pages caches index.html, and a tab left open
+ * never asks again — so this page can be running a bundle that disagrees with
+ * the database it is talking to and look entirely normal doing it. That
+ * happened, and it cost most of a day, because there was no way to ask the page
+ * which build it was: loading the same URL in another browser proved nothing
+ * about what THIS one had loaded.
+ *
+ * The time is here as well as the version because the version only answers if
+ * somebody remembered to bump it (AGENTS.md §6), and the case worth catching is
+ * the one where a rule got skipped. It reads both ways on purpose: the stamp to
+ * compare against package.json and the deploy log, the age to notice at a
+ * glance that a page has been open since yesterday.
+ *
+ * Deliberately quiet. The live-project warning below is the loud thing on this
+ * page and has to stay the loudest, so this is mono at the size the roster
+ * counts use, and it is a fact rather than a notice.
+ */
+function BuildStamp() {
+  /*
+   * The age has to keep up on its own, and this is the whole reason there is a
+   * component here rather than a paragraph in the header.
+   *
+   * `fmtRelative` reads the clock when it is CALLED, and React does not
+   * re-render a page nobody is touching — so the line was frozen at whatever it
+   * said when the console last happened to render. A tab left open since
+   * yesterday went on reading "just now", which is exactly the tab this line
+   * exists to make somebody reload.
+   *
+   * One minute, because that is the resolution of the wording: `fmtRelative`
+   * rounds to whole minutes below an hour, so a faster tick repaints an
+   * identical string. Rule 9 sends animation through the shared frame loop —
+   * this is a clock, not animation, and holding that loop awake at 60 Hz to
+   * change a number once a minute is the waste the rule is there to prevent.
+   * Same call as the feedback form's countdown; see FeedbackDialog.
+   */
+  const [, retick] = useState(0)
+  useEffect(() => {
+    const id = window.setInterval(() => retick((n) => n + 1), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  return (
+    <p className="dev__build">
+      <span className="dev__build-label">Build</span>
+      <code className="dev__code">{__TDG_SITE_VERSION__}</code>
+      <span className="dev__build-when">
+        {fmtDate(__TDG_SITE_BUILT_AT__)} · {fmtRelative(__TDG_SITE_BUILT_AT__)}
+      </span>
+    </p>
+  )
+}
+
 function Overview({ overview: o, stores }: { overview: DevOverview | null; stores: DevStoreApp[] }) {
   // Its title if the site sells it, its id made readable if this is the first
   // the shop has heard of it. An app is never shown as a bare key.
