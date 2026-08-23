@@ -164,16 +164,52 @@ Search by name, `@username`, email or user id, then for the account you pick:
   permanent deletion behind a typed confirmation.
 - **History:** every payment, free grant and moderation action on that account.
 
-Two more tabs cover the whole project: **Purchases** (all three ledgers merged,
-with `PAID` and `GRANTED` told apart) and **Audit Log** (every developer action
-in every app).
+Three more tabs cover the whole project: **Feedback** (below), **Purchases**
+(all three ledgers merged, with `PAID` and `GRANTED` told apart) and **Audit
+Log** (every developer action in every app).
+
+## Feedback
+
+Everything users send from inside the apps — a bug, a suggestion, a question —
+lands in `tdg_feedback` through `tdg_feedback_submit`, which any signed-in TDG
+account can call from any app. The tab shows the whole ledger: when, what kind,
+which app and version, the OS, who sent it (name, `@username`, compacted id),
+whatever contact line they volunteered, the message, and where the report
+stands. The migration and the app-side contract live in
+`supabase/migrations/20260823170000_user_feedback.sql`; the brief an app's
+Claude session needs to join in is `docs/feedback-app-prompt.md`.
+
+- **Every column sorts** and three dropdowns narrow by type, app and status.
+  The lists they offer come from the server's catalog UNIONED with what the
+  rows hold, so a kind added tomorrow is filterable the same day.
+- **Everything copies at every grain**: one field (in the report dialog), one
+  report (the Copy on its row), or the whole filtered list as text or JSON —
+  because a bug report's destination is usually a chat or a Claude session,
+  and retyping an OS string is how a detail gets lost.
+- **A click opens the report over the page** — Escape, the ×, or the scrim
+  puts you back exactly where you were.
+- **Reply from the dialog and the message is delivered by their own app**: it
+  waits in `tdg_feedback_replies` until the app calls `tdg_feedback_inbox()`
+  at startup, shows it, and acks it. Until then the console says NOT SEEN
+  YET, because "sent" and "seen" are different promises. Replying stamps the
+  report `replied` on its own.
+- **Statuses** are `new → seen → replied → resolved`. Delete exists for spam
+  and takes a confirmation; a real report that is dealt with is `resolved`,
+  which keeps the record. Both write the audit log.
+- The tab itself carries a `n NEW` tag and the overview a Feedback tile, so a
+  waiting report is visible from every tab, not only this one.
+
+This site is also a submitter: **Send Feedback** in the account menu files
+under the app id `tdg-site`, and `src/feedback/ReplyInbox.tsx` is the
+reference implementation of the startup reply panel the other apps copy.
 
 ## Files
 
 | File | What it is |
 | --- | --- |
-| `DevConsole.tsx` | The page: header, the overview numbers, the three tabs, the roster, and the one action runner every write goes through. |
+| `DevConsole.tsx` | The page: header, the overview numbers, the four tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The panels for one account — seven fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
+| `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
 | `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |

@@ -111,6 +111,8 @@ export type DevOverview = {
   active_7d: number
   core_paid: number
   mak_paid: number
+  /** Feedback reports still marked 'new': the "is anything waiting?" number. */
+  feedback_new: number
   /** App id → how many accounts own at least one of its packs. One key per
    *  discovered app, so a new app gets a tile in the numbers on its first day. */
   store_owners: Record<string, number>
@@ -130,6 +132,50 @@ export type DevEvent = {
   amount_cents: number | null
   currency: string | null
   event_id: string
+}
+
+/** One developer reply on a feedback report, with its delivery state. */
+export type DevFeedbackReply = {
+  id: number
+  body: string
+  at: string
+  author_id: string | null
+  /** The developer's display name, or 'deleted account'. */
+  by: string
+  /**
+   * When the person's app confirmed the reply was SHOWN — not when it was
+   * written. Null means it is still waiting in their inbox, which is the fact
+   * the console prints: "sent" and "seen" are different promises.
+   */
+  seen_at: string | null
+}
+
+/**
+ * One user feedback report, with its whole exchange.
+ *
+ * `app` is a plain string, not a union of today's products, for the same
+ * reason DevStoreEntry is keyed openly: any TDG app can submit under its own
+ * id, and one that ships tomorrow must land here without this file changing.
+ * The console titles an id it has no copy for from the id itself.
+ */
+export type DevFeedback = {
+  id: number
+  at: string
+  updated_at: string
+  /** Null once the account has been deleted; the report outlives it. */
+  user_id: string | null
+  who: string
+  username: string | null
+  email: string | null
+  app: string
+  app_version: string | null
+  os: string | null
+  kind: string
+  message: string
+  /** Volunteered, free-form — "my instagram is @tdgluke". Never required. */
+  contact: string | null
+  status: string
+  replies: DevFeedbackReply[]
 }
 
 /** One row of the moderation / permission trail, from every TDG app. */
@@ -173,6 +219,11 @@ export type DevCatalog = {
   statuses: string[]
   mak_tiers: string[]
   mak_themes: string[]
+  /** What a feedback report can be, and where it can stand. The Feedback tab's
+   *  filters and its status control both derive from these, so they can never
+   *  offer a value tdg_feedback_submit or _set_status would refuse. */
+  feedback_kinds: string[]
+  feedback_statuses: string[]
   apps: DevCatalogApp[]
 }
 
@@ -238,6 +289,7 @@ export const getOverview = async (): Promise<DevOverview> =>
     active_7d: 0,
     core_paid: 0,
     mak_paid: 0,
+    feedback_new: 0,
     store_owners: {},
     gross_cents: 0,
   })
@@ -262,6 +314,13 @@ export const getAudit = (
   maxRows = 200,
 ): Promise<DevAuditRow[]> =>
   rpc<DevAuditRow[]>('tdg_admin_audit', { p_target: userId, p_q: q, p_max_rows: maxRows })
+
+/** Every feedback report, newest first, each with its whole reply exchange. */
+export const getFeedback = (
+  userId: string | null = null,
+  maxRows = 500,
+): Promise<DevFeedback[]> =>
+  rpc<DevFeedback[]>('tdg_admin_feedback', { p_target: userId, p_max_rows: maxRows })
 
 /**
  * The accounts whose Developer permission cannot be removed, and which cannot
@@ -374,3 +433,21 @@ export const moderate = (
 
 export const deleteForever = (userId: string): Promise<null> =>
   rpc<null>('tdg_admin_delete_forever', { p_target: userId })
+
+/* ── feedback writes ───────────────────────────────────────────────────── */
+
+export const setFeedbackStatus = (id: number, status: string): Promise<null> =>
+  rpc<null>('tdg_admin_feedback_set_status', { p_id: id, p_status: status })
+
+/**
+ * Answer one report. Writing the reply IS the whole send: the person's own app
+ * calls `tdg_feedback_inbox()` when it next starts and shows it. There is no
+ * push and no email, which is why the console words it as "next time they
+ * open the app" rather than "sent".
+ */
+export const replyToFeedback = (id: number, body: string): Promise<number> =>
+  rpc<number>('tdg_admin_feedback_reply', { p_id: id, p_body: body })
+
+/** Gone for good, replies included. For spam; a handled report is 'resolved'. */
+export const deleteFeedback = (id: number): Promise<null> =>
+  rpc<null>('tdg_admin_feedback_delete', { p_id: id })

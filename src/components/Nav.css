@@ -214,6 +214,7 @@
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+.nav__account-feedback,
 .nav__account-signout {
   margin-top: 12px;
   width: 100%;
@@ -225,6 +226,7 @@
   text-align: center;
   transition: background 0.2s, var(--t-theme);
 }
+.nav__account-feedback:hover,
 .nav__account-signout:hover {
   background-color: var(--accent-soft);
   border-color: var(--border-hover);

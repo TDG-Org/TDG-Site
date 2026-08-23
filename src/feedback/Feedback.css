@@ -1,0 +1,348 @@
+/* ── Feedback: the send dialog, and the reply panel ────────────────────────
+   Two dialogs, one skin. Unlike the auth modal — which is always dark on
+   purpose, a gate in front of the site — these are part of the page, so they
+   take every colour from the tokens and theme with everything else.
+
+   One set of paddings drives both cards and every row inside them; the pair
+   of buttons on the reply panel shares one height and one radius from the
+   same rules. Nothing here writes a literal colour.                          */
+
+.fb__backdrop {
+  position: fixed;
+  inset: 0;
+  /* Under the auth modal (300): if a recovery link and a waiting reply land
+     on the same boot, the password comes first. */
+  z-index: 290;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.fb__card {
+  --fb-pad: clamp(18px, 3vw, 26px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(560px, 100%);
+  max-height: min(88vh, calc(100svh - 36px));
+  overflow-y: auto;
+  padding: var(--fb-pad);
+  border-radius: 3px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--bg2);
+  box-shadow: var(--card-shadow);
+  animation: fbIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: var(--t-theme);
+}
+@keyframes fbIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fb__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.fb__eyebrow {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.fb__x {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: none;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--muted);
+  transition: background-color 0.2s ease, color 0.2s ease, var(--t-theme);
+}
+.fb__x:hover {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+.fb__x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fb__title {
+  margin: 0;
+  font: 700 clamp(20px, 2.6vw, 24px) / 1.15 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.fb__sub {
+  margin: -4px 0 0;
+  font: 400 13.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+.fb__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+/* ── the kind picker ──────────────────────────────────────────────────── */
+
+.fb__kinds {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.fb__label {
+  display: block;
+  margin-bottom: 7px;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fb__optional {
+  font: 500 9px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.fb__kind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  gap: 8px;
+}
+.fb__kind {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.fb__kind:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+}
+.fb__kind:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fb__kind[data-active] {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.fb__kind-name {
+  font: 600 13px var(--font-body);
+  color: var(--text);
+}
+.fb__kind-what {
+  font: 400 11px/1.45 var(--font-body);
+  color: var(--faint);
+}
+
+/* ── fields ───────────────────────────────────────────────────────────── */
+
+.fb__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fb__input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 13px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  font: 400 13.5px/1.55 var(--font-body);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.fb__input::placeholder {
+  color: var(--faint);
+}
+.fb__input:hover {
+  border-color: var(--border-hover);
+}
+.fb__input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.fb__textarea {
+  resize: vertical;
+  min-height: 108px;
+}
+
+.fb__hint {
+  margin: 6px 0 0;
+  font: 400 11.5px/1.5 var(--font-body);
+  color: var(--faint);
+}
+.fb__hint[data-warn] {
+  color: var(--warm);
+}
+
+.fb__error {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--warm) 48%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 10%, transparent);
+  font: 400 12.5px/1.55 var(--font-body);
+  color: var(--text);
+}
+
+/* ── rows and buttons ─────────────────────────────────────────────────── */
+
+.fb__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fb__row--end {
+  justify-content: flex-end;
+}
+.fb__signed {
+  font: 400 11.5px var(--font-body);
+  color: var(--faint);
+}
+
+.fb__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border-hover);
+  background-color: transparent;
+  color: var(--text);
+  font: 600 13px var(--font-body);
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease,
+    var(--t-theme);
+}
+.fb__btn:hover:not(:disabled) {
+  background-color: var(--accent-soft);
+}
+.fb__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fb__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fb__btn--primary {
+  border-color: transparent;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.fb__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  background-color: var(--invert-bg);
+}
+
+/* ── the reply thread ─────────────────────────────────────────────────── */
+
+.fb__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 2px;
+}
+.fb__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fb__quote {
+  margin: 0;
+  font: 400 12px/1.6 var(--font-body);
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.fb__quote-tag {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--accent-soft);
+  font: 600 9px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fb__quote-text {
+  font-style: italic;
+}
+.fb__reply {
+  padding: 12px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--live-border);
+  background-color: var(--live-bg);
+}
+.fb__reply-body {
+  margin: 0;
+  font: 400 13.5px/1.65 var(--font-body);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fb__reply-by {
+  margin: 8px 0 0;
+  font: 600 11.5px var(--font-body);
+  color: var(--live-fg);
+}
+
+@media (max-width: 420px) {
+  .fb__row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .fb__row .fb__btn {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb__card {
+    animation: none;
+  }
+}

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
-import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevOverview } from './api'
+import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevFeedback, DevOverview } from './api'
 import { ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
 import {
+  LedgerTag,
   Panel,
   RefreshRail,
   SectionControls,
@@ -14,6 +15,7 @@ import {
   Toasts,
   useToasts,
 } from './controls'
+import { FeedbackTab, feedbackHay } from './FeedbackTab'
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
@@ -44,10 +46,11 @@ import './DevConsole.css'
 /** The server clamps every ledger read to this, so asking for more is a lie. */
 const LEDGER_CAP = 1000
 
-type Tab = 'accounts' | 'purchases' | 'audit'
+type Tab = 'accounts' | 'feedback' | 'purchases' | 'audit'
 
 const TABS: { id: Tab; label: string; what: string }[] = [
   { id: 'accounts', label: 'Accounts', what: 'Find anyone, and change anything about them.' },
+  { id: 'feedback', label: 'Feedback', what: 'What users sent us from inside the apps, and our replies.' },
   { id: 'purchases', label: 'Purchases', what: 'Every payment and free grant TDG has recorded.' },
   { id: 'audit', label: 'Audit Log', what: 'Every action a developer has taken, in every app.' },
 ]
@@ -106,6 +109,9 @@ function DevConsoleBody({
   const [allAudit, setAllAudit] = useState<DevAuditRow[]>([])
   const [ledgerState, setLedgerState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [source, setSource] = useState<string>('all')
+
+  const [allFeedback, setAllFeedback] = useState<DevFeedback[]>([])
+  const [feedbackState, setFeedbackState] = useState<'loading' | 'ready' | 'error'>('loading')
 
   const [busy, setBusy] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
@@ -226,6 +232,24 @@ function DevConsoleBody({
     }
   }, [])
 
+  /** The whole feedback ledger, like the two above: read once, filtered in
+   *  memory, so the tab is already populated by the time it is clicked. */
+  const feedbackSeq = useRef(0)
+  const loadFeedback = useCallback(async () => {
+    const seq = ++feedbackSeq.current
+    setFeedbackState('loading')
+    try {
+      const list = await api.getFeedback(null, LEDGER_CAP)
+      if (seq !== feedbackSeq.current) return false
+      setAllFeedback(list)
+      setFeedbackState('ready')
+      return true
+    } catch {
+      if (seq === feedbackSeq.current) setFeedbackState('error')
+      return false
+    }
+  }, [])
+
   /* ── Refresh: the whole page, without losing the page ─────────────────
    *
    * The five reads above, together, and NOT a reload. A reload would answer the
@@ -244,7 +268,7 @@ function DevConsoleBody({
     async (scope: 'boot' | 'again') => {
       const here = scope === 'again' ? captureAnchor() : null
       if (scope === 'again') setRefreshing(true)
-      const reads: Promise<boolean>[] = [loadOverview(), loadCatalog(), loadLedger()]
+      const reads: Promise<boolean>[] = [loadOverview(), loadCatalog(), loadLedger(), loadFeedback()]
       if (scope === 'again') reads.push(loadRoster(query), loadHistory(selectedId))
       const landed = await Promise.all(reads)
       // Only when something actually came back. A rail that says "read 1m ago"
@@ -258,12 +282,19 @@ function DevConsoleBody({
         holdAnchor(here, { ms: 900 })
       }
     },
-    [loadOverview, loadCatalog, loadLedger, loadRoster, loadHistory, query, selectedId],
+    [loadOverview, loadCatalog, loadLedger, loadFeedback, loadRoster, loadHistory, query, selectedId],
   )
 
   const refresh = useCallback(() => {
     void readAll('again')
   }, [readAll])
+
+  /** After a feedback write: the list, the tab badge and the overview tile all
+   *  re-read, so none of the three can claim a report is still new. */
+  const reloadFeedback = useCallback(async () => {
+    const landed = await Promise.all([loadFeedback(), loadOverview()])
+    if (landed.some(Boolean)) setReadAt(Date.now())
+  }, [loadFeedback, loadOverview])
 
   /* ── boot, and the two reads with a life of their own ─────────────────── */
 
@@ -395,6 +426,29 @@ function DevConsoleBody({
     [allAudit, terms],
   )
 
+  /*
+   * Counted here only for the toolbar hint; the tab filters and sorts its own
+   * copy. The haystack is FeedbackTab's own, so the hint and the tab cannot
+   * disagree about what matches.
+   */
+  const shownFeedback = useMemo(
+    () =>
+      allFeedback.filter((f) =>
+        matchesTerms(
+          feedbackHay(f, stores.find((s) => s.id === f.app)?.title ?? prettyId(f.app)),
+          terms,
+        ),
+      ),
+    [allFeedback, stores, terms],
+  )
+
+  /** Reports nobody has looked at, for the badge on the tab itself: a report
+   *  waiting behind an unopened tab is a report nobody knows about. */
+  const feedbackNew = useMemo(
+    () => allFeedback.filter((f) => f.status === 'new').length,
+    [allFeedback],
+  )
+
   /* ── keeping the page you were reading ────────────────────────────────
    *
    * The restore runs first and the saving waits for it: writing the view while
@@ -410,6 +464,7 @@ function DevConsoleBody({
     if (!searching) return null
     const parts = [
       shownRows.length && `${shownRows.length} account${shownRows.length === 1 ? '' : 's'}`,
+      shownFeedback.length && `${shownFeedback.length} report${shownFeedback.length === 1 ? '' : 's'}`,
       shownEvents.length && `${shownEvents.length} purchase${shownEvents.length === 1 ? '' : 's'}`,
       shownAudit.length && `${shownAudit.length} action${shownAudit.length === 1 ? '' : 's'}`,
     ].filter(Boolean)
@@ -477,7 +532,14 @@ function DevConsoleBody({
               aria-current={tab === t.id ? 'page' : undefined}
               onClick={() => setTab(t.id)}
             >
-              <span className="dev__tab-label">{t.label}</span>
+              <span className="dev__tab-top">
+                <span className="dev__tab-label">{t.label}</span>
+                {/* A report waiting behind an unopened tab is a report nobody
+                    knows about, so the tab itself says when there is one. */}
+                {t.id === 'feedback' && feedbackNew > 0 && (
+                  <Tag tone="warn">{feedbackNew} NEW</Tag>
+                )}
+              </span>
               <span className="dev__tab-what">{t.what}</span>
             </button>
           ))}
@@ -537,6 +599,24 @@ function DevConsoleBody({
               )}
             </div>
           </div>
+        )}
+
+        {tab === 'feedback' && (
+          <FeedbackTab
+            rows={allFeedback}
+            state={feedbackState}
+            catalog={catalog}
+            stores={stores}
+            push={push}
+            reload={reloadFeedback}
+            onOpenAccount={(id) => {
+              // Open them; do not filter the page down to their id. Same rule
+              // as the Purchases ledger's name links.
+              setTab('accounts')
+              setQuery('')
+              setSelectedId(id)
+            }}
+          />
         )}
 
         {tab === 'purchases' && (
@@ -690,26 +770,6 @@ function DevConsoleBody({
   )
 }
 
-/** A shut section's tag is all it says about itself, so it never reports zero
- *  while the real answer is still in flight. */
-function LedgerTag({
-  state,
-  n,
-  noun,
-}: {
-  state: 'loading' | 'ready' | 'error'
-  n: number
-  noun: string
-}) {
-  if (state === 'loading') return <Tag>READING</Tag>
-  if (state === 'error') return <Tag tone="bad">UNREADABLE</Tag>
-  return (
-    <Tag tone={n ? 'ok' : 'plain'}>
-      {n} {noun}
-    </Tag>
-  )
-}
-
 /* ── the numbers ───────────────────────────────────────────────────────── */
 
 /**
@@ -745,6 +805,12 @@ function Overview({ overview: o, stores }: { overview: DevOverview | null; store
         { label: 'Active (7d)', value: String(o.active_7d), what: 'signed in this week' },
         { label: 'Core Paid', value: String(o.core_paid), what: 'above the free tier' },
         { label: 'Makullveny', value: String(o.mak_paid), what: 'own something in Mak' },
+        {
+          label: 'Feedback',
+          value: String(o.feedback_new),
+          what: 'new reports waiting',
+          tone: o.feedback_new ? 'warn' : undefined,
+        },
         ...Object.entries(o.store_owners ?? {})
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([id, n]) => ({
@@ -773,11 +839,11 @@ function Overview({ overview: o, stores }: { overview: DevOverview | null; store
             </div>
           ))
           : // As many placeholders as there will be tiles, so the row does not
-            // reflow when the real numbers land: nine fixed, plus one per app.
+            // reflow when the real numbers land: ten fixed, plus one per app.
             // Every app, not only the ones confirmed on the server — this
             // branch runs while the catalog is still in flight, when the shop's
             // list is the only count available and is the right guess.
-            Array.from({ length: 9 + stores.length }, (_, i) => (
+            Array.from({ length: 10 + stores.length }, (_, i) => (
               <div key={i} className="dev__stat dev__stat--skeleton" aria-hidden="true" />
             ))}
       </div>

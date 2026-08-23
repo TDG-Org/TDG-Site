@@ -1300,6 +1300,335 @@
   text-align: right;
 }
 
+/* ── the feedback table ────────────────────────────────────────────────────
+   One report per row, one column per fact, and the two grids — the sortable
+   header and every row — take their tracks from ONE variable so they cannot
+   drift apart. The row is a button (the report opens over the page) with the
+   copy control OUTSIDE it as a sibling cell, because a button inside a button
+   is not HTML and an overlay z-index dance is how a switch gets covered.     */
+
+.dev__fb-filters {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.dev__fb-copyall {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.dev__fb-table {
+  /* when · type · app · version · os · from · message · status */
+  --fb-cols: 92px 96px 96px 56px 120px minmax(130px, 0.9fr) minmax(160px, 1.6fr) 84px;
+  --fb-copy-w: 56px;
+  --fb-pad-x: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--dev-radius);
+  background-color: var(--bg2);
+  overflow: hidden;
+}
+
+.dev__fb-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
+}
+.dev__fb-head-main {
+  display: grid;
+  grid-template-columns: var(--fb-cols);
+  gap: 10px;
+  min-width: 0;
+  padding: 0 0 0 var(--fb-pad-x);
+}
+.dev__fb-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 0;
+  text-align: left;
+  border: none;
+  background: none;
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.dev__fb-sort:hover {
+  color: var(--text);
+}
+.dev__fb-sort:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.dev__fb-sort[data-active] {
+  color: var(--accent);
+}
+/* The caret is reserved on every header, invisible until that column sorts:
+   a caret that appears from nothing shifts its neighbours sideways. */
+.dev__fb-sort-caret {
+  flex: none;
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.dev__fb-sort[data-active] .dev__fb-sort-caret {
+  opacity: 1;
+}
+.dev__fb-sort[data-dir='asc'] .dev__fb-sort-caret {
+  transform: rotate(180deg);
+}
+
+.dev__fb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dev__fb-list .dev__empty {
+  margin: 10px;
+}
+
+.dev__fb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+.dev__fb-row:last-child {
+  border-bottom: none;
+}
+
+.dev__fb-open {
+  display: grid;
+  grid-template-columns: var(--fb-cols);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 0 9px var(--fb-pad-x);
+  text-align: left;
+  border: none;
+  background-color: transparent;
+  font: 400 12px var(--font-body);
+  color: var(--muted);
+  transition: background-color 0.2s ease;
+}
+.dev__fb-open:hover {
+  background-color: var(--accent-soft);
+}
+.dev__fb-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.dev__fb-when {
+  font: 500 11px var(--font-mono);
+  color: var(--faint);
+  white-space: nowrap;
+}
+.dev__fb-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.dev__fb-clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev__fb-from {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dev__fb-from-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font: 600 12.5px var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev__fb-from-id {
+  font: 500 10px var(--font-mono);
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev__fb-msg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.dev__fb-copycell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 6px;
+}
+
+/* ── one report, opened over the page ─────────────────────────────────── */
+
+/* Over the Refresh rail (190) and under the toasts (200): a toast is how the
+   dialog's own writes report back, so it must stay readable over the scrim. */
+.dev__fbd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 195;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.dev__fbd {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(760px, 100%);
+  max-height: min(86vh, calc(100svh - 32px));
+  overflow-y: auto;
+  padding: var(--dev-pad);
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border-hover);
+  background-color: var(--bg2);
+  box-shadow: var(--card-shadow);
+  animation: devToastIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dev__fbd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dev__fbd-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dev__fbd-title {
+  margin: 0;
+  font: 700 19px var(--font-display);
+  color: var(--text);
+}
+.dev__fbd-x {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.dev__fbd-x:hover {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+.dev__fbd-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dev__fbd-sub {
+  margin: -8px 0 0;
+  font: 400 12px var(--font-body);
+  color: var(--faint);
+}
+
+.dev__fbd-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dev__fbd-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dev__fbd-msg {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  font: 400 13px/1.65 var(--font-body);
+  color: var(--text);
+  /* The report is somebody's own writing: their line breaks are theirs. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dev__fbd-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 13px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--accent-soft);
+}
+.dev__fbd-reply-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font: 400 11.5px var(--font-body);
+  color: var(--muted);
+}
+.dev__fbd-reply-top strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.dev__fbd-reply-top .dev__copy {
+  margin-left: auto;
+}
+.dev__fbd-reply-when {
+  color: var(--faint);
+}
+.dev__fbd-reply-body {
+  margin: 0;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dev__fbd-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dev__fbd-actions .dev__select-wrap {
+  width: 150px;
+}
+
+/* The label row above a tab's title, so the Feedback tab can carry its own
+   "3 NEW" without the two texts fighting for one line. */
+.dev__tab-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 /* ── toasts ───────────────────────────────────────────────────────────── */
 
 .dev__toasts {
@@ -1408,6 +1737,24 @@
   }
   .dev__fact-value {
     text-align: left;
+  }
+  /* The feedback table stacks the way the ledgers do: one report reads as a
+     small card, and the sort row wraps into a strip of buttons. */
+  .dev__fb-head-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    padding: 4px var(--fb-pad-x);
+  }
+  .dev__fb-open {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .dev__fb-msg {
+    white-space: normal;
+  }
+  .dev__fbd-actions .dev__select-wrap {
+    width: 100%;
   }
 }
 
@@ -1551,10 +1898,12 @@
   .dev__btn-spinner {
     animation: none;
   }
-  .dev__toast {
+  .dev__toast,
+  .dev__fbd {
     animation: none;
   }
-  .dev__switch-knob {
+  .dev__switch-knob,
+  .dev__fb-sort-caret {
     transition: none;
   }
 }

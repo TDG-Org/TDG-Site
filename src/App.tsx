@@ -11,6 +11,8 @@ import { Footer } from './components/Footer'
 import { Cursor } from './components/Cursor'
 import { Store } from './components/Store'
 import { AuthModal } from './components/AuthModal'
+import { FeedbackDialog } from './feedback/FeedbackDialog'
+import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 import { storeShelfId, takeOrigin, useRoute } from './lib/route'
@@ -46,6 +48,7 @@ export default function App() {
   useOffscreenPause()
   const { oauthError, recovery, isAdmin } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const route = useRoute()
 
   /*
@@ -105,7 +108,7 @@ export default function App() {
 
   return (
     <div className="page">
-      <Nav onOpenAuth={() => setAuthOpen(true)} />
+      <Nav onOpenAuth={() => setAuthOpen(true)} onOpenFeedback={() => setFeedbackOpen(true)} />
       {showDev ? (
         <main>
           {/* The chunk is local and small; the placeholder only stops the
@@ -146,6 +149,9 @@ export default function App() {
       <Footer />
       <Cursor />
       <AuthModal open={authOpen} initialTab="login" onClose={() => setAuthOpen(false)} />
+      <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      {/* Renders nothing until a developer's reply is actually waiting. */}
+      <ReplyInbox />
     </div>
   )
 }

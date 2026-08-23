@@ -295,7 +295,7 @@ export function Fact({
   )
 }
 
-export function CopyButton({ value }: { value: string }) {
+export function CopyButton({ value, label }: { value: string; label?: string }) {
   const [done, setDone] = useState(false)
   const timer = useRef<number | null>(null)
 
@@ -311,7 +311,9 @@ export function CopyButton({ value }: { value: string }) {
   }, [value])
 
   return (
-    <button type="button" className="dev__copy" onClick={copy} aria-label={`Copy ${value}`}>
+    // `label` for a value too long to be its own name: "Copy report #142" is
+    // hearable, a five-paragraph aria-label read out in full is not.
+    <button type="button" className="dev__copy" onClick={copy} aria-label={label ?? `Copy ${value}`}>
       {done ? 'Copied' : 'Copy'}
     </button>
   )
@@ -582,6 +584,26 @@ export function Tag({
     <span className="dev__tag" data-tone={tone} title={title}>
       {children}
     </span>
+  )
+}
+
+/** A shut list-section's tag is all it says about itself, so it never reports
+ *  zero while the real answer is still in flight. Shared by every ledger tab. */
+export function LedgerTag({
+  state,
+  n,
+  noun,
+}: {
+  state: 'loading' | 'ready' | 'error'
+  n: number
+  noun: string
+}) {
+  if (state === 'loading') return <Tag>READING</Tag>
+  if (state === 'error') return <Tag tone="bad">UNREADABLE</Tag>
+  return (
+    <Tag tone={n ? 'ok' : 'plain'}>
+      {n} {noun}
+    </Tag>
   )
 }
 

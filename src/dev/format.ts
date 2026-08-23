@@ -149,13 +149,45 @@ export function untilFromHours(hours: number | null): string | null {
   return hours == null ? null : new Date(Date.now() + hours * HOUR).toISOString()
 }
 
-/** `pro-export` → `Pro Export`. Pack and theme ids are kebab-case everywhere. */
+/** `pro-export` → `Pro Export`. Pack and theme ids are kebab-case everywhere.
+ *  `tdg` keeps its capitals: it is an acronym wherever it appears, and
+ *  `tdg-site` reading as "Tdg Site" would misspell the project's own name. */
 export function prettyId(id: string): string {
   return id
     .split(/[-_]/)
     .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .map((w) => (w.toLowerCase() === 'tdg' ? 'TDG' : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(' ')
+}
+
+/**
+ * `4d300dc5…f226` — a uuid at the width a table column can afford.
+ *
+ * Both ends rather than a prefix alone: sequentially created accounts share
+ * long prefixes, so the tail is what actually tells two of them apart at a
+ * glance. Copying always copies the full id; this is only for reading.
+ */
+export function shortId(id: string | null | undefined): string {
+  if (!id) return '—'
+  return id.length <= 13 ? id : `${id.slice(0, 8)}…${id.slice(-4)}`
+}
+
+/** The tag tone for a feedback kind. Unknown kinds render plain rather than
+ *  vanishing: a kind added on the server tomorrow is still a real report. */
+export function feedbackKindTone(kind: string): 'plain' | 'ok' | 'warn' | 'bad' | 'hot' {
+  if (kind === 'bug') return 'bad'
+  if (kind === 'suggestion') return 'ok'
+  if (kind === 'question') return 'warn'
+  if (kind === 'praise') return 'hot'
+  return 'plain'
+}
+
+/** The tag tone for a feedback status: 'new' asks for attention, 'replied'
+ *  says the ball is with them, the rest sit quiet. */
+export function feedbackStatusTone(status: string): 'plain' | 'ok' | 'warn' | 'bad' | 'hot' {
+  if (status === 'new') return 'warn'
+  if (status === 'replied') return 'ok'
+  return 'plain'
 }
 
 /** The name to call somebody, in the order a human would reach for. */

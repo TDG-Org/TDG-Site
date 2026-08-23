@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { version as siteVersion } from './package.json'
 
 /* GitHub Pages serves a project site from https://<org>.github.io/<repo>/, so a
    production build has to be rooted at /TDG-Site/. Dev stays at /, and `vite
@@ -9,6 +10,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === 'production' ? '/TDG-Site/' : '/',
+  /* package.json is this repo's only version carrier (AGENTS.md §6), and
+     nothing on the PAGE prints it — this constant is how the number rides
+     along invisibly where it earns its keep: a feedback report that says
+     which deploy the reporter was on. See src/feedback/api.ts. */
+  define: { __TDG_SITE_VERSION__: JSON.stringify(siteVersion) },
   server: { port: 5180 },
   build: {
     rollupOptions: {

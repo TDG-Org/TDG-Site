@@ -33,7 +33,11 @@ One `useRoute()` call decides which of five things is on screen:
 | `#/app/<slug>` | `AppPage`, lazily |
 | `#/dev` | `DevConsole`, lazily, **and only for a signed-in TDG developer** |
 
-Nav, Footer, Cursor and AuthModal render on every route.
+Nav, Footer, Cursor and AuthModal render on every route, and so do the two
+feedback surfaces: `FeedbackDialog` (opened from Send Feedback in the account
+menu) and `ReplyInbox`, which renders nothing until a developer's reply is
+actually waiting for the signed-in account. See
+[`feedback/README.md`](feedback/README.md).
 
 **Three lazy chunks, for two different reasons.** `AppPage` and `About` are a
 lot of prose, and a visitor who reads the landing page and leaves should not
@@ -58,6 +62,7 @@ the hash is the one that was left — see `lib/route.ts`.
 | `lib/` | Routing, the frame loop, sections state, Supabase, asset paths | [→](lib/README.md) |
 | `hooks/` | Reveal, tilt, parallax, offscreen pause | [→](hooks/README.md) |
 | `auth/` | Sign-in, the profile, session revocation, refusal wording | [→](auth/README.md) |
+| `feedback/` | Send Feedback, and the panel that delivers our replies | [→](feedback/README.md) |
 | `store/` | Which packs an account owns | [→](store/README.md) |
 | `theme/` | The theme wave and `data-theme` | [→](theme/README.md) |
 | `dev/` | The internal Developer console | [→](dev/README.md) |

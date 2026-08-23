@@ -50,6 +50,7 @@ protection is RLS on the server.
 | `src/lib/` | Routing, the animation loop, sections state, Supabase client, asset paths. | [`src/lib/README.md`](src/lib/README.md) |
 | `src/hooks/` | The four motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
 | `src/auth/` | Sign-in, the profile, session revocation, and what a refusal says. | [`src/auth/README.md`](src/auth/README.md) |
+| `src/feedback/` | Send Feedback, and the panel that delivers our replies. | [`src/feedback/README.md`](src/feedback/README.md) |
 | `src/store/` | Reading which packs an account owns. | [`src/store/README.md`](src/store/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
 | `src/dev/` | The internal Developer console at `#/dev`. | [`src/dev/README.md`](src/dev/README.md) |

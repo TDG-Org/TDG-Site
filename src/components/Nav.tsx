@@ -60,7 +60,15 @@ function ThemeToggle() {
  * this share one bar and are both open-able at once on a phone. One owner
  * means opening either closes the other, instead of the two overlapping.
  */
-function AccountMenu({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+function AccountMenu({
+  open,
+  setOpen,
+  onOpenFeedback,
+}: {
+  open: boolean
+  setOpen: (v: boolean) => void
+  onOpenFeedback: () => void
+}) {
   const { user, profile, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
   const ref = useRef<HTMLDivElement | null>(null)
@@ -98,6 +106,18 @@ function AccountMenu({ open, setOpen }: { open: boolean; setOpen: (v: boolean) =
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
+        {/* Feedback needs the account (a reply has to reach its sender), so
+            its door lives with the account things. See src/feedback/. */}
+        <button
+          type="button"
+          className="nav__account-feedback"
+          onClick={() => {
+            setOpen(false)
+            onOpenFeedback()
+          }}
+        >
+          Send Feedback
+        </button>
         {/* The only way back once the tab is hidden, so it lives here rather
             than on the console page itself. A switch you can only reach
             through the thing it hides is a switch you cannot un-flip. */}
@@ -138,7 +158,13 @@ function isCurrent(href: string, route: Route): boolean {
   return false
 }
 
-export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
+export function Nav({
+  onOpenAuth,
+  onOpenFeedback,
+}: {
+  onOpenAuth: () => void
+  onOpenFeedback: () => void
+}) {
   const { theme } = useTheme()
   const { status, isAdmin } = useAuth()
   const devMode = useDevMode()
@@ -293,6 +319,7 @@ export function Nav({ onOpenAuth }: { onOpenAuth: () => void }) {
             <AccountMenu
               open={openPanel === 'account'}
               setOpen={(v) => setOpenPanel(v ? 'account' : null)}
+              onOpenFeedback={onOpenFeedback}
             />
           ) : (
             <button type="button" className="nav__auth-btn" onClick={onOpenAuth}>
