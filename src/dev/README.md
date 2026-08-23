@@ -204,8 +204,9 @@ account can call from any app. The tab shows the whole ledger: when, what kind,
 which app and version, the OS, who sent it (name, `@username`, compacted id),
 whatever contact line they volunteered, the message, and where the report
 stands. The migration and the app-side contract live in
-`supabase/migrations/20260823170000_user_feedback.sql`; the brief an app's
-Claude session needs to join in is `docs/feedback-app-prompt.md`.
+`supabase/migrations/20260823170000_user_feedback.sql` and
+`20260823210000_feedback_rate_limits.sql`; the brief an app's Claude session
+needs to join in is `docs/feedback-app-prompt.md`.
 
 - **Every column sorts** and three dropdowns narrow by type, app and status.
   The lists they offer come from the server's catalog UNIONED with what the
@@ -226,6 +227,14 @@ Claude session needs to join in is `docs/feedback-app-prompt.md`.
   which keeps the record. Both write the audit log.
 - The tab itself carries a `n NEW` tag and the overview a Feedback tile, so a
   waiting report is visible from every tab, not only this one.
+- **What a sender is allowed to send**, so a thin-looking ledger is not read
+  as a broken form: 60 seconds between reports, 5 an hour, 10 a day, per
+  account, and an identical resend inside 10 minutes is folded into the
+  original rather than filed twice. One consequence worth knowing at the
+  Delete button: the counts are taken from the rows, so deleting somebody's
+  spam also hands their allowance back. For a repeat offender, suspend the
+  account first and delete after — otherwise the tidying is what lets them
+  start again.
 
 This site is also a submitter: **Send Feedback** in the account menu files
 under the app id `tdg-site`, and `src/feedback/ReplyInbox.tsx` is the

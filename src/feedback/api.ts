@@ -69,6 +69,139 @@ export async function submitFeedback(input: {
   return { id: data as number, error: null }
 }
 
+/**
+ * Where this account stands against the feedback limits, ready to render.
+ *
+ * The server owns the numbers (`tdg_feedback_limits()` in
+ * 20260823210000_feedback_rate_limits.sql) and the gate; this is only what the
+ * form is allowed to SAY about them, so a wall is never met without warning.
+ * Nothing here decides whether a send is permitted — see `fetchQuota`.
+ */
+export type FeedbackQuota = {
+  sentHour: number
+  perHour: number
+  sentDay: number
+  perDay: number
+  cooldownSeconds: number
+  reason: 'ok' | 'cooldown' | 'hour' | 'day'
+  /**
+   * When the next report may go, on the LOCAL clock — null when that is now.
+   *
+   * The server sends an absolute instant plus its own `now`, and the two are
+   * subtracted here rather than compared to `Date.now()`, so a machine whose
+   * clock is a day out still counts down the right number of seconds. A raw
+   * server timestamp read against a wrong local clock is how a countdown ends
+   * up finishing in the past or never.
+   */
+  unblockAt: number | null
+}
+
+type QuotaRow = {
+  sent_hour: number
+  per_hour: number
+  sent_day: number
+  per_day: number
+  cooldown_seconds: number
+  reason: string
+  wait_words: string | null
+  next_allowed_at: string | null
+  server_now: string
+}
+
+/**
+ * Read the caller's standing. A failed read answers null and the form says
+ * nothing about limits — like the inbox, this is opportunistic: it exists to
+ * warn, and a warning that could not be fetched must never become an error
+ * over a form that still works. The send itself is gated in Postgres, so a
+ * null here costs a sentence, never the boundary.
+ */
+export async function fetchQuota(): Promise<FeedbackQuota | null> {
+  const { data, error } = await supabase.rpc('tdg_feedback_quota')
+  if (error) return null
+  const row = (data as QuotaRow[] | null)?.[0]
+  if (!row) return null
+
+  const next = row.next_allowed_at ? Date.parse(row.next_allowed_at) : NaN
+  const server = Date.parse(row.server_now)
+  const ahead = Number.isFinite(next) && Number.isFinite(server) ? next - server : NaN
+
+  return {
+    sentHour: row.sent_hour,
+    perHour: row.per_hour,
+    sentDay: row.sent_day,
+    perDay: row.per_day,
+    cooldownSeconds: row.cooldown_seconds,
+    reason: (['cooldown', 'hour', 'day'] as const).find((r) => r === row.reason) ?? 'ok',
+    unblockAt: Number.isFinite(ahead) && ahead > 0 ? Date.now() + ahead : null,
+  }
+}
+
+/**
+ * "43 seconds" · "12 minutes" · "3 hours", rounded UP so a wait we quote is
+ * never shorter than the wait we enforce.
+ *
+ * A deliberate twin of `tdg_feedback_wait_words()` in the migration, which
+ * words the server's own refusals. Both exist because a refusal is a sentence
+ * the server writes once, and a countdown is a sentence that has to be rewritten
+ * every second — the server cannot tick. Change one and change the other; the
+ * thresholds are the whole of the contract between them.
+ */
+export function waitWords(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds))
+  if (s < 60) return `${s} second${s === 1 ? '' : 's'}`
+  if (s < 5400) {
+    const m = Math.ceil(s / 60)
+    return `${m} minute${m === 1 ? '' : 's'}`
+  }
+  const h = Math.ceil(s / 3600)
+  return `${h} hour${h === 1 ? '' : 's'}`
+}
+
+/**
+ * What the limits look like from inside the form — the whole of the copy, so
+ * the words live beside the call that fetches them rather than inside a
+ * component (the same reason `FEEDBACK_KINDS` is here).
+ *
+ * This says NOTHING about whether a send will be allowed; the gate is
+ * `tdg_feedback_submit` in Postgres. It only puts the wall on screen before
+ * somebody walks into it. Three faces, and no fourth:
+ *
+ *   · blocked  — a warm notice naming which limit, counting down in words.
+ *   · nearly   — a faint line once three or fewer reports are left today.
+ *   · fine     — nothing at all. A form that opens by telling a first-time
+ *                visitor about a quota reads as though we expect trouble.
+ *
+ * `justSent` swaps one clause: "you can send another in a minute" answers a
+ * report that just landed, "one report at a time" answers a form somebody is
+ * still filling in. Sentence case throughout — this is helper text.
+ */
+export function quotaLine(
+  quota: FeedbackQuota | null,
+  msLeft: number,
+  justSent: boolean,
+): string | null {
+  if (!quota) return null
+
+  if (msLeft > 0) {
+    const inWords = waitWords(msLeft / 1000)
+    if (quota.reason === 'day') {
+      return `That's ${quota.perDay} reports in a day — thank you. The next one can go in ${inWords}.`
+    }
+    if (quota.reason === 'hour') {
+      return `That's ${quota.perHour} reports in an hour, which is our limit. The next one can go in ${inWords}.`
+    }
+    return justSent
+      ? `You can send another report in ${inWords}.`
+      : `One report at a time — you can send the next one in ${inWords}.`
+  }
+
+  const left = quota.perDay - quota.sentDay
+  if (left > 0 && left <= 3) {
+    return `${left} more report${left === 1 ? '' : 's'} today.`
+  }
+  return null
+}
+
 /** One reply waiting to be shown, with the report it answers for context. */
 export type InboxReply = {
   reply_id: number

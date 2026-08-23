@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { FEEDBACK_KINDS, submitFeedback } from './api'
+import { FEEDBACK_KINDS, fetchQuota, quotaLine, submitFeedback, type FeedbackQuota } from './api'
 import './Feedback.css'
 
 /**
@@ -30,6 +30,8 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentId, setSentId] = useState<number | null>(null)
+  const [quota, setQuota] = useState<FeedbackQuota | null>(null)
+  const [tick, setTick] = useState(() => Date.now())
   const messageRef = useRef<HTMLTextAreaElement | null>(null)
 
   // A fresh opening is a fresh report. Reset on open, not on close, so the
@@ -43,6 +45,49 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     setError(null)
     setSentId(null)
   }, [open])
+
+  // Where this account stands against the limits, asked once per opening and
+  // again after each send. Signed-out openings never ask: the answer would be
+  // "sign in first", which the dialog is already saying.
+  useEffect(() => {
+    if (!open || status !== 'signedIn') {
+      setQuota(null)
+      return
+    }
+    let live = true
+    void fetchQuota().then((q) => {
+      if (!live) return
+      // Re-anchor the clock in the same breath as the answer. This dialog is
+      // mounted for the whole session with open={false}, so a `tick` seeded at
+      // mount is as old as the visit — and `unblockAt - tick` would then read a
+      // 60-second wait as however long the page had been open. The countdown
+      // must never start from a timestamp older than the quota it counts.
+      setTick(Date.now())
+      setQuota(q)
+    })
+    return () => {
+      live = false
+    }
+  }, [open, status, sentId])
+
+  // One second per second, and ONLY while a countdown is actually running.
+  //
+  // Rule 9 sends animation through the shared frame loop; this is a clock, not
+  // animation, and putting it there would hold that loop awake at 60 Hz to
+  // repaint a number sixty times less often than it ticks — the exact waste the
+  // rule exists to prevent. So: a plain interval, born when a wait begins and
+  // dead the moment it ends or the dialog closes.
+  const msLeft = quota?.unblockAt ? quota.unblockAt - tick : 0
+  useEffect(() => {
+    const until = quota?.unblockAt
+    if (!open || !until || until <= Date.now()) return
+    const id = window.setInterval(() => {
+      const now = Date.now()
+      setTick(now)
+      if (now >= until) window.clearInterval(id)
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [open, quota])
 
   useEffect(() => {
     if (!open) return
@@ -62,6 +107,12 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
 
   const whoami = profile?.display_name || (profile?.username ? `@${profile.username}` : user?.email)
 
+  // One line, two contexts. The cooldown wording differs by a clause because
+  // "you can send another in a minute" answers a report that just landed,
+  // while "one report at a time" answers a form somebody is still filling in.
+  const formLine = quotaLine(quota, msLeft, false)
+  const sentLine = quotaLine(quota, msLeft, true)
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (sending) return
@@ -80,6 +131,15 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     setSending(false)
     if (answer.error) {
       setError(answer.error)
+      // The refusal may name a limit that started after this dialog opened —
+      // a report sent from one of the other TDG apps two minutes ago spends
+      // the same allowance. Re-ask, so a countdown appears under the sentence
+      // that just refused rather than leaving it as a flat no.
+      void fetchQuota().then((q) => {
+        if (!q) return
+        setTick(Date.now())
+        setQuota(q)
+      })
       return
     }
     setSentId(answer.id)
@@ -120,6 +180,11 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
               That went straight to the two of us, as report #{sentId}. If we reply, the answer
               opens right here the next time you visit.
             </p>
+            {sentLine && (
+              <p className="fb__quota" data-blocked={msLeft > 0 || undefined}>
+                {sentLine}
+              </p>
+            )}
             <div className="fb__row fb__row--end">
               <button type="button" className="fb__btn fb__btn--primary" onClick={onClose}>
                 Done
@@ -201,6 +266,12 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
                 </p>
               </div>
 
+              {formLine && (
+                <p className="fb__quota" data-blocked={msLeft > 0 || undefined}>
+                  {formLine}
+                </p>
+              )}
+
               {error && (
                 <p className="fb__error" role="alert">
                   {error}
@@ -209,6 +280,13 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
 
               <div className="fb__row">
                 <span className="fb__signed">Sending as {whoami}.</span>
+                {/* Deliberately still pressable during a wait. The gate is in
+                    Postgres and only there (rule 12); a button that disabled
+                    itself on a client-side clock would be one skewed machine
+                    away from refusing a report somebody is entitled to send,
+                    and the server's own refusal — which lands in the alert
+                    above, worded to be read — is the honest answer either
+                    way. The line above says the wait; this says nothing. */}
                 <button
                   type="submit"
                   className="fb__btn fb__btn--primary"

@@ -3,15 +3,16 @@
 The public half of TDG feedback, on this site. The other half — reading
 everybody's reports, replying, statuses — is the Developer console's Feedback
 tab (`src/dev/`), and the server contract both halves speak is
-`supabase/migrations/20260823170000_user_feedback.sql`.
+`supabase/migrations/20260823170000_user_feedback.sql` plus
+`20260823210000_feedback_rate_limits.sql`, which is where the limits live.
 
 > The house rules are in [`AGENTS.md`](../../AGENTS.md). This file is
 > authoritative for `src/feedback/`.
 
 | File | What it is |
 | --- | --- |
-| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack. Also the kind list's copy, the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
-| `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Opened from **Send Feedback** in the account menu (`Nav.tsx`). |
+| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
+| `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`). |
 | `ReplyInbox.tsx` | The startup panel that delivers a developer's reply, quoted next to what the person originally wrote. Checks once per sign-in; renders nothing when nothing waits. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
 
@@ -29,6 +30,28 @@ tab (`src/dev/`), and the server contract both halves speak is
    **not** ack — a reflex dismissal costs nothing, the reply returns next
    visit, and the panel offers Show Me Next Time to make that a choice.
 
+## What stops somebody sending a thousand
+
+Four rules, per account, all in Postgres — **60 seconds between reports, 5 an
+hour, 10 a day**, and an identical resend inside **10 minutes** that answers
+with the original report's id instead of writing a second row. The numbers are
+written once, in `tdg_feedback_limits()`, and the reasoning for each one is in
+the head of `20260823210000_feedback_rate_limits.sql`.
+
+This folder's job is only to **say** so. `fetchQuota()` asks where the account
+stands when the dialog opens, after every send, and again after any refusal;
+`quotaLine()` turns that into the one sentence the form shows, and the dialog
+ticks it down once a second while a wait is running. Three faces and no
+fourth: a warm notice with a countdown while blocked, a faint line once three
+or fewer reports are left today, and nothing at all above that — a form that
+opens by telling a first-time visitor about a quota reads as though we expect
+trouble.
+
+**Send stays pressable during a wait, on purpose.** The gate is in Postgres
+(rule 12) and a button that disabled itself on the browser's clock would be
+one wrong clock away from refusing a report somebody is entitled to file. The
+server's own refusal lands in the error alert, worded to be read.
+
 ## Rules this folder lives by
 
 - **Never import from `src/dev/`.** That folder is a lazy chunk only a
@@ -44,6 +67,10 @@ tab (`src/dev/`), and the server contract both halves speak is
   a migration first, then give it copy here.
 - The inbox is opportunistic: a failed read shows nothing and tries again next
   boot. It must never put an error over a page that otherwise works.
+- **The quota read is opportunistic in exactly the same way.** A failed
+  `fetchQuota()` answers null and the form simply says nothing about limits.
+  It exists to warn; a warning that could not be fetched must never become an
+  error over a form that still works.
 
 ## Giving another TDG app this feature
 

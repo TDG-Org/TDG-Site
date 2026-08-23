@@ -28,11 +28,12 @@ This is a contract with another system, so the surface is stated here rather
 than discoverable in this repo. Everything below is already applied and tested
 in tdg-core, the shared Supabase project this app signs into (the migration
 lives in the TDG-Site repo as
-`supabase/migrations/20260823170000_user_feedback.sql`; TDG-Site's
+`supabase/migrations/20260823170000_user_feedback.sql`, with the limits in
+`20260823210000_feedback_rate_limits.sql`; TDG-Site's
 `src/feedback/` folder is a working implementation of both halves if you want
 to read one).
 
-Four RPCs, all called with this app's existing signed-in Supabase client. The
+Five RPCs, all called with this app's existing signed-in Supabase client. The
 caller's identity comes from the JWT — there is no user id parameter anywhere,
 and no table access; the functions are the whole surface:
 
@@ -43,7 +44,7 @@ and no table access; the functions are the whole surface:
   suggestion · question · praise · other`. The message is 1–5,000 characters
   after trimming; the contact line is optional free text up to 200 ("My
   instagram is @tdgluke"); version and OS are clamped rather than refused.
-  There is a rate limit of 20 reports per account per 24 hours.
+  Rate limited — see below.
 - `tdg_feedback_inbox()` — every developer reply this account has NOT yet
   been shown, oldest first: `(reply_id, feedback_id, app, kind, message,
   body, replied_at, replied_by)`, where `message` is the user's original
@@ -52,6 +53,12 @@ and no table access; the functions are the whole surface:
   this one — show them all, and let `app` say where each came from.
 - `tdg_feedback_ack(p_reply_id bigint)` — "I showed it." Idempotent and
   silent.
+- `tdg_feedback_quota()` returns one row —
+  `(sent_hour, per_hour, sent_day, per_day, cooldown_seconds, reason,
+  wait_words, next_allowed_at, server_now)`. Where this account stands
+  against the limits, and what the limits are, so no app has to hardcode a
+  number in order to explain a wall. `reason` is `ok` · `cooldown` · `hour` ·
+  `day`; `next_allowed_at` is null when a report may go right now.
 - `tdg_feedback_mine(p_max_rows int default 100)` — the account's own
   reports with status and the whole exchange (`replies` is a jsonb array of
   `{id, body, at, by, seen_at}`). Optional: it exists so a "My Feedback"
@@ -59,11 +66,34 @@ and no table access; the functions are the whole surface:
   Use it if this app has a natural place for that; skip it if not.
 
 Every refusal these raise is a sentence written to be shown, prefixed
-`tdg: ` — strip the prefix and show the rest. All four require a signed-in
+`tdg: ` — strip the prefix and show the rest. All five require a signed-in
 session and answer "sign in first" without one. A request that never reached
 the server is not a refusal; tell those apart in the wording.
 
 Semantics that matter and are invisible from the signatures:
+
+- **The limits, and what they are for.** Per ACCOUNT, over rolling windows,
+  enforced in Postgres: **60 seconds between reports**, **5 per hour**, **10
+  per 24 hours**. On top of those, a byte-identical resend of the same kind
+  to the same app inside **10 minutes** is treated as the same report — it
+  returns the ORIGINAL report's id and writes nothing, because that case is
+  almost always one send arriving twice after its answer got lost. So a retry
+  after a timeout is safe and shows a receipt, not a refusal. Never build
+  your own retry loop on top of submit; it will spend a real person's
+  allowance on a network hiccup.
+- **Show the limit before it bites.** Call `tdg_feedback_quota()` when the
+  form opens and again after each send. While `next_allowed_at` is in the
+  future, say so where the reader is looking, counting down —
+  `next_allowed_at` minus `server_now` is the wait in milliseconds, and it is
+  subtracted that way on purpose so a machine with a wrong clock still counts
+  the right number of seconds. Once three or fewer reports are left for the
+  day, say that too. Below that, say nothing: a form that greets a first-time
+  visitor with a quota reads as though we expect trouble.
+- **Do not gate on it.** The quota read is for SAYING; the gate is in
+  Postgres. Leave the send control pressable during a wait — a client that
+  disables itself on its own clock is one skewed machine away from refusing a
+  report somebody is entitled to file, and the server's refusal is a sentence
+  written to be shown anyway.
 
 - A reply stays in the inbox until acked, so ack ONLY after it actually
   rendered and the user confirmed reading it — a deliberate press, not a
@@ -101,6 +131,9 @@ THE BAR
 - Every state has a face: sending, sent (with the report number), refused
   (the server's own sentence), and could-not-reach (which is not a refusal
   and must not read like one).
+- The limits have a face too: a wait is a live countdown in words next to
+  the send control, and the last few reports of the day are counted down
+  before the wall, not at it.
 - The reply panel appears at startup only when something is actually waiting,
   quotes the user's original words (a bare "fixed!" with no context is a
   puzzle), and a failed inbox read shows NOTHING — it tries again next
@@ -114,7 +147,10 @@ THE BAR
 DONE WHEN
 
 From a signed-in run of the real app: I send feedback with a chosen kind and
-no contact line, and it answers with a reference number. In the TDG Site
+no contact line, and it answers with a reference number. Sending a second one
+straight away is refused in a sentence I can read, with a countdown beside
+the button that runs down and lets me send again — and pressing Send twice
+on the SAME text gives me the same reference number, not two reports. In the TDG Site
 Developer console (`#/dev` → Feedback) that report shows this app's id, the
 right version and OS, and my account. After a reply is written there, the
 next launch of this app opens the panel with the reply quoted against what I

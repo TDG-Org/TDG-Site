@@ -213,6 +213,32 @@
   color: var(--warm);
 }
 
+/* What the limits look like: a faint aside while there is room, the same
+   shape in warm ink once a wait is running. One element, two weights — a
+   notice that changes SIZE as it changes meaning would move the button under
+   it, and a button that moves the moment you are told to wait reads as the
+   form arguing with you. So the padding, radius and border box are the same
+   in both states and only the ink and the border's opacity move. */
+.fb__quota {
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  font: 400 12.5px/1.55 var(--font-body);
+  color: var(--muted);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.fb__quota[data-blocked] {
+  border-color: color-mix(in srgb, var(--warm) 48%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 10%, transparent);
+  color: var(--text);
+}
+
 .fb__error {
   margin: 0;
   padding: 10px 13px;
