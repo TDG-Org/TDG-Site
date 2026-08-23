@@ -97,9 +97,18 @@ export async function fetchInbox(): Promise<InboxReply[]> {
  * Mark one reply as shown, fire-and-forget. Only called after the panel has
  * actually rendered it and the reader pressed Got It — never on a dismissal,
  * so closing without reading means it comes back next time.
+ *
+ * The `.then` is not decoration. A supabase-js query builder is LAZY: it only
+ * sends the request when something subscribes, so a bare
+ * `void supabase.rpc(…)` compiles, runs, and dispatches nothing at all.
+ * Found live: Got It closed the panel, the reply stayed unseen, and it came
+ * back on the next boot. The empty handlers are what fire the call.
  */
 export function ackReply(replyId: number): void {
-  void supabase.rpc('tdg_feedback_ack', { p_reply_id: replyId })
+  void supabase.rpc('tdg_feedback_ack', { p_reply_id: replyId }).then(
+    () => undefined,
+    () => undefined,
+  )
 }
 
 /**
