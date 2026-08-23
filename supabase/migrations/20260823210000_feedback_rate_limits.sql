@@ -2,6 +2,11 @@
 --  TDG user feedback · the rate limit, made real and made visible
 --  Applied 2026-08-23 to project ddbksawvchsauiuiwvrl (tdg-core).
 --  Amends 20260823170000_user_feedback.sql. Read that file first.
+--
+--  Two comments in here were reworded after applying, to match the text that
+--  actually went to the project — `pg_get_functiondef` stores a function's
+--  comments, so prose that differs is a file quietly disagreeing with the
+--  database. Every statement below is byte-for-byte what is running.
 -- ═══════════════════════════════════════════════════════════════════════════
 --
 --  WHAT WAS WRONG WITH ONE NUMBER
@@ -112,9 +117,9 @@ returns text language sql immutable as $$
     else               h::text || case when h = 1 then ' hour'   else ' hours'   end
   end
   from (
-    select greatest(1, coalesce(p_seconds, 0))                        as s,
-           greatest(1, (greatest(1, coalesce(p_seconds, 0)) + 59) / 60)   as m,
-           greatest(1, (greatest(1, coalesce(p_seconds, 0)) + 3599) / 3600) as h
+    select greatest(1, coalesce(p_seconds, 0))                                  as s,
+           greatest(1, (greatest(1, coalesce(p_seconds, 0)) + 59) / 60)         as m,
+           greatest(1, (greatest(1, coalesce(p_seconds, 0)) + 3599) / 3600)     as h
   ) t;
 $$;
 
@@ -223,11 +228,11 @@ begin
     raise exception 'tdg: keep the contact line under 200 characters' using errcode = '22023';
   end if;
 
-  --  BEFORE the gate, deliberately. A resend of the identical thing is nearly
-  --  always the same send arriving twice — the answer to the first one was
-  --  lost, so the person pressed Send again. Give them the receipt for the
-  --  report we already hold; do not spend one of their reports on it, and do
-  --  not answer a successful submission with "wait 60 seconds".
+  --  BEFORE the gate, deliberately. An identical resend is nearly always the
+  --  same send arriving twice — the first answer was lost on the way back.
+  --  Give them the receipt for the report we already hold; do not spend one
+  --  of their reports on it, and never answer a successful submission with
+  --  "wait 60 seconds".
   select f.id into v_id
     from public.tdg_feedback f
    where f.user_id = v_uid
