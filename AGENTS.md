@@ -404,6 +404,23 @@ tree is clean when you finish: `git status --porcelain` prints nothing.
 Commit messages here are a sentence about what changed and why, not a
 `feat(scope):` prefix. Read `git log` before writing one.
 
+**Every change set you commit bumps `"version"` in `package.json`, in the same
+commit.** It says `1.0.0` today and it is the only file that carries the number.
+Push to `main` deploys, so on this repo the version is the only durable marker
+of which content went live when — nothing on the page prints it and no build
+step reads it, which means skipping the bump fails silently and forever. Patch
+for copy, a fix, an image, small polish; minor for a new page, app entry,
+section, component, or Supabase-backed feature; major for a change to the site's
+structure or to a shape stored in Supabase that the other TDG apps share.
+`package-lock.json` mirrors the version in two places at the top and
+`npm install` fixes those. Never bump backwards, never reuse a number.
+
+**Never hardcode another app's version on this site.** No page does today and it
+must stay that way: a version typed into `src/data/appPages.ts` is stale the day
+that app ships and nobody here will notice. Resolve a download's current release
+at runtime from the GitHub releases API, the way `makullveny-site` does — copy
+that pattern rather than pasting a number.
+
 ---
 
 ## 7 · What "done" means here
