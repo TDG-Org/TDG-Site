@@ -73,6 +73,37 @@
   font-weight: 600;
 }
 
+/* Which build this is. A fact, not a notice: no border, no fill, nothing that
+   competes with the live-project warning directly below it, which has to stay
+   the loudest thing on the page. Mono at 11px, the size the roster counts and
+   the section counter already use, so it reads as page metadata rather than as
+   something addressed to you. Wraps rather than shrinking, because at 375px the
+   stamp and its age do not fit on one line and half a timestamp is no use. */
+.dev__build {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 14px 0 0;
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  transition: var(--t-theme);
+}
+.dev__build-label {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+}
+/* The number itself is the thing being compared against package.json, so it
+   gets the body colour while everything around it stays quiet. */
+.dev__build .dev__code {
+  color: var(--text);
+}
+.dev__build-when {
+  color: var(--faint);
+}
+
 /* The one loud thing on the page, and it earns it: there is no staging copy of
    tdg-core, so every switch below is aimed at a real person. */
 .dev__live {

@@ -489,6 +489,36 @@ function DevConsoleBody({
             <strong>{profile?.display_name || profile?.username || user?.email}</strong>.
           </p>
 
+          {/*
+            Which build you are actually looking at.
+
+            Push to main deploys, GitHub Pages caches index.html, and a tab left
+            open never asks again — so this page can be running a bundle that
+            disagrees with the database it is talking to and look entirely
+            normal doing it. That happened, and it cost most of a day, because
+            there was no way to ask the page which build it was: loading the
+            same URL in another browser proved nothing about what THIS one had
+            loaded.
+
+            The time is here as well as the version because the version only
+            answers if somebody remembered to bump it (AGENTS.md §6), and the
+            case worth catching is the one where a rule got skipped. It reads
+            both ways on purpose: the stamp to compare against package.json and
+            the deploy log, the age to notice at a glance that a page has been
+            open since yesterday.
+
+            Deliberately quiet. The live-project warning below is the loud thing
+            on this page and has to stay the loudest, so this is mono at the
+            size the roster counts use, and it is a fact rather than a notice.
+          */}
+          <p className="dev__build">
+            <span className="dev__build-label">Build</span>
+            <code className="dev__code">{__TDG_SITE_VERSION__}</code>
+            <span className="dev__build-when">
+              {fmtDate(__TDG_SITE_BUILT_AT__)} · {fmtRelative(__TDG_SITE_BUILT_AT__)}
+            </span>
+          </p>
+
           <p className="dev__live">
             <span className="dev__live-dot" aria-hidden="true" />
             This is the <strong>live</strong> tdg-core project. There is no staging copy and no

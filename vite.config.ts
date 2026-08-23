@@ -10,11 +10,28 @@ import { version as siteVersion } from './package.json'
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === 'production' ? '/TDG-Site/' : '/',
-  /* package.json is this repo's only version carrier (AGENTS.md §6), and
-     nothing on the PAGE prints it — this constant is how the number rides
-     along invisibly where it earns its keep: a feedback report that says
-     which deploy the reporter was on. See src/feedback/api.ts. */
-  define: { __TDG_SITE_VERSION__: JSON.stringify(siteVersion) },
+  /* package.json is this repo's only version carrier (AGENTS.md §6), so it is
+     read from there and never restated: a second place to write the number is a
+     second place to forget it. Two consumers today — a feedback report that
+     says which deploy the reporter was on (src/feedback/api.ts), and the
+     Developer page's own header (src/dev/).
+
+     The build STAMP is here for a failure the version alone cannot catch.
+     Push to main deploys, GitHub Pages caches index.html, and a tab left open
+     never asks again — so a browser can be running a bundle that disagrees with
+     the database it is talking to, and look completely normal doing it. That
+     cost most of a day once, because there was no way to ask a page which build
+     it was. A version answers it only if somebody remembered to bump; a
+     timestamp answers it either way, which is the point, since the case worth
+     catching is the one where a rule got skipped.
+
+     Evaluated when the config loads, which is once per build, and once per
+     `vite dev` start — so in dev it honestly reads as "this is when the server
+     you are talking to came up". */
+  define: {
+    __TDG_SITE_VERSION__: JSON.stringify(siteVersion),
+    __TDG_SITE_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+  },
   server: { port: 5180 },
   build: {
     rollupOptions: {

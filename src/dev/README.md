@@ -43,6 +43,34 @@ Which sections are open follows you between accounts. Expanding Makullveny and
 then clicking the next person shows Makullveny open again, which is what makes
 comparing two accounts bearable.
 
+## Which build you are looking at
+
+The header prints one quiet line under the lede: **`Build <version> · <when it
+was built> · <how long ago>`**. The version is `package.json`'s, baked in by
+`vite.config.ts`; the time is when that bundle was built.
+
+It is there because this page can lie to you in a way nothing on it would show.
+Push to `main` deploys, GitHub Pages caches `index.html`, and a tab left open
+never asks again — so a browser can be running a bundle that disagrees with the
+database it is talking to, and look entirely normal doing it. When
+`tdg_admin_accounts` changed shape, that cost most of a day: loading the same URL
+in a second browser proved nothing about what the FIRST one had loaded, and
+there was no way to ask.
+
+**The timestamp is the half that matters**, which is why the version alone was
+not enough. `AGENTS.md` §6 requires a bump on every commit, and the failure worth
+catching is exactly the one where a rule got skipped — two deploys sharing a
+version look identical, and their build times do not.
+
+So: if the page is behaving oddly, read that line first and compare it against
+`package.json` and the last deploy. If it is older than the deploy, hard-reload
+before debugging anything else. In `npm run dev` it reads as when the dev server
+came up, which is the same fact for a bundle Vite is serving from memory.
+
+It is deliberately the quietest thing in the header — mono at 11px, no border,
+no fill. The live-project warning underneath it is the loud one and has to stay
+that way.
+
 ## Refreshing without losing your place
 
 The data goes stale while you read it — a payment lands, somebody else grants a
