@@ -526,6 +526,26 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
  *
  * A panel that renders nothing for an unrecognised app would be the old bug in
  * a new costume: silence reading as "there is nothing here".
+ *
+ * ## And a fourth thing, which is the one that bit
+ *
+ * **Not being told is its own state, and it is drawn as one.** This panel
+ * shipped able to say only "listed" or "no table", so a catalog that had not
+ * arrived — a read that failed, a payload whose shape this build does not
+ * recognise — made every app render as a red alarm claiming its table does not
+ * exist, with the switches turned off. A page that had been told nothing was
+ * therefore stating something false, in the most alarming way it had, while
+ * disabling the controls that would have disproved it.
+ *
+ * The same trap one level down: a `store` object with no entry for this app is
+ * an answer that never came, not an account that owns nothing. Drawing it as
+ * "Not owned" tells somebody they do not have what they paid for, which is the
+ * exact mistake `store/useOwnedPacks.ts` refuses to make on the shop side, and
+ * this page has no more right to make it than the shop does.
+ *
+ * So: `absent` is an alarm, `unknown` says it does not know and keeps its
+ * switches live — the server is the authority and refuses in a sentence written
+ * for a human — and holdings nobody reported are never rendered as tiles.
  */
 function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }) {
   const entry = a.store?.[app.id]
@@ -536,11 +556,22 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   const strays =
     app.hasList || app.inShop ? app.packs.filter((p) => !p.onServer && !p.inShop) : []
 
-  const what = !app.onServer
+  const absent = app.serverState === 'absent'
+  const unknown = app.serverState === 'unknown'
+  // Holdings are only "missing" when there was an answer to expect. An app the
+  // server says does not exist has no holdings to report, and saying so twice
+  // buries the one line that matters.
+  const holdingsMissing = !absent && !app.holdingsKnown
+
+  const what = absent
     ? `The site sells ${app.title}'s packs, but TDG Core has no table to record them in, so nothing here can be granted and a real payment would land nowhere.`
-    : !app.inShop
-      ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
-      : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
+    : unknown
+      ? `The console could not read TDG Core's list of apps, so it cannot say whether ${app.title} is registered or what this account holds. The switches still work: the server decides, and it says so in words if it disagrees.`
+      : holdingsMissing
+        ? `The server did not report what this account holds in ${app.title}, so this panel is not showing ownership rather than showing it as empty.`
+        : !app.inShop
+          ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
+          : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
 
   return (
     <Panel
@@ -553,7 +584,9 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
       title={`${app.title} Store`}
       what={what}
       writes={app.entitlementsTable ? `public.${app.entitlementsTable}` : undefined}
-      tone={!app.onServer ? 'danger' : 'plain'}
+      // Danger is for something that IS wrong. Not knowing is not an emergency,
+      // and painting it as one is how a reader learns to ignore the colour.
+      tone={absent ? 'danger' : 'plain'}
       terms={[
         app.id,
         app.title,
@@ -562,14 +595,18 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         'pack store grant revoke',
       ]}
       right={
-        !app.onServer ? (
+        absent ? (
           <Tag tone="bad">NO TABLE</Tag>
+        ) : unknown || holdingsMissing ? (
+          // A shut panel must not summarise an unknown as a number. "0 OWNED"
+          // is the sentence this whole change exists to stop the page saying.
+          <Tag tone="warn">NO ANSWER</Tag>
         ) : (
           <Tag tone={app.ownedCount ? 'ok' : 'plain'}>{app.ownedCount} OWNED</Tag>
         )
       }
     >
-      {!app.onServer && (
+      {absent && (
         <p className="dev__warn">
           <code className="dev__code">
             public.{app.entitlementsTable ?? `${app.id}_entitlements`}
@@ -582,7 +619,29 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         </p>
       )}
 
-      {app.onServer && app.packs.length === 0 ? (
+      {unknown && (
+        <p className="dev__warn">
+          The app list did not come back, so the console cannot say whether this app is registered.
+          It is <strong>not</strong> saying the table is missing, and it is not saying this account
+          owns nothing: it does not know either. Press <strong>Refresh</strong> to ask again. If it
+          keeps happening after a reload, this page is older than the database it is talking to.
+        </p>
+      )}
+
+      {holdingsMissing && !unknown && (
+        <p className="dev__warn">
+          The account came back without an entry for <code className="dev__code">{app.id}</code>, so
+          what it holds here is unknown. Ownership is left blank rather than drawn as empty, because
+          "Not owned" would be this page telling somebody they do not have what they paid for. Press{' '}
+          <strong>Refresh</strong>; if it persists, this page is older than the database.
+        </p>
+      )}
+
+      {/* Tiles ARE the ownership claim, so they are only drawn when there is an
+          answer to draw. The absent case keeps them, dead, so the panel can
+          still say WHAT the shop sells while its alarm explains why none of it
+          can be granted. */}
+      {!app.holdingsKnown && !absent ? null : app.packs.length === 0 ? (
         <p className="dev__panel-quiet">
           No packs yet. This app's list comes from{' '}
           <code className="dev__code">public.{app.id}_known_packs()</code>, and it has none, so the
@@ -595,7 +654,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
               key={pack.id}
               name={pack.name}
               owned={pack.owned}
-              disabled={!app.onServer}
+              disabled={absent}
               busy={busy === `${app.id}:${pack.id}`}
               // Short, and only when it says something. A note repeating what
               // every tile would say is a note nobody reads, which is how the
@@ -618,7 +677,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         </div>
       )}
 
-      {app.onServer && !app.hasList && app.packs.length > 0 && (
+      {app.onServer && app.holdingsKnown && !app.hasList && app.packs.length > 0 && (
         <p className="dev__panel-quiet">
           {app.id} publishes no <code className="dev__code">{app.id}_known_packs()</code> list, so
           the tiles above are what this account happens to hold rather than a catalogue. Granting

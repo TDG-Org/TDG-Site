@@ -1,5 +1,5 @@
 import { STORE_APPS, formatUsd, type StorePack } from '../data/store'
-import type { DevAccount, DevCatalog, DevCatalogApp, DevGrant } from './api'
+import type { DevAccount, DevCatalog, DevCatalogApp, DevGrant, DevStoreEntry } from './api'
 import { prettyId } from './format'
 
 /**
@@ -86,6 +86,21 @@ export type DevStorePack = {
   grant: DevGrant | null
 }
 
+/**
+ * What the SERVER said about an app, which is three answers and not two.
+ *
+ * `unknown` is the one that matters. Before this existed, a catalog that had
+ * not arrived — a failed read, a shape this client does not recognise — made
+ * every app look ABSENT, and absent renders as a red alarm claiming the app's
+ * table does not exist, with its switches turned off. So a page that had simply
+ * not been told anything told the reader, in confident red, a thing that was
+ * not true, and disabled the controls that would have disproved it.
+ *
+ * **Not knowing is never the same as knowing something is missing**, and it may
+ * never be rendered as though it were.
+ */
+export type ServerState = 'listed' | 'absent' | 'unknown'
+
 /** One app with a pack Store, as the console shows it. */
 export type DevStoreApp = {
   id: string
@@ -100,7 +115,20 @@ export type DevStoreApp = {
   eventsTable: string | null
   /** Whether its table records how each pack is held. */
   hasGrants: boolean
+  /** What the server said: listed, genuinely absent, or not yet known. */
+  serverState: ServerState
+  /** Shorthand for `serverState === 'listed'`. Never true when unknown. */
   onServer: boolean
+  /**
+   * Did the payload actually report this account's holdings for this app?
+   *
+   * False means the answer is missing, NOT that the account owns nothing. A
+   * tile drawn "Not owned" from a missing answer is the console telling somebody
+   * they do not have what they paid for, which is the one thing
+   * `store/useOwnedPacks.ts` refuses to do on the shop side and which this page
+   * has no more right to do than the shop does.
+   */
+  holdingsKnown: boolean
   inShop: boolean
   /**
    * Whether the app publishes a `<app>_known_packs()` list at all.
@@ -145,9 +173,22 @@ export function storeApps(
   catalog: DevCatalog | null,
   account?: DevAccount | null,
 ): DevStoreApp[] {
-  const server = new Map<string, DevCatalogApp>((catalog?.apps ?? []).map((a) => [a.id, a]))
+  /*
+   * An ARRAY means the server answered, even when it is empty — a project with
+   * no `<app>_entitlements` table anywhere genuinely has no apps. Anything else
+   * (no catalog yet, a failed read, a payload whose shape this client does not
+   * recognise) means we were not told, and must not be reported as an answer.
+   */
+  const listed: DevCatalogApp[] | null = Array.isArray(catalog?.apps) ? catalog.apps : null
+  const server = new Map<string, DevCatalogApp>((listed ?? []).map((a) => [a.id, a]))
   const shop = new Map(STORE_APPS.map((a) => [a.id, a]))
-  const held = account?.store ?? {}
+  // Same distinction one level down: a missing `store` object is a payload this
+  // client cannot read, not an account that owns nothing.
+  const reported: Record<string, DevStoreEntry | undefined> | null =
+    account == null ? null
+    : account.store != null && typeof account.store === 'object' ? account.store
+    : null
+  const held = reported ?? {}
 
   const ids = [
     ...STORE_APPS.map((a) => a.id),
@@ -187,6 +228,9 @@ export function storeApps(
       }
     })
 
+    const serverState: ServerState =
+      listed == null ? 'unknown' : srv != null ? 'listed' : 'absent'
+
     return {
       id,
       title: shp?.title ?? prettyId(id),
@@ -194,7 +238,10 @@ export function storeApps(
       entitlementsTable: srv?.entitlements_table ?? shp?.entitlementsTable ?? null,
       eventsTable: srv?.events_table ?? null,
       hasGrants: srv?.has_grants ?? false,
-      onServer: srv != null,
+      serverState,
+      onServer: serverState === 'listed',
+      // An app the server never mentioned has no holdings to have reported.
+      holdingsKnown: reported != null && mine != null,
       inShop: shp != null,
       hasList: (srv?.packs.length ?? 0) > 0,
       packs,
