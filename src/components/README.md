@@ -126,5 +126,8 @@ beside it. In one component:
   reading size, with its box reserved in every row so three rows stay one
   height.
 - The full accessibility floor: `role="dialog"`, `aria-expanded`,
-  `aria-haspopup`, Escape closing and returning focus, a scrim that closes on
-  click and is hidden from screen readers because Escape is its equivalent.
+  `aria-haspopup`, Escape closing and returning focus, Tab staying inside the
+  card, and a scrim that closes on a press which started AND ended on it, and
+  is hidden from screen readers because Escape is its equivalent. All of that
+  is `lib/modal.ts`, not the component — `AuthModal` calls `useModal` and
+  `useBackdropClose` like the other three dialogs.

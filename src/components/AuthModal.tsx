@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { MODAL_LAYER, useModal } from '../lib/modal'
+import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import { supabase } from '../lib/supabase'
 import './AuthModal.css'
 
@@ -323,6 +323,13 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     dismissOauthError,
   } = useAuth()
 
+  // What Tab is not allowed to leave. See src/lib/modal.ts.
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  // A scrim that needs a press which both started and ended on it. This card
+  // holds a half-typed password, and a drag-select out of a field was landing
+  // its click on the backdrop and closing the whole modal. See src/lib/modal.ts.
+  const backdrop = useBackdropClose(onClose)
+
   const [tab, setTab] = useState<TabKey>(initialTab)
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -378,9 +385,11 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     }
   }, [open, oauthError, dismissOauthError])
 
-  // The scroll lock, Escape and the focus return, counted across every dialog
-  // on the page rather than owned by this one. See src/lib/modal.ts.
-  useModal(open, onClose, MODAL_LAYER.auth)
+  // The scroll lock, Escape, Tab and the focus return, counted across every
+  // dialog on the page rather than owned by this one. See src/lib/modal.ts.
+  // No `focusFirst`: this modal's first field is the one somebody came here to
+  // type in, and the browser's own autofill wants it left alone until they do.
+  useModal({ open, onClose, layer: MODAL_LAYER.auth, dialog: cardRef })
 
   // Live availability check against the shared profiles table, debounced.
   useEffect(() => {
@@ -616,10 +625,10 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   ) : undefined
 
   return (
-    <div className="authmodal__backdrop" onClick={onClose}>
+    <div className="authmodal__backdrop" {...backdrop}>
       <div
+        ref={cardRef}
         className="authmodal__card"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="authmodal-title"

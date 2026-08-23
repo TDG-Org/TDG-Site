@@ -15,7 +15,7 @@ change one.
 | `chromeGuard.ts` | Keeping extensions from repainting our controls. |
 | `dpr.ts` | Noticing when the display's pixel ratio changes. |
 | `mergeRefs.ts` | Point several refs at one node. |
-| `modal.ts` | A dialog's scroll lock, Escape, focus return and scrim — shared by all four. |
+| `modal.ts` | A dialog's scroll lock, Escape, Tab, focus return and scrim — shared by all four. |
 
 ---
 
@@ -171,11 +171,16 @@ behaviour rather than breaking anything.
 
 ## `modal.ts`
 
-`useModal(open, onClose, layer, focusFirst?)` and `useBackdropClose(onClose)`.
-Every dialog on the site calls both: the auth modal, Send Feedback, the reply
-panel, the Developer console's report dialog. **Do not write
-`document.body.style.overflow` in a component, and do not write a scrim's
-`onClick` by hand.**
+`useModal({ open, onClose, layer, dialog, focusFirst? })` and
+`useBackdropClose(onClose)`. Every dialog on the site calls both: the auth
+modal, Send Feedback, the reply panel, the Developer console's report dialog.
+**Do not write `document.body.style.overflow` in a component, do not add your
+own `keydown` listener for Escape or Tab, and do not write a scrim's `onClick`
+by hand.**
+
+`dialog` is a ref to the element carrying `role="dialog"`, and it is required
+rather than optional because that is what Tab is kept inside — a trap that
+silently does not run is worse than no trap at all.
 
 The lock is COUNTED, because the per-dialog version was only correct one dialog
 at a time. Two open at once — the reply panel arriving over an open Send
@@ -202,8 +207,20 @@ of a drag-select as "close". Send Feedback was binning a written report that
 way, and the console's report dialog was binning a written reply — the second
 one because the fix lived in the first component instead of here.
 
+Tab is wrapped at both ends of the topmost dialog, because all four say
+`aria-modal="true"` and Tab used to walk straight out of the card and off down
+the nav and the footer — a promise made in ARIA and broken by the keyboard,
+which is worst for the reader who most depends on it. The focusable list is
+read fresh on every press rather than collected when the dialog opens: every
+dialog here changes shape while open (the auth modal swaps its whole form, the
+send form becomes a receipt, the report dialog grows a confirm step). Elements
+are filtered on their EFFECTIVE `tabIndex`, which is what keeps the send form's
+roving-tabindex kind picker to the one tile the arrow keys have selected.
+
 Focus goes to `focusFirst` on open and back to whatever had it on close. What
 does **not** work: an opener that is still mounted but has gone `inert`, which is
 every button in the closed account menu — it accepts `focus()` and ignores it.
 That is why `Nav.tsx` hands focus to the account trigger before opening the
-feedback dialog, so there is a live element to come back to.
+feedback dialog, so there is a live element to come back to. For the same
+reason the trap skips anything inside `[inert]`: those buttons are still in the
+DOM and still match the selector.

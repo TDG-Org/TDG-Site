@@ -28,6 +28,8 @@ export function ReplyInbox() {
   const [open, setOpen] = useState(false)
   const askedFor = useRef<string | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
+  // What Tab is not allowed to leave. See src/lib/modal.ts.
+  const cardRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     // Signing out forgets who we asked for, so signing back in — as the same
@@ -64,11 +66,17 @@ export function ReplyInbox() {
     setOpen(false)
   }
 
-  // The scroll lock, Escape and the focus return, counted across every dialog
-  // on the page rather than owned by this one. See src/lib/modal.ts. Focus
-  // lands on the close button, never on Got It: this panel opens by itself, and
-  // a stray Enter must not be able to ack a reply nobody has read yet.
-  useModal(open, dismiss, MODAL_LAYER.feedback, closeRef)
+  // The scroll lock, Escape, Tab and the focus return, counted across every
+  // dialog on the page rather than owned by this one. See src/lib/modal.ts.
+  // Focus lands on the close button, never on Got It: this panel opens by
+  // itself, and a stray Enter must not be able to ack a reply nobody read.
+  useModal({
+    open,
+    onClose: dismiss,
+    layer: MODAL_LAYER.feedback,
+    dialog: cardRef,
+    focusFirst: closeRef,
+  })
 
   if (!open || replies.length === 0) return null
 
@@ -76,7 +84,13 @@ export function ReplyInbox() {
 
   return (
     <div className="fb__backdrop" {...backdrop}>
-      <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-inbox-title">
+      <div
+        ref={cardRef}
+        className="fb__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fb-inbox-title"
+      >
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>
           <button

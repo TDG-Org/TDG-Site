@@ -59,8 +59,8 @@ server's own refusal lands in the error alert, worded to be read.
   console in everybody's bundle. The one helper both sides want (an app id
   made readable) is four lines and is duplicated on purpose.
 - **Both dialogs' page-level behaviour is `../lib/modal.ts`, not their own.**
-  The scroll lock, Escape, the focus return and the scrim live there and are
-  shared by every dialog on the site. Two of these used to each save and restore
+  The scroll lock, Escape, Tab, the focus return and the scrim live there and
+  are shared by every dialog on the site. Two of these used to each save and restore
   `body.style.overflow`, which left the page unscrollable whenever one opened
   over the other and a single Escape closed both. Both pass
   `MODAL_LAYER.feedback`, which is the z-index in `Feedback.css` said again in

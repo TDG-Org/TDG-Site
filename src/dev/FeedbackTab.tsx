@@ -514,6 +514,8 @@ function ReportDialog({
   const [draft, setDraft] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const closeRef = useRef<HTMLButtonElement | null>(null)
+  // What Tab is not allowed to leave. See src/lib/modal.ts.
+  const cardRef = useRef<HTMLDivElement | null>(null)
 
   // A different report through the same dialog is a fresh conversation.
   useEffect(() => {
@@ -521,10 +523,16 @@ function ReportDialog({
     setConfirmDelete(false)
   }, [f.id])
 
-  // The scroll lock, Escape and the focus return, counted across every dialog
-  // on the page rather than owned by this one. See src/lib/modal.ts. Mounted
-  // only while open, so `open` is simply true.
-  useModal(true, onClose, MODAL_LAYER.devReport, closeRef)
+  // The scroll lock, Escape, Tab and the focus return, counted across every
+  // dialog on the page rather than owned by this one. See src/lib/modal.ts.
+  // Mounted only while open, so `open` is simply true.
+  useModal({
+    open: true,
+    onClose,
+    layer: MODAL_LAYER.devReport,
+    dialog: cardRef,
+    focusFirst: closeRef,
+  })
 
   // The same scrim contract the send form has: a press that STARTED and ended
   // on the backdrop. This dialog holds a reply draft, and a drag-select that
@@ -548,6 +556,7 @@ function ReportDialog({
   return (
     <div className="dev__fbd-backdrop" {...backdrop}>
       <div
+        ref={cardRef}
         className="dev__fbd"
         role="dialog"
         aria-modal="true"

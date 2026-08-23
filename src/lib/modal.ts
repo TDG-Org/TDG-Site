@@ -1,9 +1,9 @@
 import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 
 /**
- * The four things every dialog on this site owes the page behind it: the
- * scroll lock, Escape, the focus its opener wants back, and a scrim that can
- * tell a click from the tail of a drag.
+ * The five things every dialog on this site owes the page behind it: the
+ * scroll lock, Escape, Tab, the focus its opener wants back, and a scrim that
+ * can tell a click from the tail of a drag.
  *
  * ## Why this is one shared thing and not four copies
  *
@@ -35,6 +35,24 @@ import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
  * — are deliberately left alone. They close a menu, not a layer, and nothing
  * here should reach across and cancel them.
  *
+ * ## Tab stays inside
+ *
+ * All four dialogs say `aria-modal="true"`, which tells a screen reader the
+ * rest of the page is not there. Tab did not agree: it walked straight out of
+ * the card and off down the nav, the shelves and the footer, all of which are
+ * still behind an opaque scrim. A promise made in ARIA and broken by the
+ * keyboard is worse than not making it, because the reader who most depends on
+ * it is the one who cannot see where focus went.
+ *
+ * So the same listener wraps Tab at both ends of the topmost dialog. What does
+ * NOT work: collecting the focusable elements once when the dialog opens. Every
+ * dialog here changes shape while it is open — the auth modal swaps its whole
+ * form between Sign In and Create Account, the send form replaces the form with
+ * a receipt, the console's report dialog grows a confirm step — so the list is
+ * read fresh on every press. Also not `inert` on everything else: `Nav.tsx`
+ * already puts `inert` on the closed account menu, and stacking it from up here
+ * would fight a mechanism that is doing its own job correctly.
+ *
  * ## Focus
  *
  * Whatever had focus when the dialog opened gets it back when the dialog
@@ -46,7 +64,7 @@ import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
  */
 
 /**
- * Which layer a dialog paints on, so Escape can find the one in front.
+ * Which layer a dialog paints on, so Escape and Tab can find the one in front.
  *
  * These MIRROR the `z-index` in each dialog's own stylesheet, named beside
  * every number because there is no way to derive one from the other: a value
@@ -63,9 +81,14 @@ export const MODAL_LAYER = {
   auth: 300,
 } as const
 
-type OpenDialog = { layer: number; close: () => void }
+type OpenDialog = {
+  layer: number
+  close: () => void
+  /** The element Tab is not allowed to leave — the one carrying `role="dialog"`. */
+  root: RefObject<HTMLElement | null>
+}
 
-/** Every open dialog, oldest first. Escape goes to the topmost. */
+/** Every open dialog, oldest first. Escape and Tab go to the topmost. */
 const stack: OpenDialog[] = []
 /** What `body.style.overflow` was before the FIRST dialog locked it. */
 let restore = ''
@@ -85,17 +108,87 @@ function topmost(): OpenDialog | undefined {
   return top
 }
 
-function onDocumentKey(e: KeyboardEvent) {
-  if (e.key !== 'Escape') return
-  topmost()?.close()
+/**
+ * Anything the platform would stop at, minus the things it would skip.
+ *
+ * The `tabIndex >= 0` filter is the half that is easy to get wrong: the send
+ * form's kind picker is a roving tabindex, five `<button>`s of which four carry
+ * `tabindex="-1"` at any moment. A selector alone matches all five, and the
+ * trap would then hand Tab to options the arrow keys own. Reading the property
+ * rather than the attribute gets the element's EFFECTIVE value, which is what
+ * the browser itself would use.
+ */
+const FOCUSABLE =
+  'a[href],button,input,select,textarea,[tabindex],audio[controls],video[controls],[contenteditable]'
+
+function reachable(el: HTMLElement): boolean {
+  if (el.tabIndex < 0) return false
+  if (el.matches(':disabled')) return false
+  // `inert` hides a whole subtree from focus, and the closed account menu is
+  // one — its buttons are still in the DOM and still match the selector.
+  if (el.closest('[inert]')) return false
+  // No boxes means `display: none` or a collapsed ancestor. `visibility` is
+  // checked separately because a hidden element still lays out.
+  if (el.getClientRects().length === 0) return false
+  return getComputedStyle(el).visibility !== 'hidden'
 }
 
-export function useModal(
-  open: boolean,
-  onClose: () => void,
-  layer: number,
-  focusFirst?: RefObject<HTMLElement | null>,
-): void {
+function focusablesIn(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(reachable)
+}
+
+function onDocumentKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    topmost()?.close()
+    return
+  }
+  if (e.key !== 'Tab') return
+
+  const root = topmost()?.root.current
+  if (!root) return
+
+  const items = focusablesIn(root)
+  if (items.length === 0) {
+    // A dialog with nothing to land on — the signed-out send form is close to
+    // this. Tab still must not leave, so it does nothing at all.
+    e.preventDefault()
+    return
+  }
+
+  const first = items[0]
+  const last = items[items.length - 1]
+  const active = document.activeElement
+
+  // Focus is not in the dialog: it opened without taking focus (the auth modal
+  // passes no `focusFirst`), or a click on the scrim put it on `body`. Either
+  // way the next Tab belongs inside, at whichever end the direction implies.
+  if (!(active instanceof HTMLElement) || !root.contains(active)) {
+    e.preventDefault()
+    ;(e.shiftKey ? last : first).focus()
+    return
+  }
+
+  if (!e.shiftKey && active === last) {
+    e.preventDefault()
+    first.focus()
+  } else if (e.shiftKey && active === first) {
+    e.preventDefault()
+    last.focus()
+  }
+}
+
+export type ModalOptions = {
+  open: boolean
+  onClose: () => void
+  /** One of `MODAL_LAYER`. */
+  layer: number
+  /** The `role="dialog"` element. Tab is kept inside it. */
+  dialog: RefObject<HTMLElement | null>
+  /** Where focus lands on open. Omit to leave focus where it was. */
+  focusFirst?: RefObject<HTMLElement | null>
+}
+
+export function useModal({ open, onClose, layer, dialog, focusFirst }: ModalOptions): void {
   // `onClose` is almost always an inline arrow, so it is a new function on
   // every render of the parent. Keeping it in a ref is what lets the effect
   // below depend on `open` alone — re-running it per render would re-take the
@@ -114,7 +207,7 @@ export function useModal(
       document.addEventListener('keydown', onDocumentKey)
     }
 
-    const mine: OpenDialog = { layer, close: () => close.current() }
+    const mine: OpenDialog = { layer, close: () => close.current(), root: dialog }
     stack.push(mine)
 
     focusFirst?.current?.focus()
@@ -133,7 +226,7 @@ export function useModal(
       // dialog, which leaves a live element here to return to.
       if (opener?.isConnected) opener.focus()
     }
-  }, [open, layer, focusFirst])
+  }, [open, layer, dialog, focusFirst])
 }
 
 /**
@@ -143,12 +236,13 @@ export function useModal(
  * `onClick={onClose}`, or `e.target === e.currentTarget` on its own. A drag
  * that begins inside the card and finishes a few pixels outside it fires its
  * `click` on the nearest common ancestor — the backdrop — so both of those
- * read the tail of a drag-select as "close". Two dialogs here hold text
- * somebody typed: the send form's report, and the console's reply draft. Both
- * were binning it on the way out of a textarea.
+ * read the tail of a drag-select as "close". Three dialogs here hold something
+ * somebody typed: the send form's report, the console's reply draft, and the
+ * auth modal's half-entered password. All three were binning it on the way out
+ * of a field.
  *
  * Lives here rather than in each dialog because it was fixed once, in the send
- * form, and the two copies that were not fixed kept the bug — which is what
+ * form, and the three copies that were not fixed kept the bug — which is what
  * made it worth a shared function rather than a shared comment.
  */
 export function useBackdropClose(onClose: () => void): {

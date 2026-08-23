@@ -35,6 +35,8 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   const [tick, setTick] = useState(() => Date.now())
   const messageRef = useRef<HTMLTextAreaElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
+  // What Tab is not allowed to leave. See src/lib/modal.ts.
+  const cardRef = useRef<HTMLDivElement | null>(null)
   // A scrim that needs a press which both started and ended on it. A drag that
   // begins in the textarea and finishes a few pixels outside the card lands its
   // click on the scrim, and an unguarded one would take that as "close" and bin
@@ -96,9 +98,15 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     return () => window.clearInterval(id)
   }, [open, quota])
 
-  // The scroll lock, Escape and the focus return, counted across every dialog
-  // on the page rather than owned by this one. See src/lib/modal.ts.
-  useModal(open, onClose, MODAL_LAYER.feedback, closeRef)
+  // The scroll lock, Escape, Tab and the focus return, counted across every
+  // dialog on the page rather than owned by this one. See src/lib/modal.ts.
+  useModal({
+    open,
+    onClose,
+    layer: MODAL_LAYER.feedback,
+    dialog: cardRef,
+    focusFirst: closeRef,
+  })
 
   if (!open) return null
 
@@ -176,7 +184,13 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     // The scrim closes on a press that both STARTED and ended on it; see the
     // `backdrop` above and `useBackdropClose`.
     <div className="fb__backdrop" {...backdrop}>
-      <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+      <div
+        ref={cardRef}
+        className="fb__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fb-title"
+      >
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>
           <button
