@@ -15,6 +15,7 @@ change one.
 | `chromeGuard.ts` | Keeping extensions from repainting our controls. |
 | `dpr.ts` | Noticing when the display's pixel ratio changes. |
 | `mergeRefs.ts` | Point several refs at one node. |
+| `modal.ts` | One dialog's scroll lock, Escape and focus return — counted across all of them. |
 
 ---
 
@@ -167,3 +168,26 @@ at exactly the ratio it was armed with, so the first event **is** the ratio
 having moved; the listener is then re-armed at the new value. On a browser that
 does not understand `resolution` the query never fires, which leaves the old
 behaviour rather than breaking anything.
+
+## `modal.ts`
+
+`useModal(open, onClose, focusFirst?)`. Every dialog on the site calls it: the
+auth modal, Send Feedback, the reply panel, the Developer console's report
+dialog. **Do not write `document.body.style.overflow` in a component.**
+
+The lock is COUNTED, because the per-dialog version was only correct one dialog
+at a time. Two open at once — the reply panel arriving over an open Send
+Feedback form — and the second one saved `hidden` as the value to put back. One
+Escape closed both in the same commit, the cleanups ran in tree order, and the
+page was left unscrollable with nothing on top of it. Only the last dialog to
+leave restores the page now.
+
+Escape is listened for ONCE and handed to whichever dialog opened last, so a key
+press closes the top layer rather than every layer. Listeners that are not
+dialogs — the account menu's own Escape — are left alone on purpose.
+
+Focus goes to `focusFirst` on open and back to whatever had it on close. What
+does **not** work: an opener that is still mounted but has gone `inert`, which is
+every button in the closed account menu — it accepts `focus()` and ignores it.
+That is why `Nav.tsx` hands focus to the account trigger before opening the
+feedback dialog, so there is a live element to come back to.

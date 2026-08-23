@@ -72,6 +72,7 @@ function AccountMenu({
   const { user, profile, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
   const ref = useRef<HTMLDivElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -92,6 +93,7 @@ function AccountMenu({
   return (
     <div className="nav__account" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         className="nav__auth-btn"
         aria-haspopup="true"
@@ -113,6 +115,11 @@ function AccountMenu({
           className="nav__account-feedback"
           onClick={() => {
             setOpen(false)
+            // Hand focus back to the trigger BEFORE the dialog opens. A closed
+            // menu is `inert`, and an inert button cannot be focused — so this
+            // is what leaves the dialog a live element to return focus to when
+            // it closes (AGENTS.md rule 14, and src/lib/modal.ts).
+            triggerRef.current?.focus()
             onOpenFeedback()
           }}
         >

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { STORE_APPS } from '../data/store'
+import { useModal } from '../lib/modal'
 import { ackReply, fetchInbox, type InboxReply } from './api'
 import './Feedback.css'
 
@@ -26,11 +27,18 @@ export function ReplyInbox() {
   const [replies, setReplies] = useState<InboxReply[]>([])
   const [open, setOpen] = useState(false)
   const askedFor = useRef<string | null>(null)
+  const closeRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
-    if (status !== 'signedIn' || !user) return
-    // Once per account per page load: sign out and back in asks again, a
-    // re-render does not.
+    // Signing out forgets who we asked for, so signing back in — as the same
+    // account or another one — asks again. Without this, a reply written while
+    // somebody was signed out sat unshown until a full reload: `askedFor` still
+    // held their id from the first visit and the check below skipped the read.
+    if (status !== 'signedIn' || !user) {
+      askedFor.current = null
+      return
+    }
+    // Once per account per sign-in. A re-render does not ask again.
     if (askedFor.current === user.id) return
     askedFor.current = user.id
     let live = true
@@ -44,43 +52,40 @@ export function ReplyInbox() {
     }
   }, [status, user])
 
-  const dismiss = () => setOpen(false)
+  const dismiss = useCallback(() => setOpen(false), [])
 
   const gotIt = () => {
     for (const r of replies) ackReply(r.reply_id)
     setOpen(false)
   }
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismiss()
-    }
-    document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [open])
+  // The scroll lock, Escape and the focus return, counted across every dialog
+  // on the page rather than owned by this one. See src/lib/modal.ts. Focus
+  // lands on the close button, never on Got It: this panel opens by itself, and
+  // a stray Enter must not be able to ack a reply nobody has read yet.
+  useModal(open, dismiss, closeRef)
 
   if (!open || replies.length === 0) return null
 
   const one = replies.length === 1
 
   return (
-    <div className="fb__backdrop" onClick={dismiss}>
-      <div
-        className="fb__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fb-inbox-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div
+      className="fb__backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) dismiss()
+      }}
+    >
+      <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-inbox-title">
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>
-          <button type="button" className="fb__x" aria-label="Close and keep unread" onClick={dismiss}>
+          <button
+            ref={closeRef}
+            type="button"
+            className="fb__x"
+            aria-label="Close and keep unread"
+            onClick={dismiss}
+          >
             ×
           </button>
         </header>

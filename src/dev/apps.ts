@@ -262,6 +262,25 @@ export function ownedCount(a: DevAccount): number {
   return packs + a.mak_themes.length + (a.mak_candle_purchased_at ? 1 : 0)
 }
 
+/**
+ * What to call an app, anywhere on this page: the shop's title where the shop
+ * knows it, the id made readable where it does not. An app is never shown as a
+ * bare key.
+ *
+ * One function because there were three copies of the same line — the Overview
+ * tiles, the Feedback tab's rows, and the search hint that counts what those
+ * rows will match. The third is what made it a bug rather than a tidiness note:
+ * the hint builds its haystack from a title, so a copy left behind would have
+ * had the counter and the list disagreeing about the same report.
+ *
+ * Returns the lookup rather than one title, so a caller naming a whole list
+ * pays for `stores` once instead of scanning it per row.
+ */
+export function appTitles(stores: DevStoreApp[]): (id: string) => string {
+  const byId = new Map(stores.map((s) => [s.id, s.title]))
+  return (id) => byId.get(id) ?? prettyId(id)
+}
+
 /** Every app id and pack id an account holds, for the page search's haystack. */
 export function ownedTerms(a: DevAccount): string[] {
   return Object.entries(a.store ?? {}).flatMap(([app, s]) => [app, ...(s?.packs ?? [])])

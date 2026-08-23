@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useModal } from '../lib/modal'
 import * as api from './api'
 import type { DevCatalog, DevFeedback } from './api'
-import type { DevStoreApp } from './apps'
 import {
   Button,
   CopyButton,
@@ -62,7 +62,28 @@ import { captureAnchor, holdAnchor } from './viewState'
  * lists which apps can send feedback — see rule 17 in AGENTS.md.
  */
 
-const FEEDBACK_CAP = 1000
+/**
+ * The floor under the two dropdowns and the status control, for when the
+ * catalog read has not landed or did not land at all. Copy of the server's
+ * order, which is also the ladder the Type and Status sorts rank by:
+ * `tdg_feedback_kinds()` and `tdg_feedback_statuses()` in
+ * supabase/migrations/20260823170000_user_feedback.sql are the authority, and
+ * still refuse anything they do not know — this is a fallback, not a contract.
+ */
+const KINDS = ['bug', 'suggestion', 'question', 'praise', 'other']
+const STATUSES = ['new', 'seen', 'replied', 'resolved']
+
+/** The server's list where there is one, this build's where there is not, plus
+ *  anything the rows hold that neither mentions — appended, so a value nobody
+ *  has heard of sorts last instead of ahead of everything on `indexOf` → -1. */
+function vocabulary(
+  fromServer: string[] | undefined,
+  fallback: string[],
+  rows: DevFeedback[],
+  of: (r: DevFeedback) => string,
+): string[] {
+  return [...new Set([...(fromServer?.length ? fromServer : fallback), ...rows.map(of)])]
+}
 
 type SortKey = 'at' | 'kind' | 'app' | 'app_version' | 'os' | 'who' | 'message' | 'status'
 type Sort = { key: SortKey; dir: 'asc' | 'desc' }
@@ -78,16 +99,32 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'status', label: 'Status' },
 ]
 
-/** Everything a report is about, for the page search. Shared with DevConsole's
- *  match counter so the hint and the tab can never disagree about a hit. */
-export function feedbackHay(f: DevFeedback, appTitle: string): string {
-  return hay(
-    `#${f.id}`, String(f.id),
-    f.who, f.username, f.email, f.user_id,
-    f.app, appTitle, f.app_version, f.os,
-    f.kind, f.message, f.contact, f.status,
-    f.replies.map((r) => r.body),
-    f.replies.map((r) => r.by),
+/**
+ * Everything each report is about, keyed by its id, for the page search.
+ *
+ * Built ONCE per ledger read, in DevConsole, and handed to both the match
+ * counter and this tab — so the hint and the list cannot disagree about a hit,
+ * and neither of them rebuilds it while somebody is typing. A report's haystack
+ * is its whole message plus every reply body, so at a full LEDGER_CAP page this
+ * is megabytes of string; doing it per keystroke, twice, put that on the search
+ * input's own render path.
+ */
+export function feedbackHaystacks(
+  rows: DevFeedback[],
+  appTitle: (id: string) => string,
+): Map<number, string> {
+  return new Map(
+    rows.map((f) => [
+      f.id,
+      hay(
+        `#${f.id}`, String(f.id),
+        f.who, f.username, f.email, f.user_id,
+        f.app, appTitle(f.app), f.app_version, f.os,
+        f.kind, f.message, f.contact, f.status,
+        f.replies.map((r) => r.body),
+        f.replies.map((r) => r.by),
+      ),
+    ]),
   )
 }
 
@@ -118,7 +155,14 @@ type Props = {
   rows: DevFeedback[]
   state: 'loading' | 'ready' | 'error'
   catalog: DevCatalog | null
-  stores: DevStoreApp[]
+  /** Each report's search haystack, keyed by id. Built once per read by the
+   *  console and shared with its match counter. See `feedbackHaystacks`. */
+  hays: Map<number, string>
+  /** The console's one app-naming lookup, from `appTitles`. */
+  titleOf: (id: string) => string
+  /** How many rows the read asked for, so "newest N loaded" names the real
+   *  number rather than a second copy of it. */
+  cap: number
   push: (tone: 'ok' | 'bad', text: string) => void
   /** Re-read the feedback and the overview after a write, so the list, the
    *  tab badge and the tile all say what actually landed. */
@@ -126,7 +170,17 @@ type Props = {
   onOpenAccount: (userId: string) => void
 }
 
-export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpenAccount }: Props) {
+export function FeedbackTab({
+  rows,
+  state,
+  catalog,
+  hays,
+  titleOf,
+  cap,
+  push,
+  reload,
+  onOpenAccount,
+}: Props) {
   const { terms } = useSearch()
   const searching = terms.length > 0
 
@@ -137,23 +191,25 @@ export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpen
   const [openId, setOpenId] = useState<number | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
-  const titleOf = useCallback(
-    (id: string) => stores.find((s) => s.id === id)?.title ?? prettyId(id),
-    [stores],
-  )
-
   /*
-   * The dropdowns offer the server's vocabulary UNIONED with whatever the rows
-   * actually hold, so a kind added on the server tomorrow — or a status this
-   * build has never heard of — is still filterable rather than invisible. A
-   * filter that omits a value silently hides those reports; see rule 17.
+   * The server's vocabulary, in the server's order, with anything the rows hold
+   * that it does not mention appended. Both halves matter and for different
+   * reasons: the ORDER is what the Type and Status sorts rank by, so it has to
+   * be the ladder ('new' before 'seen' before 'replied') and not the order
+   * reports happened to arrive in; the APPENDING is what keeps a kind added
+   * tomorrow filterable rather than invisible (rule 17).
+   *
+   * The fallback is why a fixed list is written down here at all. `catalog` is
+   * null while it is in flight and stays null if that read failed, and without
+   * a floor the Status control in the report dialog would offer only the
+   * statuses the loaded rows happen to hold — one option, on a page of new
+   * reports, with nothing on screen saying why nothing can be marked resolved.
+   * These mirror `tdg_feedback_kinds()` and `tdg_feedback_statuses()`; the
+   * server still refuses anything it does not know.
    */
-  const kinds = useMemo(
-    () => [...new Set([...(catalog?.feedback_kinds ?? []), ...rows.map((r) => r.kind)])],
-    [catalog, rows],
-  )
+  const kinds = useMemo(() => vocabulary(catalog?.feedback_kinds, KINDS, rows, (r) => r.kind), [catalog, rows])
   const statuses = useMemo(
-    () => [...new Set([...(catalog?.feedback_statuses ?? []), ...rows.map((r) => r.status)])],
+    () => vocabulary(catalog?.feedback_statuses, STATUSES, rows, (r) => r.status),
     [catalog, rows],
   )
   /** Only apps that have actually sent something: this is a filter over the
@@ -163,11 +219,11 @@ export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpen
   const shown = useMemo(
     () =>
       rows
-        .filter((f) => matchesTerms(feedbackHay(f, titleOf(f.app)), terms))
+        .filter((f) => matchesTerms(hays.get(f.id) ?? '', terms))
         .filter((f) => kindF === 'all' || f.kind === kindF)
         .filter((f) => appF === 'all' || f.app === appF)
         .filter((f) => statusF === 'all' || f.status === statusF),
-    [rows, terms, kindF, appF, statusF, titleOf],
+    [rows, hays, terms, kindF, appF, statusF],
   )
 
   const sorted = useMemo(() => {
@@ -221,18 +277,11 @@ export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpen
     [push, reload],
   )
 
-  /* ── opening a report, and giving the focus back ──────────────────────── */
+  /* ── opening a report ─────────────────────────────────────────────────── */
 
-  const lastFocus = useRef<HTMLElement | null>(null)
-  const openReport = (id: number) => {
-    lastFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    setOpenId(id)
-  }
-  const closeReport = useCallback(() => {
-    setOpenId(null)
-    const back = lastFocus.current
-    if (back && back.isConnected) back.focus()
-  }, [])
+  // Which row opened it, and the focus back to that row on close, are both
+  // useModal's job now — one mechanism for every dialog on the site.
+  const closeReport = useCallback(() => setOpenId(null), [])
 
   const open = openId == null ? null : (rows.find((f) => f.id === openId) ?? null)
   // A refresh can take the open report away — somebody else deleted it. The
@@ -297,7 +346,7 @@ export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpen
           ? 'Reading the feedback…'
           : state === 'error'
             ? "Couldn't read the feedback."
-            : `${sorted.length}${filtered ? ` of ${rows.length}` : ''} report${(filtered ? rows.length : sorted.length) === 1 ? '' : 's'} · click one to read, reply and copy${rows.length >= FEEDBACK_CAP ? ` · newest ${FEEDBACK_CAP} loaded` : ''}`}
+            : `${sorted.length}${filtered ? ` of ${rows.length}` : ''} report${(filtered ? rows.length : sorted.length) === 1 ? '' : 's'} · click one to read, reply and copy${rows.length >= cap ? ` · newest ${cap} loaded` : ''}`}
       </p>
 
       <Panel
@@ -347,7 +396,7 @@ export function FeedbackTab({ rows, state, catalog, stores, push, reload, onOpen
                 key={f.id}
                 report={f}
                 appTitle={titleOf(f.app)}
-                onOpen={() => openReport(f.id)}
+                onOpen={() => setOpenId(f.id)}
               />
             ))}
             {state !== 'error' && sorted.length === 0 && (
@@ -472,19 +521,10 @@ function ReportDialog({
     setConfirmDelete(false)
   }, [f.id])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    closeRef.current?.focus()
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [onClose])
+  // The scroll lock, Escape and the focus return, counted across every dialog
+  // on the page rather than owned by this one. See src/lib/modal.ts. Mounted
+  // only while open, so `open` is simply true.
+  useModal(true, onClose, closeRef)
 
   const copy = (text: string, said: string) =>
     void navigator.clipboard?.writeText(text).then(

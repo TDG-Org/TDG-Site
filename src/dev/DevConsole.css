@@ -1353,15 +1353,28 @@
   --fb-cols: 92px 96px 96px 56px 120px minmax(130px, 0.9fr) minmax(160px, 1.6fr) 84px;
   --fb-copy-w: 56px;
   --fb-pad-x: 12px;
+  /* The narrowest this table can be drawn without a column losing width it
+     needs: 834px of tracks (six fixed, two floored at 130 and 160) + 7 × 10px
+     of gaps + 12px of --fb-pad-x + the 56px copy column. Below that it SCROLLS.
+     It used to clip — `overflow: hidden` over tracks that cannot shrink — so
+     between the 720px stacking breakpoint and roughly 1200px of viewport, which
+     is every tablet and every half-screen window, the STATUS tag and the tail
+     of the message were cut off with no way to reach them. A wide table that
+     scrolls is a wide table; a wide table that clips is a lie about how many
+     columns it has. The stacked layout below 720px clears this back to `auto`,
+     because there is nothing left to scroll once each report is a card. */
+  --fb-min: 972px;
   border: 1px solid var(--border);
   border-radius: var(--dev-radius);
   background-color: var(--bg2);
-  overflow: hidden;
+  /* Not `hidden`: still clips to the radius, but reachably. */
+  overflow: auto hidden;
 }
 
 .dev__fb-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  min-width: var(--fb-min);
   border-bottom: 1px solid var(--border);
   background-color: var(--surface);
 }
@@ -1424,6 +1437,7 @@
 .dev__fb-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  min-width: var(--fb-min);
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
@@ -1770,7 +1784,11 @@
     text-align: left;
   }
   /* The feedback table stacks the way the ledgers do: one report reads as a
-     small card, and the sort row wraps into a strip of buttons. */
+     small card, and the sort row wraps into a strip of buttons. Nothing is
+     side by side any more, so the scroll floor goes with it. */
+  .dev__fb-table {
+    --fb-min: 0;
+  }
   .dev__fb-head-main {
     display: flex;
     flex-wrap: wrap;

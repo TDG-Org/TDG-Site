@@ -343,6 +343,16 @@ $$;
 
 --  Move a report along its ladder. Same-status writes return quietly rather
 --  than writing an audit row that says nothing changed.
+--
+--  NOTE, added after applying: the `perform v_me;` on the last line of this
+--  body does NOTHING and is not a permission check. The check happens where
+--  `v_me` is declared — `tdg_admin_uid()` raises for a non-developer before the
+--  first statement runs — exactly as it does in `_reply` and `_delete`, which
+--  need `v_me` for a real purpose and carry no such line. It is left in place
+--  because this file is byte-for-byte what is running (`pg_get_functiondef`
+--  stores the body, comments included), and a cosmetic line is not worth a
+--  migration; do not read it as a second guard, and do not keep it if this
+--  function is ever recreated for a real reason.
 create or replace function public.tdg_admin_feedback_set_status(p_id bigint, p_status text)
 returns void
 language plpgsql security definer set search_path to 'public'

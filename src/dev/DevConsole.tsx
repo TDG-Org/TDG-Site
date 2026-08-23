@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevFeedback, DevOverview } from './api'
-import { ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
+import { appTitles, ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
 import {
   LedgerTag,
   Panel,
@@ -15,11 +15,11 @@ import {
   Toasts,
   useToasts,
 } from './controls'
-import { FeedbackTab, feedbackHay } from './FeedbackTab'
+import { FeedbackTab, feedbackHaystacks } from './FeedbackTab'
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
-import { fmtDate, fmtRelative, fmtUsd, nameOf, prettyId, standingOf } from './format'
+import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
 import { captureAnchor, holdAnchor, readView, useRememberView, useRestoreView } from './viewState'
 import './DevConsole.css'
 
@@ -426,28 +426,37 @@ function DevConsoleBody({
     [allAudit, terms],
   )
 
+  /** The one app-naming lookup this page uses, everywhere. See `appTitles`. */
+  const appTitle = useMemo(() => appTitles(stores), [stores])
+
   /*
-   * Counted here only for the toolbar hint; the tab filters and sorts its own
-   * copy. The haystack is FeedbackTab's own, so the hint and the tab cannot
-   * disagree about what matches.
+   * Every report's search haystack, built once per read and handed to the tab
+   * as well — so the hint and the tab cannot disagree about what matches, and
+   * neither of them rebuilds a thousand reports' worth of text on the search
+   * input's render path. Depends on the ROWS, not on the terms.
    */
+  const feedbackHays = useMemo(
+    () => feedbackHaystacks(allFeedback, appTitle),
+    [allFeedback, appTitle],
+  )
+
+  /* Counted here only for the toolbar hint; the tab filters and sorts its own
+   * copy, from the same haystacks. */
   const shownFeedback = useMemo(
-    () =>
-      allFeedback.filter((f) =>
-        matchesTerms(
-          feedbackHay(f, stores.find((s) => s.id === f.app)?.title ?? prettyId(f.app)),
-          terms,
-        ),
-      ),
-    [allFeedback, stores, terms],
+    () => allFeedback.filter((f) => matchesTerms(feedbackHays.get(f.id) ?? '', terms)),
+    [allFeedback, feedbackHays, terms],
   )
 
   /** Reports nobody has looked at, for the badge on the tab itself: a report
-   *  waiting behind an unopened tab is a report nobody knows about. */
-  const feedbackNew = useMemo(
-    () => allFeedback.filter((f) => f.status === 'new').length,
-    [allFeedback],
-  )
+   *  waiting behind an unopened tab is a report nobody knows about.
+   *
+   *  From the OVERVIEW, which counts the whole table server-side, not from the
+   *  loaded rows. The read is capped at LEDGER_CAP, so past that a report still
+   *  marked 'new' can sit outside the page — and a badge counting only what is
+   *  in front of it would then disagree with the tile directly above it about
+   *  how many are waiting. Both now come from the same number. Zero while the
+   *  overview is in flight, which shows no badge rather than a wrong one. */
+  const feedbackNew = overview?.feedback_new ?? 0
 
   /* ── keeping the page you were reading ────────────────────────────────
    *
@@ -636,7 +645,9 @@ function DevConsoleBody({
             rows={allFeedback}
             state={feedbackState}
             catalog={catalog}
-            stores={stores}
+            hays={feedbackHays}
+            titleOf={appTitle}
+            cap={LEDGER_CAP}
             push={push}
             reload={reloadFeedback}
             onOpenAccount={(id) => {
@@ -813,7 +824,7 @@ function DevConsoleBody({
 function Overview({ overview: o, stores }: { overview: DevOverview | null; stores: DevStoreApp[] }) {
   // Its title if the site sells it, its id made readable if this is the first
   // the shop has heard of it. An app is never shown as a bare key.
-  const titleOf = (id: string) => stores.find((s) => s.id === id)?.title ?? prettyId(id)
+  const titleOf = appTitles(stores)
 
   const stats: { label: string; value: string; what: string; tone?: 'warn' | 'bad' }[] = o
     ? [

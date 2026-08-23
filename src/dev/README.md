@@ -209,8 +209,13 @@ stands. The migration and the app-side contract live in
 needs to join in is `docs/feedback-app-prompt.md`.
 
 - **Every column sorts** and three dropdowns narrow by type, app and status.
-  The lists they offer come from the server's catalog UNIONED with what the
-  rows hold, so a kind added tomorrow is filterable the same day.
+  The lists they offer are the server's catalog, in the server's ORDER —
+  which is what the Type and Status sorts rank by, so `new` really does come
+  before `seen` before `replied` — with anything the rows hold that the
+  catalog does not mention appended, so a kind added tomorrow is filterable
+  the same day. There is a copy of both lists in `FeedbackTab.tsx` as a floor
+  for when the catalog read has not landed; without it a failed catalog left
+  the status control offering one option and no explanation.
 - **Everything copies at every grain**: one field (in the report dialog), one
   report (the Copy on its row), or the whole filtered list as text or JSON —
   because a bug report's destination is usually a chat or a Claude session,
@@ -226,7 +231,13 @@ needs to join in is `docs/feedback-app-prompt.md`.
   and takes a confirmation; a real report that is dealt with is `resolved`,
   which keeps the record. Both write the audit log.
 - The tab itself carries a `n NEW` tag and the overview a Feedback tile, so a
-  waiting report is visible from every tab, not only this one.
+  waiting report is visible from every tab, not only this one. Both read the
+  same server-side count (`tdg_admin_overview`), not the loaded rows, so they
+  cannot disagree once the ledger outgrows the read's cap.
+- **The table scrolls sideways rather than clipping.** Eight columns need
+  about 972px; below that the panel gives you a scrollbar, and below 720px
+  each report stacks into a small card instead. A wide table that clips is a
+  lie about how many columns it has.
 - **What a sender is allowed to send**, so a thin-looking ledger is not read
   as a broken form: 60 seconds between reports, 5 an hour, 10 a day, per
   account, and an identical resend inside 10 minutes is folded into the

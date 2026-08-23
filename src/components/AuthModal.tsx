@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { useModal } from '../lib/modal'
 import { supabase } from '../lib/supabase'
 import './AuthModal.css'
 
@@ -377,19 +378,9 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     }
   }, [open, oauthError, dismissOauthError])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [open, onClose])
+  // The scroll lock, Escape and the focus return, counted across every dialog
+  // on the page rather than owned by this one. See src/lib/modal.ts.
+  useModal(open, onClose)
 
   // Live availability check against the shared profiles table, debounced.
   useEffect(() => {

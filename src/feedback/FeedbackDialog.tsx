@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { useModal } from '../lib/modal'
 import { FEEDBACK_KINDS, fetchQuota, quotaLine, submitFeedback, type FeedbackQuota } from './api'
 import './Feedback.css'
 
@@ -33,6 +34,12 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   const [quota, setQuota] = useState<FeedbackQuota | null>(null)
   const [tick, setTick] = useState(() => Date.now())
   const messageRef = useRef<HTMLTextAreaElement | null>(null)
+  const closeRef = useRef<HTMLButtonElement | null>(null)
+  // Where a mouse press STARTED. A drag that begins in the textarea and
+  // finishes a few pixels outside the card lands its click on the scrim, and
+  // an unguarded scrim would take that as "close" and bin a report somebody
+  // spent five minutes writing.
+  const pressedBackdrop = useRef(false)
 
   // A fresh opening is a fresh report. Reset on open, not on close, so the
   // closing animation never flashes an emptied form.
@@ -89,19 +96,9 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     return () => window.clearInterval(id)
   }, [open, quota])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [open, onClose])
+  // The scroll lock, Escape and the focus return, counted across every dialog
+  // on the page rather than owned by this one. See src/lib/modal.ts.
+  useModal(open, onClose, closeRef)
 
   if (!open) return null
 
@@ -112,6 +109,36 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   // while "one report at a time" answers a form somebody is still filling in.
   const formLine = quotaLine(quota, msLeft, false)
   const sentLine = quotaLine(quota, msLeft, true)
+
+  function pickKind(id: string) {
+    setKind(id)
+    setError(null)
+  }
+
+  /**
+   * The radiogroup's keyboard half: arrows and Home/End move the selection and
+   * carry focus with it, wrapping at both ends. Selection FOLLOWS focus, which
+   * is the pattern for a group this small — every option is one press away and
+   * none of them costs anything to land on.
+   */
+  function moveKind(e: KeyboardEvent<HTMLButtonElement>, from: number) {
+    const last = FEEDBACK_KINDS.length - 1
+    const to =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (from === last ? 0 : from + 1)
+      : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (from === 0 ? last : from - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : -1
+    if (to < 0) return
+    e.preventDefault()
+    pickKind(FEEDBACK_KINDS[to].id)
+    // The tile is about to become the only tabbable one in the group; move
+    // focus to it in the same breath, or the reader is left standing on an
+    // option that is no longer chosen.
+    const group = e.currentTarget.parentElement
+    const next = group?.children[to]
+    if (next instanceof HTMLElement) next.focus()
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -146,17 +173,28 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   }
 
   return (
-    <div className="fb__backdrop" onClick={onClose}>
-      <div
-        className="fb__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fb-title"
-        onClick={(e) => e.stopPropagation()}
-      >
+    // The scrim closes on a press that both STARTED and ended on it. A click
+    // whose mousedown was inside the card — the tail of a drag-select in the
+    // textarea — is somebody editing, not somebody leaving.
+    <div
+      className="fb__backdrop"
+      onMouseDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && pressedBackdrop.current) onClose()
+      }}
+    >
+      <div className="fb__card" role="dialog" aria-modal="true" aria-labelledby="fb-title">
         <header className="fb__head">
           <div className="fb__eyebrow">Feedback</div>
-          <button type="button" className="fb__x" aria-label="Close" onClick={onClose}>
+          <button
+            ref={closeRef}
+            type="button"
+            className="fb__x"
+            aria-label="Close"
+            onClick={onClose}
+          >
             ×
           </button>
         </header>
@@ -202,21 +240,27 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
             </p>
 
             <form className="fb__form" onSubmit={handleSubmit}>
-              <fieldset className="fb__kinds" role="radiogroup" aria-label="What kind of feedback">
+              {/* A real radiogroup, keyboard contract included: arrows move
+                  and select, and only one option is in the tab order at a time
+                  (the checked one, or the first while nothing is chosen) so Tab
+                  crosses the group rather than walking it. Announcing "radio,
+                  1 of 5" and then ignoring the arrow keys is worse than five
+                  plain buttons — see AGENTS.md rule 14. The legend is the
+                  group's name; no aria-label, which would replace it. */}
+              <fieldset className="fb__kinds" role="radiogroup">
                 <legend className="fb__label">What Kind Of Feedback Is This?</legend>
                 <div className="fb__kind-grid">
-                  {FEEDBACK_KINDS.map((k) => (
+                  {FEEDBACK_KINDS.map((k, i) => (
                     <button
                       key={k.id}
                       type="button"
                       role="radio"
                       aria-checked={kind === k.id}
+                      tabIndex={kind === k.id || (kind == null && i === 0) ? 0 : -1}
                       className="fb__kind"
                       data-active={kind === k.id || undefined}
-                      onClick={() => {
-                        setKind(k.id)
-                        setError(null)
-                      }}
+                      onKeyDown={(e) => moveKind(e, i)}
+                      onClick={() => pickKind(k.id)}
                     >
                       <span className="fb__kind-name">{k.name}</span>
                       <span className="fb__kind-what">{k.what}</span>

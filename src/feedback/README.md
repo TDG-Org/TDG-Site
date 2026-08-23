@@ -58,6 +58,15 @@ server's own refusal lands in the error alert, worded to be read.
   developer's browser ever fetches; one import here would put the whole
   console in everybody's bundle. The one helper both sides want (an app id
   made readable) is four lines and is duplicated on purpose.
+- **Both dialogs' page-level behaviour is `../lib/modal.ts`, not their own.**
+  The scroll lock, Escape and the focus return live there and are counted
+  across every dialog on the site. Two of these used to each save and restore
+  `body.style.overflow`, which left the page unscrollable whenever one opened
+  over the other and a single Escape closed both.
+- **The send form's scrim needs a press that starts AND ends on it.** A drag
+  that begins in the textarea and finishes outside the card is somebody editing,
+  not somebody leaving, and the reset-on-open means a stray close bins the whole
+  report with nothing to undo it with.
 - **The server's refusals are shown, not rewritten.** They are worded to be
   read — "pick what kind of feedback this is" — and a network failure gets
   its own sentence, because "the server said no" and "the server never heard
