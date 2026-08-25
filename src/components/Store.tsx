@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
+import { MODAL_LAYER, useEscape } from '../lib/modal'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
@@ -158,16 +159,13 @@ function PlanPanel({
   }, [step])
 
   // Escape backs out of it the way it backs out of every other thing that
-  // opens on this site. Deliberately NOT `useModal`: that locks the page's
-  // scroll for a full-screen dialog, and this one is anchored inside a card
-  // that is a third of the page.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  // opens on this site — through the SAME stack, so the press goes to whatever
+  // is painted in front and to nothing else. Still deliberately not `useModal`:
+  // that locks the page's scroll for a dialog covering all of it, and this one
+  // is anchored inside a card that is a third of the page and leaves the rest
+  // scrolling. `useEscape` is that ordering without the lock; a listener of its
+  // own is what had a panel closing underneath the auth modal opened over it.
+  useEscape({ open: true, onClose, layer: MODAL_LAYER.storePlan })
 
   return (
     <>

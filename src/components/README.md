@@ -139,9 +139,20 @@ beside it. In one component:
   and returning focus, and a scrim that is a real button and is hidden from
   screen readers because Escape is its keyboard equivalent.
 
-**These two panels deliberately do NOT use `lib/modal.ts`.** That hook locks the
-page's scroll and joins a stack meant for the four full-screen dialogs; these are
-anchored inside a card that is a third of the page, and locking the document
-behind a small in-card panel would be heavier than the thing it is protecting.
-The cost is that their Escape is an ordinary `document` listener rather than a
-member of that stack — see `lib/modal.ts` on why the stack exists.
+**These two panels deliberately do NOT use `useModal`.** That hook locks the
+page's scroll, traps Tab and takes the focus, all of which a full-screen dialog
+owes the page and none of which these do: they are anchored inside a card that is
+a third of the page, they say `role="dialog"` without `aria-modal`, and the page
+goes on scrolling behind them, which is the property they were kept out of
+`useModal` to keep.
+
+**They are members of its stack all the same, through `useEscape`.** That used to
+be the same decision — the panels carried a `document` keydown listener each, so
+a panel open under the auth modal took the same Escape as the modal in front of
+it and closed something the reader could not see. The two properties came apart
+instead of being traded: `modal.ts` counts the scroll lock over the members that
+asked for it and traps Tab only for members that name a dialog element, so a
+panel can hold a place in the Escape ordering and nothing else. Its layer is
+`MODAL_LAYER.storePlan`, which mirrors `.store__plans` in `Store.css` and is
+small because a panel inside a card genuinely paints under everything the page
+puts over one — change one, change both.

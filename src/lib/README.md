@@ -15,7 +15,7 @@ change one.
 | `chromeGuard.ts` | Keeping extensions from repainting our controls. |
 | `dpr.ts` | Noticing when the display's pixel ratio changes. |
 | `mergeRefs.ts` | Point several refs at one node. |
-| `modal.ts` | A dialog's scroll lock, Escape, Tab, focus return and scrim — shared by all four. |
+| `modal.ts` | A dialog's scroll lock, Escape, Tab, focus return and scrim — and, for a dialog that covers a card rather than the page, the Escape ordering on its own. |
 
 ---
 
@@ -172,11 +172,24 @@ behaviour rather than breaking anything.
 ## `modal.ts`
 
 `useModal({ open, onClose, layer, dialog, focusFirst? })` and
-`useBackdropClose(onClose)`. Every dialog on the site calls both: the auth
-modal, Send Feedback, the reply panel, the Developer console's report dialog.
-**Do not write `document.body.style.overflow` in a component, do not add your
-own `keydown` listener for Escape or Tab, and do not write a scrim's `onClick`
-by hand.**
+`useBackdropClose(onClose)`. Every full-screen dialog on the site calls both:
+the auth modal, Send Feedback, the reply panel, the Developer console's report
+dialog. **Do not write `document.body.style.overflow` in a component, do not add
+your own `keydown` listener for Escape or Tab, and do not write a scrim's
+`onClick` by hand.**
+
+`useEscape({ open, onClose, layer })` is the third export and it is one of those
+five things alone: a place in the Escape ordering. The Store's two plan panels
+take it. They are `role="dialog"` but not `aria-modal`, they cover one card
+rather than the page, and the page goes on scrolling behind them — so they want
+no scroll lock, no Tab trap and no focus of this file's choosing, and `useModal`
+would have given them all three. Left outside the stack with a `document`
+listener each, a panel open beneath the auth modal took the same Escape as the
+modal in front of it and closed something the reader could not see, which is the
+bug the stack exists to prevent arriving from the one direction it did not
+reach. What made the fix possible is that the two properties are counted
+separately: the scroll lock over the members that asked for it, never over
+`stack.length`, and the Tab trap only over members that name a dialog element.
 
 `dialog` is a ref to the element carrying `role="dialog"`, and it is required
 rather than optional because that is what Tab is kept inside — a trap that
@@ -195,9 +208,12 @@ what this replaced, and it was wrong in a reachable case: at boot a recovery
 link opens the auth modal from an effect while the reply panel is still waiting
 on its fetch, so the panel opens second at z-index 290 and the modal covering it
 sits at 300. Escape closed the panel nobody could see. `MODAL_LAYER` holds the
-three numbers and names the stylesheet each one mirrors — change one, change
-both. Listeners that are not dialogs — the account menu's own Escape — are left
-alone on purpose.
+four numbers and names the stylesheet each one mirrors — change one, change
+both. The Store panel's 2 is the odd one and is honest: `.store__action` is a
+direct child of `.card` and carries a `z-index`, so the panel's number is
+measured inside the card's own stacking context, which places it under
+everything the page paints over a card. Listeners that are not dialogs — the
+account menu's own Escape — are left alone on purpose.
 
 `useBackdropClose` is the scrim, and it needs a press that both STARTED and
 ended on the backdrop. A drag that begins inside the card and finishes outside
