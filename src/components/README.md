@@ -109,25 +109,39 @@ are checking layout.
 
 ## Store.tsx is the worked example
 
-It is the file to read before you build anything new here, and its plan chooser
-is a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it down,
-and any future app that sells a second plan copies it rather than designing
+It is the file to read before you build anything new here, and its two choosers
+are a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it
+down, and any future app that sells a plan copies it rather than designing
 beside it. In one component:
 
 - A **state machine** with six states, each with its own copy, and a fixed floor
   so the card never resizes between them.
-- **One buy button per pack**, whatever the plan count — a pack sold three ways
-  opens a chooser over the card rather than printing three buttons, because the
-  packs sit in a grid row and unequal action rows are visible immediately.
+- **One button per pack, in every state.** A pack sold three ways opens a
+  chooser over the card rather than printing three buttons, and a pack already
+  subscribed to opens a *manage* panel from a button of exactly the same size in
+  exactly the same place — measured 530×47 against its neighbour's Buy button.
+  The packs sit in a grid row and unequal action rows are visible immediately.
 - Chips and cadence that **agree with the plan**. Printing `ONE-TIME · YOURS FOR
   GOOD` over a monthly subscription is the one mistake a shop may not make.
 - A **derived** saving, so `Save $22.88` cannot disagree with the two prices it
   is computed from — sitting under the amount it is about, in the body face at
   reading size, with its box reserved in every row so three rows stay one
-  height.
-- The full accessibility floor: `role="dialog"`, `aria-expanded`,
-  `aria-haspopup`, Escape closing and returning focus, Tab staying inside the
-  card, and a scrim that closes on a press which started AND ended on it, and
-  is hidden from screen readers because Escape is its equivalent. All of that
-  is `lib/modal.ts`, not the component — `AuthModal` calls `useModal` and
-  `useBackdropClose` like the other three dialogs.
+  height. The reservation carries the **real text**, hidden where it is not
+  true: an empty span reserved the height and not the width, which made the
+  yearly row's money column 30px wider than the other two and its note a line
+  taller at 375px.
+- **Both panels are one component**, `PlanPanel`. Rule 11's promise that a pack
+  looks the same wherever it is sold is kept mechanically rather than by two
+  blocks of JSX agreeing.
+- The accessibility floor: `role="dialog"` with an `aria-label` naming the pack,
+  `aria-expanded` and `aria-haspopup` on the button, focus into the first row on
+  open *and again when the panel swaps its rows for a confirm*, Escape closing
+  and returning focus, and a scrim that is a real button and is hidden from
+  screen readers because Escape is its keyboard equivalent.
+
+**These two panels deliberately do NOT use `lib/modal.ts`.** That hook locks the
+page's scroll and joins a stack meant for the four full-screen dialogs; these are
+anchored inside a card that is a third of the page, and locking the document
+behind a small in-card panel would be heavier than the thing it is protecting.
+The cost is that their Escape is an ordinary `document` listener rather than a
+member of that stack — see `lib/modal.ts` on why the stack exists.

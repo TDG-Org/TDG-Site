@@ -192,6 +192,15 @@
 }
 
 .store__pack {
+  /* `--warm` as a STROKE and `--warm` as TEXT are not the same requirement.
+     The token is tuned to read as a border and a tint, and light theme's
+     `#b8763a` set as 13px type ON a warm tint measured 3.2:1 — under the 4.5
+     rule 14 makes a floor, and the confirm button was worse at 2.7. Mixing a
+     little of the page's own text colour in darkens it in light and lightens
+     it in dark, so ONE expression is right in both: measured 4.9 and 5.4 in
+     light, 9.7 and above in dark. Borders and backgrounds keep plain `--warm`,
+     where the token is already correct. */
+  --warm-text: color-mix(in srgb, var(--warm) 68%, var(--text));
   display: flex;
   flex-direction: column;
   padding: 24px;
@@ -323,6 +332,35 @@
 .store__buy:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+
+/* Two variants, and both keep the button's SIZE exactly.
+
+   `--quiet` is the Manage Plan button on an owned card. It must not shout the
+   way a Buy button does — nothing here is for sale to this reader — but it sits
+   in the same place on the same shelf as its neighbour's Buy button, so a
+   smaller one would be the misaligned action row rule 11 exists to prevent,
+   arriving through the back door.
+
+   `--leave` is the confirm on the way out of a plan. Warm rather than inverted,
+   because the inverted button is what this site uses to mean "yes, buy", and
+   the one press that stops a payment must never be able to be mistaken for it. */
+.store__buy--quiet {
+  border-color: var(--border-hover);
+  background-color: var(--surface);
+  color: var(--text);
+}
+.store__buy--quiet:hover {
+  background-color: var(--accent-soft);
+}
+
+.store__buy--leave {
+  border-color: color-mix(in srgb, var(--warm) 48%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 14%, transparent);
+  color: var(--warm-text);
+}
+.store__buy--leave:hover {
+  background-color: color-mix(in srgb, var(--warm) 22%, transparent);
 }
 
 .store__ghost {
@@ -457,6 +495,16 @@
 }
 
 .store__plan-list {
+  /* Two lines of `.store__plan-note`, in ONE place, because two rules reserve
+     exactly this box for the same reason and a second literal would be a
+     second thing to keep in step. 11.5px at 1.45 is 16.675, so two lines and a
+     rounding pixel. */
+  --plan-note-2: 34px;
+  /* One line of `.store__plan-price`, which is set at `700 17px/1`. Reserved
+     in the stacked layout below, where the money is a LINE rather than a
+     column and a row without an amount would otherwise be shorter than the one
+     with it. */
+  --plan-money-1: 17px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -500,6 +548,18 @@
   outline-offset: 2px;
 }
 
+/* The way OUT of a plan, told apart from the ways further in by colour alone
+   — same size, same weight, same place in the list. A row that stops a payment
+   should not be hard to find, and should not be easy to hit by accident: it is
+   tinted here and confirmed before anything happens. */
+.store__plan[data-tone='leave'] .store__plan-label {
+  color: var(--warm-text);
+}
+.store__plan[data-tone='leave']:hover {
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 9%, transparent);
+}
+
 .store__plan-text {
   display: flex;
   flex-direction: column;
@@ -513,6 +573,26 @@
 .store__plan-note {
   font: 400 11.5px/1.45 var(--font-body);
   color: var(--faint);
+}
+
+/* The MANAGE panel's rows, and only those.
+
+   Its four rows say four different things, at four different lengths, so they
+   measured 79, 63, 63 and 63 — a menu that reads as four controls nobody laid
+   out together. The note's box is reserved at exactly two lines in every row,
+   which is the same trick the saving badge uses one panel over and works for
+   the same reason: reserve the space, do not let the text decide it.
+
+   Scoped to `[data-menu]` because the BUY chooser's rows are one line each and
+   already exactly equal at 69px — the figure AGENTS.md §8 records — and a
+   reservation there would push all three to 86px for no gain.
+
+   The copy is kept inside two lines at 320px, the width where it is tightest.
+   A note that ever needs a third line there would make its own row taller
+   again, so keep them short. */
+.store__plan-list[data-menu] .store__plan-note {
+  display: block;
+  min-height: var(--plan-note-2);
 }
 
 /* The money column. The amount and what it saves are one fact about one plan,
@@ -562,8 +642,70 @@
   white-space: nowrap;
   transition: var(--t-theme);
 }
-.store__plan-save:empty {
+/* Reserved and hidden, never removed. It carries the real text in every row —
+   see Store.tsx — so the money column is one width down the whole list and the
+   text column beside it wraps identically. `display: none` would give both back
+   and undo the point of reserving them. */
+.store__plan-save[data-blank] {
   visibility: hidden;
+}
+
+/* ── the question before anything moves ──────────────────────────────────
+
+   Cancelling and buying out both change what somebody is charged, so neither
+   is one press. The panel replaces its own rows with this in place rather than
+   opening a second dialog over the first: a dialog on a dialog inside a card is
+   three scrims deep, and the reader has already told us which pack they mean.  */
+
+.store__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.store__ask-q {
+  margin: 0;
+  font: 600 14px/1.35 var(--font-body);
+  color: var(--text);
+}
+.store__ask-what {
+  margin: 0;
+  font: 400 12px/1.55 var(--font-body);
+  color: var(--muted);
+}
+
+/* A mirrored pair, so it takes its sizing from ONE place on the common parent
+   and is applied to both halves — per AGENTS.md rule 6. `flex: 1 1 0` makes the
+   two exactly equal in width whatever their labels say, and `stretch` makes
+   them exactly equal in height even though the ghost and the buy button carry
+   different padding of their own. Two literals here would be a lopsided pair
+   the first time either label changed length. */
+.store__ask-row {
+  --ask-gap: 10px;
+  --ask-pad-x: 16px;
+  display: flex;
+  align-items: stretch;
+  gap: var(--ask-gap);
+}
+/* Both halves take their horizontal padding from the SAME variable above, and
+   that is load-bearing rather than tidiness. `flex: 1 1 0` with `box-sizing:
+   border-box` floors each item at its own padding and border and then splits
+   only what is left, so the ghost's 14px and the buy button's 18px came out as
+   241px and 249px — a lopsided pair in which neither number looks wrong on its
+   own, which is exactly the shape AGENTS.md rule 6 describes. Measured: 246 and
+   246 after this. `stretch` does the same job vertically, so the two are equal
+   in height even though their vertical padding differs. */
+.store__ask-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: var(--ask-pad-x);
+}
+
+/* Working. The same pulse the card's own wait uses, because it is the same
+   thing being said: we have asked, and we are holding on for the answer. */
+.store__waiting--panel {
+  padding: 6px 2px;
+  font-size: 12.5px;
+  color: var(--muted);
 }
 
 @keyframes storeScrimIn {
@@ -612,6 +754,31 @@
 }
 .store__owned-tick {
   display: inline-flex;
+}
+
+/* Owned is not the whole truth about a RENTED pack, and the part it leaves out
+   is the part somebody is looking for. So the state rides in the same pill,
+   behind a hairline, in the pill's own colour — one thing to read rather than a
+   second badge to notice. */
+.store__owned-standing {
+  padding-left: 9px;
+  border-left: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Green means yours and stays green while it is. Warm is the one that needs
+   something from the reader — a card that failed, or renewals they have
+   stopped — and plain is a fact with nothing to do about it. Never a fourth. */
+.store__owned[data-tone='warn'] {
+  border-color: color-mix(in srgb, var(--warm) 48%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 13%, transparent);
+  color: var(--warm-text);
+}
+.store__owned[data-tone='plain'] {
+  border-color: var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
 }
 
 .store__waiting {
@@ -684,6 +851,48 @@
     bottom: -20px;
     left: -20px;
   }
+
+  /* A chooser row STACKS below the layout breakpoint, and this is a width
+     problem rather than a taste one. Side by side inside a 284px card, the
+     money column takes 95px of a 202px row and leaves the note 77 — a ribbon
+     six words tall, wrapping differently in every row, so the three rows came
+     out 113, 96 and 113 px. Stacked, the text has the row's whole width, all
+     three notes wrap the same way, and the money keeps its own line.
+
+     The right-hand column is what a reader compares prices DOWN on a wide
+     screen; on a phone the rows are already read top to bottom, so the amount
+     and its saving sit on one line together instead — the saving still directly
+     beside the amount it is about, which is the part that matters. */
+  .store__plan {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+  }
+  .store__plan-money {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  /* Stacked, the three notes sit within a pixel or two of the same wrap point
+     — "Billed every month." needs a second line and "Billed once a year." does
+     not — so the rows measured 110, 94 and 110. Reserving two lines here does
+     for the width what the badge's own reservation does for the height, and it
+     is scoped to this media query because on a wide screen all three notes are
+     one line and the rows are already exactly equal at 69px. */
+  .store__plan-note {
+    display: block;
+    min-height: var(--plan-note-2);
+  }
+  /* Stacked, the money is a line of its own, so a row carrying no amount is a
+     whole line shorter than the one that does — the manage menu measured 89,
+     106, 89, 89. Reserved rather than removed, for the same reason the saving
+     badge is: `display: none` gives the space back and undoes the point.
+     Only the manage menu, because the buy chooser prices every row by
+     definition and has nothing to reserve. */
+  .store__plan-list[data-menu] .store__plan-money {
+    min-height: var(--plan-money-1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -695,6 +904,10 @@
     transform: none;
   }
   .store__plan:hover {
+    transform: none;
+  }
+  .store__buy--quiet:hover,
+  .store__buy--leave:hover {
     transform: none;
   }
   .store__plans,

@@ -1,20 +1,87 @@
-# `src/store/` · what this account owns
+# `src/store/` · what this account owns, and what it can do about it
 
-One hook, `useOwnedPacks()`. It answers the only question the shop needs a server
-for: which packs has this account already bought?
+| File | What it is |
+| --- | --- |
+| `useOwnedPacks.ts` | The read: which packs this account holds, and how it holds each one. |
+| `grant.ts` | What "how it holds it" MEANS — the shape, and the sentence the card prints. |
+| `billing.ts` | The write: change a plan, stop the renewals, start them again. |
 
 ```ts
-const { stateFor, owned, refresh } = useOwnedPacks()
+const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
 ```
 
 | | |
 | --- | --- |
 | `stateFor(appId)` | That shelf's state: `loading` · `signedOut` · `ready` · `error`. An id no app claims stays `loading`, never `ready`. |
 | `owned` | A set of `packKey(app, pack)` strings. Meaningful once that app's shelf is `ready`. |
+| `grantFor(app, pack)` | The `grants` entry for one pack, or `null` when that app records none. Never a substitute for `owned`. |
 | `refresh()` | Ask again, now. The hook already asks on its own (see below); this is for a caller that knows something changed. |
 
 The catalogue it reads against is [`../data/store.ts`](../data/README.md). The
 card that renders the answer is `components/Store.tsx`.
+
+---
+
+## Two columns, and only one of them decides anything
+
+`owned_packs` is the answer: a plain `text[]` of pack ids, and the only thing the
+apps gate on. `grants` is the *reason*: an object keyed by pack id saying HOW
+each one is held — bought outright, or subscribed, with Stripe's status, the end
+of the period paid for, and whether it is set to stop at the end of it.
+
+**`owned_packs` is DERIVED from `grants` by a trigger in tdg-core**, through
+`<app>_packs_in_force()`. That function is the authority and the app asks the
+same one. Nothing in this folder decides whether a pack is in force; `grant.ts`
+only decides what sentence to print beside it, which is why a browser with a
+wrong clock can word a date badly and can never grant or remove a pack.
+
+**Not every app has a `grants` column.** DevFleet's table does not, because
+DevFleet sells nothing with a clock on it. The hook does not write that fact
+down anywhere — it ASKS for the column and reads the server's own refusal
+(PostgREST `42703`), remembering the answer per table for the life of the tab.
+A schema fact typed into a catalogue goes stale the day the column is added, and
+it fails in the direction that hides a subscription.
+
+## What a standing is
+
+`standingOfGrant(grant)` turns a grant into one of seven readings — `perpetual`,
+`active`, `trial`, `ending`, `dunning`, `lapsed`, `unknown` — each with a Title
+Case label, one sentence-case line, and whether there is a live Stripe
+subscription behind it to act on.
+
+`unknown` is not a gap. It is what a grant written by an app newer than this page
+looks like, and it renders as a real state saying exactly what is known, because
+**a state a reader can reach and cannot read is a bug**.
+
+`manageable` is false for a subscription grant with no `subscriptionId` on it —
+which is what a pack granted by hand from `#/dev` looks like. The card draws no
+Manage Plan button there, because a button that can only ever fail is worse than
+no button, and `storeAnswers.ts` says out loud why it is missing.
+
+## Changing and cancelling
+
+`billing.ts` talks to the `tdg-site-billing` Edge Function
+([`supabase/README.md`](../../supabase/README.md)). The request carries an app id
+and a pack id and nothing else that matters: the account comes from the caller's
+own access token, and the Stripe customer and subscription come from that
+account's own row. **A body naming somebody else's subscription changes nothing**,
+because no field of it is ever passed to Stripe.
+
+- `openBilling({ intent: 'update' })` — Stripe's own plan picker, prorated.
+- `openBilling({ intent: 'billing' })` — the card on file and past charges.
+- `setRenewal({ renew: false })` — `cancel_at_period_end`, never "cancel now".
+
+**Cancelling takes nothing away that day.** Stripe leaves the subscription
+`active` until the period ends, and `<app>_packs_in_force()` keeps it in force
+while that is true — so the pack goes on working, in the app as well as here,
+for every day already paid for. The card names the date; the database is what
+makes it true.
+
+Nothing here writes `<app>_entitlements`. That table has exactly one writer —
+the app's own Stripe webhook, from Stripe's own events. The cancel lands at
+Stripe, `customer.subscription.updated` follows within seconds, the webhook
+writes the grant, and `refresh()` reads it back. The card shows Stripe's own
+answer in the meantime and drops it the moment the grant arrives.
 
 ---
 
@@ -113,3 +180,8 @@ than at the next foreground.
 
 That effect depends on the pending pack alone and **never on `owned`**:
 re-running on every answer would reset the deadline and poll for ever.
+
+A cancel or a resume calls `refresh()` once rather than starting a watch, because
+that round trip is seconds rather than a payment's minutes — and the card is not
+waiting on it in any case: it renders Stripe's own answer immediately and lets
+the grant replace it.

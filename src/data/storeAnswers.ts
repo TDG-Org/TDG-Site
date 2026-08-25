@@ -28,10 +28,21 @@ import type { PageSection } from './pageBlocks'
  * who to write to, because a policy invented on a web page is a policy nobody
  * has agreed to keep.
  *
- * And "no subscription" is a fact about THIS SHELF, never about TDG. Makullveny
- * sells tiers of its own on its own site, one of which renews, and there is a
- * TDG-wide subscription tier several apps read. A page that promised we never
- * do subscriptions would be a promise broken by something already shipped.
+ * ## The plans section used to say "no", and that is why it is written the way
+ * ## it is now
+ *
+ * This shelf really did sell one-time packs only, and the section about
+ * subscriptions was one word long. Then the Pro Export Pack became a plan, and
+ * a page still answering "nothing here renews" was the shop telling somebody
+ * the wrong thing about their own money — the one mistake `store.ts` says a
+ * shop may not make, arriving through a file nobody thought of as part of the
+ * price.
+ *
+ * So the section names no pack and counts nothing. It says what is true of
+ * whatever is on the shelf: the card tells you before you click, and anything
+ * that renews can be changed and stopped from that same card. Both of those
+ * stay true when a second pack gains a plan, which is the only version of this
+ * section that will not go stale on its own.
  *
  * Facts checked against: `src/data/store.ts` (what is sold, the links, the
  * currency), `src/components/Store.tsx` (the buy flow and the five minutes it
@@ -57,8 +68,8 @@ export const STORE_ANSWERS: PageSection[] = [
       {
         kind: 'facts',
         items: [
-          { label: 'What a pack is', value: 'A one-time purchase, not a licence key and not a trial' },
-          { label: 'Charged', value: 'Once. There is nothing to renew and nothing to cancel' },
+          { label: 'What a pack is', value: 'A purchase on your account, not a licence key and not a trial' },
+          { label: 'Charged', value: 'Once, unless the card says it renews. Then the card also says how to stop it' },
           { label: 'Currency', value: 'US dollars, whichever country you are in' },
           { label: 'The price', value: 'On the card above, and it is the number Stripe charges' },
           { label: 'Usable today', value: 'Not yet. Both apps are still in development' },
@@ -134,21 +145,50 @@ export const STORE_ANSWERS: PageSection[] = [
   },
   {
     id: 'subscription',
-    title: 'Is anything here a subscription',
-    what: 'No, and exactly how far that answer goes across the rest of TDG.',
-    tag: 'NO',
+    title: 'Plans, and how to stop one',
+    what: 'Which packs renew, how to change or cancel, and what you keep afterwards.',
+    tag: 'PLANS',
     blocks: [
       {
         kind: 'text',
-        text: 'Nothing on this shelf renews. Every pack here is charged once, and there is no plan, no seat and nothing that lapses.',
+        text: 'Most packs on this shelf are charged once and are yours for good. Some are a plan that renews, and one is today. You never have to work out which: a pack that renews says SUBSCRIPTION on its card, next to the price and the cadence, before you click anything. A pack that does not renew says ONE-TIME. Neither of those is ever the other way round.',
       },
       {
         kind: 'text',
-        text: 'That is a statement about this shelf and not a promise about everything TDG will ever sell, which is worth saying plainly rather than letting you infer the bigger version. Makullveny already has tiers of its own, sold on its own site, and one of them does renew. There is also a TDG-wide subscription tier that several of our apps can read and gate on.',
+        text: 'A pack sold as a plan is usually sold more than one way — by the month, by the year, and sometimes outright — and the card prices every one of them before you choose. Nothing is picked for you, and nothing is dressed as the recommended one.',
+      },
+      {
+        kind: 'features',
+        items: [
+          {
+            name: 'Everything is on the card itself',
+            text: 'Once a plan is yours, the same card grows a Manage Plan button where the Buy button was. Changing it, stopping it, starting it again, changing the card you pay with and reading what you have been charged are all behind that one button. There is nowhere else to go and nobody to email.',
+          },
+          {
+            name: 'The card says where you stand',
+            text: 'It names the day it renews while it is renewing, the day it ends once you have cancelled, and it says so plainly if a payment has failed. You never have to open anything to find out which of those is true.',
+          },
+          {
+            name: 'Changing a plan',
+            text: 'Change Plan opens Stripe’s own page, where you can move between the plans. You pay the difference for the time left rather than the whole amount again, and Stripe works that out and shows it to you before you agree to it.',
+          },
+          {
+            name: 'Cancelling keeps what you have paid for',
+            text: 'Cancelling stops the next payment. It does not take anything away that day. Every part of the pack keeps working until the end of the period you have already paid for, in the app as well as on this page, and the card tells you the exact date. Then it stops on its own and nothing further is charged.',
+          },
+          {
+            name: 'And you can change your mind',
+            text: 'While a cancelled plan is still running, the same button offers Resume Plan. That puts the renewals back on the plan you were already on, and nothing is charged on the day you press it.',
+          },
+          {
+            name: 'Buying it outright instead',
+            text: 'Where a pack can also be bought once and kept, the manage panel offers that too. We stop the renewals first and say so before you agree, so you are never paying for the plan and the outright copy at the same time.',
+          },
+        ],
       },
       {
         kind: 'note',
-        text: 'The rule you can hold us to is smaller and more useful: if a card does not say it renews, it does not renew. Anything that ever does will say so on the card, next to the price, before you click.',
+        text: 'The rule you can hold us to: if a card does not say it renews, it does not renew — and if it does, you can stop it from that card in two presses, keep everything you have paid for, and never be charged again.',
       },
     ],
   },
@@ -217,6 +257,14 @@ export const STORE_ANSWERS: PageSection[] = [
           {
             name: 'You paid twice for the same pack',
             text: 'There is no way to own a pack twice, so the second payment bought nothing, and that is the clearest refund case there is. Send us both receipts.',
+          },
+          {
+            name: 'Manage Plan is not on the card',
+            text: 'That button only appears when there is a live plan behind it to change. A pack bought outright has nothing to renew, and a pack we put on your account by hand has no payment attached to it at all — both of those say so on the card instead. If you are being charged for something and cannot see the button, that is worth telling us, and we can stop the payment ourselves the day you write.',
+          },
+          {
+            name: 'Cancelling would not go through',
+            text: 'If the panel says our billing setup would not let it through, nothing on your account changed and nothing was charged. That one is ours to fix rather than yours, and writing to us is genuinely the fastest way: we can stop the renewal by hand the same day.',
           },
           {
             name: 'This page cannot read your purchases',

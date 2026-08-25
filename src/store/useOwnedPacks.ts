@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { STORE_APPS, packKey } from '../data/store'
+import type { PackGrant } from './grant'
 
 /**
  * Which packs the signed-in account owns, across every app on the shelf.
@@ -60,6 +61,13 @@ export type OwnedPacks = {
   readonly stateFor: (appId: string) => OwnedState
   /** `packKey(app, pack)` for every pack owned. Per app, meaningful once ready. */
   readonly owned: ReadonlySet<string>
+  /**
+   * HOW one pack is held: bought outright, subscribed, ending, behind on
+   * payment. Null when that app records nothing about it, which is not the
+   * same as "bought outright" and is why this returns null rather than a
+   * perpetual grant — `standingOfGrant` is the one place that reading is made.
+   */
+  readonly grantFor: (appId: string, packId: string) => PackGrant | null
   /** Re-ask now, after a purchase or when the tab comes back to the front. */
   readonly refresh: () => void
 }
@@ -67,14 +75,49 @@ export type OwnedPacks = {
 /** A tab left open with nobody touching it. The events cover somebody who is here. */
 const RECHECK_MS = 5 * 60 * 1000
 
+/**
+ * PostgREST's code for "no such column", which is how this hook finds out
+ * whether an app records grants at all.
+ *
+ * Every entitlements table has `owned_packs`; only an app that sells something
+ * with a clock on it has grown a `grants` column beside it, and DevFleet's has
+ * not. The alternative was writing "does this app have grants" down in
+ * `store.ts` — a fact about a SCHEMA, typed into a catalogue, going stale the
+ * day the column is added and failing silently in the direction that hides a
+ * subscription. So the column is ASKED for, and the server's own refusal is
+ * the answer. Remembered per table for the life of the tab, so an app without
+ * one costs a single extra round trip rather than one per refresh.
+ */
+const NO_SUCH_COLUMN = '42703'
+
+/** Which tables have been found to have no `grants` column. Module scope on
+ *  purpose: the answer is about the SCHEMA, so it outlives a component and is
+ *  identical for every reader in the tab. */
+const withoutGrants = new Set<string>()
+
 function everyApp(state: OwnedState): Record<string, OwnedState> {
   return Object.fromEntries(STORE_APPS.map((app) => [app.id, state]))
+}
+
+/** `packKey(app, pack)` → the grant that app recorded for it. */
+type GrantMap = Readonly<Record<string, PackGrant>>
+
+function grantsOf(value: unknown): Record<string, PackGrant> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {}
+  const out: Record<string, PackGrant> = {}
+  for (const [pack, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (entry !== null && typeof entry === 'object' && !Array.isArray(entry)) {
+      out[pack] = entry as PackGrant
+    }
+  }
+  return out
 }
 
 export function useOwnedPacks(): OwnedPacks {
   const { status, user } = useAuth()
   const [states, setStates] = useState<Record<string, OwnedState>>(() => everyApp('loading'))
   const [owned, setOwned] = useState<ReadonlySet<string>>(() => new Set<string>())
+  const [grants, setGrants] = useState<GrantMap>(() => ({}))
   // Bumped by refresh(). A counter rather than calling the query directly, so
   // a refresh that lands after the user signed out cannot revive stale packs.
   const [tick, setTick] = useState(0)
@@ -112,6 +155,7 @@ export function useOwnedPacks(): OwnedPacks {
       loadedFor.current = null
       answered.current = new Set()
       setOwned(new Set())
+      setGrants({})
       setStates(everyApp('signedOut'))
       return
     }
@@ -120,21 +164,78 @@ export function useOwnedPacks(): OwnedPacks {
       loadedFor.current = userId
       answered.current = new Set()
       setOwned(new Set())
+      setGrants({})
       setStates(everyApp('loading'))
     }
 
     let cancelled = false
 
+    const land = (appId: string, data: Record<string, unknown> | null) => {
+      const ids = Array.isArray(data?.owned_packs)
+        ? (data.owned_packs as unknown[]).filter((id): id is string => typeof id === 'string')
+        : []
+      setOwned((prev) => {
+        // This app's keys are REPLACED rather than merged in: a pack that
+        // was refunded or revoked has to be able to leave the set, and a
+        // merge would make ownership one-way for as long as the tab is open.
+        const next = new Set([...prev].filter((key) => !key.startsWith(`${appId}:`)))
+        for (const id of ids) next.add(packKey(appId, id))
+        return next
+      })
+      // Grants are replaced per app for the same reason, and by the same rule:
+      // a subscription that lapsed has to be able to leave, and a cancellation
+      // has to be able to arrive.
+      setGrants((prev) => {
+        const next: Record<string, PackGrant> = {}
+        for (const [key, grant] of Object.entries(prev)) {
+          if (!key.startsWith(`${appId}:`)) next[key] = grant
+        }
+        for (const [pack, grant] of Object.entries(grantsOf(data?.grants))) {
+          next[packKey(appId, pack)] = grant
+        }
+        return next
+      })
+      setStates((prev) => ({ ...prev, [appId]: 'ready' }))
+    }
+
     // Every shelf at once, each landing on its own: one table refusing must not
     // hold up another, or answer for it.
     for (const app of STORE_APPS) {
+      const table = app.entitlementsTable
+      const columns = withoutGrants.has(table) ? 'owned_packs' : 'owned_packs, grants'
+
       supabase
-        .from(app.entitlementsTable)
-        .select('owned_packs')
+        .from(table)
+        .select(columns)
         .eq('user_id', userId)
         .maybeSingle()
         .then(({ data, error }) => {
           if (cancelled || !live.current) return
+
+          // Asked for a column this app does not have. That is an answer about
+          // the SCHEMA, not about the account, so it is remembered and the read
+          // is made again without it rather than turning the shelf red.
+          if (error?.code === NO_SUCH_COLUMN && !withoutGrants.has(table)) {
+            withoutGrants.add(table)
+            supabase
+              .from(table)
+              .select('owned_packs')
+              .eq('user_id', userId)
+              .maybeSingle()
+              .then(({ data: plain, error: plainError }) => {
+                if (cancelled || !live.current) return
+                if (plainError) {
+                  if (!answered.current.has(app.id)) {
+                    setStates((prev) => ({ ...prev, [app.id]: 'error' }))
+                  }
+                  return
+                }
+                answered.current.add(app.id)
+                land(app.id, plain as Record<string, unknown> | null)
+              })
+            return
+          }
+
           if (error) {
             // A re-check that failed is not an answer. Leave the shelf saying
             // whatever it last actually knew.
@@ -144,18 +245,7 @@ export function useOwnedPacks(): OwnedPacks {
             return
           }
           answered.current.add(app.id)
-          const ids = Array.isArray(data?.owned_packs)
-            ? (data.owned_packs as unknown[]).filter((id): id is string => typeof id === 'string')
-            : []
-          setOwned((prev) => {
-            // This app's keys are REPLACED rather than merged in: a pack that
-            // was refunded or revoked has to be able to leave the set, and a
-            // merge would make ownership one-way for as long as the tab is open.
-            const next = new Set([...prev].filter((key) => !key.startsWith(`${app.id}:`)))
-            for (const id of ids) next.add(packKey(app.id, id))
-            return next
-          })
-          setStates((prev) => ({ ...prev, [app.id]: 'ready' }))
+          land(app.id, data as Record<string, unknown> | null)
         })
     }
 
@@ -197,5 +287,10 @@ export function useOwnedPacks(): OwnedPacks {
 
   const stateFor = useCallback((appId: string): OwnedState => states[appId] ?? 'loading', [states])
 
-  return { stateFor, owned, refresh }
+  const grantFor = useCallback(
+    (appId: string, packId: string): PackGrant | null => grants[packKey(appId, packId)] ?? null,
+    [grants],
+  )
+
+  return { stateFor, owned, grantFor, refresh }
 }

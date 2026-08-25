@@ -248,6 +248,41 @@ plan on open, Escape closes and returns focus to the button, a click on the
 scrim closes, and the chevron flips. Both themes, reduced-motion handled, and
 the rows measured equal — see §7.
 
+**A plan that can be started can be STOPPED, from the same card.** This half is
+not optional and it is not a later feature. A shop that can take a recurring
+payment and cannot stop one is a shop nobody should give a card to, and "email
+us to cancel" is that shop wearing a politer sentence.
+
+So an owned subscription's card carries **one button**, `Manage Plan`, in the
+same place and at exactly the same size as the Buy button its neighbour has —
+measured, not assumed. It opens the SAME panel component as the chooser, which
+is how rule 11's promise is kept mechanically rather than by two blocks of JSX
+agreeing with each other. Behind it: change the plan, buy it outright where that
+is sold, cancel, resume, and reach the card on file.
+
+**Cancelling means the renewals stop. It never means access stops.** The
+entitlement runs to the end of the period already paid for, in the app as much
+as on this page, and the card names the exact date. That is not wording — it is
+`<app>_packs_in_force()` in Postgres, which keeps a cancelled-but-unexpired
+subscription in force and is the same function the app itself asks. The Store
+sets `cancel_at_period_end` with one API call rather than sending anybody to
+Stripe's own cancel flow, because that flow's behaviour is a **dashboard
+setting**: flipped to "immediately" it would take days off somebody's purchase
+silently, with nothing in this repo changed and nothing to notice it.
+
+**Both of the money presses ask first**, in the panel, in place — not in a
+second dialog over the first. And the confirm's two buttons are a mirrored pair
+under rule 6: they take their padding from one variable on the row, because
+`flex: 1 1 0` with `border-box` splits only what is left after each item's own
+padding, and the site's ghost and buy paddings made them 241px and 249px.
+
+**Every standing gets a face**, including the awkward ones: renewing, ending on
+a date, in a free trial, behind on a payment, lapsed, and a `kind` this site has
+not been taught to read. And `Manage Plan` is drawn only when there is a live
+Stripe subscription behind it — a pack granted by hand from `#/dev` has none —
+because a button that can only ever fail is worse than no button, and
+`storeAnswers.ts` says out loud why it is missing.
+
 ### 12. The security boundary is in Postgres, and only in Postgres.
 
 Every privileged read and write goes through a `tdg_admin_*` function that opens
@@ -406,7 +441,9 @@ Commit messages here are a sentence about what changed and why, not a
 `feat(scope):` prefix. Read `git log` before writing one.
 
 **Every change set you commit bumps `"version"` in `package.json`, in the same
-commit.** It says `1.0.0` today and it is the only file that carries the number.
+commit.** It is the only file that carries the number — read it there rather
+than from this sentence, which is the kind of copy that goes stale silently and
+did: it named `1.0.0` for four releases after that stopped being true.
 Push to `main` deploys, so on this repo the version is the only durable marker
 of which content went live when — nothing on the page prints it and no build
 step reads it, which means skipping the bump fails silently and forever. Patch

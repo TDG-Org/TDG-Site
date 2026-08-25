@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
 import { useOwnedPacks } from '../store/useOwnedPacks'
+import {
+  formatDay,
+  standingOfGrant,
+  standingTone,
+  type PackGrant,
+  type PackStanding,
+} from '../store/grant'
+import { billingMessage, openBilling, setRenewal, type BillingError } from '../store/billing'
 import { SectionsProvider } from '../lib/sections'
 import { appHash, rememberOrigin, storeShelfId } from '../lib/route'
 import { AppIcon } from './AppIcon'
@@ -104,20 +112,160 @@ function planNote(plan: StorePlan): string {
   return 'Paid once. Yours for good, no renewal.'
 }
 
+/**
+ * The panel every chooser on a pack card is drawn in.
+ *
+ * There are two of them now — choosing a plan before buying, and changing or
+ * stopping one afterwards — and rule 11 of AGENTS.md is that a pack sold more
+ * than one way looks the SAME wherever it appears. That promise is kept
+ * mechanically here rather than by two files agreeing: both choosers are this
+ * component, so the scrim, the head, the dialog role, Escape, the focus and the
+ * animation cannot drift apart.
+ *
+ * Drawn OVER the card and never pushed into it, for the reason `Store.css`
+ * sets out at length: the packs sit in a grid row, a grid row stretches its
+ * siblings to the tallest of them, and an expansion in the flow would grow
+ * BOTH cards and leave a hole under the other one's button.
+ *
+ * `step` re-runs the focus. The manage panel replaces its own rows with a
+ * confirm question in place, and focus that stayed on a button which no longer
+ * exists is a keyboard reader stranded on the page behind the panel.
+ */
+function PlanPanel({
+  label,
+  title,
+  step,
+  onClose,
+  children,
+}: {
+  /** Names the pack, per rule 14: a dialog says what it is about. */
+  label: string
+  /** The 10px mono head. Title Case. */
+  title: string
+  /** Changes when the panel's contents are replaced, so focus follows. */
+  step: string
+  onClose: () => void
+  children: ReactNode
+}) {
+  const panel = useRef<HTMLDivElement>(null)
+
+  // Put the keyboard where the choice is. The first row rather than the close
+  // button: this panel's actions are all reversible or confirmed, and landing
+  // on Close would make the keyboard route to the thing the panel exists for
+  // the longest one on the card.
+  useEffect(() => {
+    panel.current?.querySelector<HTMLButtonElement>('.store__plan')?.focus({ preventScroll: true })
+  }, [step])
+
+  // Escape backs out of it the way it backs out of every other thing that
+  // opens on this site. Deliberately NOT `useModal`: that locks the page's
+  // scroll for a full-screen dialog, and this one is anchored inside a card
+  // that is a third of the page.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <>
+      {/* A press anywhere else closes it. A button rather than a bare div so it
+          is a real click target with real semantics, and hidden from a screen
+          reader because Escape is its keyboard equivalent and a second "close"
+          in the tab order is noise. */}
+      <button
+        type="button"
+        className="store__plans-scrim"
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={onClose}
+      />
+      <div ref={panel} className="store__plans" role="dialog" aria-label={label}>
+        <div className="store__plans-head">
+          <p className="store__plans-title">{title}</p>
+          <button type="button" className="store__plans-close" onClick={onClose}>
+            <span className="sr-only">Close this panel</span>
+            <Cross />
+          </button>
+        </div>
+        {children}
+      </div>
+    </>
+  )
+}
+
+/**
+ * One row of a chooser: a name, a line saying what it does, and the money.
+ *
+ * The money column is reserved in EVERY row, empty where there is nothing to
+ * say, for the reason the saving badge is: a column present on one row and
+ * absent from another makes those rows different heights, which is the same
+ * unevenness the chooser was built to remove, one level down.
+ */
+function PlanRow({
+  label,
+  note,
+  money,
+  tone,
+  onClick,
+}: {
+  label: string
+  note: string
+  money?: ReactNode
+  /** `leave` draws the row as the way out. Nothing else is ever tinted. */
+  tone?: 'leave'
+  onClick: () => void
+}) {
+  return (
+    <li>
+      <button type="button" className="store__plan" data-tone={tone} onClick={onClick}>
+        <span className="store__plan-text">
+          <span className="store__plan-label">{label}</span>
+          <span className="store__plan-note">{note}</span>
+        </span>
+        <span className="store__plan-money">{money}</span>
+      </button>
+    </li>
+  )
+}
+
+/**
+ * Where the manage panel is, once it is open.
+ *
+ * A state machine rather than four booleans, because two of these are mutually
+ * exclusive in a way booleans do not enforce: a panel that is both `busy` and
+ * showing its menu would take a second press while the first is still in
+ * flight, and cancelling twice is a support email.
+ */
+type ManageStep =
+  | { at: 'menu' }
+  /** A question, because both of these move money and neither should be one press. */
+  | { at: 'confirm'; what: 'cancel' | 'outright' }
+  | { at: 'busy'; doing: string }
+  | { at: 'error'; error: BillingError }
+
 function PackCard({
   pack,
+  appId,
   appTitle,
   index,
   state,
+  grant,
   onBuy,
   onSignIn,
   onCheck,
 }: {
   pack: StorePack
+  /** The app this pack belongs to, which is half of the pack's real identity. */
+  appId: string
   /** The app this pack is for, so a card never names the wrong one. */
   appTitle: string
   index: number
   state: CardState
+  /** How this account holds it, when the app records that. Null when it does not. */
+  grant: PackGrant | null
   onBuy: (plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -131,43 +279,135 @@ function PackCard({
   const primaryPlan = plans[0] ?? null
   const multiPlan = plans.length > 1
   const saving = multiPlan ? annualSavingCents(plans) : null
+  const lifetimePlan = plans.find((plan) => plan.id === 'lifetime') ?? null
+
+  /** What this account's own grant says about this pack, in the card's words. */
+  const standing = standingOfGrant(grant)
 
   /**
-   * Is the plan chooser open over this card?
+   * Is a chooser open over this card, and which one?
    *
    * Per CARD, never per page: two cards on a shelf are two independent shops
    * as far as this is concerned, and a single shared flag would open the wrong
-   * one the first time a second pack gained plans.
+   * one the first time a second pack gained plans. One flag for both choosers
+   * rather than two, because the card can only ever be in one of Buy and Owned,
+   * so two of them could never be open at once and a second flag would only be
+   * a second thing to remember to close.
    */
   const [choosing, setChoosing] = useState(false)
+  const [step, setStep] = useState<ManageStep>({ at: 'menu' })
+  /**
+   * What was true the instant Stripe answered, before the webhook has written
+   * the grant and the next read has fetched it.
+   *
+   * That round trip is seconds, and for those seconds the card would otherwise
+   * still say "Renews on…" to somebody who has just pressed Cancel and watched
+   * nothing happen. This is only ever the SAME fact arriving sooner: the grant
+   * replaces it the moment it lands, and a reload forgets it entirely.
+   */
+  const [justChanged, setJustChanged] = useState<PackStanding | null>(null)
   const buyRef = useRef<HTMLButtonElement>(null)
-  const firstPlanRef = useRef<HTMLButtonElement>(null)
 
   const closeChooser = (refocus = true) => {
     setChoosing(false)
+    setStep({ at: 'menu' })
     if (refocus) buyRef.current?.focus()
   }
 
-  // The chooser belongs to the Buy state and to nothing else. A card that
-  // flips to Waiting mid-choice must not leave it hanging over the wait, and
-  // a card whose wait times out must not find it still open underneath.
+  // A chooser belongs to the state that opened it and to nothing else. A card
+  // that flips to Waiting mid-choice must not leave one hanging over the wait,
+  // and a card whose wait times out must not find one still open underneath.
+  //
+  // `manageable` is in here for the same reason one level down: a re-read that
+  // lands a lapsed or hand-granted standing takes the Manage Plan button away,
+  // and a panel left open with nothing behind it would be a dialog the reader
+  // cannot get back to and cannot act in.
+  const manageable = standing.manageable
   useEffect(() => {
-    if (state.kind !== 'buy') setChoosing(false)
-  }, [state.kind])
-
-  // Open: put the keyboard where the choice is, and let Escape back out of it
-  // the way it backs out of every other thing that opens on this site.
-  useEffect(() => {
-    if (!choosing) return
-    firstPlanRef.current?.focus({ preventScroll: true })
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+    if ((state.kind !== 'buy' && state.kind !== 'owned') || (state.kind === 'owned' && !manageable)) {
       setChoosing(false)
-      buyRef.current?.focus()
+      setStep({ at: 'menu' })
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [choosing])
+  }, [state.kind, manageable])
+
+  // A fresh answer from the server replaces the optimistic one. Keyed on the
+  // grant's own fields rather than on a timer: the point is to stop guessing
+  // the moment there is something better to say.
+  useEffect(() => {
+    setJustChanged(null)
+  }, [grant?.cancelAtPeriodEnd, grant?.currentPeriodEnd, grant?.status])
+
+  const shown = justChanged ?? standing
+
+  /** Stop the renewals, or put them back. Both are the same one call. */
+  const changeRenewal = async (renew: boolean) => {
+    setStep({ at: 'busy', doing: renew ? 'Starting the renewals again…' : 'Stopping the renewals…' })
+    const result = await setRenewal({ app: appId, pack: pack.id, renew })
+    if (!result.ok) {
+      setStep({ at: 'error', error: result.error })
+      return
+    }
+    // Say the new thing NOW, from what Stripe just confirmed, and ask the
+    // server to catch up in the background.
+    setJustChanged(
+      standingOfGrant({
+        ...grant,
+        kind: 'subscription',
+        status: grant?.status ?? 'active',
+        cancelAtPeriodEnd: !renew,
+        currentPeriodEnd: result.value.currentPeriodEnd ?? grant?.currentPeriodEnd ?? null,
+      }),
+    )
+    closeChooser()
+    onCheck()
+  }
+
+  /** Off to Stripe's own page, in a new tab so the shop is still here after. */
+  const goToStripe = async (intent: 'update' | 'billing') => {
+    setStep({ at: 'busy', doing: 'Opening your billing page…' })
+    const result = await openBilling({ app: appId, pack: pack.id, intent })
+    if (!result.ok) {
+      setStep({ at: 'error', error: result.error })
+      return
+    }
+    window.open(result.value, '_blank', 'noopener,noreferrer')
+    closeChooser()
+  }
+
+  /**
+   * Buy it outright while subscribed: stop the renewals FIRST, then check out.
+   *
+   * Order matters and it is the safe way round. Paying first and cancelling
+   * after leaves a window in which somebody owns the pack for ever AND is still
+   * being billed monthly for it, and the perpetual grant that lands overwrites
+   * the subscription id, so nothing on this page could find the subscription to
+   * stop afterwards. Cancelling first cannot lose anything: the days already
+   * paid for are kept either way, and somebody who then abandons the checkout
+   * is left in a state the card SAYS out loud, with Resume Plan on it.
+   *
+   * The row says all of that before it is pressed, and the confirm says it
+   * again. A shop may surprise nobody about money.
+   */
+  const buyOutright = async () => {
+    if (!lifetimePlan) return
+    setStep({ at: 'busy', doing: 'Stopping the renewals…' })
+    const result = await setRenewal({ app: appId, pack: pack.id, renew: false })
+    if (!result.ok) {
+      setStep({ at: 'error', error: result.error })
+      return
+    }
+    setJustChanged(
+      standingOfGrant({
+        ...grant,
+        kind: 'subscription',
+        status: grant?.status ?? 'active',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: result.value.currentPeriodEnd ?? grant?.currentPeriodEnd ?? null,
+      }),
+    )
+    closeChooser()
+    onBuy(lifetimePlan)
+  }
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card store__pack" data-owned={owned || undefined}>
@@ -241,17 +481,200 @@ function PackCard({
 
         {state.kind === 'owned' && (
           <>
-            <p className="store__owned">
+            {/*
+              Owned is the headline and stays the headline, because it is what
+              a reader came to check. HOW it is held sits beside it, and only
+              when there is something to say: a pack bought outright has no
+              second state and a tag on it would be a word to read every time
+              that never changes, which is how the tag on the one that DOES
+              change gets skipped.
+            */}
+            <p className="store__owned" data-tone={standingTone(shown)}>
               <span className="store__owned-tick" aria-hidden="true">
                 <Tick />
               </span>
               Owned
+              {shown.kind !== 'perpetual' && (
+                <span className="store__owned-standing">{shown.label}</span>
+              )}
             </p>
             <p className="store__note">
-              {state.justLanded
-                ? `Payment received. It is on your account now, so open ${appTitle} and it is there.`
-                : `On your TDG Account. Sign in inside ${appTitle} and it unlocks.`}
+              {shown.kind === 'perpetual'
+                ? state.justLanded
+                  ? `Payment received. It is on your account now, so open ${appTitle} and it is there.`
+                  : `On your TDG Account. Sign in inside ${appTitle} and it unlocks.`
+                : state.justLanded
+                  ? `Payment received. ${shown.note}`
+                  : shown.note}
             </p>
+
+            {/*
+              ONE button, in the same place and at the same size as the Buy
+              button the card carries in its other state, per rule 11. A
+              subscription somebody cannot change from the page that sold it to
+              them is a subscription they have to email us about, and "email us
+              to cancel" is a dark pattern however politely it is worded.
+
+              Drawn only when there is genuinely something behind it: a pack
+              granted by hand from `#/dev` is a subscription with no Stripe
+              subscription to act on, and a button that can only ever fail is
+              worse than no button.
+            */}
+            {shown.manageable && (
+              <button
+                ref={buyRef}
+                type="button"
+                className="store__buy store__buy--quiet"
+                aria-haspopup="dialog"
+                aria-expanded={choosing}
+                onClick={() => (choosing ? closeChooser() : setChoosing(true))}
+              >
+                Manage Plan
+                <span className="store__buy-caret">
+                  <Caret />
+                </span>
+              </button>
+            )}
+
+            {choosing && shown.manageable && (
+              <PlanPanel
+                label={`Manage your ${pack.name} plan`}
+                title="Manage Plan"
+                step={step.at === 'confirm' ? `confirm-${step.what}` : step.at}
+                onClose={() => closeChooser()}
+              >
+                {step.at === 'menu' && (
+                  /* `data-menu` reserves a two-line note in every row, so four
+                     controls of four different lengths are still four rows of
+                     one height. See `Store.css`; the buy chooser deliberately
+                     does not carry it. */
+                  <ul className="store__plan-list" data-menu>
+                    <PlanRow
+                      label="Change Plan"
+                      note="Move between plans on Stripe's page. You pay the difference."
+                      onClick={() => void goToStripe('update')}
+                    />
+                    {/* Only while it is still renewing. Offering to stop the
+                        renewals of something already stopping is a row that
+                        does nothing, and a row that does nothing on a panel
+                        about money reads as a page that has lost track. */}
+                    {lifetimePlan && !shown.ending && (
+                      <PlanRow
+                        label="Buy It Outright"
+                        note={
+                          shown.endsAt
+                            ? `Pay once and keep it. Renewals stop on ${formatDay(shown.endsAt.toISOString())}.`
+                            : 'Pay once and keep it. Renewals stop at the end of this period.'
+                        }
+                        money={
+                          <span className="store__plan-price">
+                            {formatUsd(lifetimePlan.priceCents)}
+                          </span>
+                        }
+                        onClick={() => setStep({ at: 'confirm', what: 'outright' })}
+                      />
+                    )}
+                    {shown.ending ? (
+                      <PlanRow
+                        label="Resume Plan"
+                        note="Renewals start again, on the same plan. Nothing is charged today."
+                        onClick={() => void changeRenewal(true)}
+                      />
+                    ) : (
+                      <PlanRow
+                        label="Cancel Plan"
+                        note={
+                          shown.endsAt
+                            ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}.`
+                            : 'Renewals stop. Yours to the end of the period you have paid for.'
+                        }
+                        tone="leave"
+                        onClick={() => setStep({ at: 'confirm', what: 'cancel' })}
+                      />
+                    )}
+                    <PlanRow
+                      label="Payment & Receipts"
+                      note="Change the card, or read past charges, on Stripe's page."
+                      onClick={() => void goToStripe('billing')}
+                    />
+                  </ul>
+                )}
+
+                {step.at === 'confirm' && (
+                  <div className="store__ask">
+                    <p className="store__ask-q">
+                      {step.what === 'cancel' ? 'Stop the renewals?' : 'Buy it outright?'}
+                    </p>
+                    <p className="store__ask-what">
+                      {step.what === 'cancel'
+                        ? shown.endsAt
+                          ? `Nothing more is charged, and nothing is taken away today. Every part of ${pack.name} keeps working until ${formatDay(shown.endsAt.toISOString())}, and you can start the renewals again before then.`
+                          : `Nothing more is charged, and nothing is taken away today. ${pack.name} keeps working to the end of the period you have paid for.`
+                        : shown.endsAt
+                          ? `We stop the renewals first, so you are never charged for both. ${pack.name} stays yours until ${formatDay(shown.endsAt.toISOString())} either way, and Stripe opens in a new tab for the one-off payment.`
+                          : `We stop the renewals first, so you are never charged for both. Stripe opens in a new tab for the one-off payment.`}
+                    </p>
+                    <div className="store__ask-row">
+                      <button
+                        type="button"
+                        className="store__ghost"
+                        onClick={() => setStep({ at: 'menu' })}
+                      >
+                        {step.what === 'cancel' ? 'Keep My Plan' : 'Not Now'}
+                      </button>
+                      {/* Warm for the one that stops a payment, the site's own
+                          inverted button for the one that makes one. The press
+                          that ends a subscription may never wear the colour
+                          this site uses to mean "yes, buy". */}
+                      <button
+                        type="button"
+                        className={
+                          step.what === 'cancel' ? 'store__buy store__buy--leave' : 'store__buy'
+                        }
+                        onClick={() =>
+                          step.what === 'cancel' ? void changeRenewal(false) : void buyOutright()
+                        }
+                      >
+                        {step.what === 'cancel' ? 'Yes, Stop Renewals' : 'Yes, Continue'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {step.at === 'busy' && (
+                  <p className="store__waiting store__waiting--panel">
+                    <span className="store__waiting-dot" aria-hidden="true" />
+                    {step.doing}
+                  </p>
+                )}
+
+                {/* A refusal says what happened, says that nothing changed, and
+                    ends in something to do. `billingMessage` is the one place
+                    that wording lives, matched on codes and never on message
+                    text — see `src/auth/wording.ts` for why. */}
+                {step.at === 'error' && (
+                  <div className="store__ask">
+                    <p className="store__note store__note--warn">{billingMessage(step.error)}</p>
+                    <div className="store__ask-row">
+                      <button
+                        type="button"
+                        className="store__ghost"
+                        onClick={() => setStep({ at: 'menu' })}
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        className="store__ghost"
+                        onClick={() => closeChooser()}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </PlanPanel>
+            )}
           </>
         )}
 
@@ -322,88 +745,74 @@ function PackCard({
               unevenness this whole change is about, moved somewhere else.
             */}
             {choosing && (
-              <>
-                {/* A press anywhere else closes it. A button rather than a bare
-                    div so it is a real click target with real semantics, and
-                    hidden from a screen reader because Escape is its keyboard
-                    equivalent and a second "close" in the tab order is noise. */}
-                <button
-                  type="button"
-                  className="store__plans-scrim"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  onClick={() => closeChooser()}
-                />
-                <div
-                  className="store__plans"
-                  role="dialog"
-                  aria-label={`Choose a plan for ${pack.name}`}
-                >
-                  <div className="store__plans-head">
-                    <p className="store__plans-title">Choose a Plan</p>
-                    <button
-                      type="button"
-                      className="store__plans-close"
-                      onClick={() => closeChooser()}
-                    >
-                      <span className="sr-only">Close the plan chooser</span>
-                      <Cross />
-                    </button>
-                  </div>
+              <PlanPanel
+                label={`Choose a plan for ${pack.name}`}
+                title="Choose a Plan"
+                step="plans"
+                onClose={() => closeChooser()}
+              >
+                <ul className="store__plan-list">
+                  {plans.map((plan) => (
+                    <PlanRow
+                      key={plan.id}
+                      label={plan.label}
+                      note={planNote(plan)}
+                      /*
+                        The saving belongs UNDER THE AMOUNT it is about, not
+                        beside the plan's name: it is a fact about the money,
+                        and a reader comparing three prices is looking down the
+                        right-hand column when they need it. It is also the
+                        thing that decides the sale, so it is set at reading
+                        size rather than in the site's 9px tag mono.
 
-                  <ul className="store__plan-list">
-                    {plans.map((plan, planIndex) => (
-                      <li key={plan.id}>
-                        <button
-                          ref={planIndex === 0 ? firstPlanRef : undefined}
-                          type="button"
-                          className="store__plan"
-                          onClick={() => {
-                            setChoosing(false)
-                            onBuy(plan)
-                          }}
-                        >
-                          <span className="store__plan-text">
-                            <span className="store__plan-label">{plan.label}</span>
-                            <span className="store__plan-note">{planNote(plan)}</span>
+                        Rendered in EVERY row whenever the chooser has a saving
+                        to state, empty where there is nothing to say. A badge
+                        on one row alone would make that row taller than the
+                        other two, which is the same unevenness this chooser was
+                        built to remove — so the space is reserved by the same
+                        element in all of them, and hidden rather than absent
+                        where it is blank. A chooser with no saving anywhere
+                        reserves nothing.
+                      */
+                      money={
+                        <>
+                          <span className="store__plan-price">
+                            {formatUsd(plan.priceCents)}
+                            {plan.cadence ? (
+                              <span className="store__plan-cadence">{plan.cadence}</span>
+                            ) : null}
                           </span>
-                          {/*
-                            The saving belongs UNDER THE AMOUNT it is about, not
-                            beside the plan's name: it is a fact about the money,
-                            and a reader comparing three prices is looking down
-                            the right-hand column when they need it. It is also
-                            the thing that decides the sale, so it is set at
-                            reading size rather than in the site's 9px tag mono.
-
-                            Rendered in EVERY row whenever the chooser has a
-                            saving to state, empty where there is nothing to
-                            say. A badge on one row alone would make that row
-                            taller than the other two, which is the same
-                            unevenness this chooser was built to remove — so the
-                            space is reserved by the same element in all of
-                            them, and hidden rather than absent where it is
-                            blank. A chooser with no saving anywhere reserves
-                            nothing.
-                          */}
-                          <span className="store__plan-money">
-                            <span className="store__plan-price">
-                              {formatUsd(plan.priceCents)}
-                              {plan.cadence ? (
-                                <span className="store__plan-cadence">{plan.cadence}</span>
-                              ) : null}
+                          {saving !== null && (
+                            /*
+                              The SAME TEXT in every row, hidden where it is not
+                              true. An empty span reserved the badge's height and
+                              not its width, so the yearly row's money column was
+                              95px against the other two at 66 and 64 — which at
+                              375px squeezed that row's note to a third line and
+                              made it 96px tall against 79. The reservation only
+                              works if it reserves the real thing, and this can
+                              never go stale: the string is the one being
+                              measured. `visibility: hidden` keeps it out of the
+                              accessibility tree, so nothing announces a saving
+                              on a plan that does not have one.
+                            */
+                            <span
+                              className="store__plan-save"
+                              data-blank={plan.id !== 'annual' || undefined}
+                            >
+                              Save {formatUsd(saving)}
                             </span>
-                            {saving !== null && (
-                              <span className="store__plan-save">
-                                {plan.id === 'annual' ? `Save ${formatUsd(saving)}` : ''}
-                              </span>
-                            )}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
+                          )}
+                        </>
+                      }
+                      onClick={() => {
+                        setChoosing(false)
+                        onBuy(plan)
+                      }}
+                    />
+                  ))}
+                </ul>
+              </PlanPanel>
             )}
           </>
         )}
@@ -415,12 +824,14 @@ function PackCard({
 function AppSection({
   app,
   cardState,
+  grantFor,
   onBuy,
   onSignIn,
   onCheck,
 }: {
   app: StoreApp
   cardState: (app: StoreApp, pack: StorePack) => CardState
+  grantFor: (appId: string, packId: string) => PackGrant | null
   onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -474,9 +885,11 @@ function AppSection({
           <PackCard
             key={pack.id}
             pack={pack}
+            appId={app.id}
             appTitle={app.title}
             index={i}
             state={cardState(app, pack)}
+            grant={grantFor(app.id, pack.id)}
             onBuy={(plan) => onBuy(app, pack, plan)}
             onSignIn={onSignIn}
             onCheck={onCheck}
@@ -489,7 +902,7 @@ function AppSection({
 
 export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { status, user, profile } = useAuth()
-  const { stateFor, owned, refresh } = useOwnedPacks()
+  const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
   const blob = useParallax<HTMLDivElement>(-0.12)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const how = useReveal<HTMLDivElement>('scale', 1)
@@ -570,12 +983,14 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
             <span className="kicker__rule" />
             <span className="kicker__label">Store</span>
           </div>
-          <h2 className="h2 store__heading">Buy once. It follows your account.</h2>
+          <h2 className="h2 store__heading">It follows your account, not your machine.</h2>
           <p className="lede store__lede">
             A few paid extras for the apps we build. Everything else stays free. These are the
-            pieces that pay for the nights they took. Every pack on this shelf is charged once and
-            sits on your TDG Account rather than on a machine. Neither app has shipped yet, and
-            what that means for buying today is under the shelf, along with the rest of it.
+            pieces that pay for the nights they took. Most are charged once and are yours for
+            good; one is a plan you can change or stop from its own card, and it says so before
+            you click. Either way it sits on your TDG Account rather than on a machine. Neither
+            app has shipped yet, and what that means for buying today is under the shelf, along
+            with the rest of it.
           </p>
 
           <div className="store__account" data-signed-in={status === 'signedIn' || undefined}>
@@ -606,6 +1021,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
             key={app.id}
             app={app}
             cardState={cardState}
+            grantFor={grantFor}
             onBuy={buy}
             onSignIn={onOpenAuth}
             onCheck={refresh}
