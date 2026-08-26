@@ -55,9 +55,9 @@ ffmpeg -y -i in.png -vf "scale='if(gt(iw,1000),1000,iw)':-1:flags=lanczos" \
 
 ### Why this matters enough to be the first section in the file
 
-The PNG kit is **28 files, 28.0 MB** — the heaviest single decorative prop is
-2.10 MB, the widest piece is 2172px.  The WebP kit is the same 28 pieces at
-**2.0 MB**: a 93% reduction, and roughly 3–4 MB of eager image bytes off the
+The PNG kit is **36 files, 35.4 MB** — the heaviest single decorative prop is
+2.10 MB, the widest piece is 2172px.  The WebP kit is the same 36 pieces at
+**2.3 MB**: a 93% reduction, and roughly 2–3 MB of eager image bytes off the
 home page's first load.  This is a site whose own documentation is proud of taking a
 parked reader from 71 ms of main thread per second down to 0.1 ms.  A 1.6 MB
 decorative arch undoes that work for a real visitor on a real connection, and
@@ -83,8 +83,8 @@ go in.
 | Folder | Contents | Intended use |
 | --- | --- | --- |
 | `hero/` | Theme-paired lampposts | A small left-edge hero detail. |
-| `landscapes/` | Theme-paired mountain ridge and stone footbridge cutouts | The hero floor or a quiet lower section seam. |
-| `props/` | Theme-paired trees, bench, foliage/reeds, wayfinding post, garden arch, and pine grove | Sparse section-edge decoration. |
+| `landscapes/` | Theme-paired mountain ridges, snow-bank strips, and stone footbridge cutouts | Layered hero terrain or a quiet lower-section seam. |
+| `props/` | Theme-paired trees, boulder clusters, bench, foliage/reeds, wayfinding post, garden arch, and pine grove | Sparse section-edge decoration. |
 | `transitions/` | Theme-paired stepping-stone paths | A quiet cue between Origin beats. |
 | `faith/` | Theme-paired hillside crosses | A small, reverent Faith-section detail. |
 | `atmosphere/` | Theme-paired fog veils | A slow, quiet layer behind a landscape or prop. |
@@ -104,9 +104,13 @@ file at a smaller size, and it never touches which of the two artworks is drawn.
 | Asset group | Dark | Light | Placement |
 | --- | --- | --- | --- |
 | Mountain ridge | `landscapes/mountain-ridge-dark.webp` | `landscapes/mountain-ridge-light.webp` | Hero floor, behind the content and model. |
+| Rear mountain ridge | `landscapes/mountain-ridge-rear-dark.webp` | `landscapes/mountain-ridge-rear-light.webp` | Optional distant Hero/Origin layer, **behind** the main mountain ridge. Never use it for Faith; Faith's terrain remains Claude-authored SVG. |
+| Snow bank | `landscapes/snow-bank-dark.webp` | `landscapes/snow-bank-light.webp` | A low foreground drift that runs beyond both section edges; use sparingly as a floor, not a scene. |
 | Park lamppost | `hero/lamppost-left-dark.webp` | `hero/lamppost-left-light.webp` | Far-left edge, below navigation, no closer than 30px to the wordmark. |
 | Pine pair | `props/pine-pair-dark.webp` | `props/pine-pair-light.webp` | A secondary edge prop, never adjacent to the lamppost. |
 | Faceted pine pair | `props/pine-faceted-pair-dark.webp` | `props/pine-faceted-pair-light.webp` | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
+| Tall foreground pine | `props/tall-pine-dark.webp` | `props/tall-pine-light.webp` | One oversized edge prop, cropped by the frame. Use it alone rather than alongside another pine family. |
+| Boulder cluster | `props/boulder-cluster-dark.webp` | `props/boulder-cluster-light.webp` | A dark, chunky bottom-corner anchor; pair only with a quiet landscape layer. |
 | Canopy tree | `props/canopy-tree-dark.webp` | `props/canopy-tree-light.webp` | A distinct, softer silhouette for a later section. |
 | Park bench | `props/park-bench-dark.webp` | `props/park-bench-light.webp` | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds-dark.webp` | `props/bushes-reeds-light.webp` | A low foreground cover or section seam. |
@@ -123,6 +127,11 @@ clear illustrated facets and an expressive silhouette without naturalistic
 foliage.  Keep the more painterly `pine-grove` files as an optional variation;
 do not substitute them for the faceted pair by default and never remove either
 family when adding further tree props.
+
+`tall-pine` is deliberately a **single foreground** variation rather than a
+replacement for the faceted pair.  It keeps the same broad illustrated facet
+language while offering an edge-overflow silhouette for a different depth plane.
+It is not a reason to add multiple trees to one composition.
 
 ## Richer-detail family
 
@@ -145,9 +154,11 @@ files must be swapped as actual themed assets rather than filtered.
 2. Render the selected themed image as decorative (`alt=""`, `aria-hidden`,
    `pointer-events: none`) and swap the actual source on `data-theme`, rather
    than recolouring the art in CSS.
-3. The hero stack is deliberate.  Keep fog and mountains below the point cloud;
-   keep every prop below the hero content; never place art over the `TDG` mark,
-   eyebrow, CTA group, nav, or bottom strip.
+3. The hero stack is deliberate.  If the distant terrain is used, order it
+   fog → rear mountain ridge → main mountain ridge → optional snow bank. Keep
+   those layers below the point cloud, and keep every prop below the hero
+   content; never place art over the `TDG` mark, eyebrow, CTA group, nav, or
+   bottom strip. The rear mountain is for Hero/Origin depth only, never Faith.
 4. Use the existing `useHeroParallax` / `useParallax` hooks only.  No new scroll
    listener, direct `requestAnimationFrame`, interval, animation package, or
    continuously animated image filter.
