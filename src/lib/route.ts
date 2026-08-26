@@ -7,12 +7,15 @@ import { STORE_APPS } from '../data/store'
  *
  * A hash route rather than a path: the site is served from GitHub Pages, where
  * a real path needs a 404.html rewrite to survive a refresh or a shared link,
- * and every existing nav item is already a hash anchor. `#/store` is
- * deliberately shaped with the slash so it can never collide with a section
- * id: `#story` and `#store` are one letter apart, and a route that ate a section
- * anchor would break the one-page scroll. Every route added since carries the
- * same leading slash for the same reason; `#/app/<slug>` also puts the slug
- * behind a segment, so no future app name can collide with a section either.
+ * and every existing nav item is already a hash anchor. **Every route carries a
+ * leading slash**, so it can never collide with a section id. The rule was
+ * learned from one near miss: the home section used to be `#story`, one letter
+ * from `#store`, and a route that ate a section anchor would break the one-page
+ * scroll. That section is `#origin` now, so that particular pair cannot clash
+ * any more — the rule stays exactly as it was, because what it actually buys is
+ * that no section anchor added in future can collide with a route added today.
+ * `#/app/<slug>` also puts the slug behind a segment, so no future app name can
+ * collide with a section either.
  *
  * A route may also name a PLACE on the page it opens, which is what
  * `#/store/<app>` is: the Store, landed at that app's shelf rather than at its
@@ -128,9 +131,9 @@ export function useRoute(): Route {
  * both routes through are one code path and cannot land in different places.
  *
  * The remembered hash is checked on the way back. Somebody who leaves an app
- * page by clicking Story in the nav is not returning to the list, and restoring
- * a scroll position over their anchor would drop them somewhere they did not
- * ask to be.
+ * page by clicking Origin in the nav is not returning to the list, and
+ * restoring a scroll position over their anchor would drop them somewhere they
+ * did not ask to be.
  */
 type Origin = { hash: string; scrollY: number; label: string }
 

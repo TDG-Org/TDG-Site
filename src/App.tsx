@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
-import { Story } from './components/Story'
+import { Origin } from './components/Origin'
 import { Apps } from './components/Apps'
 import { Tools } from './components/Tools'
 import { Building } from './components/Building'
@@ -94,7 +94,7 @@ export default function App() {
     const hash = window.location.hash
     // Coming back from an app page, to the exact place the card was clicked
     // from. Only when the hash is the one that was left: somebody who leaves an
-    // app page by clicking Story in the nav is not returning to the list, and
+    // app page by clicking Origin in the nav is not returning to the list, and
     // this must not land on top of their anchor. See src/lib/route.ts.
     const y = takeOrigin(hash)
     if (y !== null) {
@@ -138,7 +138,7 @@ export default function App() {
       ) : (
         <main>
           <Hero />
-          <Story />
+          <Origin />
           <Apps />
           <Tools />
           <Building />
