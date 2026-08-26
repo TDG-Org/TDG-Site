@@ -186,6 +186,10 @@ Search by name, `@username`, email or user id, then for the account you pick:
 - **Every pack Store:** each pack on or off, for anybody, in every app that has
   one — one panel per app, discovered rather than listed. (The existing
   `veditor_admin_set_pack` only ever touched your own account.)
+- **How a pack is HELD**, for an app whose entitlements table records that:
+  bought outright, renewing, cancelled and running out, in a trial, behind on a
+  payment, or ended. One dropdown per held pack, named the way the Store's own
+  card names the state — see below for why this is not decoration.
 - **Standing:** suspend (locks sign-in across every TDG app and ends every live
   session), hide from Bible Educator's public surfaces, sign out everywhere (see
   below for what that does and does not reach), soft delete, restore, and
@@ -195,6 +199,45 @@ Search by name, `@username`, email or user id, then for the account you pick:
 Three more tabs cover the whole project: **Feedback** (below), **Purchases**
 (all three ledgers merged, with `PAID` and `GRANTED` told apart) and **Audit
 Log** (every developer action in every app).
+
+## Held As · the states nobody could otherwise reach
+
+Switching a pack ON writes a bare pack id, and the app's own trigger reads a
+bare id as **bought outright** — the historically true reading, and the right
+default. The consequence was that every pack any developer had ever granted was
+perpetual, and every state a real subscription passes through was unreachable
+by hand: renewing on a date, cancelled and running out, in a free trial, behind
+on a payment, ended.
+
+Those are on the money path and nobody could look at one. There is not a single
+live Stripe subscription on this project — both apps are pre-release and every
+`stripe_customer_id` is null — so the entire half of the Store that renews,
+ends and lapses had never been seen outside a screenshot.
+
+So a held pack in an app that records grants gets a **Held As** dropdown, whose
+options are the Store card's own state names. One press puts the account into
+that state, the card on `#/store` draws it, and `src/dev/grantShapes.ts` is the
+single list both ends read — if the Store can draw it, the console can reach it.
+
+**It never writes a Stripe subscription id.** `tdg_admin_set_pack_grant` carries
+over whatever was already on the grant and refuses to invent one, in both
+directions: nudging a real subscriber's period end must not detach their row
+from Stripe, and a hand-made subscription must not look like one the Store could
+cancel — `tdg-site-billing` acts on that id alone, so a fake one would be a
+Cancel button reaching into a live Stripe account for something that was never
+there.
+
+The consequence is visible rather than hidden. On the Store, a developer with
+**Developer Mode** on still gets the Manage Plan panel over a hand-made
+subscription, with a line at the top saying it is a preview and that its actions
+will refuse. A customer never sees that button, because the card only draws it
+for a grant with a real subscription behind it.
+
+**`Ended` makes the pack leave.** Writing it drops the pack out of
+`owned_packs` immediately, which is `<app>_packs_in_force()` doing its job and
+not the grant failing. The Store then offers to sell it again — with a line
+saying what ended and when, so a card that went back to Buy is not silent about
+why.
 
 ## Feedback
 

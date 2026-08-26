@@ -23,10 +23,19 @@ import type { PageSection } from './pageBlocks'
  *
  * ## What is deliberately NOT claimed
  *
- * There is no refund policy. Not a strict one, not a generous one: it has not
- * been written. The section says that, says what we are able to do, and says
- * who to write to, because a policy invented on a web page is a policy nobody
- * has agreed to keep.
+ * ## The refund policy is now written down, and it says no
+ *
+ * This page used to say there was no policy — not a strict one, not a generous
+ * one, simply not written — and that the honest answer was to write in and have
+ * a person read it. That was true, and it was the wrong thing to leave true: a
+ * shop that decides refunds one email at a time is a shop where the answer
+ * depends on who wrote and how they put it, which is worse for a reader than a
+ * plain no they can see before they pay.
+ *
+ * So it is a no, it is stated in the words above the shelf as well as in the
+ * section below, and the section still ends in the two things that are NOT
+ * refunds and are still fixed the day you ask: money taken for something that
+ * bought nothing, and a pack that landed on the wrong account.
  *
  * ## The plans section used to say "no", and that is why it is written the way
  * ## it is now
@@ -70,8 +79,10 @@ export const STORE_ANSWERS: PageSection[] = [
         items: [
           { label: 'What a pack is', value: 'A purchase on your account, not a licence key and not a trial' },
           { label: 'Charged', value: 'Once, unless the card says it renews. Then the card also says how to stop it' },
+          { label: 'Refunds', value: 'None. A plan can be cancelled instead, and you keep it to the period’s end' },
           { label: 'Currency', value: 'US dollars, whichever country you are in' },
           { label: 'The price', value: 'On the card above, and it is the number Stripe charges' },
+          { label: 'What you get', value: 'Everything the card lists, and that list is all of it' },
           { label: 'Usable today', value: 'Not yet. Both apps are still in development' },
         ],
       },
@@ -256,7 +267,7 @@ export const STORE_ANSWERS: PageSection[] = [
           },
           {
             name: 'You paid twice for the same pack',
-            text: 'There is no way to own a pack twice, so the second payment bought nothing, and that is the clearest refund case there is. Send us both receipts.',
+            text: 'There is no way to own a pack twice, so the second payment bought nothing at all. That is not a refund and the no-refunds line does not cover it: it is money we should not have taken, and we send it back. Write to us with both receipts.',
           },
           {
             name: 'Manage Plan is not on the card',
@@ -277,23 +288,39 @@ export const STORE_ANSWERS: PageSection[] = [
   {
     id: 'refunds',
     title: 'Refunds, and reaching us',
-    what: 'What we have not decided yet, who to write to, and how long we take.',
-    tag: 'HONEST',
+    what: 'There are none. Why, what you can do instead, and the two cases this is not about.',
+    tag: 'NO REFUNDS',
     blocks: [
       {
         kind: 'text',
-        text: 'We have not written a refund policy. That is the true state of it, and an invented one on this page would be a rule nobody has agreed to keep.',
+        text: 'Payments on this shelf are not refundable. It is worth saying that as plainly as we can, above the shelf as well as here, because a rule you find out about afterwards is a rule you never agreed to.',
       },
       {
         kind: 'text',
-        text: 'What is true is what we are able to do. Stripe can refund a payment, and a pack can be taken back off an account, and both are things we can do the day you ask. What has not happened is deciding in advance which cases we say yes to. Until it has, the honest answer is that you write to us and a person reads it, rather than a page telling you what that person will say.',
+        text: 'The reason is not that we would rather keep your money. Every sale costs us fees that do not come back when a payment is reversed, and we are two brothers doing this on nights and weekends rather than a company that can absorb that. A refund does not undo a sale for us; it turns it into a loss. So the honest thing is to say no in advance and make sure you never need to ask — which is what the rest of this page is for.',
+      },
+      {
+        kind: 'note',
+        text: 'What is on a card is the whole of what that pack unlocks, and a one-time pack is yours for good once it is paid for. Read the card, and if a pack renews it says so beside the price. Nothing here is a trial that quietly becomes a charge.',
       },
       {
         kind: 'features',
         items: [
           {
+            name: 'Cancel instead, if it renews',
+            text: 'A plan can be stopped from its own card the moment you want it stopped, and you keep every part of it until the end of the period you have already paid for. Nothing further is charged after that. That is the thing to reach for rather than a refund, and it is two presses.',
+          },
+          {
+            name: 'A payment that bought nothing is not a refund',
+            text: 'If you were charged twice for the same pack, the second payment bought nothing, because there is no way to own a pack twice. That is money we should not have taken and we send it back. Same for a payment that landed with no pack attached to it at all.',
+          },
+          {
+            name: 'A pack on the wrong account is not a refund either',
+            text: 'We can take a pack off one account and put it on another, and both halves are written to the same record a real payment is. Nobody has to buy anything a second time to fix that.',
+          },
+          {
             name: 'Where to write',
-            text: 'The contact page linked in the footer reaches both of us. It is the same place for a refund, a purchase that will not land, and a pack on the wrong account.',
+            text: 'The contact page linked in the footer reaches both of us. It is the same place for a purchase that will not land, a pack on the wrong account, and anything on this page that turns out not to match what happened to you.',
           },
           {
             name: 'What to include',
@@ -307,7 +334,7 @@ export const STORE_ANSWERS: PageSection[] = [
       },
       {
         kind: 'note',
-        text: 'The day there is a refund policy, it will be written here, on this page, rather than told to one person in an email.',
+        text: 'If this policy ever changes it will change here, on this page, before it changes for anybody — not quietly, and not for one person in an email.',
       },
     ],
   },

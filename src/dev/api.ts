@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import type { PackGrant } from '../store/grant'
 
 /**
  * Every call the Developer console can make, in one file.
@@ -34,16 +35,18 @@ export type DevStoreEntry = {
   grants: Record<string, DevGrant | undefined>
 }
 
-/** One entry of an app's `grants` column. Every field is optional: this is an
- *  app's own jsonb, not a shape this project controls. */
-export type DevGrant = {
-  kind?: string | null
-  since?: string | null
-  status?: string | null
-  subscriptionId?: string | null
-  currentPeriodEnd?: string | null
-  cancelAtPeriodEnd?: boolean | null
-}
+/**
+ * One entry of an app's `grants` column. Every field is optional: this is an
+ * app's own jsonb, not a shape this project controls.
+ *
+ * The SAME type the shop reads, not a copy of it. It used to be declared twice
+ * — once here and once in `store/grant.ts` — which is two places to update when
+ * an app's webhook starts recording a field, and the console is the half that
+ * would go quiet rather than break. One declaration also means the console and
+ * the Store can never disagree about what a grant MEANS, because
+ * `standingOfGrant` reads them both.
+ */
+export type DevGrant = PackGrant
 
 /** One account, seen across every TDG product at once. */
 export type DevAccount = {
@@ -415,6 +418,47 @@ export const setPack = (
     p_app: app,
     p_pack: pack,
     p_owned: owned,
+  })
+
+/**
+ * The SHAPE of a grant, for an app that records one: held outright, or rented
+ * with a status and a date.
+ *
+ * `setPack` above can only say on or off, and a bare "on" is read by the app's
+ * own trigger as PERPETUAL — the historically true reading of a pack id with
+ * nothing beside it. Correct, and it left every state a real subscription
+ * passes through unreachable by hand: renewing, cancelled and running out, in
+ * a trial, behind on a payment, lapsed. Those are on the money path and nobody
+ * could look at one.
+ *
+ * Returns the app's whole `grants` object as it now stands, so a caller can
+ * see what it did rather than assume.
+ *
+ * **It never writes a `subscriptionId`.** The server carries whatever was
+ * already there and refuses to invent one, because that id is the only handle
+ * `tdg-site-billing` has: a made-up one would be a Cancel button aimed into a
+ * live Stripe account at something that was never there.
+ */
+export const setPackGrant = (
+  userId: string,
+  app: string,
+  pack: string,
+  grant: {
+    kind: 'perpetual' | 'subscription'
+    status?: string | null
+    /** ISO. Required for a subscription; the server refuses one without it. */
+    periodEnd?: string | null
+    cancelAtPeriodEnd?: boolean
+  },
+): Promise<Record<string, DevGrant | undefined>> =>
+  rpc<Record<string, DevGrant | undefined>>('tdg_admin_set_pack_grant', {
+    p_target: userId,
+    p_app: app,
+    p_pack: pack,
+    p_kind: grant.kind,
+    p_status: grant.status ?? null,
+    p_period_end: grant.periodEnd ?? null,
+    p_cancel_at_period_end: grant.cancelAtPeriodEnd ?? false,
   })
 
 /** `until` is an ISO string, or null for indefinite. */

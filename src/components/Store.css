@@ -95,6 +95,44 @@
   color: var(--text);
 }
 
+/* The three things a reader has to know BEFORE the Buy button, above the shelf
+   rather than folded under it. Deliberately quiet — `--surface` and `--border`,
+   the same box the account strip is — because it is information and not an
+   alarm, and a warm panel here would read as a warning about the shop rather
+   than the terms of it. The lead-in of each line carries `--text` so the three
+   claims are readable at a glance without reading the whole paragraph. */
+.store__terms {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.store__terms-title {
+  margin: 0 0 10px;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.store__terms-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.store__terms-list li {
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.store__terms-list strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* ── one app's shelf ──────────────────────────────────────────────────── */
 
 /* A shelf is a landing place: `#/store/<app>` scrolls to it, so it clears the
@@ -731,6 +769,24 @@
   margin: 0;
   font: 400 12px/1.5 var(--font-body);
   color: var(--faint);
+}
+
+/* Only a TDG developer with Developer Mode on ever sees this, and it says so.
+   Accent rather than warm: nothing is wrong, this is a preview of a panel that
+   has no live subscription behind it yet. */
+.store__devnote {
+  margin: 0 0 11px;
+  padding: 9px 11px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background-color: var(--accent-soft);
+  font: 400 11.5px/1.5 var(--font-body);
+  color: var(--muted);
+  transition: var(--t-theme);
+}
+.store__devnote strong {
+  font-weight: 600;
+  color: var(--text);
 }
 .store__note--quiet {
   opacity: 0.8;

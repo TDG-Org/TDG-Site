@@ -139,6 +139,20 @@ beside it. In one component:
   and returning focus, and a scrim that is a real button and is hidden from
   screen readers because Escape is its keyboard equivalent.
 
+- A **`Before You Pay` block above the shelf**, carrying the three facts most
+  likely to stop somebody pressing Buy: the card lists everything, a one-time
+  pack stays bought, and payments are not refundable. It is above the shelf
+  rather than folded under it because a refund policy you find afterwards is one
+  you never agreed to. Its long form is the `refunds` section of
+  `storeAnswers.ts`; change one and change the other.
+- A **developer preview**. With Developer Mode on and `is_admin` true, Manage
+  Plan is drawn over a grant that has no Stripe subscription behind it, with a
+  line at the top saying so and that its actions will refuse. It reveals and
+  grants nothing — both halves are the same pair the Developer tab already uses
+  — and it exists because there is not one live subscription on the project yet,
+  so the whole manage surface would otherwise be unreachable. `#/dev`'s **Held
+  As** dropdown is what puts an account into each state.
+
 **These two panels deliberately do NOT use `useModal`.** That hook locks the
 page's scroll, traps Tab and takes the focus, all of which a full-screen dialog
 owes the page and none of which these do: they are anchored inside a card that is

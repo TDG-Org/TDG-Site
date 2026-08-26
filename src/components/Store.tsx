@@ -5,6 +5,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
+import { useDevMode } from '../dev/devMode'
 import { useOwnedPacks } from '../store/useOwnedPacks'
 import {
   formatDay,
@@ -251,6 +252,7 @@ function PackCard({
   index,
   state,
   grant,
+  devView,
   onBuy,
   onSignIn,
   onCheck,
@@ -264,6 +266,16 @@ function PackCard({
   state: CardState
   /** How this account holds it, when the app records that. Null when it does not. */
   grant: PackGrant | null
+  /**
+   * Is a TDG developer looking at this, with Developer Mode switched on?
+   *
+   * It reveals one thing and grants nothing — the Manage Plan panel over a
+   * grant that has no Stripe subscription behind it, which is what every
+   * hand-made grant is and what every grant on this project is today. Without
+   * it the whole manage surface is unreachable until the first real subscriber
+   * exists, which is a state nobody has looked at on the money path.
+   */
+  devView: boolean
   onBuy: (plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -312,6 +324,27 @@ function PackCard({
     if (refocus) buyRef.current?.focus()
   }
 
+  const shown = justChanged ?? standing
+
+  /**
+   * Is Manage Plan drawn ONLY because a developer asked to see it?
+   *
+   * `standing.manageable` stays honest and needs a real Stripe subscription
+   * id, because a customer offered a button that can only ever fail is worse
+   * off than one who is told plainly why there is no button. A developer with
+   * Developer Mode on gets it anyway, and the panel says at the top what it is
+   * and that its actions will refuse — a preview, labelled as one, rather than
+   * a control that quietly does nothing.
+   */
+  const devOnly =
+    !standing.manageable &&
+    devView &&
+    (shown.kind === 'active' ||
+      shown.kind === 'ending' ||
+      shown.kind === 'trial' ||
+      shown.kind === 'dunning')
+  const canManage = shown.manageable || devOnly
+
   // A chooser belongs to the state that opened it and to nothing else. A card
   // that flips to Waiting mid-choice must not leave one hanging over the wait,
   // and a card whose wait times out must not find one still open underneath.
@@ -320,13 +353,12 @@ function PackCard({
   // lands a lapsed or hand-granted standing takes the Manage Plan button away,
   // and a panel left open with nothing behind it would be a dialog the reader
   // cannot get back to and cannot act in.
-  const manageable = standing.manageable
   useEffect(() => {
-    if ((state.kind !== 'buy' && state.kind !== 'owned') || (state.kind === 'owned' && !manageable)) {
+    if ((state.kind !== 'buy' && state.kind !== 'owned') || (state.kind === 'owned' && !canManage)) {
       setChoosing(false)
       setStep({ at: 'menu' })
     }
-  }, [state.kind, manageable])
+  }, [state.kind, canManage])
 
   // A fresh answer from the server replaces the optimistic one. Keyed on the
   // grant's own fields rather than on a timer: the point is to stop guessing
@@ -334,8 +366,6 @@ function PackCard({
   useEffect(() => {
     setJustChanged(null)
   }, [grant?.cancelAtPeriodEnd, grant?.currentPeriodEnd, grant?.status])
-
-  const shown = justChanged ?? standing
 
   /** Stop the renewals, or put them back. Both are the same one call. */
   const changeRenewal = async (renew: boolean) => {
@@ -518,7 +548,7 @@ function PackCard({
               subscription to act on, and a button that can only ever fail is
               worse than no button.
             */}
-            {shown.manageable && (
+            {canManage && (
               <button
                 ref={buyRef}
                 type="button"
@@ -534,13 +564,23 @@ function PackCard({
               </button>
             )}
 
-            {choosing && shown.manageable && (
+            {choosing && canManage && (
               <PlanPanel
                 label={`Manage your ${pack.name} plan`}
                 title="Manage Plan"
                 step={step.at === 'confirm' ? `confirm-${step.what}` : step.at}
                 onClose={() => closeChooser()}
               >
+                {/* Said before the rows rather than after them, because it
+                    changes what every row below means. Only a developer with
+                    Developer Mode on can reach this. */}
+                {devOnly && (
+                  <p className="store__devnote">
+                    <strong>Developer view.</strong> This grant has no Stripe subscription behind
+                    it, so every action here will refuse. It is drawn so the panel can be looked
+                    at before there is a real subscriber.
+                  </p>
+                )}
                 {step.at === 'menu' && (
                   /* `data-menu` reserves a two-line note in every row, so four
                      controls of four different lengths are still four rows of
@@ -693,6 +733,15 @@ function PackCard({
 
         {state.kind === 'buy' && (
           <>
+            {/* A subscription that has run out puts the card back to Buy, which
+                is right — they do not have it and the shop should sell it. But
+                a card that says only "Buy" to somebody who had this last week
+                has quietly dropped the part they would ask about, so the state
+                that made it buyable again gets its own line. Perpetual grants
+                never reach here: a pack bought outright does not leave. */}
+            {shown.kind === 'lapsed' && (
+              <p className="store__note store__note--warn">{shown.note}</p>
+            )}
             {/*
               ONE button, whatever the pack costs and however many ways it is
               sold. A pack sold three ways used to print three buttons, which
@@ -823,6 +872,7 @@ function AppSection({
   app,
   cardState,
   grantFor,
+  devView,
   onBuy,
   onSignIn,
   onCheck,
@@ -830,6 +880,7 @@ function AppSection({
   app: StoreApp
   cardState: (app: StoreApp, pack: StorePack) => CardState
   grantFor: (appId: string, packId: string) => PackGrant | null
+  devView: boolean
   onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -888,6 +939,7 @@ function AppSection({
             index={i}
             state={cardState(app, pack)}
             grant={grantFor(app.id, pack.id)}
+            devView={devView}
             onBuy={(plan) => onBuy(app, pack, plan)}
             onSignIn={onSignIn}
             onCheck={onCheck}
@@ -901,6 +953,16 @@ function AppSection({
 export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { status, user, profile } = useAuth()
   const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
+  /**
+   * A TDG developer, with the Developer Mode switch on.
+   *
+   * Both halves, and neither is a permission. `is_admin` is the same column
+   * Postgres re-checks on every privileged call, and Developer Mode is a
+   * per-browser preference about chrome — so this reveals a preview and grants
+   * nothing, exactly like the Developer tab it sits beside. A copy of this site
+   * with both forced true shows one extra panel whose buttons all refuse.
+   */
+  const devView = useDevMode() && profile?.is_admin === true
   const blob = useParallax<HTMLDivElement>(-0.12)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const how = useReveal<HTMLDivElement>('scale', 1)
@@ -1012,6 +1074,45 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
               </>
             )}
           </div>
+
+          {/*
+            Above the shelf, not folded under it.
+
+            Everything here is also said at length in `storeAnswers.ts`, and
+            being said there is not enough: a fold is a thing you open when you
+            already suspect there is something to find, and the three facts
+            most likely to make somebody NOT press Buy have to be readable
+            before they press it. A refund policy discovered afterwards is a
+            refund policy nobody agreed to.
+
+            Three lines, and each is a promise in a different direction: what
+            the card lists is all of it, what is bought once stays bought, and
+            money that has gone does not come back. The last one ends in the
+            thing a reader can actually do, because a rule with no way out of
+            it reads as a wall.
+          */}
+          <div className="store__terms">
+            <p className="store__terms-title">Before You Pay</p>
+            <ul className="store__terms-list">
+              <li>
+                <strong>What is on the card is what you get.</strong> Everything a pack unlocks is
+                listed on its own card above, and that list is the whole of it. Nothing is held
+                back, and nothing turns up later that you have to buy a second time.
+              </li>
+              <li>
+                <strong>A one-time pack is truly yours.</strong> Paid once, kept for good, on your
+                TDG Account rather than on a machine. There is nothing to renew, nothing to
+                activate, and we do not take it back.
+              </li>
+              <li>
+                <strong>Payments are not refundable.</strong> Every sale costs us fees we do not
+                get back, and we are two people rather than a company that can absorb that — so
+                please read the card and be sure before you pay. Anything that renews can be
+                cancelled from its own card whenever you like, and you keep it to the end of the
+                period you have already paid for.
+              </li>
+            </ul>
+          </div>
         </div>
 
         {STORE_APPS.map((app) => (
@@ -1020,6 +1121,7 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
             app={app}
             cardState={cardState}
             grantFor={grantFor}
+            devView={devView}
             onBuy={buy}
             onSignIn={onOpenAuth}
             onCheck={refresh}

@@ -190,6 +190,22 @@ two prices above it.
 make.** Every chip, label and cadence on a card must agree with the plan it
 describes.
 
+**A pack's `unlocks` is the WHOLE list, not a highlight reel.** The Store says
+out loud, above the shelf, that what is on a card is everything you get — so a
+feature left off because the list was getting long is the shop breaking a
+promise it made in writing. If a pack gains something, it gains a line.
+
+**And there are no refunds**, which is stated in the same place before anybody
+presses Buy, because a rule discovered afterwards is a rule nobody agreed to.
+That policy lives in exactly two places and they have to move together: the
+`Before You Pay` block in `Store.tsx`, above the shelf, and the `refunds`
+section of `storeAnswers.ts` under it. The short version is above the fold on
+purpose — a refund policy only reachable by opening a fold is one somebody finds
+out about the day they want one. The two things that are NOT refunds and are
+still fixed the day somebody asks — money taken that bought nothing, and a pack
+on the wrong account — are named in that section so the no does not read as a
+wall.
+
 ### 11. Every pack sold more than one way looks the same, in every app.
 
 This is a fixed pattern, not a per-app design decision. TDG Veditor's Pro Export
@@ -375,7 +391,8 @@ from the vocabulary in `src/data/pageBlocks.ts`. Do not invent a block type for
 one paragraph; that is how a content file becomes a component.
 
 **Add or change a pack in the Store.** `src/data/store.ts`, and read its header
-first — the number lives in four places plus Stripe. A pack sold more than one
+first — the number lives in four places plus Stripe. `unlocks` is a complete
+list and not a summary, because the shelf promises it is (rule 10). A pack sold more than one
 way gets a `plans[]` array whose **first entry must match the pack's own
 `priceCents` and `paymentLink`**, so the primary plan is not a fourth place to
 state it. The card renders one button whatever the plan count; see

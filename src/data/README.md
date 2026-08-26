@@ -91,6 +91,15 @@ refuses every real card, and a customer who meets one is told nothing about why.
 **`storeAnswers.ts` names no amount at all, on purpose.** "The price on the card"
 is not a hedge; it is the only way to still be right in a year. Keep it that way.
 
+**But it does now carry a policy, and the policy lives in two places.** Payments
+are not refundable, and that is stated both in the `refunds` section here and in
+the `Before You Pay` block above the shelf in `components/Store.tsx` — short
+version above the fold, long version under it. They are not derived from each
+other and nothing will catch them drifting, so change them in the same sitting.
+Same for the completeness promise: the block says what a card lists is
+everything you get, which makes every pack's `unlocks` in `store.ts` a claim
+rather than a summary.
+
 ## Adding an app, end to end
 
 1. Card in `APPS` or `TOOLS` in `content.ts`, with a `page:` slug and its icon.

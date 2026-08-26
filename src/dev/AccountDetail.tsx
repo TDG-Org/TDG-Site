@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent } from './api'
 import * as api from './api'
 import { grantNote, storeApps, type DevStoreApp } from './apps'
+import { GRANT_SHAPES, grantArgsFor, shapeOfGrant } from './grantShapes'
 import {
   Button,
   Combo,
@@ -571,7 +572,9 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         ? `The server did not report what this account holds in ${app.title}, so this panel is not showing ownership rather than showing it as empty.`
         : !app.inShop
           ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
-          : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
+          : app.hasGrants
+            ? 'Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does. This app also records HOW each pack is held, so a pack that is on can be put into any state a real subscription passes through.'
+            : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
 
   return (
     <Panel
@@ -675,6 +678,76 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
             />
           ))}
         </div>
+      )}
+
+      {/*
+          HOW each held pack is held, for an app that records it.
+
+          Only for packs that are actually ON: a shape is a property of a grant,
+          and offering to set one on a pack nobody holds would be a second way
+          to grant that disagrees with the switch above it.
+
+          This exists because every pack a developer has ever granted was
+          PERPETUAL — `tdg_admin_set_pack` writes a bare id and the app's own
+          trigger reads that as bought-outright, which is the right default and
+          left every subscription state unreachable by hand. Both apps are
+          pre-release and there is not one live Stripe subscription on the
+          project, so without this nobody can look at the half of the Store that
+          renews, ends, lapses or fails to take a payment.
+      */}
+      {app.hasGrants && app.holdingsKnown && !absent && app.packs.some((p) => p.owned) && (
+        <div className="dev__grid">
+          {app.packs
+            .filter((pack) => pack.owned)
+            .map((pack) => {
+              const current = shapeOfGrant(pack.grant, pack.owned)
+              return (
+                <Field
+                  key={`shape:${pack.id}`}
+                  label={`${pack.name} · Held As`}
+                  htmlFor={`shape-${app.id}-${pack.id}`}
+                  hint={
+                    GRANT_SHAPES.find((sh) => sh.id === current)?.what ??
+                    'This grant is in a shape the site has no reading for, so no preset matches it. Choosing one below replaces it.'
+                  }
+                >
+                  <Select
+                    id={`shape-${app.id}-${pack.id}`}
+                    value={current ?? ''}
+                    disabled={busy === `shape:${app.id}:${pack.id}`}
+                    options={[
+                      ...(current === null
+                        ? [{ value: '', label: 'Unrecognised shape' }]
+                        : []),
+                      ...GRANT_SHAPES.map((sh) => ({ value: sh.id, label: sh.label })),
+                    ]}
+                    onChange={(next) => {
+                      const shape = GRANT_SHAPES.find((sh) => sh.id === next)
+                      if (!shape) return
+                      run(
+                        `shape:${app.id}:${pack.id}`,
+                        `${pack.name} is now ${shape.label}.`,
+                        () =>
+                          api.setPackGrant(a.user_id, app.id, pack.id, grantArgsFor(shape)),
+                      )
+                    }}
+                  />
+                </Field>
+              )
+            })}
+        </div>
+      )}
+
+      {app.hasGrants && app.holdingsKnown && !absent && app.packs.some((p) => p.owned) && (
+        <p className="dev__panel-quiet">
+          A shape written here carries no Stripe subscription id, because the server refuses to
+          invent one — that id is the only handle the Store's Cancel button has, and a made-up one
+          would aim it into a live Stripe account at something that was never there. So a hand-made
+          subscription shows every state on the card and its actions refuse, and the card says so.
+          Ended drops the pack out of <code className="dev__code">owned_packs</code> the moment it is
+          written, which is <code className="dev__code">{app.id}_packs_in_force()</code> doing its
+          job, not the grant failing.
+        </p>
       )}
 
       {app.onServer && app.holdingsKnown && !app.hasList && app.packs.length > 0 && (
