@@ -5,9 +5,45 @@ import { onFrame } from '../lib/motion'
 const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
 
 /**
+ * How far outside the viewport a layer goes on being painted, in px.
+ *
+ * `useOffscreenPause` cannot reach this. It stamps `data-live` on a section and
+ * `base.css` turns that into `animation-play-state: paused` on everything
+ * inside — but an `onFrame` subscriber knows nothing about an attribute.
+ * Anything driven from JS instead of CSS keyframes has to check for itself,
+ * which is what `Starfield` and `OriginField` already do and what this had been
+ * missing.
+ *
+ * **400px, and deliberately not the 120px `useOffscreenPause` uses**, because
+ * the two are answering different questions. That hook decides WHETHER a CSS
+ * animation ticks, and being a frame late about it costs nothing. This one
+ * decides WHERE an element is, through a lerp that takes about 17 frames to
+ * settle into its natural lag behind the target. Re-enter 120px out and the
+ * layer spends a third of a second ON SCREEN drifting at not quite the right
+ * rate: no snap, nothing you could point at, but still a behaviour change at
+ * the exact moment somebody starts looking at the section, and this guard is
+ * only allowed to be a saving. 400px is those 17 frames at a brisk 1400px/s
+ * scroll, so the settle is spent where nobody is. Flick faster than that and
+ * what is left is a fraction of a pixel per frame on a blurred decorative layer
+ * that is already smearing past.
+ *
+ * The margin also has to clear the biggest drift a layer can carry, because the
+ * rect measured below already includes that drift and the drift is frozen while
+ * the layer is parked — too small a margin and the guard could park something
+ * that is still on screen. At the band edge the largest factor on the page
+ * (0.2, the Tools blob) is worth (vh/2 + 400 + height/2) x 0.2: about 280px on
+ * a 1000px viewport with a 1000px layer, and still under 400 at 1400 x 1400.
+ * Take a factor past ~0.25 and this number has to come up with it.
+ */
+const PARK_MARGIN = 400
+
+/**
  * Drift a decorative layer against its own distance from the viewport centre.
  * Uses the standalone `translate` property so any `transform` the element
  * already carries (centring, rotation) survives untouched.
+ *
+ * Eighteen of these run on the home page alone. Off screen they now cost the
+ * rect and nothing else — see `PARK_MARGIN`.
  */
 export function useParallax<T extends HTMLElement>(factor: number) {
   const ref = useRef<T | null>(null)
@@ -22,6 +58,43 @@ export function useParallax<T extends HTMLElement>(factor: number) {
       const r = el.getBoundingClientRect()
       const centreOffset = r.top + r.height / 2 - vh / 2
       const target = centreOffset * -factor * mi
+
+      /* ── parked: nobody can see this layer ────────────────────────────────
+         The rect read stays, because the guard is what needs it — and it has to
+         be THIS element's rect rather than its section's. These layers are
+         deliberately larger than their sections and drift against them, so a
+         section's rect is not its art's rect. What goes is the `toFixed`, the
+         write closure, the inline style write the browser then has to
+         recalculate, and the `hold()` — which until now kept the whole frame
+         loop awake for a lerp nobody could see.
+
+         `current = target` rather than a bare `return`, and that one line is
+         the difference between this working and this flickering. Freeze
+         `current` instead and it is only correct for as long as the scroll
+         position it was frozen at stays true: a hash jump into a section, a
+         lazy image resizing the page above it, or a reduced-motion toggle
+         leaves it hundreds of pixels out, and the layer then snaps or slides to
+         catch up on the first frame anybody can see it. That is a flicker at
+         the exact moment somebody starts looking, which is worse than the cost
+         being removed. Tracking the target while parked is two multiplies and
+         an assignment, and it means the first live frame starts from zero error
+         instead of unwinding one.
+
+         Nothing shows the frozen position on the way back in, either: this read
+         and the write it returns happen inside the same frame, before the
+         browser paints, so the first frame back inside the band is already
+         painted in the right place.
+
+         Reduced motion comes through here too. At `mi === 0` the target is 0,
+         so a parked layer syncs to 0 and takes its one identity write on the
+         frame it re-enters the band — 400px before it can be seen. The guard
+         defers that write, it never swallows it, and a layer that was never
+         painted at all is sitting at the identity position already. */
+      if (r.bottom < -PARK_MARGIN || r.top > vh + PARK_MARGIN) {
+        current = target
+        return
+      }
+
       // the lerp is still converging, so it needs the next frame even if the
       // page has stopped moving
       if (Math.abs(target - current) > 0.02) hold()
@@ -43,6 +116,42 @@ export function useParallax<T extends HTMLElement>(factor: number) {
 /**
  * Layers that ride the hero's own displacement rather than their own. The
  * hero sinks as you scroll and these follow it at their own rate.
+ *
+ * ## Why this one has no off-screen guard when `useParallax` does
+ *
+ * **There is no stale state here to be wrong about.** This writes a pure
+ * function of the hero's rect with no lerp behind it, so whatever frame it
+ * resumed on it would write exactly what an unguarded run writes on that frame.
+ * The entry problem that makes the guard next door delicate — a `current` that
+ * goes stale while parked — does not exist in this hook.
+ *
+ * **And the guard would not be free here, where next door it is.**
+ * `useParallax` already has the element's own rect in hand, so its guard is two
+ * comparisons on a number it had to measure anyway. This hook reads the HERO's
+ * rect — one element, shared by all six of its subscribers — and never touches
+ * the element it writes to. Guarding it means a second `getBoundingClientRect`
+ * per subscriber per frame, plus a number shadowing the string it already keeps
+ * so it can tell where the frozen drift has actually left the element: a
+ * measurement added to every live frame, and two measurements left on every
+ * parked one, to save one style write. Six subscribers do not pay for that.
+ * Eighteen did.
+ *
+ * It also never calls `hold()`, so unlike `useParallax` it has never kept the
+ * loop from parking. A reader sitting still pays nothing for it at all; its
+ * cost exists only while the page is already moving.
+ *
+ * **The version that looked free, and why it was not taken.** Five of the six
+ * subscribers live inside `.hero`, and `.hero` is `overflow: hidden` — so the
+ * hero's own rect, already read on the line below, would settle all five at no
+ * cost. It works. It also makes this hook's behaviour depend on where in the
+ * DOM its element sits and on an `overflow` declared in `Hero.css`, a file this
+ * hook otherwise has no reason to know about, where deleting one line would
+ * silently hide a layer. Six subscribers are not worth that coupling.
+ *
+ * If this ever grows a lerp, or grows to `useParallax`'s numbers, guard it on
+ * the LIVE box — the element's rect corrected by the drift about to be written
+ * — and never on the frozen one. The drift here scales with total scroll rather
+ * than with the viewport, so no fixed margin can absorb it.
  */
 export function useHeroParallax<T extends HTMLElement>(factor: number) {
   const ref = useRef<T | null>(null)

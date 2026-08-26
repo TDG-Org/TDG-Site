@@ -13,7 +13,7 @@ per second on a page nobody is even scrolling.
 | --- | --- |
 | `useReveal(kind, index)` | Brings an element in as it enters the viewport. |
 | `useTilt(soft?)` | Tilts a card toward the cursor and feeds the spotlight. |
-| `useParallax(factor)` | Drifts a decorative layer against its own distance from centre. |
+| `useParallax(factor)` | Drifts a decorative layer against its own distance from centre. **Stops painting 400px outside the viewport.** |
 | `useHeroParallax(factor)` | Drifts a layer with the **hero's** displacement instead of its own. Same file as `useParallax`, and the two must never share an element. |
 | `useOffscreenPause()` | Parks decorative animation in sections nobody can see. |
 
@@ -75,6 +75,21 @@ Uses the standalone `translate` property rather than `transform`, so any
 transform the element already carries — centring, rotation — survives untouched.
 Lerps per second rather than per frame, so 144 Hz feels like 60 Hz.
 
+**Your layer stops updating 400px outside the viewport.** That is a contract,
+not an implementation detail: while it is parked nothing is written to
+`element.style.translate`, so the value sitting there is the one from the last
+frame it was near the viewport, and anything else reading that element's
+position off screen is reading a stale one. It goes on tracking its target
+internally the whole time, so the first frame back inside the band is painted at
+the correct place with no snap and no catch-up slide — but that frame happens
+400px out, not at the viewport edge. See `PARK_MARGIN` in the file for why 400
+and not `useOffscreenPause`'s 120.
+
+`useOffscreenPause` cannot do this job for you. It stamps `data-live` and CSS
+`animation-play-state` follows it, but an `onFrame` subscriber never sees an
+attribute — **anything you drive from JS instead of CSS keyframes has to check
+visibility itself**, the way `Starfield` and `OriginField` do.
+
 ## `useHeroParallax`
 
 ```tsx
@@ -92,6 +107,13 @@ content with it, and `Faith.tsx` gives its rays the same ride. Anything else on
 the page uses `useParallax`. There is no lerp in the hero version and it needs
 none: it tracks a rect that is already moving smoothly, so a smoother of its own
 would only add lag.
+
+**It does not park off screen, and `useParallax` does.** Six subscribers rather
+than eighteen, no lerp to keep the loop awake, and a guard here would have to
+buy a second rect the hook does not otherwise read — the header comment in the
+file carries the full reasoning, and says how to guard it if that ever stops
+being true. What it means for a consumer: a `useHeroParallax` layer's inline
+`translate` is current on every frame the page moves, wherever that layer is.
 
 **Never put both on one element.** Each writes the whole of
 `element.style.translate` every frame from its own source and neither reads what
