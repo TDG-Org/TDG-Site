@@ -410,10 +410,19 @@
      depends on is the band's LIGHTNESS, and the new band was derived to hold
      the old one's L* to a tenth of a unit. Recomputed the same way — resolve
      the band, mix it 94% with --text, take L* of each, subtract — #origin
-     gives 5.80 -> 5.81 dark and -4.56 -> -4.56 light across the change.
+     gives 5.80 -> 5.81 dark and -4.56 -> -4.59 light across the change.
      (5.80 rather than the 5.72 above: that line was read back off the
      browser's rounded rgb(), this one is computed from the hex. The pair is
      consistent within itself either way, and 94% stands on both.)
+
+     The light pair read -4.56 -> -4.56 for a pass, which was this file
+     disagreeing with itself: the --band-origin block above says -4.59 and so
+     does base.css. Re-derived to settle it — mix, round to 8 bits the way a
+     browser paints, then take L*: #eef0f6 -> #e1e3e9 is -4.5596 and #ebf0fb ->
+     #dee3ed is -4.5870. Round the mix and you get -4.56 / -4.59; do not round
+     it and you get -4.62 / -4.62, which is where a flat pair comes from. State
+     which convention you used if you re-derive this, because the two answers
+     differ by more than the change being measured.
 
      One older line did not reproduce and has been softened rather than
      restated: "dark runs 0.4 to 1.3 higher than light" comes out 0.2 (outro)

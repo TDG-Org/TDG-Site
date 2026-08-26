@@ -178,6 +178,7 @@ export function ImageSlot({
                   stroke="currentColor"
                   strokeWidth="1.5"
                   aria-hidden="true"
+                  focusable="false"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <circle cx="8.5" cy="9.5" r="1.6" />

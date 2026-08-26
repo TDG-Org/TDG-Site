@@ -83,8 +83,17 @@ const blob = useParallax<HTMLDivElement>(-0.12)
 Uses the standalone `translate` property rather than `transform`, so any
 transform the element already carries — centring, rotation — survives untouched.
 Lerps per second rather than per frame, so 144 Hz feels like 60 Hz — through
-`settle()` in [`../lib/motion.ts`](../lib/README.md), which every damped thing
-on this site shares.
+`settle()` in [`../lib/motion.ts`](../lib/README.md), which every damped lerp
+on this site shares: `useParallax`, `usePointer`, `Hero`, `origin/CabinScene`
+and `Cursor`. That is five, and the fifth was found three passes late — see
+`settle`'s own header, which carries the count and why a miscount there is the
+exact failure the export exists to prevent.
+
+The one thing that looks like a sixth and is not: `hero/PointCloud.tsx` decays
+a *throw's velocity* with `Math.pow(0.945, step * 60)`, which is the same
+per-second normalisation written as the complement. It is not a lerp toward a
+target and there is nothing for `settle()` to return to it, so read the claim
+above as "every lerp", not "every exponential".
 
 **Zero under reduced motion, and it SNAPS there rather than easing.** Same rule
 `usePointer` states and for the same reason: an eased return is itself motion,

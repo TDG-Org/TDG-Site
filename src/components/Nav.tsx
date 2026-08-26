@@ -68,9 +68,14 @@ function ThemeToggle() {
                live INSIDE the theme button, and an inline <svg> takes a tab
                stop of its own in IE and older Edge whatever aria says — so the
                stop lands between the nav links and the control they sit in,
-               on an element that does nothing when you press it. Every other
-               decorative svg on the site pairs the two; `CrossGlyph.tsx` has
-               the same note. */
+               on an element that does nothing when you press it.
+
+               Every other decorative svg on the site pairs the two, and that
+               is now a count: 31 of 31 rendered svg carry `focusable="false"`.
+               It was 9 of 31 while this sentence said the same thing, and the
+               missing 22 included icons in buttons — the case this paragraph
+               calls the worst one. `CrossGlyph.tsx` carries the sweep, the
+               file list and the grep that produces 31 rather than 35. */
             focusable="false"
           >
             <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />

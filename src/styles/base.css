@@ -257,11 +257,29 @@ stop {
    bands.                                                                   */
 
 /* ── three of these eight have no Seam, and all three are kept ────────────
-   #top, #origin and .footer. Measured this pass: the live DOM has exactly
-   FIVE `svg.scene__seam` — apps, tools, building, faith, outro — and
-   `grep -rn 'var(--seam-fill)' src/components/` returns five `color:`
-   declarations, one per those five stylesheets, plus three prose mentions in
-   Apps.tsx, Seam.tsx and scene/README.md. No sixth consumer.
+   #top, #origin and .footer.
+
+   ── two numbers live in this paragraph and they are NOT the same number ──
+   The next reader is going to grep and find both, so they are separated here
+   rather than left to be reconciled.
+
+   **SEVEN `<Seam>` elements, across FIVE boundaries.** `grep -rn '<Seam' src/`
+   is the population: #apps and #faith each hang two — a far shape with a
+   nearer one over it — and #tools, #building and the Outro hang one each.
+   Five joins, seven silhouettes. (That grep returns twelve LINES: the seven,
+   four prose mentions in scene/README.md, and one `Record<SeamShape` in
+   Seam.tsx that matches by accident. Count the JSX, not the lines.)
+
+   **FIVE `--seam-fill` consumers, one per boundary.** `grep -rn
+   'var(--seam-fill)' src/components/` returns five `color:` declarations —
+   Apps.css, Tools.css, Building.css, Faith.css, Outro.css — plus four prose
+   mentions across Apps.tsx, Seam.tsx and scene/README.md. No sixth consumer.
+   The second silhouette at a doubled boundary is NOT a sixth: it is painted
+   from --seam-step-2 in its own section's stylesheet, because a masked second
+   band wants a different step. See tokens.css.
+
+   So: seven shapes, five fills, five joins. This line said FIVE shapes for a
+   pass, which was the join count wearing the shape count's units.
 
    #top and .footer are the ends of the page and have carried no seam since
    they were written: Hero.tsx and Footer.tsx render none. They are kept so

@@ -116,8 +116,8 @@ third time that happens.
 `clamp01()` and `settle()` are the two bits of shared arithmetic that ride
 along with the loop. `settle(rate, dt)` is the per-second lerp rate — 144 Hz
 settling the way 60 Hz does — and it is exported from here rather than written
-per consumer because it had drifted into four private copies of one expression
-(`useParallax`, `usePointer`, `Hero`, `origin/CabinScene`), where a correction
+per consumer because it had drifted into five private copies of one expression
+(`useParallax`, `usePointer`, `Hero`, `origin/CabinScene`, `Cursor`), where a correction
 would have landed in one and silently not the rest. Its header says why that
 failure is invisible on a 60 Hz machine.
 

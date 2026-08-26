@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { onFrame } from '../lib/motion'
+import { onFrame, settle } from '../lib/motion'
 import './Cursor.css'
 
 /** What the pointer is currently over. It drives the ring's shape. */
@@ -173,8 +173,10 @@ export function Cursor() {
       // still catching up
       hold()
       // Reduced motion gets a ring locked to the pointer. Still a custom
-      // cursor, just without the trailing.
-      const ease = mi === 0 ? 1 : 1 - Math.pow(1 - 0.19, dt * 60)
+      // cursor, just without the trailing. The snap is in FRONT of the lerp
+      // rather than inside it, so `settle` is only ever asked for the eased
+      // case -- the same shape usePointer and useParallax use.
+      const ease = mi === 0 ? 1 : settle(0.19, dt)
       rx += (x - rx) * ease
       ry += (y - ry) * ease
       // below half the rounding quantum the written string can never change again

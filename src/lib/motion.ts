@@ -265,13 +265,24 @@ export const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
  * curve through real time is the same at 30, 60 and 144Hz. `dt` is already
  * clamped to 50ms above, so a backgrounded tab cannot make this jump.
  *
- * **It is here because it had four copies.** `hooks/useParallax`,
- * `hooks/usePointer`, `components/Hero` and `components/origin/CabinScene`
- * each reached the identical expression on their own, and two of them carried
- * a comment asserting there was "one settle on this site" — which is what
- * builders who cannot see each other write. A correction to the curve would
- * have landed in one copy and silently not the other three, and **the
- * divergence is only visible above 60Hz**: correct on the machine of whoever
- * changed it, wrong on every faster one.
+ * **It is here because it had five copies.** `hooks/useParallax`,
+ * `hooks/usePointer`, `components/Hero`, `components/origin/CabinScene` and
+ * `components/Cursor` each reached the identical expression on their own, and
+ * two of them carried a comment asserting there was "one settle on this site"
+ * — which is what builders who cannot see each other write. A correction to
+ * the curve would have landed in one copy and silently not the other four, and
+ * **the divergence is only visible above 60Hz**: correct on the machine of
+ * whoever changed it, wrong on every faster one.
+ *
+ * **`Cursor` was the fifth and was found last, which is the whole failure mode
+ * happening to this very comment.** The count above said four for three
+ * passes, and the copy it missed is the custom cursor — the one animated thing
+ * on EVERY page of the site, including the four routes with no scroll-linked
+ * scenery at all. It was `1 - Math.pow(1 - 0.19, dt * 60)` written out, behind
+ * a reduced-motion snap, in a file that already imported from here. So the
+ * sentence "a correction would land in one copy and silently not the others"
+ * was true of this list as well as of the arithmetic. If you add a caller, add
+ * it here; if you are reading this to check the number, the population is
+ * `grep -rn 'settle(' src/` minus this file's own two mentions.
  */
 export const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)

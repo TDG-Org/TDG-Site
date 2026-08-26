@@ -144,21 +144,32 @@
    against this section's own `padding-top`, `clamp(72px, 9vw, 130px)`. -0.02
    drifts DOWN by `0.02 * vh/2` = 1.0vh, and that excursion is at its largest
    while the boundary is low on the screen — which is when a reader can see
-   both this and the heading. Computed, with the worst viewport height in
-   brackets:
+   both this and the heading. `height` is `clamp(48px, 6.4vw, 100px)` below.
+   Computed, with the worst viewport height in brackets:
 
        width   height  drift        bottom   padding-top   clear
-        320     54.0   10.0 (1000)   64.0      72.0         8.0
-        375     54.0   10.0 (1000)   64.0      72.0         8.0
-        768     54.0   16.0 (1600)   70.0      72.0         2.0
-       1024     69.6   14.0 (1400)   83.6      92.2         8.6
-       1440     97.9   14.0 (1400)  111.9     129.6        17.7
-       1920    104.0   16.0 (1600)  120.0     130.0        10.0
+        320     48.0   10.0 (1000)   58.0      72.0        14.0
+        375     48.0   10.0 (1000)   58.0      72.0        14.0
+        768     49.2   16.0 (1600)   65.2      72.0         6.8
+       1024     65.5   14.0 (1400)   79.5      92.2        12.6
+       1440     92.2   14.0 (1400)  106.2     129.6        23.4
+       1920    100.0   16.0 (1600)  116.0     130.0        14.0
 
    768 is the binding row and only against a 768x1600 window no device has; at
    a real 768-wide viewport (vh <= 1024) the drift is 10.2 and the clearance
-   7.8. Both readings are conservative anyway, because the mask is at zero
+   12.6. Both readings are conservative anyway, because the mask is at zero
    alpha for the last stop, so the ink stops well above `bottom`.
+
+   **The `height` column shipped once derived from `clamp(54px, 6.8vw, 104px)`,
+   which was never the code** — the `drift` column was right, so the table
+   looked internally consistent and every real clearance was LARGER than it
+   claimed, which is why nothing looked wrong for several passes. Re-derived
+   from the shipped clamp above. The slice table further up this comment still
+   carries `box H` from that same never-shipped clamp; its conclusion survives
+   untouched, because a SHORTER box takes a narrower slice about the same 62%
+   centre and so moves both bounds further inside the file's ink (320px goes
+   0.306..0.813 -> 0.341..0.791, still clear of the hard bottom edge at 0.908),
+   but re-derive it too if you touch the height again.
 
    Full width and no overhang — `left: 0; width: 100%` — because a layer that
    ran off the edges here would have to be caught by something, and the fog's

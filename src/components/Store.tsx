@@ -58,6 +58,7 @@ function Tick() {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      focusable="false"
     >
       <path d="M20 6 9 17l-5-5" />
     </svg>
@@ -77,6 +78,7 @@ function Caret() {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      focusable="false"
     >
       <path d="m6 15 6-6 6 6" />
     </svg>
@@ -94,6 +96,7 @@ function Cross() {
       strokeWidth="2.2"
       strokeLinecap="round"
       aria-hidden="true"
+      focusable="false"
     >
       <path d="M6 6l12 12M18 6 6 18" />
     </svg>

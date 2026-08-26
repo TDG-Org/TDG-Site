@@ -926,9 +926,12 @@ export function CabinScene({ className }: { className?: string }) {
       }
 
       // The damped camera. `settle` is `lib/motion.ts`'s per-second lerp — the
-      // one settle on this site, shared with useParallax and usePointer, so a
-      // correction to the rate law cannot land in one file and silently not the
-      // others. Damping is also what stops an opening chapter from snapping the
+      // one settle on this site, so a correction to the rate law cannot land in
+      // one file and silently not the others. This comment used to name the
+      // sharers ("useParallax and usePointer") and was two short; the count and
+      // the list live in `settle`'s own header and nowhere else, because a list
+      // kept in five places is the failure the export exists to prevent.
+      // Damping is also what stops an opening chapter from snapping the
       // shot: a disclosure growing the section changes `rect.height`, which
       // steps the target, and a welded camera would jump on the frame it
       // happens.
@@ -958,9 +961,6 @@ export function CabinScene({ className }: { className?: string }) {
       camera.position.set(camX, camY, camZ)
       camera.lookAt(0, LOOK_Y_FAR + (LOOK_Y_NEAR - LOOK_Y_FAR) * u, LOOK_Z)
 
-      // The windows warm and brighten as the door gets closer. At the far end
-      // they are barely lit — and the fog has most of them anyway, which is the
-      // "cold and distant" half of the brief doing itself.
       // The windows warm and brighten as the door gets closer, but the FLOOR
       // matters more than the ramp: at the far end of the walk the cabin is a
       // 100px shape in fog, and the one thing that says "somebody is in" is a

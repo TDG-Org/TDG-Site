@@ -176,10 +176,12 @@
    token cannot fix alone is how far down. Composited against the bands, per
    flake alpha 0.16 (smallest, farthest) to 0.66 (largest, nearest):
 
-     light, over --band-origin #eef0f6
+     light, over --band-origin (#eef0f6 when these were measured; the band has
+     since been re-derived from the hero ridge's ink and is #ebf0fb, which moves
+     the rows below by under one level and changes nothing this rule decides)
        without this rule   rgb(203,205,211) .. rgb( 94, 95,101)
        at --art-near 0.52  rgb(220,222,228) .. rgb(163,164,170)
-     dark, over --band-origin #0a0b12
+     dark, over --band-origin (#0a0b12 when measured; now #040c19, same note)
        without this rule   rgb( 49, 50, 56) .. rgb(172,172,174)
        at --art-near 0.68  rgb( 37, 38, 44) .. rgb(120,121,124)
 

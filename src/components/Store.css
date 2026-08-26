@@ -8,8 +8,9 @@
    tokens.css claims a band is the ONLY place its number is written down. It
    was not: four of these six were that same number typed again, and a nudge
    to a band would have moved the home page and left this one behind. Each one
-   that has an owner now reads its owner; the two that have none stay literal,
-   because inventing a token for them is a different change.
+   that has an owner now reads its owner; the three that have none stay
+   literal, because inventing a token for them is a different change. (It was
+   two. The light --tint-mid joined them — see the light block.)
 
    --bg2 and not --band-foot, though they are the same number: --band-foot is
    an ALIAS of --bg2, and this page's ceiling is not the footer. Where a band
@@ -22,9 +23,10 @@
    the Store ever wants a floor of its own it gets its own token in tokens.css,
    not a second hex here.
 
-   --tint-mid has no owner in dark and does in light, which is why this block
-   and the light one below are not each other's mirror. That is the palette as
-   it stands, not an oversight; matching them would move a pixel.           */
+   --tint-mid has no owner in EITHER theme, so it is the one line of the six
+   that is a literal on both sides. It used to read var(--band-origin) in
+   light; the block below records why it stopped, and that paragraph is the
+   general rule, not a note about one hex.                                  */
 .store {
   --tint-top: var(--bg2);
   --tint-mid: #0a0c14;
@@ -36,14 +38,40 @@
   padding-top: clamp(104px, 12vw, 156px);
 }
 
-/* Read against the dark block: the ceiling has an owner there and none here,
-   the mid has one here and none there. --band-origin is the same coincidence
-   --band-apps is above — this page's middle is not the Origin band, it is that
-   band's number, and that band is its only owner. --bg and not --band-outro
-   for the floor, for the reason the dark block gives. */
+/* Read against the dark block: the ceiling has an owner there and none here.
+   The mid has none in either, and getting back to that is the only thing in
+   this file worth a paragraph.
+
+   ── a borrowed number, and the day it stopped being one ──────────────────
+   --tint-mid here read var(--band-origin) for several passes, on exactly the
+   argument the dark block still makes for --band-apps: this page's middle is
+   not the Origin band, it is that band's NUMBER, and rule 2 says a number
+   gets one home, so it read the home it had.
+
+   That was fair while --band-origin was a chosen near-white. It stopped being
+   fair the moment the band was RE-DERIVED. It is now the colour the hero
+   ridge's foot actually composites to on screen, sampled off
+   mountain-ridge-light.webp and taken to the band's own lightness — tokens.css
+   carries the working — and the Store has no mountains. The borrow went
+   through unnoticed: this page's light middle moved #eef0f6 -> #ebf0fb, dE00
+   2.29, db-star -2.74, as a side effect of a hero fix, in a theme nobody had
+   opened. The literal below is that value put back.
+
+   **The rule, which is the part to keep: borrow a band's number only for as
+   long as the number is a CHOICE. The moment it starts being derived from
+   something — artwork, a measurement, another token — the borrow silently
+   becomes a claim about that something, and a page that cannot make the claim
+   has to stop borrowing.** A coincidence has no owner to notice it break.
+
+   --band-apps above is still a chosen hex, so the floor's borrow stands. If it
+   is ever taken off a file the same way, this page's floor comes with it and
+   gets a token of its own in tokens.css — not a second hex here.
+
+   --bg and not --band-outro for the floor, for the reason the dark block
+   gives. */
 [data-theme='light'] .store {
   --tint-top: #f2f3f7;
-  --tint-mid: var(--band-origin);
+  --tint-mid: #eef0f6;
   --tint-bot: var(--bg);
 }
 

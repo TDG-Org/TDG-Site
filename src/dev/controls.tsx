@@ -122,6 +122,7 @@ export function Panel({
               strokeWidth="2.6"
               strokeLinecap="round"
               strokeLinejoin="round"
+              focusable="false"
             >
               <path d="m9 18 6-6-6-6" />
             </svg>
@@ -189,6 +190,7 @@ export function SectionControls({ hint }: { hint?: ReactNode }) {
             stroke="currentColor"
             strokeWidth="2.2"
             strokeLinecap="round"
+            focusable="false"
           >
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.6-3.6" />
@@ -444,6 +446,7 @@ export function Select({
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
+        focusable="false"
       >
         <path d="m6 9 6 6 6-6" />
       </svg>
@@ -672,6 +675,7 @@ export function OwnTile({
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
+          focusable="false"
         >
           <path d="M20 6 9 17l-5-5" />
         </svg>
@@ -946,6 +950,7 @@ export function RefreshRail({
             strokeWidth="2.3"
             strokeLinecap="round"
             strokeLinejoin="round"
+            focusable="false"
           >
             <path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01" />
             <path d="M20.5 4.5v5h-5" />

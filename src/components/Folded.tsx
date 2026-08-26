@@ -30,6 +30,15 @@ function Chevron() {
       strokeWidth="2.6"
       strokeLinecap="round"
       strokeLinejoin="round"
+      /* On the element, not only on the wrapper. Every call site today puts
+         this inside a `<span aria-hidden="true">`, so nothing was ever exposed
+         to a screen reader — but this is a component, and the next caller is
+         under no obligation to wrap it. AGENTS.md rule 14 asks for
+         `aria-hidden` on decorative svg; a decorative svg that only inherits
+         it is one refactor away from not having it. `focusable` is the pair
+         `CrossGlyph.tsx` explains. */
+      aria-hidden="true"
+      focusable="false"
     >
       <path d="m9 18 6-6-6-6" />
     </svg>

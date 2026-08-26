@@ -64,9 +64,27 @@ export function CrossGlyph({ variant = 'hero', className }: Props) {
          tree; IE and older Edge still give every inline <svg> a tab stop of
          its own, and `focusable="false"` is the only thing that removes it —
          so without this the page carries three empty tab stops, one per
-         instance of this glyph. `scene/Moon.tsx`, `scene/Seam.tsx`,
-         `faith/Summit.tsx` and `KeyArt.tsx` all pair the two; this file and
-         `Nav.tsx`'s toggle icons were the last that did not. */
+         instance of this glyph.
+
+         **This comment used to declare a sweep finished that was not.** It
+         said this file and `Nav.tsx`'s toggle icons "were the last that did
+         not", naming `scene/Moon.tsx`, `scene/Seam.tsx`, `faith/Summit.tsx`
+         and `KeyArt.tsx` as already paired. Counted afterwards: NINE of 31
+         rendered svg carried it. The 22 that did not were every icon in
+         `AuthModal.tsx` (11), `dev/controls.tsx` (5), `Store.tsx`'s Tick,
+         Caret and Cross, `Folded.tsx`'s Chevron, `ImageSlot.tsx`'s placeholder
+         and `dev/FeedbackTab.tsx`'s sort caret — and several of those are an
+         icon INSIDE a button, which `Nav.tsx` calls the case that matters
+         most. All 22 were done in one pass. It is 31 of 31 now, and the claim
+         is a count rather than a recollection.
+
+         Count it the right way, because the raw numbers disagree with each
+         other: `grep -rn '<svg' src/` gives 35 lines across the .tsx files,
+         four of which are prose inside comments — this block, `Nav.tsx`,
+         `faith/Summit.tsx` and `scene/Moon.tsx`. `grep -rn 'focusable' src/`
+         overcounts for the same reason, this block included. The population is
+         `grep -rnE '^[[:space:]]*<svg' src/`: 31, because every rendered one
+         opens its own line. */
       focusable="false"
       className={className}
     >
