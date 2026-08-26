@@ -13,29 +13,6 @@ import { CHAPTERS, type Chapter } from '../data/content'
 import './Origin.css'
 
 /**
- * The disclosure's affordance, written where it is used rather than pulled
- * from a package (AGENTS §5). Deliberately the same right-pointing chevron
- * `Folded.tsx` draws and the same 90° rotation on open, because a reader who
- * has opened a section on an app page has already learned this control.
- */
-function Chevron() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  )
-}
-
-/**
  * One chapter of the timeline, as a disclosure.
  *
  * The chapter's prose is shut by default and opens on click. Seven open
@@ -57,6 +34,27 @@ function Chevron() {
  * `tabIndex={0}` and an `aria-label`, which is an element that looks focusable,
  * takes a tab stop, and does nothing at all when you press Enter or Space on
  * it. A button gets both keys for free and can say `aria-expanded`.
+ *
+ * **The button's HIT AREA is the whole row; its box is not.** The row carries
+ * the padding — 28px above, 30px below, 26px right and a left gutter the spine
+ * and the dot live in — and the button sits inside all of it, so for a while a
+ * click anywhere but the words landed on the `<article>` and did nothing, on a
+ * row that lights up on hover across its whole width. Measured at 1440px with
+ * `elementFromPoint`: every probe in the two padding bands, the four corners
+ * and the gutter answered `article.origin__row`.
+ *
+ * Moving the row's padding onto the button is the obvious fix and it is the
+ * wrong one: the button's bottom padding then falls between the title and the
+ * prose whenever the row is open, and the 21.75px gap measured there becomes
+ * 51.75px. So no box moves. `.origin__toggle::after` is stretched out into the
+ * row's padding instead — the same thing `.card__cover` does on an Apps card —
+ * and the open row's spacing is identical to what it was.
+ *
+ * **The opened prose is not part of the control.** The overlay stops at the
+ * heading's bottom edge once the row is open, because somebody dragging to
+ * select a sentence must not lose it to a close. It is also what `Folded.tsx`
+ * does — its head toggles, the region under it never does — so the site's two
+ * disclosures answer a click in the same place.
  */
 function OriginRow({ chapter, index }: { chapter: Chapter; index: number }) {
   const reveal = useReveal<HTMLElement>('pop', index)
@@ -93,9 +91,6 @@ function OriginRow({ chapter, index }: { chapter: Chapter; index: number }) {
           <span className="origin__meta">
             <span className="origin__chapter">{chapter.chapter}</span>
             <span className="origin__phase">{chapter.phase}</span>
-            <span className="origin__mark" aria-hidden="true">
-              <Chevron />
-            </span>
           </span>
           <span className="origin__body">
             {/* The tag beside it already says "CH. 01", so to a screen reader

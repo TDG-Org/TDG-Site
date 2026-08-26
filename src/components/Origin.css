@@ -19,11 +19,16 @@
      end on this same right edge */
   --origin-col: 620px;
   --origin-head-w: calc(var(--origin-numeral-w) + var(--origin-gap) + var(--origin-col));
-  /* the row's own two paddings, here rather than in the rule that writes them,
-     because the chevron is positioned against both */
+  /* The row's four paddings, here rather than as literals in the rule that
+     writes them, because a second rule has to measure against exactly these
+     numbers: the toggle's hit overlay is stretched out into all four of them
+     and would be a hairline off the row's edge if either side wrote its own.
+     Rule 6 — one set on the common parent, never a literal here and a
+     different literal there. */
   --origin-inset: clamp(58px, 7vw, 92px);
   --origin-pad: 26px;
-  --origin-mark: 22px;
+  --origin-pad-top: 28px;
+  --origin-pad-bot: 30px;
 }
 
 /* The section's own background, not another floating layer: a broad soft
@@ -219,7 +224,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 3px;
-  padding: 28px var(--origin-pad) 30px var(--origin-inset);
+  padding: var(--origin-pad-top) var(--origin-pad) var(--origin-pad-bot) var(--origin-inset);
   background-color: transparent;
   border: 1px solid transparent;
   /* gentle on purpose: 1.05° tilt, 2.5px lift, long settle */
@@ -236,9 +241,36 @@
 }
 
 /* ── the disclosure ───────────────────────────────────────────────────────
-   The whole row is the toggle: a 22px chevron is a 22px target and the row is
-   the width of the reading column. */
+   The whole row is the toggle. The button's BOX is only the row's content box
+   — it is `display: block; width: 100%; padding: 0` in normal flow inside a
+   row padded on all four sides — and for a while that was also the whole hit
+   area, so a click in the top band, the bottom band, the right padding or the
+   left gutter landed on the `<article>` and did nothing, on a row that lights
+   up on hover across every pixel of itself.
+
+   The obvious repair is to move the row's padding onto the button. It was
+   tried and rejected: the button's bottom padding then sits between the title
+   and the prose whenever the row is open, and the gap measured there at 1440px
+   goes from 21.75px to 51.75px. There is no padding that is right in both
+   states, because in one of them it is an outer margin and in the other it is
+   an inner gutter.
+
+   So the boxes do not move at all and only the hit area grows — a transparent
+   overlay stretched out of the heading into the row's own padding, which is
+   the `.card__cover` trick from `base.css` (`position: absolute; inset: 0` on
+   a grandchild, covering the padding a control in normal flow cannot reach).
+   The offsets are the four `--origin-pad-*` variables, so the overlay lands on
+   the row's padding edge exactly rather than a hairline inside or outside it.
+   Nothing here paints, so the row's look is untouched.
+
+   `bottom` is the one edge that moves. Shut, it reaches the row's bottom edge,
+   because the panel below the heading has no height and the whole row is head.
+   Open, it stops at the heading — the chapter's prose is content, not part of
+   the control, and a reader dragging to select a sentence must not lose it to
+   a close. `Folded.tsx` answers a click the same way: its head toggles and the
+   region under it never does. */
 .origin__row-heading {
+  position: relative;
   margin: 0;
   font: inherit;
 }
@@ -252,9 +284,21 @@
   background: none;
   border: none;
 }
+.origin__toggle::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--origin-pad-top)) calc(-1 * var(--origin-pad))
+    calc(-1 * var(--origin-pad-bot)) calc(-1 * var(--origin-inset));
+}
+.origin__row[data-open] .origin__toggle::after {
+  bottom: 0;
+}
 /* Offset outward, into the row's own padding, so the ring reads as belonging
-   to the row rather than boxing the words. The row is `overflow: hidden` and
-   the smallest padding here is 26px, so nothing clips it. */
+   to the row rather than boxing the words. It follows the button's box, not
+   the overlay above — an absolutely positioned pseudo-element does not extend
+   an outline — so the ring is still drawn around the chapter's head and never
+   around the whole row. The row is `overflow: hidden` and the smallest padding
+   here is 18px, so nothing clips it. */
 .origin__toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 6px;
@@ -370,12 +414,13 @@
   align-items: baseline;
   gap: 14px;
   flex-wrap: wrap;
-  /* The chevron is out of flow on this same line, so its space is reserved
-     here rather than taken. Below about 345px the phase drops to a second line
-     instead, which is what the wrap is for and reads as two tags rather than
-     as something broken. */
-  padding-right: calc(var(--origin-mark) + 12px);
-  /* ends on the reading column's right edge, which is where the chevron sits */
+  /* Everything in a row ends on the reading column's right edge — the title,
+     the prose and this line of tags — so a long phase wraps where a long title
+     wraps rather than running out to the row's own edge. The wrap is what
+     happens then, and two tags stacked read as two tags rather than as
+     something broken. It used to reserve a further 34px of right padding for a
+     chevron pinned on this line; the chevron is gone and the tags have it
+     back, which is what stopped them stacking at 320px. */
   max-width: var(--origin-head-w);
 }
 .origin__chapter {
@@ -390,53 +435,6 @@
   font: 500 10px var(--font-mono);
   letter-spacing: 0.2em;
   color: var(--faint);
-}
-
-/* Pinned to the row rather than laid out in it.
-   It used to sit in the meta row on a `margin-left: auto`, which is tidy right
-   up until the meta row runs out of width: measured at 320px the tag and the
-   phase came to 181px inside 206px, leaving 25px for a 22px box and its 10px
-   gap, and the chevron wrapped onto a line of its own above the numeral. Out
-   of flow it cannot compete for that width at all.
-
-   It lands on the reading column's right edge — the same edge the title and
-   the prose end on — or on the row's own inner edge at widths where the row is
-   narrower than that column, whichever comes first. Both terms are built from
-   the variables on .origin, so it cannot drift away from the padding it is
-   measured against. The 27px top centres the 22px box on the 20px meta line
-   inside the row's 28px top padding. */
-.origin__mark {
-  position: absolute;
-  top: 27px;
-  left: min(
-    calc(100% - var(--origin-pad) - var(--origin-mark)),
-    calc(var(--origin-inset) + var(--origin-head-w) - var(--origin-mark))
-  );
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--origin-mark);
-  height: var(--origin-mark);
-  border-radius: 2px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  transition:
-    transform 0.46s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.25s ease,
-    color 0.25s ease;
-}
-.origin__row:hover .origin__mark {
-  border-color: var(--border-hover);
-  color: var(--text);
-}
-.origin__row:has(.origin__toggle:focus-visible) .origin__mark {
-  border-color: var(--border-hover);
-  color: var(--text);
-}
-.origin__row[data-open] .origin__mark {
-  transform: rotate(90deg);
-  border-color: var(--border-hover);
-  color: var(--text);
 }
 
 .origin__body {
@@ -557,7 +555,6 @@
   .origin__panel,
   .origin__copy,
   .origin__row[data-open] .origin__copy,
-  .origin__mark,
   .origin__more-arrow {
     transition: none;
   }
