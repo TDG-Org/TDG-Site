@@ -221,11 +221,16 @@ stop {
    above is now something this file enforces rather than asserts. It used to
    be two hexes that happened to agree, twice over, once per theme.
 
-   --seam-fill is that section's own band, for a Seam (components/scene/)
-   sitting on the boundary above it: painted in its own colour the seam reads
-   as the section rising into the one before it. See scene/README.md — it
-   cannot read --tint-* directly, because those are registered with
-   `inherits: false` so the theme wave can animate them.
+   --seam-fill is for a Seam (components/scene/) sitting on one of this
+   section's edges. It is that section's own band stepped --seam-step toward
+   --text, and the step is NOT decoration: a seam painted in a band flat would
+   be invisible, because the invariant above means a boundary is exactly where
+   two bands are equal. Measured on #apps: seam rgb(8,8,12), section behind it
+   rgb(8,8,12). Toward --text rather than toward a lighter or darker literal,
+   so one declaration is right in both themes — lighter than the sky in dark,
+   darker than it in light, the way the art kit's own ridges read. tokens.css
+   has how 94% was picked. A seam cannot read --tint-* directly either way:
+   those are registered `inherits: false` so the theme wave can animate them.
 
    These blocks carry no theme of their own any more. The bands are per theme,
    so the tints that read them are too, and there is no light twin to keep in
@@ -251,28 +256,28 @@ stop {
    and the fix is to state the hexes per theme again rather than to unpick the
    bands.                                                                   */
 #top {
-  --seam-fill: var(--band-hero);
+  --seam-fill: color-mix(in srgb, var(--band-hero) var(--seam-step), var(--text));
 }
 #origin {
   --tint-top: var(--band-hero);
   --tint-mid: var(--band-origin);
   --tint-bot: var(--band-apps);
-  --seam-fill: var(--band-origin);
+  --seam-fill: color-mix(in srgb, var(--band-origin) var(--seam-step), var(--text));
   --origin-glow-warm: rgba(245, 201, 138, 0.16);
 }
 #apps {
   --tint-mid: var(--band-apps);
-  --seam-fill: var(--band-apps);
+  --seam-fill: color-mix(in srgb, var(--band-apps) var(--seam-step), var(--text));
 }
 #tools {
   --tint-top: var(--band-apps);
   --tint-mid: var(--band-tools);
   --tint-bot: var(--band-building);
-  --seam-fill: var(--band-tools);
+  --seam-fill: color-mix(in srgb, var(--band-tools) var(--seam-step), var(--text));
 }
 #building {
   --tint-mid: var(--band-building);
-  --seam-fill: var(--band-building);
+  --seam-fill: color-mix(in srgb, var(--band-building) var(--seam-step), var(--text));
 }
 #faith {
   --tint-top: var(--band-building);
@@ -286,13 +291,13 @@ stop {
      recorded rather than quietly absorbed into the rename that surfaced it:
      this line is the only pixel in the band rewrite that is not what it was.*/
   --tint-bot: var(--band-outro);
-  --seam-fill: var(--band-faith);
+  --seam-fill: color-mix(in srgb, var(--band-faith) var(--seam-step), var(--text));
 }
 .outro {
-  --seam-fill: var(--band-outro);
+  --seam-fill: color-mix(in srgb, var(--band-outro) var(--seam-step), var(--text));
 }
 .footer {
-  --seam-fill: var(--band-foot);
+  --seam-fill: color-mix(in srgb, var(--band-foot) var(--seam-step), var(--text));
 }
 
 [data-theme='light'] #origin {

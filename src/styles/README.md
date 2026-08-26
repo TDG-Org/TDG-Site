@@ -41,13 +41,15 @@ in the same edit.
 | Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
 | The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
-| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-fade` |
+| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-fade` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
 `--live-*` is per theme deliberately: one hardcoded `#4ea36a` failed AA in both.
 `--danger` is per theme for the same reason. Its `-soft` and `-border` are
 not — the red they are mixed from is the same in both — so they are declared
-once on `:root` and are deliberately absent from the light block.
+once on `:root` and are deliberately absent from the light block. `--seam-step`
+is single for a better reason: it steps toward `--text`, which already carries
+the theme, so one percentage is correct in both.
 
 ### The bands of the page
 
@@ -59,12 +61,15 @@ the same token. That is what turns the promise above `.section--blend` ("every
 boundary meets on an identical value") into something the file enforces rather
 than asserts.
 
-`base.css` also hands each section its own band as `--seam-fill`, for a `Seam`
-from [`../components/scene/`](../components/scene/README.md) sitting on its top
-edge. A seam is a flat silhouette in a section's own colour; if the seam's
-number and the section's number ever drift apart, the seam stops being the
-section rising and becomes a shape drawn on top of it — a visible line across a
-boundary whose whole job is to be invisible.
+`base.css` also hands each section a `--seam-fill`, for a `Seam` from
+[`../components/scene/`](../components/scene/README.md) sitting on one of its
+edges. It is **not** the band itself: because adjacent bands meet on an
+identical value, a shape drawn at a boundary in either neighbour's colour is
+drawn where the two are equal, and paints nothing at all — measured on `#apps`,
+`rgb(8, 8, 12)` for both. So `--seam-fill` is the band stepped `--seam-step`
+toward `--text`, which lifts the silhouette slightly above a dark sky and drops
+it slightly below a pale one from a single declaration, the way the art kit's
+two ridge files are drawn. See that folder's README.
 
 Three of the eight are an alias rather than a value, because the number already
 has an owner: `--band-hero` is `--hero-bg`, `--band-outro` is `--bg`,
@@ -182,9 +187,18 @@ the always-dark auth modal each come back as themselves.
 ### `@media print` and `@media (prefers-reduced-motion: reduce)`
 
 Printing a dark page produces white-on-white, so the print block re-uses the
-light tokens and drops everything decorative. The reduced-motion block is not
-optional — every component stylesheet carries its own, and anything you add with
-a transform or an animation needs an entry.
+light tokens and drops everything decorative.
+
+The reduced-motion block in `base.css` pauses **every** animation on the page —
+`*, *::before, *::after { animation-play-state: paused !important }` — so a
+component stylesheet needs no block of its own merely to stop a keyframe
+animation, and most do not have one. What a component's own block is for is
+what the global pause cannot reach: a transition, a transform on hover or
+focus, and any animation whose 0% frame is not a resting state — the hero's
+scroll arrow and shafts and the Faith rays are pinned back up in `base.css` for
+exactly that reason. If what you added is a decorative keyframe animation
+inside a section, it is already covered. If it moves on hover, on focus or on a
+state change, write the block.
 
 ### `overflow-wrap` on text elements
 

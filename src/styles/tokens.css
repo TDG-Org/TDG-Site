@@ -139,15 +139,15 @@
      One name per band of the one-page scroll, top to bottom, and the ONLY
      place each of those colours is written down. `base.css` builds every
      section's --tint-top / --tint-mid / --tint-bot out of these, and a Seam
-     (components/scene/) is painted from the same names through --seam-fill.
+     (components/scene/) takes its colour from one of them too — stepped, see
+     --seam-step below, because a seam painted in a band flat is invisible.
 
-     That is the whole reason they exist. A seam is a flat silhouette in a
-     section's OWN colour, sitting on the boundary above it so that section
-     reads as rising into the one before it. If the seam's number and the
-     section's number drift apart by a single step, the seam stops being the
-     section and becomes a shape drawn on top of it: a visible line straight
-     across the page, at a boundary whose whole job is to be invisible. Two
-     hexes that happen to agree can drift. One name cannot.
+     That is the whole reason they exist. A boundary here is the one place two
+     bands are required to be the SAME number, and anything drawn at one is
+     therefore drawn against a value it has to be measured away from. Two
+     hexes that happen to agree can drift apart silently and turn a seam into
+     a stripe; one name cannot, and one name is also what lets a seam step a
+     known distance from it.
 
      It also makes the promise above `.section--blend` in base.css something
      the file enforces instead of asserts — a section's --tint-bot and the
@@ -190,6 +190,33 @@
   --art-far: 0.5;
   --art-mid: 0.58;
   --art-near: 0.68;
+  /* How far a seam steps away from its own band, toward --text.
+
+     A seam CANNOT be painted in its band unmodified. base.css's invariant is
+     that adjacent bands meet on an identical value, so a shape drawn at a
+     boundary in either neighbour's colour is drawn where the two colours are
+     equal: measured, #apps gave rgb(8,8,12) for both the seam and the section
+     behind it. Invisible everywhere, by construction, not by mistake.
+
+     So a seam is a shape that CONTRASTS, not a colour that matches, and the
+     step goes toward the page's own ink — which makes it right in both themes
+     for one reason instead of two. --text is near-white in dark, so the
+     silhouette comes out slightly lighter than the sky; near-black in light,
+     so it comes out slightly darker than a pale one. That is exactly how the
+     art kit's -dark and -light ridges read, so a seam and the PNG beside it
+     finally agree.
+
+     94% and not 92 or 96, chosen against a measurement rather than by eye:
+     .card's own face — --surface over its section, the site's quietest plane
+     that is still deliberately visible — is dL* 3.6 in dark and 2.4 in light.
+     94% puts the eight seams at dL* 4.3-6.2 dark and 4.6-4.9 light: above a
+     card face, because a seam is usually masked by --seam-fade below and so
+     paints most of its band at part opacity, and nowhere near the dL* 8-11
+     that 90% gives, which would be eight grey stripes across the page. The
+     two themes land within ~1 of each other, so neither reads louder.
+     Verified as numbers, NOT yet on a screen.                              */
+  --seam-step: 94%;
+
   /* A seam that wants to dissolve rather than stop at a line masks itself
      with a gradient; this is the alpha that gradient is still at halfway
      down, so every seam on the page dissolves at the same rate. Higher in
