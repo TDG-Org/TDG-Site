@@ -28,13 +28,15 @@ export function Building() {
      with each other rather than three planes.
 
         +0.07  the blob   warm glow behind everything
+        +0.022 the seam   the far bank's edge at the boundary
+        -0.02  the mist   rising off the water, in front of it
         +0.018 the fog    the far bank, all but still
-        +0.022 the seam   the boundary, still
         -0.06  the pines  crowns on the near side of the mist
 
      This is the page's flat contrast anchor and it stays the quietest of the
      four beats in this pass: the spread is 0.078, against #tools' 0.145, and
-     nothing here follows the cursor. */
+     nothing here follows the cursor. The mist and the seam disagree by 0.042,
+     which is what makes the boundary read as depth rather than as an edge. */
   const blob = useParallax<HTMLDivElement>(0.07)
   const seam = useParallax<HTMLDivElement>(0.022)
   const head = useReveal<HTMLDivElement>('wipe', 0)
@@ -67,9 +69,24 @@ export function Building() {
           behind them is read straight through them. What keeps it off the copy
           is that every box lives inside this section's own floor; Building.css
           does that arithmetic. */}
+      {/* ── the boundary: carried by atmosphere, not by an edge ─────────────
+          Fourth of the five joins on this page and the third distinct idea:
+          #apps hangs a canopy at two depths, #tools draws one clean waterline,
+          and this one has no hard edge anywhere in it. A `dune` that dissolves
+          downward, and a band of the same mist that backs this section's own
+          far bank rising in front of it — the water you just crossed coming
+          off the surface as you reach the bank.
+
+          The mist is drawn AFTER the seam, so it is in front of it: the bank's
+          edge is the far thing here and the mist off the water is the near
+          one, which is also why their factors have opposite signs. It is the
+          same file the fog at this section's floor uses, so it costs no bytes
+          and no second request — the kit is explicit that fog is the one layer
+          allowed beside a section's anchor. */}
       <div ref={seam} className="building__seam-drift" aria-hidden="true">
         <Seam shape="dune" edge="top" className="building__seam" />
       </div>
+      <ThemedArt art="atmosphere/fog-veil" className="building__mist" factor={-0.02} />
       <ThemedArt art="atmosphere/fog-veil" className="building__fog" factor={0.018} />
       <ThemedArt art="props/pine-faceted-pair" className="building__pines" factor={-0.06} />
 

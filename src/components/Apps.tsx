@@ -138,10 +138,11 @@ export function Apps() {
      differed in magnitude is what the first pass had, and it looked like one
      layer with a bit of jitter.
 
-        +0.06  the blob   sky glow behind everything
-        +0.02  the seam   the ridge at the boundary, barely drifting
-        +0.035 the reeds  scrub across the clearing, small and far
-        -0.08  the pine   the tree at the frame edge, near, and swaying
+        +0.06  the blob    sky glow behind everything
+        +0.02  the seam    the far treeline at the boundary, barely drifting
+        -0.02  the canopy  the nearer branches over it, moving against it
+        +0.035 the reeds   scrub across the clearing, small and far
+        -0.08  the pine    the tree at the frame edge, near, and swaying
 
      The pine and the reeds go opposite ways, and that is the pair that carries
      the depth: 0.115 of relative travel between them where the first pass had
@@ -156,6 +157,7 @@ export function Apps() {
      foreground `--art-near`, and its sway is 8/5px against `#tools`' 12/7. */
   const blob = useParallax<HTMLDivElement>(0.06)
   const seam = useParallax<HTMLDivElement>(0.02)
+  const canopy = useParallax<HTMLDivElement>(-0.02)
   const sway = useSway<HTMLDivElement>(SWAY_X, SWAY_Y)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('scale', 2)
@@ -203,24 +205,41 @@ export function Apps() {
         <ThemedArt art="props/tall-pine" className="apps__pine" factor={-0.08} />
       </div>
 
-      {/* The boundary above, wearing a shape instead of a straight line. It is
-          painted `var(--seam-fill)`, which base.css sets for `#apps` beside the
-          band tints it has to agree with — the seam cannot read `--tint-*`
-          itself, because those are registered `inherits: false` so the theme
-          wave can animate them. See scene/README.md. `ridge` rather than
-          `peaks`: a low, many-faceted profile reads as a distant treeline,
-          where `peaks` at 44–90px across a whole viewport is a mountain range
-          and would be the loudest thing in a section that is meant to be the
-          calm one.
+      {/* ── the boundary: a canopy at two depths ───────────────────────────
+          Origin is the snow and the lit cabin; this is the treeline you walk
+          under on the way out of it. So the join is TWO silhouettes rather
+          than one, and it is the only boundary on the page that carries two —
+          the four below it are a single shape, a mist, a pass and a dissolve,
+          in that order, so no two joins on this page are the same idea.
 
-          It drifts now, where it used to be nailed to the edge. Same wrapper
-          trick as Tools.css — the drift goes on a zero-height box because
-          `useParallax` is typed to HTMLElement and `Seam` takes no ref, and a
-          zero height means the hook reads the BOUNDARY's distance from the
-          viewport centre rather than a box whose middle moves with however
-          tall the band happens to be at this width. */}
+          Reading them from the back:
+
+          - `ridge` is the far treeline, hard-edged, `var(--seam-fill)`, and it
+            drifts DOWN with the page at +0.02.
+          - `dune` is the nearer branches over it: a bigger step toward the
+            ink, a taller band, dissolved with `--seam-fade` so it has no edge
+            of its own, and it drifts UP at -0.02.
+
+          0.04 of relative travel between them, so the two edges open and
+          close as you scroll instead of sitting one on top of the other. That
+          is the whole point: a reader following the near shape down finds the
+          far one behind it rather than finding a line.
+
+          Both are painted `var(--seam-fill)` / a band mix, and neither can
+          read `--tint-*` — those are registered `inherits: false` so the theme
+          wave can animate them. See scene/README.md.
+
+          The drift goes on a zero-height wrapper because `useParallax` is
+          typed to HTMLElement and `Seam` takes no ref, and a zero height means
+          the hook reads the BOUNDARY's distance from the viewport centre
+          rather than a box whose middle moves with however tall the band
+          happens to be at this width. Apps.css carries the rest, including
+          what `--seam-lift` is for. */}
       <div ref={seam} className="apps__seam-drift" aria-hidden="true">
-        <Seam shape="ridge" edge="top" className="apps__seam" />
+        <Seam shape="ridge" edge="top" />
+      </div>
+      <div ref={canopy} className="apps__canopy-drift" aria-hidden="true">
+        <Seam shape="dune" edge="top" className="apps__canopy" />
       </div>
 
       <div className="shell apps__shell">

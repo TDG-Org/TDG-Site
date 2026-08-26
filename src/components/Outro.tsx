@@ -39,7 +39,30 @@ export function Outro() {
               so it inherits none of them.
 
             `steps` is the path climbing out. It is the only orthogonal shape
-            of the five, which suits a threshold made of stone. */}
+            of the five, which suits a threshold made of stone — and it is the
+            only band on the page that dissolves at BOTH ends, so nothing at
+            all is painted on the join itself and the terrace fades in below
+            it. Outro.css argues that, and says why this is the one boundary
+            that needs no `--seam-lift`.
+
+            **The arch cannot cross this boundary, and that was computed rather
+            than left open.** A layer that belongs to both sections is the
+            strongest way to hide a join — it is how the lamppost works four
+            sections up — and only an UPWARD crossing can work anywhere on this
+            page, because each section paints over the one before it, so a
+            layer sent DOWN out of its own section is covered by the section it
+            lands in. Upward is available here: this section is later in the
+            DOM than `#faith`. What is not available is the height. The arch is
+            bedded 76px below this section's floor and is `1.5w` tall against a
+            section that is `2 x padding + 254px`, so its crown already sits
+            BELOW the top edge by 20px at 1440, 36 at 1920, 55 at 1280 and 110
+            at 1024; crossing needs it taller, and its width is bounded by the
+            copy's own left edge, so the extra height can only come from
+            hanging further off the left of the page. At 1024 a crown at the
+            join needs `w = 410` against a box whose left edge would then be at
+            −215 — the entire left column, ink and all, outside the viewport.
+            An arch with one leg is not a threshold. So this boundary is
+            carried by the shape and the arch stands under it. */}
         <div ref={seam} className="outro__seam-drift" aria-hidden="true">
           <Seam shape="steps" edge="top" className="outro__seam" />
         </div>

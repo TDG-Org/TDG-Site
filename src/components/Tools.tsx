@@ -173,8 +173,14 @@ export function Tools() {
           it — everything here is z-index auto — so there is still not a single
           z-index in this section, and `.shell`'s own z-index 1 still keeps the
           whole scene layer under the cards. */}
+      {/* The boundary, and it is the QUIET one of the five on purpose — a
+          single unaccompanied shape between #apps' two-depth canopy above and
+          #building's mist below, because everything loud in this section is at
+          its own floor. Tools.css argues it, and carries what --seam-lift is
+          for. The colour and the drift are both on the wrapper now; the svg
+          needs no class of its own. */}
       <div ref={seam} className="tools__seam-drift" aria-hidden="true">
-        <Seam shape="wave" edge="top" className="tools__seam" />
+        <Seam shape="wave" edge="top" />
       </div>
 
       {/* retro-neon band, clipped to the bottom so it can never touch a card */}

@@ -18,9 +18,31 @@
     var(--summit-clearance, var(--faith-pad-y));
 }
 
-/* Same wrapper trick as Tools.css — see there for why the drift is on a
-   wrapper and why it carries no height. */
-.faith__seam-drift {
+/* ── the boundary: a pass ──────────────────────────────────────────────────
+   Two lands closing on a slot of sky, and the only join on the page built that
+   way. Faith.tsx has the beat. Both bands take the same wrapper trick as
+   Tools.css — the drift goes on a zero-height box, because `useParallax` is
+   typed to HTMLElement, `Seam` takes no ref, and zero height is what makes the
+   hook read the BOUNDARY's own distance from the viewport centre rather than a
+   box whose middle moves with however tall the band is at this width.
+
+   `--seam-lift` is on the HANGING band only. A `Seam` path is solid from y = 0
+   down to its silhouette, so it carries a straight horizontal top edge, and
+   +0.034 — the largest boundary factor on the page — slides that edge 15.3px
+   clear of the join on a 900px viewport and draws a line across it. The lift
+   is a strip of the band's own ink painted above its top edge, so the
+   section's overflow cuts the band rather than the path cutting it. Apps.css
+   carries the full derivation and why 4vh is right in every window. The RISING
+   band needs none: it is `edge="bottom"`, so its mass is at the bottom and its
+   own top is transparent, and there is no edge there to expose.
+
+   The colour is on the wrappers, not on the `<svg>`s, and that is a fix rather
+   than plumbing: base.css's `transition: var(--t-theme)` list covers `div` and
+   not `svg` or `path`, so a seam painted on the svg SNAPPED to the new theme
+   while the page around it crossed on the wave. Summit.css, one folder down,
+   records the same lesson for the ridges. */
+.faith__seam-drift,
+.faith__climb-drift {
   position: absolute;
   top: 0;
   left: 0;
@@ -29,17 +51,135 @@
   pointer-events: none;
   will-change: translate;
 }
-/* Its own band stepped toward the page's ink — see Tools.css for why a band
-   worn flat would be invisible. Hard-edged for the same reason Tools' is:
-   blended section, gradient already softening the top, and `peaks` is the one
-   boundary where the land actually rises, which wants a silhouette and not a
-   suggestion of one. */
-.faith__seam {
+
+/* The near band: the far bank you are leaving, hanging into this section. Its
+   own band stepped --seam-step toward the page's ink, which is what
+   --seam-fill resolves to — see Tools.css for why a band worn flat would be
+   invisible. Hard-edged all the way, because it is the nearer of the two and a
+   near edge is a hard one. */
+.faith__seam-drift {
+  --seam-lift: 4vh;
   color: var(--seam-fill);
+}
+.faith__seam-drift::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--seam-lift);
+  background-color: currentColor;
+}
+
+/* ── the far range, climbing ───────────────────────────────────────────────
+   `--summit-*` and this are two different scenes in one section and they never
+   meet: this is 40–70px below the boundary at the TOP of #faith, the summit is
+   at its floor several thousand pixels down.
+
+   ## The slot of sky, computed
+
+   The hanging band is `ridge`, whose deepest point is viewBox y = 80 of 120,
+   so its lowest ink is at `0.667 x clamp(44px, 5.5vw, 90px)` below the join.
+   This band is `peaks` mirrored, whose highest point is y = 120 - 106 = 14 of
+   120, so its highest ink is at `top + 0.117 x height`. Both, and the gap:
+
+       width  ridge low   this top   this h    highest ink   SLOT
+        320      29.3       38.0      28.0        41.3       12.0
+        375      29.3       38.0      28.0        41.3       12.0
+        640      29.3       38.0      28.0        41.3       12.0
+        768      29.3       38.0      28.0        41.3       12.0
+       1024      37.5       47.1      36.9        51.4       13.9
+       1440      52.8       66.2      51.8        72.3       19.5
+       1920      60.0       68.0      52.0        74.1       14.1
+
+   Every row is positive, so the two silhouettes never touch at ANY width —
+   and that is at the ridge's DEEPEST point, which is one x out of 1440. Across
+   the rest of the width the sky between them is far wider. Re-do this table
+   before changing either clamp, either factor, or the shapes.
+
+   ## It stops before the copy, and that is arithmetic too
+
+   The band's lowest pixel sits at `top + height + downward drift` below the
+   join, against this section's own `--faith-pad-y`, `clamp(88px, 11vw, 150px)`.
+   -0.018 drifts DOWN by `0.018 x vh/2` = 0.9vh, largest while the boundary is
+   low on the screen — which is exactly when a reader can see this and the
+   cross glyph at the top of the copy at once. Computed, worst plausible window
+   height in brackets, then the same at a real one:
+
+       width   bottom   drift        pad-y    clear   at a real window
+        320      66.0    9.0 (1000)   88.0     13.0   15.8  (800)
+        375      66.0    9.0 (1000)   88.0     13.0   15.7  (812)
+        640      66.0   12.6 (1400)   88.0      9.4   13.9  (900)
+        768      66.0   14.4 (1600)   88.0      7.6   12.8 (1024)
+       1024      84.0   12.6 (1400)  112.6     16.1   20.6  (900)
+       1440     118.1   12.6 (1400)  150.0     19.3   23.8  (900)
+       1920     120.0   14.4 (1600)  150.0     15.6   20.3 (1080)
+
+   Both columns are the conservative reading: the mask has this band at zero
+   alpha for its last stop, so the INK stops well above `bottom`, and vw is
+   taken off the viewport rather than off the section's padding box, which is a
+   scrollbar narrower.
+
+   ## The ink
+
+   92% of the band toward --text, against --seam-fill's 94% on the band above.
+   That pair is a page rule and not a choice made here: 94 is the primary band
+   at all five joins, 92 is the second band wherever a boundary has one, and
+   the second band is always the masked one. Apps.css carries the computed L*
+   table both numbers were picked from; for this band it reads 6.06 (94, solid)
+   against 8.33 (92, solid) and 4.21 (92 under the mask's midpoint) in dark,
+   and 4.63 / 6.18 / 2.46 in light.
+
+   So it is closer to the ink than the page's calibrated seam step and still the
+   QUIETER of the two once the mask is applied — this band paints most of its
+   height at part opacity, where the one above it paints all of its height
+   solid. That is the right way round: the near thing has the hard edge, the
+   far thing has a crisp tip that dissolves into haze. Toward --text so one
+   declaration is correct in both themes, lifted above a near-black sky and
+   dropped below a near-white one, the way the art kit's own ridges are drawn.
+   The bands are on `:root`, so any element may mix any of them.
+
+   The mask runs top-down here as it does everywhere else on this page, but it
+   is doing the opposite job: on a hanging band it softens the shape's LOWER
+   edge, and on this rising one it softens the mass BELOW the peaks, leaving
+   the tips crisp. Same token, same rate, opposite read. A mask is an alpha
+   channel and not a colour — the #000 paints nothing.                       */
+.faith__climb-drift {
+  top: clamp(38px, 4.6vw, 68px);
+  color: color-mix(in srgb, var(--band-faith) 92%, var(--text));
+}
+.faith__climb {
+  /* `Seam.css` anchors an `edge="bottom"` band with `bottom: 0`, because that
+     variant was written for a seam sitting on a section's BOTTOM edge. What is
+     wanted here is the same mirrored path used at a TOP boundary — mass at the
+     bottom, silhouette rising — so the anchor is flipped back to the wrapper's
+     own origin. Without this the band would hang entirely ABOVE the wrapper
+     (a zero-height box's `bottom: 0` and `top: 0` are the same line) and the
+     whole thing would be clipped away at the join. */
+  top: 0;
+  bottom: auto;
+  height: clamp(28px, 3.6vw, 52px);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .faith__seam-drift {
+  /* Both hooks resolve to a zero translate at motionIntensity 0, so the two
+     bands rest exactly where this stylesheet composed them — visible, still,
+     and the slot of sky at its resting width. The hint would be a promoted
+     layer paid for and never used. */
+  .faith__seam-drift,
+  .faith__climb-drift {
     will-change: auto;
   }
 }
@@ -192,4 +332,16 @@
   font: 400 16.5px/1.7 var(--font-body);
   color: var(--muted);
   text-wrap: pretty;
+}
+
+@media print {
+  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
+     is painted by a ::before on a plain <div> that no selector there reaches —
+     and the print block in base.css does not neutralise the --band-* tokens,
+     so the strip would come out as a near-black bar across the top of the
+     section on white paper. Decorative, so it goes, like everything else that
+     block drops. */
+  .faith__seam-drift {
+    display: none !important;
+  }
 }

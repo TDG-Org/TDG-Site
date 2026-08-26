@@ -81,23 +81,177 @@
   padding-bottom: var(--apps-floor);
 }
 
-/* Same wrapper trick as Tools.css and Building.css: the drift goes on a
-   zero-height box because `useParallax` is typed to HTMLElement and `Seam`
-   takes no ref, and no height means the hook reads the boundary's own distance
-   from the viewport centre. See Tools.css for the long version. */
-.apps__seam-drift {
+/* ── the boundary: a canopy at two depths ──────────────────────────────────
+   Two bands, and this is the only boundary on the page that carries two. The
+   far one is the treeline you are walking toward, the near one is the branches
+   over your head, and they travel in opposite directions so the reader's eye
+   follows one edge down and finds the other behind it instead of finding a
+   line. Apps.tsx has the beat; the arithmetic is here.
+
+   ## Why every seam on this page needed --seam-lift, and what it fixes
+
+   A `Seam` path is solid from the TOP of its viewBox down to the silhouette:
+   `ridge` opens `M0 0 L0 24 … L1440 0 Z`, so the segment (1440,0)→(0,0) is a
+   straight horizontal edge across the whole width. That edge is invisible only
+   while it sits exactly on the section's boundary, where the section's own
+   overflow cuts it.
+
+   It does not sit there. `useParallax` writes `centreOffset * -factor`, and
+   for a zero-height wrapper at the section's top edge that is
+   `factor * (vh/2 - top)` — so a POSITIVE factor pushes the band DOWN by up
+   to `factor * vh/2` once the boundary has passed the middle of the screen,
+   and the straight top edge comes out from behind the boundary with a strip of
+   bare band above it. Worked at the five factors this page uses, on a 900px
+   viewport: 9px at #apps, 13.5 at #tools and .outro, 9.9 at #building and 15.3
+   at #faith. It is worst exactly where a reader is looking — the boundary sits
+   in the top third of the screen for the whole of that range — and a straight
+   line under a boundary is the note this pass exists to answer.
+
+   So each drift wrapper paints a solid strip of its own ink from its top edge
+   UPWARD, and the section's overflow cuts that instead of cutting the path:
+
+       ::before spans [d - lift, d]      the backfill
+       the seam spans [d, d + height]    the shape
+       union     spans [d - lift, d + height]
+
+   With `lift >= d_max` the union always starts at or above the boundary, so
+   the top edge can never be seen at any scroll position, in either direction.
+
+   **4vh, and it is a vh on purpose.** The drift is a fraction of the viewport
+   HEIGHT, so a lift in pixels would be right on one window and wrong on the
+   next. 4vh covers a factor of 0.08 (4 = 100 * f / 2 solved for f) and the
+   largest factor at any boundary on this page is #faith's 0.034, so every band
+   has better than twice the cover it needs. `vh` and not `svh`: 100vh is the
+   LARGE viewport, which is never smaller than the `window.innerHeight` the
+   frame loop measures, so the inequality holds on a phone with its chrome
+   showing as well as with it hidden.
+
+   The colour moves to the WRAPPER for this, and that is a second fix rather
+   than plumbing. `--seam-fill` used to be set on the `<svg>`, and base.css's
+   `transition: var(--t-theme)` list covers `div` but not `svg` and not `path`
+   — so a seam SNAPPED to the new theme while the page around it crossed on the
+   wave. On the wrapper, `color` transitions, the `<svg>` inherits the animated
+   value and `fill="currentColor"` resolves against it, and the `::before`'s
+   `background-color: currentColor` tracks the same value at used-value time.
+   Summit.css records the same lesson from the other end.                    */
+.apps__seam-drift,
+.apps__canopy-drift {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  /* Zero-height, so `useParallax` reads the BOUNDARY's own distance from the
+     viewport centre rather than a box whose middle moves with however tall the
+     band happens to be at this width. All five boundaries then drift by the
+     same law. */
   height: 0;
+  --seam-lift: 4vh;
   pointer-events: none;
   will-change: translate;
 }
-.apps__seam {
-  /* base.css sets --seam-fill for #apps, next to the band tints it has to
-     agree with. Do not restate the colour here — see scene/README.md. */
+.apps__seam-drift::before,
+.apps__canopy-drift::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* `bottom: 0` of a zero-height box is the boundary itself, so this paints
+     the `--seam-lift` px directly ABOVE it and travels with the band. */
+  bottom: 0;
+  height: var(--seam-lift);
+  background-color: currentColor;
+}
+
+/* The far treeline. base.css sets --seam-fill for #apps, next to the band
+   tints it has to agree with; do not restate the colour here — see
+   scene/README.md. Hard-edged, because it is the layer the near one is meant
+   to be read against. */
+.apps__seam-drift {
   color: var(--seam-fill);
+}
+
+/* ── the near branches ─────────────────────────────────────────────────────
+   ## 94 / 92, and it is a rule rather than a per-boundary guess
+
+   `--seam-step`'s 94% is the page's calibrated boundary ink and it stays the
+   PRIMARY band at all five joins. 92% is the SECOND band wherever a boundary
+   has one, and it is always the masked one — here, and on #faith's rising
+   range. Two numbers for the whole page instead of five sections each picking
+   their own, which is the same argument tokens.css makes for --seam-step
+   itself.
+
+   Computed rather than eyeballed, as CIE L* against the band the shape is
+   drawn on, at the alpha the mask actually leaves:
+
+       theme   band        step  alpha   dL* vs the band
+       dark    apps          94   1.00       5.14
+       dark    apps          92   1.00       7.50
+       dark    apps          92   0.55       3.44
+       light   apps          94   1.00       4.76
+       light   apps          92   1.00       6.36
+       light   apps          92   0.40       2.53
+
+   The 94 rows reproduce the 5.0–6.1 dark / 4.6–4.8 light that tokens.css
+   records for --seam-step, which is what says the method here matches the one
+   that number was picked with. 92 is 2.4 dark / 1.6 light clear of it at full
+   alpha — enough to read as a different plane at a soft edge, and nowhere near
+   the 9.6–10.6 / 7.7–8.0 that tokens.css measured for a 90% step and rejected
+   as a grey stripe. It also sits inside the range this page already paints
+   ridges at: faith/Summit.css runs 87 / 91 / 95% for its three.
+
+   Toward `--text` rather than toward a lighter or a darker literal, so one
+   declaration is correct in both themes: lifted above a near-black sky, dropped
+   below a near-white one, the way the art kit's own -dark and -light ridges are
+   drawn. The bands live on `:root`, so any element may mix any of them.
+
+   It dissolves rather than stopping at a line, at --seam-fade, which is the
+   alpha every dissolving band on this page is still at halfway down. That is
+   what lets the far ridge be read THROUGH it: solid at the boundary, 0.55 dark
+   / 0.40 light at the middle of the band, gone at the bottom. A mask is an
+   alpha channel and not a colour — the #000 paints nothing.
+
+   ## It has to stop before the copy, and that is arithmetic
+
+   The band's lowest painted pixel sits at `height + downward drift` below the
+   boundary, and the first ink in this section is at the section's own
+   `padding-top`, `clamp(72px, 9vw, 130px)`. -0.026 drifts DOWN by
+   `0.026 * vh/2` = 1.3vh, which is the excursion that costs the margin: it is
+   at its largest while the boundary is low on the screen, which is exactly
+   when a reader can see both this and the heading. Computed, worst viewport
+   height in brackets:
+
+       width   height  drift        bottom   padding-top   clear
+        320     46.0   13.0 (1000)   59.0      72.0        13.0
+        375     46.0   13.0 (1000)   59.0      72.0        13.0
+        768     47.6   20.8 (1600)   68.4      72.0         3.6
+       1024     63.5   18.2 (1400)   81.7      92.2        10.5
+       1440     89.3   18.2 (1400)  107.5     129.6        22.1
+       1920    100.0   20.8 (1600)  120.8     130.0         9.2
+
+   768 is the row that binds, and only against a 768x1600 window that no device
+   has; at any real 768-wide viewport (vh <= 1024) the drift is 13.3 and the
+   clearance 11.1. The figures are also the conservative reading twice over:
+   the mask has this band at zero alpha for its last stop, so its INK stops
+   well above `bottom`, and `.kicker` — the first thing in the shell — carries
+   no negative margin. Re-do this table before changing the factor, the clamp
+   or the section's padding.                                                 */
+.apps__canopy-drift {
+  color: color-mix(in srgb, var(--band-apps) 92%, var(--text));
+}
+.apps__canopy {
+  height: clamp(50px, 5.8vw, 96px);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
 }
 
 /* ── the pine: the structural anchor, and the near plane ───────────────────
@@ -194,6 +348,7 @@
      promoted layers paid for and never used. Same trade as scene/Scene.css
      makes for the art. */
   .apps__seam-drift,
+  .apps__canopy-drift,
   .apps__pine-sway {
     will-change: auto;
   }
@@ -362,4 +517,17 @@
 .apps__more-link {
   font: 600 13px var(--font-body);
   color: var(--accent-2);
+}
+
+@media print {
+  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
+     is painted by a ::before on a plain <div> that no selector there reaches —
+     and the print block in base.css does not neutralise the --band-* tokens,
+     so the strip would come out as a near-black bar across the top of the
+     section on white paper. Decorative, so it goes, like everything else that
+     block drops. */
+  .apps__seam-drift,
+  .apps__canopy-drift {
+    display: none !important;
+  }
 }

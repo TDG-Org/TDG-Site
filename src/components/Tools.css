@@ -251,33 +251,72 @@
    kit's guardrail 8 allows beside one. Nothing else goes in here; a third
    piece would be an illustrated scene rather than a place suggested.        */
 
-/* The seam's drift is on a wrapper, not on the <svg>: useParallax is typed to
+/* ── the boundary: the quiet one, and it is quiet on purpose ───────────────
+   Five boundaries, five different ideas, and this is the one carried by a
+   single unaccompanied shape. #apps above it hangs a canopy at two depths,
+   #building below it dissolves under a rising mist, #faith opens a pass and
+   the Outro fades in from nothing — so a reader arrives here having just
+   learned that a boundary on this page is something to look at, and finds one
+   clean waterline instead.
+
+   That is the trade being made, not an omission. Everything loud in this
+   section is at its FLOOR — the neon band, the sun, the bridge, the boulders,
+   which between them are the busiest 380px on the page — and a boundary that
+   competed with its own section's scene would leave the reader nothing to
+   look at first. A quiet join between two carried ones is what makes the
+   carried ones read.
+
+   `wave` is the only water shape of the five, used at the only boundary with
+   water under it. Hard-edged rather than dissolved: this section is blended,
+   so its own gradient is already softening the top, and a waterline wants to
+   be a silhouette.
+
+   The drift is on a wrapper, not on the <svg>: useParallax is typed to
    HTMLElement and Seam takes no ref, and a wrapper is also where the drift can
    be given its own factor per boundary. No height on it — the Seam inside is
    absolutely positioned and takes its own from Seam.css, so a height here
    would be that clamp written down a second place to go stale. Zero height
    also means useParallax reads the BOUNDARY's distance from the viewport
    centre rather than a box whose middle moves with however tall the band
-   happens to be at this width, so all four boundaries drift by the same law. */
+   happens to be at this width, so every boundary drifts by the same law.
+
+   --seam-lift is the strip of solid ink this wrapper paints ABOVE its own top
+   edge, so the section's overflow cuts the band rather than the path's own
+   straight top edge cutting it. Without it a +0.03 factor slides that edge
+   13.5px clear of the boundary on a 900px viewport and draws a line across the
+   page. Apps.css carries the full derivation and the reason it is a vh.
+
+   The colour is on the WRAPPER and not on the <svg>, which is also a fix
+   rather than plumbing: base.css's `transition: var(--t-theme)` list covers
+   `div` and not `svg` or `path`, so a seam painted on the svg snapped to the
+   new theme while the page around it crossed on the wave. `color` on a div
+   transitions, the svg inherits the animated value, and `currentColor`
+   resolves against it in both the path and the ::before.
+
+   Its own band stepped --seam-step toward the page's ink, which is what
+   --seam-fill resolves to — worn flat a band would be invisible, because a
+   boundary is exactly where two bands are equal. So it reads as this section
+   rising into Apps. Both themes come free: the bands and --text are both per
+   theme, so one declaration is right in each.                               */
 .tools__seam-drift {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 0;
+  --seam-lift: 4vh;
+  color: var(--seam-fill);
   pointer-events: none;
   will-change: translate;
 }
-/* Its own band stepped --seam-step toward the page's ink, which is what
-   --seam-fill resolves to — worn flat a band would be invisible, because a
-   boundary is exactly where two bands are equal. So it reads as this section
-   rising into Apps. Hard-edged rather than dissolved, unlike the two flat
-   sections further down: this one is blended, so its own gradient is already
-   softening the top, and a `wave` at a water boundary wants to be a
-   silhouette. Both themes come free — the bands and --text are both per
-   theme, so one declaration is right in each. */
-.tools__seam {
-  color: var(--seam-fill);
+.tools__seam-drift::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--seam-lift);
+  background-color: currentColor;
 }
 
 /* ── the bridge ────────────────────────────────────────────────────────────
@@ -387,5 +426,17 @@
   .tools__seam-drift,
   .tools__rocks-sway {
     will-change: auto;
+  }
+}
+
+@media print {
+  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
+     is painted by a ::before on a plain <div> that no selector there reaches —
+     and the print block in base.css does not neutralise the --band-* tokens,
+     so the strip would come out as a near-black bar across the top of the
+     section on white paper. Decorative, so it goes, like everything else that
+     block drops. */
+  .tools__seam-drift {
+    display: none !important;
   }
 }

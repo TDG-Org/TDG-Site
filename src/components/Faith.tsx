@@ -10,6 +10,10 @@ export function Faith() {
   const rays = useHeroParallax<HTMLDivElement>(0.05)
   const blob = useParallax<HTMLDivElement>(0.12)
   const seam = useParallax<HTMLDivElement>(0.034)
+  /* The far range climbing into the frame from below the boundary. Negative,
+     so it moves AGAINST the band hanging over it: 0.052 of relative travel,
+     which is what opens and closes the slot of sky between the two. */
+  const climb = useParallax<HTMLDivElement>(-0.018)
   const content = useReveal<HTMLDivElement>('holy', 0)
   /* The summit's scroll choreography. It is read here rather than inside
      `Summit` because the hook measures a SECTION and the section is this
@@ -20,11 +24,33 @@ export function Faith() {
   return (
     <section ref={section} id="faith" className="section section--blend faith faith-summit-host">
       {/* ── the walk, beat six: the climb, and the summit at the top of it ──
-          `peaks` because this is the one boundary on the walk where the land
-          actually rises: you leave the open ground of #building and climb.
+          This is the one boundary on the walk where the land actually rises:
+          you leave the open ground of #building and start up. So it is drawn
+          as a PASS — two lands closing on a slot of sky — and it is the only
+          join on the page built that way. The four others are a canopy at two
+          depths (#apps), one clean waterline (#tools), a mist with no edge in
+          it at all (#building) and a shape that fades in from nothing (the
+          Outro), so a reader never meets the same idea twice.
+
+          `ridge` HANGS from the boundary: a low, many-faceted profile, the far
+          bank you are leaving seen from below it. It drifts DOWN with the page.
+
+          `peaks` RISES to meet it, `edge="bottom"` — the only seam on this page
+          in that orientation, and it is the shape the old single seam here used
+          to be, now doing the job its name implies. It is the range you are
+          about to climb, so it drifts UP against the other one and dissolves at
+          its base into haze rather than ending on a line.
+
+          Neither ever reaches the other: Faith.css carries the computed gap at
+          every width, and the two silhouettes are 12–20px apart at their
+          closest. The sky between them is the point.
+
           The summit at the bottom of this section is where the climb ends. */}
       <div ref={seam} className="faith__seam-drift" aria-hidden="true">
-        <Seam shape="peaks" edge="top" className="faith__seam" />
+        <Seam shape="ridge" edge="top" />
+      </div>
+      <div ref={climb} className="faith__climb-drift" aria-hidden="true">
+        <Seam shape="peaks" edge="bottom" className="faith__climb" />
       </div>
 
       {/* a slow gradient field: a drifting radial pair, a rotating conic

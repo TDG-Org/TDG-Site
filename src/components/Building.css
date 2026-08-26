@@ -25,15 +25,42 @@
 
 /* Same wrapper trick as Tools.css: useParallax is typed to HTMLElement and
    Seam takes no ref, and the height stays in Seam.css so the clamp is written
-   once. See Tools.css for the long version. */
+   once. See Tools.css for the long version.
+
+   --seam-lift is the strip of solid ink this wrapper paints ABOVE its own top
+   edge. A `Seam` path is solid from y = 0 down to its silhouette, so it has a
+   straight horizontal top edge, and +0.022 slides that edge 9.9px clear of the
+   boundary on a 900px viewport — a line drawn across the page at exactly the
+   join this pass exists to hide. The lift means the section's overflow cuts
+   the band instead of the path cutting it. Apps.css has the derivation and why
+   4vh is right in every window.
+
+   The colour moved here from the <svg> in the same edit, and that is a second
+   fix: base.css's `transition: var(--t-theme)` list covers `div` and not `svg`
+   or `path`, so this seam used to SNAP to the new theme while the page around
+   it crossed on the wave. On a div, `color` transitions; the svg inherits the
+   animated value and `currentColor` resolves against it in both the path and
+   the ::before. The mask stays on the <svg>, which is right — the ::before is
+   above the boundary, where the mask's own top stop is opaque anyway. */
 .building__seam-drift {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 0;
+  --seam-lift: 4vh;
+  color: var(--seam-fill);
   pointer-events: none;
   will-change: translate;
+}
+.building__seam-drift::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--seam-lift);
+  background-color: currentColor;
 }
 /* --seam-fill: this section's own --band-building, stepped --seam-step toward
    --text by base.css. A band worn flat would be invisible here — a boundary is
@@ -57,9 +84,11 @@
    dissolving seam dissolves at the same rate — and a masked seam is the case
    --seam-step was calibrated against, since it paints most of its band at
    part opacity. A mask is an alpha channel, not a colour: the #000 here
-   paints nothing, exactly as in .tools__road-grid. */
+   paints nothing, exactly as in .tools__road-grid.
+
+   (The `color` this rule used to carry now sits on the wrapper above, where it
+   rides the theme wave instead of snapping. See the note there.) */
 .building__seam {
-  color: var(--seam-fill);
   -webkit-mask-image: linear-gradient(
     180deg,
     #000 0,
@@ -72,6 +101,79 @@
     rgba(0, 0, 0, var(--seam-fade)) 50%,
     transparent 100%
   );
+}
+
+/* ── the mist at the boundary ──────────────────────────────────────────────
+   The same `atmosphere/fog-veil` file the floor fog below uses — same URL,
+   same request, no extra bytes — cropped to a shallow band at the top of the
+   section and softened at BOTH ends, so this boundary has no hard edge in it
+   anywhere. Building.tsx has the beat: the water you crossed in #tools coming
+   off the surface as you reach the far bank.
+
+   ## Which slice of the file is shown, and why nothing can cut
+
+   The file is 1600x533 and its ink runs y 0.3884..0.9081 in dark and
+   0.4634..0.9850 in light — a faint speckle along the top and a HARD, straight
+   bottom edge. Both have to be kept out of the box, and `object-fit: cover`
+   into a box far wider than 3:1 is what does it: the image is scaled to the
+   box's WIDTH, and `object-position`'s second value then chooses which slice
+   of the much taller scaled image the box shows. At 50% 62%, computed:
+
+       width   scaled H   box H   slice of the file
+        320     106.6      54     0.306 .. 0.813
+        768     256.0      54     0.492 .. 0.703
+       1440     475.0      97.9   0.492 .. 0.698
+       1920     634.6     104     0.518 .. 0.682
+
+   Every row's lower bound is below 0.908, so the file's hard bottom edge is
+   never in the box at any width. The 320 row reaches above the dark ink's own
+   top, which paints nothing rather than painting an edge, and the mask has
+   that end at zero alpha regardless.
+
+   ## The mask, and why it needs no --seam-lift
+
+   `transparent 0 -> #000 42% -> transparent 100%`: the mist fades IN below the
+   boundary and OUT above the copy, so it has no top edge for a drift to expose
+   and no bottom edge to cut. That is what makes it immune to the artefact
+   --seam-lift exists to fix on the seam above it, and it is why the two layers
+   at this boundary are softened by two different mechanisms.
+
+   ## It stops before the copy, and that is arithmetic
+
+   The lowest painted pixel is `height + downward drift` below the boundary,
+   against this section's own `padding-top`, `clamp(72px, 9vw, 130px)`. -0.02
+   drifts DOWN by `0.02 * vh/2` = 1.0vh, and that excursion is at its largest
+   while the boundary is low on the screen — which is when a reader can see
+   both this and the heading. Computed, with the worst viewport height in
+   brackets:
+
+       width   height  drift        bottom   padding-top   clear
+        320     54.0   10.0 (1000)   64.0      72.0         8.0
+        375     54.0   10.0 (1000)   64.0      72.0         8.0
+        768     54.0   16.0 (1600)   70.0      72.0         2.0
+       1024     69.6   14.0 (1400)   83.6      92.2         8.6
+       1440     97.9   14.0 (1400)  111.9     129.6        17.7
+       1920    104.0   16.0 (1600)  120.0     130.0        10.0
+
+   768 is the binding row and only against a 768x1600 window no device has; at
+   a real 768-wide viewport (vh <= 1024) the drift is 10.2 and the clearance
+   7.8. Both readings are conservative anyway, because the mask is at zero
+   alpha for the last stop, so the ink stops well above `bottom`.
+
+   Full width and no overhang — `left: 0; width: 100%` — because a layer that
+   ran off the edges here would have to be caught by something, and the fog's
+   own art is already full-bleed in x. Nothing recolours a pixel; the -dark and
+   -light files are separate drawings.                                        */
+.building__mist {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: clamp(48px, 6.4vw, 100px);
+  object-fit: cover;
+  object-position: 50% 62%;
+  opacity: var(--art-far);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
 }
 
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its
@@ -356,4 +458,16 @@
 }
 .building__pill-dot[data-alt] {
   background-color: var(--accent);
+}
+
+@media print {
+  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
+     is painted by a ::before on a plain <div> that no selector there reaches —
+     and the print block in base.css does not neutralise the --band-* tokens,
+     so the strip would come out as a near-black bar across the top of the
+     section on white paper. Decorative, so it goes, like everything else that
+     block drops. */
+  .building__seam-drift {
+    display: none !important;
+  }
 }
