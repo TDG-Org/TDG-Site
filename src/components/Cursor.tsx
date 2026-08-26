@@ -6,38 +6,76 @@ import './Cursor.css'
 type Kind = 'default' | 'link' | 'grab' | 'wide'
 
 /*
- * The three things the ring can be over, in the order they are tested. The
- * order IS the rule: the most specific thing under the pointer wins, so a
- * button inside a card is a button.
+ * The three things the ring can be over, and the order they are tested in.
  *
- * ## Why `.origin__row` is in WIDE even though it has never won
+ * ## The precedence rule, written down
  *
- * It had not, and the reason was not this ordering being wrong. Every timeline
- * row carried a stray `tabIndex={0}`, which matches
- * `[tabindex]:not([tabindex="-1"])` in LINK, so the whole row answered LINK
- * before WIDE was ever consulted and the entry below did nothing at all. The
- * rows are being rebuilt as real `<button>` disclosures and that attribute is
- * going with them, which is what finally lets this line do its job.
+ * GRAB, then LINK, then WIDE. The reason is NOT "the more specific selector
+ * wins" -- it is that **the ring names the smallest thing the pointer can act
+ * on by itself.**
  *
- * ## What that leaves, and why it is the intended feel
+ * A Store pack card is the worked example: `.card` is WIDE, the Buy button
+ * inside it is LINK, and the body between them does nothing at all. The ring
+ * opens to 38px over the card and to 44px over the button, and that step is how
+ * the cursor says "this whole thing is one object, and THIS is the part that
+ * does something".
  *
- * A rebuilt row is a wide surface with a control inside it, so the ring will
- * read 38px over the row and open to 44px over the button — the SAME step this
- * site has always given a `.card` with a control in it. A Store pack card is
- * the shipped example: its body is `wide` and its Buy button is `link`, and
- * that step is how the cursor says "this whole thing is one object, and THIS is
- * the part that does something". A row is exactly that shape, so it gets
- * exactly that answer.
+ * A card that is entirely one link does not step, and needs no exemption from
+ * anything: `.card__cover` is `position: absolute; inset: 0`, so it covers the
+ * card's padding as well as its content and leaves no strip of card to read
+ * differently. Every Apps and Tools card is uniformly LINK for that reason.
  *
- * The alternative was dropping `.origin__row` from WIDE, and it is worse rather
- * than quieter: with the row no longer focusable the prose beside the button
- * would fall all the way to `default`, and the pointer would cross 26px → 44px
- * instead of 38px → 44px. Removing the entry to avoid a step makes the step
- * nearly three times bigger.
+ * ## Why the timeline is an exception, and FILLS is where exceptions go
+ *
+ * This pair has now produced two surprises, so both are written down here
+ * rather than rediscovered a third time.
+ *
+ * The FIRST was that `.origin__row` had never won at all. Every row carried a
+ * stray `tabIndex={0}`, which matches `[tabindex]:not([tabindex="-1"])` in
+ * LINK, so the whole row answered LINK before WIDE was ever consulted and the
+ * WIDE entry was dead code from the day it was written.
+ *
+ * The SECOND arrived when those rows were rebuilt as real `<button>`
+ * disclosures and the attribute went with them. `.origin__toggle` is
+ * `display: block; width: 100%; padding: 0` in normal flow, and `.origin__row`
+ * is padded 28px/30px, so the button fills the row's CONTENT box and leaves the
+ * row's own padding around it. That is not a card with a control in it. It is a
+ * frame of WIDE around a fill of LINK, and crossing a single row read
+ * wide -> link -> wide with nothing having changed about what the pointer could
+ * actually do. Jitter, not information.
+ *
+ * A row has exactly one behaviour and the button IS the row. So the whole row
+ * is one target, chevron and all, and it reads WIDE across every pixel of
+ * itself.
+ *
+ * ## Why a third list, and not a `:not()` inside LINK
+ *
+ * `button:not(.origin__toggle)` would work and would hide the reasoning: the
+ * next reader parses it as "apparently that button is not interactive", which
+ * is the opposite of true. Reordering WIDE ahead of LINK is worse still and was
+ * ruled out -- it is a site-wide regression, because a link inside a card would
+ * stop winning the link ring.
+ *
+ * FILLS states the actual fact: a control that fills the wide surface it sits
+ * in is not a target WITHIN that surface, it is that surface. Anything else
+ * inside an `.origin__row` -- a link in a chapter's prose once one is opened --
+ * still matches LINK and still gets the link ring, which is right, because that
+ * genuinely is a second thing to act on.
  */
 const LINK = 'a,button,[role="button"],summary,label,input,select,textarea,[tabindex]:not([tabindex="-1"])'
 const GRAB = '.hero__model'
 const WIDE = '.card,.origin__row'
+
+/**
+ * Controls that ARE their wide surface rather than a control within one.
+ *
+ * Deliberately short, and it should stay short. An entry here is a claim that
+ * the element covers its WIDE ancestor's whole hit area, so a reader crossing
+ * it can never tell where one ends and the other begins. That is true of
+ * `.origin__toggle`; it is not true of a Buy button sitting in a card's action
+ * row, and adding one of those here would flatten a step that carries meaning.
+ */
+const FILLS = '.origin__toggle'
 
 /**
  * A two-part cursor: a dot that tracks the pointer exactly and a ring that
@@ -68,9 +106,17 @@ export function Cursor() {
     const kindOf = (target: EventTarget | null): Kind => {
       if (!(target instanceof Element)) return 'default'
       if (target.closest(GRAB)) return 'grab'
-      if (target.closest(LINK)) return 'link'
+      // The NEAREST interactive ancestor, so a link inside a control inside a
+      // card still answers for itself.
+      const link = target.closest(LINK)
+      // ...unless that control fills its wide surface, in which case it IS the
+      // surface and the WIDE answer below is the honest one. See FILLS.
+      if (link && !link.matches(FILLS)) return 'link'
       if (target.closest(WIDE)) return 'wide'
-      return 'default'
+      // A fill control with no WIDE surface around it is still a control. It
+      // cannot happen today -- .origin__toggle only exists inside .origin__row
+      // -- and falling to 'default' would be the one wrong answer available.
+      return link ? 'link' : 'default'
     }
 
     /**
