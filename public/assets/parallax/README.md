@@ -23,8 +23,10 @@ previewers represents transparency, not a painted background.
 | Folder | Contents | Intended use |
 | --- | --- | --- |
 | `hero/` | Theme-paired lampposts | A small left-edge hero detail. |
-| `landscapes/` | Theme-paired mountain ridge cutouts | The bottom hero layer; reveal upward behind the strip. |
-| `props/` | Theme-paired pine, canopy tree, bench, and foliage/reed cutouts | Sparse section-edge or transition decoration. |
+| `landscapes/` | Theme-paired mountain ridge and stone footbridge cutouts | The hero floor or a quiet lower section seam. |
+| `props/` | Theme-paired trees, bench, foliage/reeds, wayfinding post, garden arch, and pine grove | Sparse section-edge decoration. |
+| `transitions/` | Theme-paired stepping-stone paths | A quiet cue between Story beats. |
+| `faith/` | Theme-paired hillside crosses | A small, reverent Faith-section detail. |
 | `atmosphere/` | Theme-paired fog veils | A slow, quiet layer behind a landscape or prop. |
 | `implementation-brief.md` | Implementation brief | The exact handoff prompt for Claude Code. |
 
@@ -43,6 +45,23 @@ two worlds.
 | Park bench | `props/park-bench-dark.png` | `props/park-bench-light.png` | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds-dark.png` | `props/bushes-reeds-light.png` | A low foreground cover or section seam. |
 | Fog veil | `atmosphere/fog-veil-dark.png` | `atmosphere/fog-veil-light.png` | Far backdrop; place behind mountains and props. |
+| Wayfinding post | `props/wayfinding-post-dark.png` | `props/wayfinding-post-light.png` | Story's far edge; its boards must stay blank. |
+| Stone footbridge | `landscapes/stone-footbridge-dark.png` | `landscapes/stone-footbridge-light.png` | A low Story seam, used instead of—not with—the stepping stones. |
+| Garden arch | `props/garden-arch-dark.png` | `props/garden-arch-light.png` | A far-edge Outro threshold, never a content container. |
+| Stepping stones | `transitions/stepping-stones-dark.png` | `transitions/stepping-stones-light.png` | A subtle Story transition, behind the timeline. |
+| Hillside cross | `faith/hillside-cross-dark.png` | `faith/hillside-cross-light.png` | A small Faith-only lower-corner detail, below the verse. |
+| Pine grove | `props/pine-grove-dark.png` | `props/pine-grove-light.png` | A richer edge anchor for one later section; never beside the lamppost. |
+
+## Richer-detail family
+
+`wayfinding-post`, `stone-footbridge`, `garden-arch`, `stepping-stones`,
+`hillside-cross`, and `pine-grove` deliberately carry more facets than the
+first foliage props.
+They are the kit's **story anchors**: use one, at a small scale, to suggest a
+place without turning a content section into an illustrated scene.  Their dark
+versions are materially deeper midnight blue; their light partners are paler
+mist/silver with a narrow graphite-blue note.  This contrast shift is why both
+files must be swapped as actual themed assets rather than filtered.
 
 ## Guardrails for implementation
 
@@ -64,6 +83,8 @@ two worlds.
    the art disappear first when vertical space is tight.
 7. At `max-width: 640px`, hide the peripheral lamppost and bench.  Keep only a
    simplified mountain/fog composition if it does not obscure hero copy.
+8. Do not build a scene from the kit.  A section gets at most one structural
+   anchor (bridge, arch, wayfinder, or cross), plus optional low foliage/fog.
 
 ## Validation after integration
 

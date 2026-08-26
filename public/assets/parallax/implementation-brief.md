@@ -18,6 +18,12 @@ Implement the following intentionally small composition:
    a few pixels against the landscape, but it must never overlap the nav,
    heading, eyebrow, CTA group, or strip.  Do not add the bench/trees to the
    hero by default; reserve them for future sections so the scene stays quiet.
+   For the later sections, use the richer story anchors one at a time: the
+   wayfinding post or stepping stones for Story, the footbridge as an alternate
+   Story seam, the garden arch near Outro, and the small hillside cross only in
+   Faith.  The richer pine grove is a one-section edge anchor only and must
+   never sit beside the hero lamppost.  Never place the bridge and stepping
+   stones together.
 3. Use each section's existing style of reveal / parallax.  All movement must
    run through the existing shared frame loop via `useHeroParallax` or
    `useParallax`, and stop cleanly for reduced motion.  No direct
@@ -33,6 +39,8 @@ Implement the following intentionally small composition:
 7. Preserve the site's token discipline.  The assets themselves already carry
    their theme palette; CSS may control opacity and placement but must not add
    literal colours or filters to recolour them.
+8. The second-wave anchors intentionally have a richer low-poly facet count.
+   Keep them small enough that their detail is discovered rather than announced.
 
 Validate real paths in both themes, light/dark contrast after the theme wave,
 reduced motion, 375px and 1440px layouts, keyboard flow, the console, then run
