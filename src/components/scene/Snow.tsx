@@ -81,11 +81,28 @@ function readRGB(el: Element, varName: string, fallback: string): string {
  * Falling snow on a 2D canvas, at about the cost of a gradient.
  *
  * ```tsx
- * <Stage className="building__stage">
- *   <Snow className="building__snow" density={0.8} />
- *   <ThemedArt art="landscapes/mountain-ridge" className="building__ridge" factor={0.05} />
+ * <Stage className="origin__stage">
+ *   <CabinScene className="origin__cabin" />
+ *   <Snow className="origin__flakes" density={NEAR_SNOW} />
  * </Stage>
  * ```
+ *
+ * That is `Origin.tsx`, and it is the only caller. It is worth reading as a
+ * pair rather than as an example: the cabin's three.js scene draws snow of its
+ * own with real depth, between the trees and in front of them, and this canvas
+ * is the layer in front of ALL of it — a few larger, faster flakes crossing the
+ * frame close to the reader. Two snowfalls at two depths, which is how layered
+ * snow works and is not the same thing as drawing it twice. Order inside the
+ * stage is the whole of the z-order: both canvases are `position: absolute` with
+ * no `z-index`, so the later one paints over the earlier one, and `.shell`'s
+ * `z-index: 1` keeps both of them off the copy. `Origin.css` has the density
+ * and the per-theme opacity.
+ *
+ * It also means the section keeps its weather when WebGL does not arrive.
+ * `CabinScene` needs a context and a browser may decline to give it one; this
+ * needs a 2D canvas, so a visitor on the fallback path still gets snow rather
+ * than a bare band. That makes "quiet and correct on its own" a requirement
+ * here and not a nicety — do not tune this layer against the cabin's.
  *
  * The canvas takes its size from CSS and nothing else, so **the caller has to
  * give it one** — a canvas with no CSS size is 300x150 and this will faithfully
@@ -109,10 +126,24 @@ function readRGB(el: Element, varName: string, fallback: string): string {
  * returns before it draws OR holds when the section is off screen. It is the
  * same box `Stage` guards on, so the two flip together.
  *
- * Nothing catches up when it comes back. Time is only accumulated after the
- * visibility check, so a field that was left mid-fall resumes exactly where it
- * stopped rather than jumping forward by however long the reader spent
- * elsewhere.
+ * Nothing catches up when it comes back — and for a while that sentence was
+ * only half true, which is worth writing down because the half that was false
+ * was invisible in every test short of leaving the section and returning.
+ *
+ * The FALL was always right: `pending` accumulates `dt` only after the
+ * visibility check, so a field left mid-fall resumes exactly where it stopped
+ * rather than jumping forward by however long the reader spent elsewhere. The
+ * SWAY was not. It read `performance.now()` straight off the frame, so the
+ * sideways term kept running while nothing was being drawn: come back after 40
+ * seconds away and `sin(now * swayRate)` had advanced through several whole
+ * cycles, and every flake's x jumped by up to `2 x sway` in the single frame
+ * that painted next. The same jump fired on a reduced-motion `0 -> 1` flip,
+ * where the term is gated off and the clock behind it was not.
+ *
+ * So the sway is driven by `elapsed`, which is integrated exactly the way the
+ * fall is — one accumulator, advanced by the same `step * mi` inside the same
+ * drawn frame, and by nothing else. A frame that returns early advances
+ * neither. There is no wall clock left in this file.
  *
  * ## "Still snow", and why that is not the same as a paused animation
  *
@@ -163,6 +194,12 @@ export function Snow({
 
     let w = 0
     let h = 0
+    // The BACKING store's size, which is what the same-size guard in `fit`
+    // compares. Not the CSS box: a DPR change moves these two and leaves the
+    // CSS box exactly where it was, so comparing the CSS box would let the one
+    // resize that is not a resize through and stop the one that is.
+    let backW = 0
+    let backH = 0
     let flakes: Flake[] = []
 
     /*
@@ -191,44 +228,107 @@ export function Snow({
     })
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
-    const seed = () => {
-      w = cv.clientWidth || 1
-      h = cv.clientHeight || 1
-      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
-      cv.width = Math.round(w * dpr)
-      cv.height = Math.round(h * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    /** One flake, at a position the caller picks. One depth drives everything
+     *  else, so a flake is never big and slow or small and bright — which is
+     *  what makes a flat field read as deep. */
+    const makeFlake = (x: number, y: number): Flake => {
+      const z = Math.random()
+      return {
+        x,
+        y,
+        z,
+        size: 0.6 + z * 2.1,
+        speed: 14 + z * 46,
+        alpha: 0.16 + z * 0.5,
+        sway: 4 + z * 13,
+        swayRate: 0.3 + z * 0.45,
+        phase: Math.random() * TAU,
+      }
+    }
 
-      const n = flakeBudget(w, h, amount)
-      flakes = Array.from({ length: n }, () => {
-        // One depth drives everything, so a flake is never big and slow or
-        // small and bright — which is what makes a flat field read as deep.
-        const z = Math.random()
-        return {
-          x: Math.random() * w,
-          y: Math.random() * h,
-          z,
-          size: 0.6 + z * 2.1,
-          speed: 14 + z * 46,
-          alpha: 0.16 + z * 0.5,
-          sway: 4 + z * 13,
-          swayRate: 0.3 + z * 0.45,
-          phase: Math.random() * TAU,
+    /**
+     * The box changed size — which is NOT the same event as "seed a new field",
+     * and this file used to treat them as one.
+     *
+     * The `ResizeObserver` was handed the seeding function directly, so every
+     * callback rebuilt all 170 flakes out of `Math.random()`: dragging a window
+     * wider re-dealt the whole field, repeatedly, mid-drag. What a reader saw
+     * was the snow blinking to a different snow rather than following the
+     * window. Two things follow from splitting the two jobs apart.
+     *
+     * **Nothing already falling is thrown away.** Every flake keeps its
+     * identity — its depth and the five values derived from it — and its
+     * position is scaled into the new box, so the field re-FITS. Only the count
+     * follows the budget: surplus flakes are trimmed off the end, and a box
+     * that grew is topped up. The added ones are seeded across the whole box
+     * rather than above its top edge, because a handful arriving among thirty
+     * is invisible beside the thing this replaced, and the alternative is a
+     * second code path for a case nobody watches.
+     *
+     * **A resize that is not one costs nothing.** `ResizeObserver` always fires
+     * once on `observe`, so before the guard, mounting did two full resizes and
+     * two array allocations. `lib/motion.ts` skips its own first callback for
+     * exactly this and says so; `hero/PointCloud.tsx` compares the same two
+     * backing-store numbers this does. (`hero/Starfield.tsx` is the pattern for
+     * everything else in this file and is the one place that still has neither
+     * — it is not this component's to fix.)
+     */
+    const fit = () => {
+      const cw = cv.clientWidth
+      const ch = cv.clientHeight
+      // No layout, no buffers — `hero/PointCloud.tsx`'s guard, for the same
+      // reason. A canvas with no CSS size is 300x150, and this would
+      // faithfully allocate for it and put four flakes in it. `Stage` hides a
+      // covered stage with `visibility` precisely so this box stays
+      // measurable, so inside one this only ever fires before first layout.
+      if (!cw || !ch) return
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
+      const bw = Math.round(cw * dpr)
+      const bh = Math.round(ch * dpr)
+      if (bw === backW && bh === backH) return
+      backW = bw
+      backH = bh
+      // Read before w/h move. Zero on the very first fit, which is the one
+      // call that has nothing to carry across.
+      const sx = w ? cw / w : 0
+      const sy = h ? ch / h : 0
+      w = cw
+      h = ch
+      cv.width = bw
+      cv.height = bh
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      if (sx) {
+        for (const f of flakes) {
+          f.x *= sx
+          f.y *= sy
         }
-      })
+      }
+      const n = flakeBudget(w, h, amount)
+      if (n < flakes.length) flakes.length = n
+      while (flakes.length < n) flakes.push(makeFlake(Math.random() * w, Math.random() * h))
       // the two width/height writes above just blanked the canvas
       invalidate()
     }
-    seed()
+    fit()
 
-    const ro = new ResizeObserver(seed)
+    const ro = new ResizeObserver(fit)
     ro.observe(cv)
     // The observer cannot see a scaling change on its own. See lib/dpr.ts.
-    const unwatchDpr = onDprChange(seed)
+    const unwatchDpr = onDprChange(fit)
 
     let pending = 0
+    /**
+     * The field's own clock, in seconds, and the only time this file keeps.
+     *
+     * It is advanced by the same `step * mi` the fall is, inside the same drawn
+     * frame, so a frame that returns early — off screen, under the Hz cap, or
+     * parked at `mi === 0` — advances neither. See the header for the bug this
+     * replaced: reading `performance.now()` here teleported every flake
+     * sideways after any pause.
+     */
+    let elapsed = 0
 
-    const stop = onFrame(({ vh, mi, now, dt, hold }) => {
+    const stop = onFrame(({ vh, mi, dt, hold }) => {
       const r = box.getBoundingClientRect()
       // Neither draw nor hold while nobody can see it.
       if (r.bottom <= 0 || r.top >= vh) return
@@ -242,8 +342,11 @@ export function Snow({
       const step = pending
       pending = 0
       settled = mi === 0
+      // The sway's clock, integrated exactly like the fall below it. Both
+      // terms therefore stop and restart together, and neither can advance
+      // through a frame that was never drawn.
+      elapsed += step * mi
 
-      const t = now * 0.001
       ctx.clearRect(0, 0, w, h)
       ctx.fillStyle = `rgb(${rgb})`
 
@@ -259,7 +362,7 @@ export function Snow({
         }
         // The second motion term, gated exactly like the fall — leave it live
         // and reduced motion still drifts sideways forever.
-        const x = mi === 0 ? f.x : f.x + Math.sin(t * f.swayRate + f.phase) * f.sway
+        const x = mi === 0 ? f.x : f.x + Math.sin(elapsed * f.swayRate + f.phase) * f.sway
         ctx.globalAlpha = f.alpha
         ctx.beginPath()
         ctx.arc(x, f.y, f.size, 0, TAU)

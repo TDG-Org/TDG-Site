@@ -142,6 +142,75 @@
   display: block;
 }
 
+/* ── the near snow ─────────────────────────────────────────────────
+   The second half of this section's weather, in front of the cabin's own.
+   Origin.tsx has the depth ladder and the density; this file has the box and
+   the one per-theme decision.
+
+   Same box as .origin__cabin above, and for the same reason: Snow sizes its
+   backing store from this element's client box, so the box has to have one
+   before the first frame, and `inset: 0` on a pin that is already 100svh
+   does. It is the LATER of the two canvases in the DOM and neither carries a
+   z-index, so this paints over the cabin and both stay under .shell's
+   z-index: 1 — the copy is never at risk from either.
+
+   pointer-events is already none twice over — .stage sets it and the property
+   inherits — and it is restated because this is a full-viewport box sitting
+   directly under the reader's cursor, and a canvas that quietly ate a click
+   on a chapter would be found by a person and not by a test.
+
+   ── opacity, and why it is a token and not a number ───────────────
+   --art-near is the kit's opacity for "the props closest to the reader" —
+   0.68 dark, 0.52 light — and it is the same token .origin__lamp is drawn at,
+   which is the other near object in this section. It is doing real work here
+   rather than dressing:
+
+   Snow takes its hue from --glow, which is this site's palette inverting the
+   way it should: rgba(255,255,255,0.2) in dark, rgba(20,20,26,0.16) in light.
+   Only the triple is read, so the flakes are white on dark and near-black on
+   light. White on #0a0b12 is snow. Near-black on #eef0f6 needs the second
+   look, and the answer is that flakes DARKER than the sky is the right
+   direction here and not a bug — CabinScene reaches the same conclusion from
+   the other end, putting its light-theme flakes part way DOWN the tone ramp
+   because "near-white snow over a near-white sky is invisible". What the
+   token cannot fix alone is how far down. Composited against the bands, per
+   flake alpha 0.16 (smallest, farthest) to 0.66 (largest, nearest):
+
+     light, over --band-origin #eef0f6
+       without this rule   rgb(203,205,211) .. rgb( 94, 95,101)
+       at --art-near 0.52  rgb(220,222,228) .. rgb(163,164,170)
+     dark, over --band-origin #0a0b12
+       without this rule   rgb( 49, 50, 56) .. rgb(172,172,174)
+       at --art-near 0.68  rgb( 37, 38, 44) .. rgb(120,121,124)
+
+   The light row is the one that needed it. rgb(94,95,101) on a near-white band
+   is a dark speck — closer to soot than to snow — and there would be one of
+   those for every flake near the front of the field. At 0.52 the same flake is
+   a mid grey, and the far end of the field lands on rgb(220,222,228), which is
+   within a few steps of the rgb(214,215,219) CabinScene's own light flakes
+   composite to right behind it. The two layers read as one snowfall at two
+   depths, which is the whole point of drawing both.
+
+   Dark needed the same token for the opposite reason: rgb(172,172,174) is
+   most of the way to --text, and a field of that behind seven chapters of
+   prose is a glare. It is the argument CabinScene's own ramp cap makes about
+   the same section, one layer nearer.
+
+   Opacity on this element and NOT on .stage: Stage.css says out loud that a
+   caller wants opacity on its own layers, one at a time, because on the stage
+   it would promote a full-viewport compositor layer for every section that has
+   one. Here it promotes one layer for one canvas that is already being
+   composited.                                                              */
+.origin__flakes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: var(--art-near);
+}
+
 .origin__grid {
   opacity: 0.72;
   background-image:

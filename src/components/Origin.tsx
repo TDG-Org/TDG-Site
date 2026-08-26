@@ -5,6 +5,7 @@ import { useParallax } from '../hooks/useParallax'
 import { usePointer } from '../hooks/usePointer'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
+import { Snow } from './scene/Snow'
 import { Stage } from './scene/Stage'
 import { StillArt } from './scene/ThemedArt'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
@@ -47,6 +48,53 @@ const CABIN_MARGIN = '0px 0px -20% 0px'
  *  spent out of the same budget that keeps the lamp's ink 30px clear of the
  *  wordmark, so it cannot be raised here alone. */
 const LAMP_POINT_X = 10
+
+/**
+ * How much snow the NEAR layer is allowed to add, on top of the cabin's own.
+ *
+ * This section now has snow at two depths, which is not the same thing as
+ * having it twice. `CabinScene` draws the far and middle layers inside the 3D
+ * scene, where flakes have real parallax against the trees and the cabin and
+ * pass behind geometry as well as in front of it; `Snow` is the near layer, a
+ * few bigger, faster flakes crossing the frame close to the reader, in front of
+ * everything the scene draws.
+ *
+ * **Density is the whole risk, and it is a reading risk rather than a
+ * performance one.** Two snowfalls at the wrong ratio is a blizzard, and behind
+ * this one there are seven chapters of prose somebody is trying to read. So the
+ * number is deliberately far below `Snow`'s own default of 1: at 1 the canvas
+ * at a 1440px viewport gets 99 flakes, which is the density of weather you look
+ * AT.
+ *
+ * Counted at 0.3 off the drawn canvas, not calculated — the flakes were
+ * flood-filled out of the backing store — against the cabin's 200 / 420 / 640
+ * in-scene flakes on the same three machine tiers. The canvas is the stage's
+ * pin, so its box is the section's width by 100svh:
+ *
+ * | canvas | <=4 cores, or under 900px | 8 cores | more |
+ * | --- | --- | --- | --- |
+ * | 320 x 812 | 3 | 3 | 3 |
+ * | 375 x 812 | 4 | 4 | 4 |
+ * | 1430 x 900 | 16 | 24 | 29-30 |
+ * | 1910 x 1080 | 26 | 38 | 48 |
+ *
+ * (29 and not 30 in one reading of the busiest cell, because two flakes
+ * overlapped into one blob for the counter. The budget is 30.)
+ *
+ * The narrow column is the one that decides it. `flakeBudget` treats a viewport
+ * under 900px as a weak machine, so a phone lands on the 0.55 multiplier
+ * whatever its cores are, and at 0.3 that is three or four flakes on a phone —
+ * sparse, and the direction to be wrong in for a layer meant to read as a few
+ * flakes close to your face rather than as fog. Going high enough to make a
+ * phone busy puts a 1920 desktop past 70, which is where the near layer starts
+ * competing with the copy behind it. The weather this section HAS is the
+ * cabin's; this is the pane of glass in front of it.
+ *
+ * It is a prop and not an edit to `Snow`'s defaults on purpose: the defaults
+ * are that component's idea of ordinary snowfall, and this is one section
+ * asking for less.
+ */
+const NEAR_SNOW = 0.3
 
 /**
  * One chapter of the timeline, as a disclosure.
@@ -292,6 +340,30 @@ export function Origin() {
               <CabinScene className="origin__cabin" />
             </Suspense>
           ) : null}
+
+          {/* The near layer of the snow, and the only snow that does not need
+              WebGL. See NEAR_SNOW above for the depth ladder and the density.
+
+              It sits INSIDE the stage rather than beside it, which buys three
+              things at once. It is one viewport of canvas instead of a
+              section's worth — the pin is 100svh, this section is nearly three
+              times that — so the fill is bounded by the screen and the flake
+              budget is spent where the reader is looking. It is pinned, so the
+              near snow is viewport-locked the way snow in front of your face
+              is, rather than scrolling away with the page. And it inherits the
+              stage's `pointer-events: none`, its `aria-hidden`, its
+              `data-covered` paint guard and its place at the floor of the
+              section's stacking order, which is what keeps it off the copy.
+
+              AFTER the cabin, which is the whole of the z-order between them:
+              neither canvas carries a `z-index`, so tree order decides, and
+              inventing one here would only escape into the section's stacking
+              context — see .stage's note in Stage.css.
+
+              It is unconditional where the cabin is deferred. It has no chunk
+              to download and no context to acquire, so there is nothing to
+              defer, and a visitor whose browser refuses WebGL gets this. */}
+          <Snow className="origin__flakes" density={NEAR_SNOW} />
         </Stage>
 
         <div className="texture origin__grid" />
