@@ -13,7 +13,7 @@ import {
   Scene,
   WebGLRenderer,
 } from 'three'
-import { clamp01, onFrame, wake } from '../../lib/motion'
+import { clamp01, onFrame, settle, wake } from '../../lib/motion'
 import { onDprChange } from '../../lib/dpr'
 
 /**
@@ -39,26 +39,85 @@ import { onDprChange } from '../../lib/dpr'
  * - **It is editable by the next person.** Every dimension below is a named
  *   constant in a file git can diff. A binary mesh is not.
  *
- * The whole scene is ~540 triangles in four draw calls. That is deliberate:
- * this is a silhouette with warm windows, not an architectural render, and it
- * sits behind seven chapters of prose that have to stay the thing you read.
+ * The whole scene is **four draw calls**, and its triangle count is a range
+ * rather than a number, because the tier decides it. Measured from
+ * `renderer.info.render.triangles` on a frame that drew: **342 on `low`, 462 on
+ * `mid`, 600 on `high`**, plus 200 / 420 / 640 snow points. `low` is not an edge
+ * case — it is every viewport under 760px and every machine with four cores or
+ * fewer, which is most phones — so a single figure quoted from `high` describes
+ * the scene most visitors never get. (This header used to say ~540 for all of
+ * it. That was the `high` tier's WORLD mesh on its own — measured, 556 — with
+ * the 44 triangles of the light layer left out and the other two tiers with it.
+ * See `TIERS`.)
+ *
+ * All three are deliberate: this is a silhouette with warm windows, not an
+ * architectural render, and it sits behind seven chapters of prose that have to
+ * stay the thing you read.
  *
  * ## The mount this expects
  *
  * `CabinScene` takes a `className` and lets the caller place it. The framing it
- * was composed for is **a viewport-sized box** — a `position: sticky` /
- * `height: 100svh` layer inside `#origin` is the natural one.
+ * was composed for is **a viewport-sized box**, and on this site that box has a
+ * name: `scene/Stage`, the sticky-backdrop primitive built in this same pass
+ * for exactly this problem.
  *
- * It does not *require* that. A canvas stretched over the whole section (the
- * `inset: 0` shape `OriginField` used) is several times taller than the
- * viewport, and a 3D composition painted once across a box like that would
- * scroll away from the reader instead of staying in front of them. So the
+ * **Use it. Do not hand-roll a sticky layer beside it.** A rebuilt one loses
+ * `Stage`'s `data-covered` paint guard (a full-viewport backdrop goes on
+ * painting all the way to the footer without it), its `aria-hidden`, and the
+ * `.stage-host` line the SECTION needs — `.section` is `overflow: hidden`, an
+ * `overflow: hidden` ancestor is a scroll container, and a scroll container
+ * that never scrolls stops `sticky` dead. `Stage.tsx`'s header has that
+ * measurement and the rest of the traps.
+ *
+ * `Origin.tsx` is the live mount:
+ *
+ * ```tsx
+ * const CabinScene = lazy(() =>
+ *   import('./origin/CabinScene').then((m) => ({ default: m.CabinScene })),
+ * )
+ * // ...inside <section id="origin" className="section section--blend stage-host origin">
+ * <Stage className="origin__stage">
+ *   {cabin ? (
+ *     <Suspense fallback={null}>
+ *       <CabinScene className="origin__cabin" />
+ *     </Suspense>
+ *   ) : null}
+ * </Stage>
+ * ```
+ *
+ * `.origin__cabin` in `Origin.css` is `position: absolute; inset: 0; width:
+ * 100%; height: 100%; display: block`, and that is all it has to be:
+ * `.stage__pin` is already sticky and one viewport tall. There is no
+ * `margin-bottom: -100svh` anywhere and there must not be — `Stage`'s outer
+ * box is `position: absolute; inset: 0`, so it takes no flow space and there is
+ * nothing to cancel. (An earlier version of this header prescribed exactly that
+ * negative margin, on a `.origin__scene` class that has never existed anywhere
+ * in this repo. It was wrong before `Stage` was written and it is wronger now.)
+ *
+ * `cabin` is Origin's own deferred-mount flag and not part of this component's
+ * contract: `React.lazy` splits the chunk but fires the import the moment the
+ * component renders, so the flag is what stops a visitor who reads the hero and
+ * leaves from downloading three.js. See `Origin.tsx`.
+ *
+ * **The className lands on a container `<div>`, not on the canvas.** The canvas
+ * is created inside the effect and appended to that container, so every mount
+ * gets a brand new element — the note where it is created says what that is
+ * worth. It is stretched over the container inline, so a caller rule that gives
+ * the container a box gives the canvas the same one, and `clientWidth` /
+ * `clientHeight` are unchanged. A caller whose class sized the element
+ * INTRINSICALLY would now be sizing a div, which collapses to nothing; give the
+ * container a box, the way `.origin__cabin` does.
+ *
+ * It does not *require* a viewport-sized box. A canvas stretched over the whole
+ * section (the `inset: 0` shape `OriginField` used) is several times taller
+ * than the viewport, and a 3D composition painted once across a box like that
+ * would scroll away from the reader instead of staying in front of them. So the
  * camera composes for the SLICE of itself that is currently on screen, via an
  * off-centre frustum (`setViewOffset`, see `frameSlice`), and the scene stays
  * put in the viewport either way. The cost of the tall mount is real, though —
  * every frame fills the whole canvas, most of which nobody can see — so the
- * backing store is capped by area as well as by dpr, and a sticky mount is
- * still the one to give it.
+ * backing store is capped by area as well as by dpr, and `Stage` is still the
+ * one to give it.
  *
  * ## Rules this is holding to (AGENTS.md §2)
  *
@@ -81,56 +140,112 @@ import { onDprChange } from '../../lib/dpr'
  * - **Rule 5, every state gets a face.** No WebGL, a refused context, a lost
  *   context and an unreadable palette all resolve to the same face: an empty
  *   transparent canvas. The section keeps its own gradients, its art kit and
- *   its prose and simply has no cabin. It is never a black rectangle.
+ *   its prose and simply has no cabin. It is never a black rectangle. The
+ *   READER's face is silence; the DEVELOPER's is not. Every one of those paths
+ *   logs before it returns, in `lib/motion.ts`'s voice, because a bare
+ *   `catch { return }` around the renderer is exactly what turned a hard crash
+ *   into an invisible blank that survived a whole build-and-review pass.
  *
  * **The caller must lazy-load this.** three.js is the heaviest thing that could
- * be on this page, and `hero/PointCloud.tsx` is already `React.lazy` +
- * `<Suspense fallback={null}>` for exactly that reason. Mount this the same
- * way; nothing in here runs at import time beyond the three.js module itself.
- * Measured: the lazy chunk is 520 kB raw / 134 kB gzipped, and it is a separate
- * file only because of the dynamic import — pull this in statically and all of
- * that lands in the entry bundle, which is already flagged at 500 kB.
- *
- * ```tsx
- * const CabinScene = lazy(() =>
- *   import('./origin/CabinScene').then((m) => ({ default: m.CabinScene })),
- * )
- * // ...inside #origin, as the first flow child:
- * <Suspense fallback={null}>
- *   <CabinScene className="origin__scene" />
- * </Suspense>
- * ```
- *
- * ```css
- * .origin__scene {
- *   position: sticky;
- *   top: 0;
- *   height: 100svh;
- *   width: 100%;
- *   margin-bottom: -100svh;
- * }
- * ```
- *
- * The negative margin is what makes a sticky backdrop add no height of its own.
- * Sticky needs a flow child, so this cannot be `position: absolute` the way the
- * art layers around it are.
+ * be on this page. `Hero.tsx` splits `hero/PointCloud.tsx` the same way —
+ * `React.lazy` + `<Suspense fallback={null}>` — and that is the pattern to
+ * copy, but not the reason: `PointCloud` is a **2D canvas**
+ * (`getContext('2d')`), and its chunk imports nothing from three at all. Hero
+ * splits it because its twelve form definitions in `hero/shapes.ts` are the
+ * largest thing on that section and none of it is needed to paint the hero.
+ * Here the weight really is three.js. Nothing in this file runs at import time
+ * beyond the three.js module itself. Measured on this build: the lazy chunk is
+ * 519 kB raw / 133 kB gzipped, and `npm run build` puts three.js and this file
+ * in it and neither in the entry bundle. It is a separate file only because of
+ * the dynamic import
+ * — pull this in statically and all of that lands in the entry bundle, which
+ * is already flagged at 500 kB.
  */
 export function CabinScene({ className }: { className?: string }) {
-  const canvas = useRef<HTMLCanvasElement | null>(null)
+  const host = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    const cv = canvas.current
-    if (!cv) return
-    const section = cv.closest('section')
+    const mount = host.current
+    if (!mount) return
+    const section = mount.closest('section')
     if (!section) return
 
-    // ── palette ───────────────────────────────────────────────────────────
-    // Read before anything is built: with no palette there is nothing to draw,
-    // and an empty transparent canvas is this component's honest failure face.
+    // ── palette ───────────────────────────────────────────────────────────────
+    /*
+     * Read before anything is built: with no palette there is nothing to draw,
+     * and an empty transparent canvas is this component's honest failure face.
+     *
+     * A failure here is terminal — the deps are `[]`, so nothing re-runs it —
+     * and that is a position rather than an oversight. Every token this reads
+     * comes from `styles/tokens.css`, which `main.tsx` imports before it
+     * renders anything, plus `--band-origin`, which `Origin.css` sets on the
+     * very section being measured and which is therefore in the document before
+     * this element exists. There is no ordering in which the read fails now and
+     * a later one succeeds, so a retry would be a loop with nothing to wait for.
+     * What there IS is the log: without it this is a section that renders
+     * perfectly, has no cabin, and says nothing anywhere about why.
+     */
     const first = readPalette(section)
-    if (!first) return
+    if (!first) {
+      console.error(
+        '[cabin] palette unreadable, so nothing is drawn',
+        document.documentElement.getAttribute('data-theme') ?? 'dark',
+      )
+      return
+    }
     let target: Palette = first
     let shown: Palette = { ...first }
+
+    // ── the canvas ────────────────────────────────────────────────────────────
+    /*
+     * This component creates its own canvas rather than rendering one in JSX,
+     * and that is the whole fix for a bug that hid this scene from everybody
+     * who ever worked on it.
+     *
+     * `main.tsx` wraps the app in `<StrictMode>`, which in development runs
+     * every effect setup → cleanup → setup **on the same DOM node**. The
+     * cleanup below calls `renderer.forceContextLoss()`, and it has to:
+     * browsers cap the number of live WebGL contexts per page and start
+     * dropping the oldest, which takes out whatever else on the page owned one.
+     * But on the second setup `canvas.getContext('webgl2')` hands back THE
+     * SAME, STILL-LOST context rather than null — measured against this repo's
+     * own three, `sameObject: true, secondIsLost: true` — so three.js sails
+     * straight past its own "Error creating WebGL context" guard and dies in
+     * the capabilities probe instead, with `TypeError: Cannot read properties
+     * of null (reading 'precision')`.
+     *
+     * Measured before the fix, through real React StrictMode on this tree: one
+     * construction, one dispose, one forced loss, **zero renders**, no console
+     * error and nothing in the network tab. The canvas was present, sized and
+     * transparent and the cabin simply never existed — on every dev load and
+     * every Fast Refresh. Production was safe only because StrictMode does not
+     * double-invoke there, and `Origin.tsx`'s own header contemplates
+     * unmounting on scroll-out, which would have made it permanent and silent
+     * there too.
+     *
+     * A fresh element per mount is the fix that KEEPS `forceContextLoss()`.
+     * Both alternatives give something real up. Dropping the forced loss leaks
+     * a context per mount, which is the bug the cleanup was written for. And a
+     * lost context cannot be un-lost on demand: `WEBGL_lose_context`'s
+     * `restoreContext()` is asynchronous and applies only to a context the
+     * extension itself lost, so "detect and recover" is a race in place of a
+     * guarantee.
+     */
+    const cv = document.createElement('canvas')
+    // Inline, because this component does not own a stylesheet and does not
+    // want to depend on the caller having written one. The box comes from the
+    // container, so `clientWidth` / `clientHeight` are the caller's box exactly.
+    // `pointer-events: none` because a full-bleed canvas that can take a
+    // pointer event is a canvas that can eat a click on the prose behind it.
+    cv.style.cssText =
+      'position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none'
+    mount.appendChild(cv)
+    // The canvas is absolutely positioned, so the container has to BE its
+    // containing block. `.origin__cabin` already is; a caller whose class left
+    // it `static` would size this against whatever ancestor happened to be
+    // positioned instead, which is a bug that shows up only on that caller's
+    // layout. One computed read, once, at mount.
+    if (getComputedStyle(mount).position === 'static') mount.style.position = 'relative'
 
     // ── renderer ──────────────────────────────────────────────────────────
     // WebGL is a thing that can be refused — a blocklisted driver, a machine
@@ -152,7 +267,13 @@ export function CabinScene({ className }: { className?: string }) {
         // pick the cheaper path.
         preserveDrawingBuffer: false,
       })
-    } catch {
+    } catch (err) {
+      // The reader's face is the empty transparent canvas above. The DEVELOPER
+      // does not get silence: this is `lib/motion.ts`'s voice for a subscriber
+      // that threw, and it is here because `catch { return }` is what made the
+      // StrictMode failure above invisible for a whole pass.
+      console.error('[cabin] renderer construction failed', err)
+      cv.remove()
       return
     }
     renderer.setClearAlpha(0)
@@ -258,8 +379,11 @@ export function CabinScene({ className }: { className?: string }) {
     snowGeo.setAttribute('position', snowAttr)
     // The bounding sphere would be recomputed from a buffer that changes every
     // frame; the box is known and fixed, so frustum culling is simply off. One
-    // Points object either way.
-    snowGeo.boundingSphere = null
+    // Points object either way. `snow.frustumCulled = false` below is the whole
+    // mechanism: there was a `snowGeo.boundingSphere = null` here as well and it
+    // did nothing at all, because null is a BufferGeometry's own default and the
+    // field is only ever filled in lazily by the culling test this object never
+    // takes.
     const snowMat = new PointsMaterial({
       size: SNOW_SIZE,
       sizeAttenuation: true,
@@ -291,10 +415,22 @@ export function CabinScene({ className }: { className?: string }) {
      * same one, and `wake()` in lib/motion.ts exists for it.
      */
     let settled = false
+    /** The colour buffer no longer matches `shown` and has to be rebuilt. */
     let dirty = true
+    /**
+     * The canvas is showing something that is wrong RIGHT NOW — a drawing
+     * buffer a resize blanked, a context that just came back, a camera that
+     * snapped — so the next frame draws without waiting out SCENE_HZ.
+     *
+     * Deliberately NOT what a theme cross-fade sets. A fade is smooth motion
+     * and belongs under the cap with everything else that moves; treating it as
+     * urgent is what used to run the whole 600ms at display refresh.
+     */
+    let urgent = true
     const invalidate = () => {
       settled = false
       dirty = true
+      urgent = true
       wake()
     }
 
@@ -359,18 +495,46 @@ export function CabinScene({ className }: { className?: string }) {
     // ── size ──────────────────────────────────────────────────────────────
     let cssW = 0
     let cssH = 0
+    // The BACKING store's size, which is what the same-size guard below
+    // compares. Not the CSS box: a dpr change moves these two and leaves the
+    // CSS box exactly where it was, so comparing the CSS box would let the one
+    // resize that is not a resize through and stop the one that is. `Snow.tsx`'s
+    // `fit` states the same pair for the same reason.
+    let backW = 0
+    let backH = 0
+    // What `frameSlice` last handed the camera; see there. `resize` clears it,
+    // because a new canvas size is a new answer.
+    let framedW = -1
+    let framedH = -1
+    let framedX = -1
+    let framedY = -1
     const resize = () => {
-      cssW = cv.clientWidth
-      cssH = cv.clientHeight
-      if (!cssW || !cssH) return
-      // 1.5 is this site's cap and the reasoning is in lib/dpr.ts and
-      // hero/PointCloud.tsx: flat-shaded facets gain very little from 2x and it
-      // costs four times the fill. The AREA cap is this component's own, and it
-      // is what makes a canvas stretched over a whole tall section survivable —
-      // see the mount note in the header.
+      const w = cv.clientWidth
+      const h = cv.clientHeight
+      if (!w || !h) return
+      // MAX_DPR is this site's cap; its own note carries the reasoning and the
+      // three other files that hold a copy of the number. The AREA cap is this
+      // component's own, and it is what makes a canvas stretched over a whole
+      // tall section survivable — see the mount note in the header.
       let dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
-      const area = cssW * cssH * dpr * dpr
+      const area = w * h * dpr * dpr
       if (area > MAX_PIXELS) dpr = Math.max(0.75, dpr * Math.sqrt(MAX_PIXELS / area))
+      const bw = Math.round(w * dpr)
+      const bh = Math.round(h * dpr)
+      // `setSize` assigns canvas.width and canvas.height unconditionally, and
+      // assigning either one BLANKS the drawing buffer whether or not the value
+      // changed. A ResizeObserver fires once on observe and again for any box
+      // change the layout happens to touch, and `onDprChange` fires for a ratio
+      // that moved without the box moving at all — so without this guard a
+      // resize that resized nothing throws the painted frame away, and a
+      // reduced-motion visitor has no next frame coming to put it back.
+      // `Snow.tsx`'s `fit` and `PointCloud.tsx`'s `resize` both hold this line.
+      if (bw === backW && bh === backH) return
+      backW = bw
+      backH = bh
+      cssW = w
+      cssH = h
+      framedW = -1
       renderer.setPixelRatio(dpr)
       renderer.setSize(cssW, cssH, false)
       invalidate()
@@ -391,16 +555,49 @@ export function CabinScene({ className }: { className?: string }) {
      * the rest of the canvas is rendered as that frustum extended outwards, so
      * the composition stays in front of the reader instead of scrolling off the
      * top of it.
+     *
+     * **Returns whether the projection actually moved, and that answer is
+     * load-bearing.** This used to be called at the BOTTOM of the tick, after
+     * the settle gate, on the reasoning that a rect should only be paid for on
+     * frames that draw. That is true right up until the frustum is the only
+     * thing that changed: on a tall mount a reduced-motion visitor settles, the
+     * gate starts returning early, and the view offset is then never recomputed
+     * again however far they scroll — the shot they are looking at is composed
+     * for a slice they left behind. It never bit the shipped `Stage` mount,
+     * because a pin exactly one viewport tall always takes the
+     * `clearViewOffset()` branch, and that is precisely what made it invisible
+     * and armed.
+     *
+     * So it runs before the gate now, and the return value keeps the cost
+     * honest: a frame where nothing moved writes no projection matrix.
+     *
+     * The rect is read only when there is spare canvas for the offset to slide
+     * along. Below that both spares are zero, the offsets clamp to zero whatever
+     * the rect says, and the mount this actually ships with pays nothing for it.
      */
-    const frameSlice = (rect: DOMRect, vw: number, vh: number) => {
+    const frameSlice = (vw: number, vh: number) => {
       const sliceW = Math.min(vw, cssW)
       const sliceH = Math.min(vh, cssH)
+      const spareX = cssW - sliceW
+      const spareY = cssH - sliceH
+      let offX = 0
+      let offY = 0
+      if (spareX > 0.5 || spareY > 0.5) {
+        const rect = cv.getBoundingClientRect()
+        offX = Math.max(0, Math.min(spareX, -rect.left))
+        offY = Math.max(0, Math.min(spareY, -rect.top))
+      }
+      if (sliceW === framedW && sliceH === framedH && offX === framedX && offY === framedY) {
+        return false
+      }
+      framedW = sliceW
+      framedH = sliceH
+      framedX = offX
+      framedY = offY
       const aspect = sliceW / Math.max(1, sliceH)
       camera.aspect = aspect
       camera.fov = fovFor(aspect)
-      const offX = Math.max(0, Math.min(cssW - sliceW, -rect.left))
-      const offY = Math.max(0, Math.min(cssH - sliceH, -rect.top))
-      if (offX < 0.5 && offY < 0.5 && cssW - sliceW < 0.5 && cssH - sliceH < 0.5) {
+      if (offX < 0.5 && offY < 0.5 && spareX < 0.5 && spareY < 0.5) {
         camera.clearViewOffset()
       } else {
         // Negative offsets are the whole trick: they grow the frustum outwards
@@ -408,7 +605,9 @@ export function CabinScene({ className }: { className?: string }) {
         camera.setViewOffset(sliceW, sliceH, -offX, -offY, cssW, cssH)
       }
       camera.updateProjectionMatrix()
+      return true
     }
+
 
     // ── context loss ──────────────────────────────────────────────────────
     // three.js already prevents the default on `webglcontextlost` and rebuilds
@@ -472,27 +671,69 @@ export function CabinScene({ className }: { className?: string }) {
         return
       }
 
-      // Theme cross-fade. It runs under reduced motion too, because the page's
-      // own colour transitions do — base.css pauses animations for a
-      // reduced-motion visitor, never transitions.
-      let fading = false
-      if (fadeFrom) {
-        fadeK += dt / THEME_FADE
-        if (fadeK >= 1) {
-          shown = { ...target }
-          fadeFrom = null
-          fadeK = 1
-        } else {
-          const k = clamp01(fadeK)
-          shown = lerpPalette(fadeFrom, target, k * k * (3 - 2 * k))
-          fading = true
-        }
-        dirty = true
+      /*
+       * Reduced motion SNAPS to the rest frame. It does not ease to it.
+       *
+       * `wanted` is already WALK_REST at mi 0, but the damped `walk` below is
+       * not, and letting it converge is a camera pulling back over about a
+       * second: `motion.ts` wakes the loop for a full second on the media-query
+       * change and this tick holds it, so the whole move plays out. The one
+       * moment that move would ever happen is the moment somebody standing at
+       * the cabin door turned "Reduce motion" ON. `hooks/usePointer.ts` states
+       * the rule next door in this same pass and it is the same rule for the
+       * same reason: an eased return IS motion, and this is the one time it
+       * would ever play.
+       *
+       * `walk < 0` is the other snap, and always was one: the first frame lands
+       * on target rather than flying in from nowhere.
+       *
+       * Every other time-varying term in this tick already stops dead at mi 0
+       * rather than easing. The snow's fall is `fall * step * mi`; its sway is
+       * frozen by `t` below; the window opacities are pure functions of `walk`,
+       * so they arrive the moment it does. The theme cross-fade is the single
+       * exception and it is deliberate — the note on it says why.
+       */
+      if (walk < 0 || (mi === 0 && walk !== wanted)) {
+        walk = wanted
+        // The canvas is still showing where the camera used to be, and under
+        // reduced motion there is no next frame coming to fix it.
+        settled = false
+        urgent = true
       }
 
-      const converging = walk < 0 || Math.abs(wanted - walk) > WALK_EPS
+      // The CANVAS's rect, not the section's. The two are the same thing when
+      // this is mounted `inset: 0` over the section and are not when it is
+      // mounted in a `Stage`, and it is the painted box that has to be framed.
+      // Before the gates rather than after them; frameSlice says why, and what
+      // it costs on the mount that ships.
+      if (frameSlice(window.innerWidth || 1200, vh)) settled = false
+
+      /*
+       * Theme cross-fade. It runs under reduced motion too, because the page's
+       * own colour transitions do — base.css pauses animations for a
+       * reduced-motion visitor, never transitions.
+       *
+       * The CLOCK advances every frame, because it is measuring --t-theme's
+       * 0.6s in real time. The PICTURE changes only on frames that draw, and
+       * only once the wave has actually reached this canvas: `fadeK` starts at
+       * -waveDelay / THEME_FADE and ThemeProvider's WAVE_SPREAD is 640ms, so
+       * for up to that long the clamped mix is still 0 and every frame drawn
+       * would be byte-identical to the one already on the canvas.
+       *
+       * This used to set `dirty` unconditionally for every frame of the fade,
+       * which both bypassed SCENE_HZ and re-ran applyPalette's ~1670 vertex
+       * colours at display refresh — and on a fast display most of those frames
+       * were painting a mix that had not started moving. `holding` keeps the
+       * loop alive across the wait without drawing into it; `fading` is what
+       * says there is something new to draw.
+       */
+      const holding = fadeFrom !== null
+      if (holding) fadeK += dt / THEME_FADE
+      const fading = holding && fadeK > 0
+
+      const converging = Math.abs(wanted - walk) > WALK_EPS
       const snowing = mi > 0
-      if (converging || snowing || fading) hold()
+      if (converging || snowing || holding) hold()
       if (!converging && !snowing && !fading && settled && !dirty) return
 
       // 30Hz, this section's existing number. A camera on a damped scalar and
@@ -500,19 +741,36 @@ export function CabinScene({ className }: { className?: string }) {
       // reads as, and it is half the GPU work of an uncapped scene sitting
       // behind prose. A scroll that outruns it is absorbed by the damping,
       // which is the other half of why this does not judder on a trackpad.
+      //
+      // `urgent` is the bypass, and `dirty` is not. A blanked drawing buffer
+      // has to be repainted now; a cross-fade is motion, and motion waits its
+      // turn like the rest of the motion in here.
       pending += dt
-      if (pending < 1 / SCENE_HZ && !dirty) return
+      if (pending < 1 / SCENE_HZ && !urgent) return
       const step = pending
       pending = 0
 
-      // The damped camera. `settle` is useParallax's per-second lerp, restated
-      // here rather than imported because that hook owns a DOM element and this
-      // owns a frustum; what carries across is the rate law, not the code.
-      // Damping is also what stops an opening chapter from snapping the shot:
-      // a disclosure growing the section changes `rect.height`, which steps the
-      // target, and a welded camera would jump on the frame it happens.
-      if (walk < 0) walk = wanted
-      else walk += (wanted - walk) * settle(WALK_RATE, step)
+      // The mix itself, on a frame that is actually going to draw it.
+      if (fadeFrom && fadeK > 0) {
+        if (fadeK >= 1) {
+          shown = { ...target }
+          fadeFrom = null
+          fadeK = 1
+        } else {
+          const k = fadeK
+          shown = lerpPalette(fadeFrom, target, k * k * (3 - 2 * k))
+        }
+        dirty = true
+      }
+
+      // The damped camera. `settle` is `lib/motion.ts`'s per-second lerp — the
+      // one settle on this site, shared with useParallax and usePointer, so a
+      // correction to the rate law cannot land in one file and silently not the
+      // others. Damping is also what stops an opening chapter from snapping the
+      // shot: a disclosure growing the section changes `rect.height`, which
+      // steps the target, and a welded camera would jump on the frame it
+      // happens.
+      walk += (wanted - walk) * settle(WALK_RATE, step)
 
       // Apparent size, not distance, is what the eye reads on an approach, and
       // apparent size goes as 1/d. Interpolating the RECIPROCAL of the distance
@@ -576,13 +834,8 @@ export function CabinScene({ className }: { className?: string }) {
         applyPalette(shown)
         dirty = false
       }
-      // The CANVAS's rect, not the section's. The two are the same thing when
-      // this is mounted `inset: 0` over the section and are not when it is
-      // mounted sticky, and it is the painted box that has to be framed. Read
-      // here rather than at the top of the tick so it is only paid for on
-      // frames that actually draw.
-      frameSlice(cv.getBoundingClientRect(), window.innerWidth || 1200, vh)
       renderer.render(scene, camera)
+      urgent = false
       settled = mi === 0 && !converging && !fading
     })
 
@@ -603,18 +856,24 @@ export function CabinScene({ className }: { className?: string }) {
       scene.clear()
       renderer.dispose()
       renderer.forceContextLoss()
+      // And the element goes with it. A context this has just force-lost can
+      // never be un-lost, and `getContext` on the same node hands the dead one
+      // back rather than null — which is exactly what turned StrictMode's
+      // second setup into a silent TypeError. See the note where it is created.
+      cv.remove()
     }
   }, [])
 
   return (
-    <canvas
-      ref={canvas}
+    <div
+      ref={host}
       className={className}
       aria-hidden="true"
       // Not in a stylesheet, because this component does not own one and does
-      // not want to depend on the caller having written it: a full-bleed canvas
-      // that can take a pointer event is a canvas that can eat a click on the
-      // prose behind it. Decorative means decorative.
+      // not want to depend on the caller having written it: a full-bleed layer
+      // that can take a pointer event is a layer that can eat a click on the
+      // prose behind it. Decorative means decorative. The canvas inside carries
+      // the same declaration; see where it is created.
       style={{ pointerEvents: 'none' }}
     />
   )
@@ -661,8 +920,14 @@ const WALK_OUT = 0.8
  */
 const WALK_REST = 0.62
 
-/** Per-frame lerp expressed per second, so 144Hz settles like 60Hz does. */
-const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
+/**
+ * How fast the camera converges on the scroll's target, as the per-second rate
+ * `settle` takes. `settle` itself lives in `lib/motion.ts` beside `clamp01`:
+ * there used to be a byte-identical copy of it here, and three more in
+ * `useParallax`, `usePointer` and `Hero` — four copies of one rate law, whose
+ * difference is only visible above 60Hz, which is to say on somebody else's
+ * machine.
+ */
 const WALK_RATE = 0.14
 /** Below this the camera has arrived and the loop is allowed to park. */
 const WALK_EPS = 0.0006
@@ -708,12 +973,27 @@ function fovFor(aspect: number) {
 const FOG_NEAR = 12
 const FOG_FAR = 74
 
+/**
+ * This site's dpr cap, and the fourth copy of it.
+ *
+ * The reasoning is in `hero/PointCloud.tsx`: a soft point cloud gains nothing
+ * from 2x and it costs four times the fill. Flat-shaded facets gain even less.
+ * The same 1.5 is `hero/Starfield.tsx`'s MAX_DPR and `scene/Snow.tsx`'s, and
+ * PointCloud writes it as a bare literal with no name at all — one decision in
+ * four places, correctable in one.
+ *
+ * `lib/dpr.ts` is where it belongs, and where an earlier version of this note
+ * sent readers looking for it. **It is not there.** That file is 44 lines about
+ * NOTICING a ratio change — `onDprChange`, which `resize` above uses — and it
+ * holds no cap, no 1.5 and no fill argument. Cite it for what it does.
+ */
 const MAX_DPR = 1.5
 /**
  * Ceiling on the backing store, in device pixels. 1.5x on a 1440x900 viewport
  * is 2.9M and clears this; a canvas stretched over a whole 2400px section does
  * not, and this is what stops that mount from allocating a 40MB buffer and
- * filling it sixty times a... thirty times a second.
+ * filling it thirty times a second — SCENE_HZ, which is the rate this file
+ * actually runs at.
  */
 const MAX_PIXELS = 2_400_000
 
@@ -743,8 +1023,16 @@ const TIERS: Record<'low' | 'mid' | 'high', Quality> = {
   high: { trees: 8, flakes: 640, patchX: 10, patchZ: 8, cone: 6, aa: true },
 }
 
+/**
+ * No `typeof window === 'undefined'` guard. There was one, returning 'mid', and
+ * it could not fire: this is called from inside the effect, effects do not run
+ * on a server, and the module is only reached at all through Origin's
+ * `React.lazy` behind a flag an IntersectionObserver sets in a browser. A branch
+ * that cannot be taken is a claim the file makes about itself that is not true.
+ * (`hero/PointCloud.tsx`'s `pointBudget` still carries the same unreachable
+ * guard; it is not this file's to remove.)
+ */
 function tierOf(): 'low' | 'mid' | 'high' {
-  if (typeof window === 'undefined') return 'mid'
   const cores = navigator.hardwareConcurrency ?? 4
   if (cores <= 4 || window.innerWidth < 760) return 'low'
   if (cores <= 8) return 'mid'
@@ -1087,6 +1375,19 @@ const smooth = (t: number) => {
  * the join can never show. The other flattens it around the cabin, which is
  * partly so nothing has to stand on a slope and partly because it is true: the
  * snow in front of a door somebody uses is trodden flat.
+ *
+ * **And it drifts UP, never down.** The two sines are signed and sum to ±0.25,
+ * and both masks only ever scale toward zero, so the raw value reaches as far
+ * below the ground as above it — while the flat plane the patch is laid over
+ * sits at PLANE_Y, two centimetres down. Measured on the grids this actually
+ * builds: 23 of the `high` tier's 99 vertices came out below that plane, by up
+ * to 0.23m, and 7 of `low`'s 42 did. Not one of those hollows was ever visible.
+ * The plane was nearer the camera, so it filled each of them in flat, and along
+ * the band where the two surfaces crossed they were coplanar and z-fought for
+ * real. Clamping at zero is what makes the "cannot z-fight" claim beside the
+ * ground true rather than hopeful, and it costs no triangle and no visible
+ * height: a clamped facet is flat and up-facing, which is the plane's own
+ * normal and therefore the plane's own tone.
  */
 function driftAt(x: number, z: number) {
   const edge =
@@ -1095,7 +1396,7 @@ function driftAt(x: number, z: number) {
   const trodden = smooth((d - 0.8) / 0.4)
   const h =
     0.16 * Math.sin(x * 0.36 + 1.7) * Math.cos(z * 0.29 - 0.6) + 0.09 * Math.sin(x * 0.9 + z * 0.7)
-  return h * edge * trodden
+  return Math.max(0, h * edge * trodden)
 }
 
 const PATCH_HX = 17
@@ -1104,6 +1405,8 @@ const PATCH_Z1 = 21
 const PLANE_HX = 58
 const PLANE_Z0 = -54
 const PLANE_Z1 = 72
+/** How far the flat plane sits below the patch's own zero. See `driftAt`. */
+const PLANE_Y = -0.02
 
 /**
  * Where the trees stand, best composition first: the tier budget takes the
@@ -1127,14 +1430,17 @@ function buildWorld(tier: Quality): Solid {
   // ── ground ───────────────────────────────────────────────────────────────
   // One enormous flat quad for everything the fog is going to eat anyway, and a
   // faceted patch around the cabin where the reader can actually see the snow.
-  // The patch sits a hair above the plane so the two cannot z-fight, and its
-  // drift tapers to zero at its own border so the join is invisible.
+  // The patch sits a hair above the plane so the two cannot z-fight — which is
+  // a fact about `driftAt`, not about this quad, and it holds only because
+  // `driftAt` is clamped at zero. Read its note before changing either number.
+  // The drift also tapers to zero at the patch's own border, so the join is
+  // invisible.
   quad(
     s,
-    [-PLANE_HX, -0.02, PLANE_Z1],
-    [PLANE_HX, -0.02, PLANE_Z1],
-    [PLANE_HX, -0.02, PLANE_Z0],
-    [-PLANE_HX, -0.02, PLANE_Z0],
+    [-PLANE_HX, PLANE_Y, PLANE_Z1],
+    [PLANE_HX, PLANE_Y, PLANE_Z1],
+    [PLANE_HX, PLANE_Y, PLANE_Z0],
+    [-PLANE_HX, PLANE_Y, PLANE_Z0],
     T_SNOW,
     [0, 1, 0],
   )
@@ -1352,9 +1658,36 @@ function cone(s: Solid, cx: number, y0: number, cz: number, r: number, h: number
 
 type Glow = { pos: number[]; rgba: number[] }
 
-const pushQuad = (g: Glow, a: V, b: V, c: V, d: V, alpha: number) => {
-  for (const q of [a, b, c, a, c, d]) {
-    g.pos.push(q[0], q[1], q[2])
+/**
+ * One quad of light, wound to face `out`.
+ *
+ * The facing is STATED rather than left to vertex order, exactly the way `tri`
+ * states it and for exactly the reason `tri`'s note gives — and this layer is
+ * the proof of that note. Every quad here used to be emitted in whatever order
+ * it was written in, `softMat` and `coreMat` are FrontSide `MeshBasicMaterial`s
+ * like everything else in the scene, and the four HORIZONTAL quads came out
+ * wound face-down. All four were back-face culled, on every frame, in both
+ * themes, since the day they were written.
+ *
+ * Measured at the door, by muting each range's vertex alpha and diffing the
+ * drawing buffer: the two window pools, the deck pool and the door pool
+ * contributed **0 pixels each**. Wound correctly they contribute 7474, 6463,
+ * 4580 and 134706. The vertical bloom quads were always right, which is why the
+ * layer looked like it worked and why nothing in the file ever said otherwise.
+ */
+const pushQuad = (g: Glow, a: V, b: V, c: V, d: V, alpha: number, out: V) => {
+  const ux = b[0] - a[0]
+  const uy = b[1] - a[1]
+  const uz = b[2] - a[2]
+  const vx = c[0] - a[0]
+  const vy = c[1] - a[1]
+  const vz = c[2] - a[2]
+  const nx = uy * vz - uz * vy
+  const ny = uz * vx - ux * vz
+  const nz = ux * vy - uy * vx
+  const [p, q, r, s] = nx * out[0] + ny * out[1] + nz * out[2] < 0 ? [d, c, b, a] : [a, b, c, d]
+  for (const v of [p, q, r, p, r, s]) {
+    g.pos.push(v[0], v[1], v[2])
     // RGB is 1: the hue lives on the material, so a theme change is one colour
     // assignment rather than a buffer rewrite. Only the falloff is baked.
     g.rgba.push(1, 1, 1, alpha)
@@ -1373,6 +1706,7 @@ function buildGlowCore(): Glow {
       [cx + WIN_HW, WIN_Y1, 0.03],
       [cx - WIN_HW, WIN_Y1, 0.03],
       1,
+      [0, 0, 1],
     )
   }
   // The doorway is set back inside the frame, so the open leaf casts a real
@@ -1384,6 +1718,7 @@ function buildGlowCore(): Glow {
     [DOOR_HW, DECK_Y + DOOR_H, -0.06],
     [-DOOR_HW, DECK_Y + DOOR_H, -0.06],
     1,
+    [0, 0, 1],
   )
   return g
 }
@@ -1410,17 +1745,45 @@ function buildGlowSoft(): Glow {
     for (const [scale, alpha] of rings) {
       const w = hw * scale
       const h = hh * scale
-      pushQuad(g, [cx - w, cy - h, dz], [cx + w, cy - h, dz], [cx + w, cy + h, dz], [cx - w, cy + h, dz], alpha)
+      pushQuad(
+        g,
+        [cx - w, cy - h, dz],
+        [cx + w, cy - h, dz],
+        [cx + w, cy + h, dz],
+        [cx - w, cy + h, dz],
+        alpha,
+        [0, 0, 1],
+      )
       dz += 0.006
     }
   }
   for (const sign of [-1, 1]) {
     bloom(sign * WIN_X, (WIN_Y0 + WIN_Y1) / 2, WIN_HW, (WIN_Y1 - WIN_Y0) / 2, 0.045, 1)
-    // what a window puts on the snow in front of it
+    /*
+     * What a window puts on the snow in front of it — and the near end of it is
+     * under the porch deck, deliberately left there.
+     *
+     * The pool runs from z = 0.55, a hand's width off the wall, and the deck is
+     * an opaque box from z = 0 to DECK_Z with its top at DECK_Y; the pool lies
+     * at y = 0.03, so its first metre and a bit is inside that box. `softMat`
+     * has `depthWrite: false` but the depth TEST is on, so the deck simply wins
+     * and those fragments are discarded. Measured at the door: 42% of the left
+     * pool and 47% of the right one never reach the frame.
+     *
+     * That is occlusion doing its job, not a bug — light does not land on snow
+     * that has a deck standing on it, and the pool emerging from under the deck
+     * edge is what the reader sees. It costs six triangles' worth of discarded
+     * fragments and no wrong pixel. What it is NOT is invisible: the numbers are
+     * here so the next person deciding whether the pool should instead START at
+     * the deck's edge is making that call with them, rather than discovering the
+     * overlap and assuming it was a mistake.
+     */
     pool(g, sign * WIN_X, 0.55, 3.1, 0.75, 1.5, 0.3)
   }
   bloom(0, DECK_Y + DOOR_H / 2, DOOR_HW, DOOR_H / 2, 0.045, 1.15)
-  // the deck, then the snow past the steps
+  // The deck, then the snow past the steps. `[0, 1, 0]`: these lie FLAT and are
+  // looked down on, and getting that wrong is what culled every pool in this
+  // layer — see `pushQuad`.
   pushQuad(
     g,
     [-0.85, DECK_Y + 0.02, 0.02],
@@ -1428,6 +1791,7 @@ function buildGlowSoft(): Glow {
     [1.15, DECK_Y + 0.02, DECK_Z],
     [-1.15, DECK_Y + 0.02, DECK_Z],
     0.42,
+    [0, 1, 0],
   )
   pool(g, 0, 2.9, 7.4, 1.35, 3.4, 0.5)
   return g
@@ -1437,6 +1801,12 @@ function buildGlowSoft(): Glow {
  * A warm pool on the snow: a fan of three faceted bands widening away from the
  * cabin and fading to nothing, so the light has a shape on the ground rather
  * than stopping at a line.
+ *
+ * It emits its own vertices rather than going through `pushQuad`, because every
+ * corner carries its own alpha. That means it also has to get its own winding
+ * right, and it did not: wound as written, all three pools faced DOWN and a
+ * FrontSide material culled every one of them. See `pushQuad` for the
+ * measurement.
  */
 function pool(g: Glow, cx: number, z0: number, z1: number, w0: number, w1: number, alpha: number) {
   const bands = 3
@@ -1450,13 +1820,16 @@ function pool(g: Glow, cx: number, z0: number, z1: number, w0: number, w1: numbe
     const wb = w0 + (w1 - w0) * k1
     const aa = alpha * (1 - k0) * (1 - k0)
     const ab = alpha * (1 - k1) * (1 - k1)
+    // Counter-clockwise seen from ABOVE, which is the only side of a thing
+    // lying on the ground that anybody looks at. The order of these six is the
+    // difference between a pool of light and nothing at all.
     for (const q of [
-      [cx - wa, y, za, aa],
+      [cx + wb, y, zb, ab],
       [cx + wa, y, za, aa],
+      [cx - wa, y, za, aa],
+      [cx - wb, y, zb, ab],
       [cx + wb, y, zb, ab],
       [cx - wa, y, za, aa],
-      [cx + wb, y, zb, ab],
-      [cx - wb, y, zb, ab],
     ]) {
       g.pos.push(q[0], q[1], q[2])
       g.rgba.push(1, 1, 1, q[3])
