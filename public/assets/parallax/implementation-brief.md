@@ -21,9 +21,10 @@ Implement the following intentionally small composition:
    For the later sections, use the richer story anchors one at a time: the
    wayfinding post or stepping stones for Story, the footbridge as an alternate
    Story seam, the garden arch near Outro, and the small hillside cross only in
-   Faith.  The richer pine grove is a one-section edge anchor only and must
-   never sit beside the hero lamppost.  Never place the bridge and stepping
-   stones together.
+   Faith.  Use the faceted pine pair as the default tree prop; it is the
+   intended graphic-art treatment.  The richer pine grove is an optional
+   one-section edge anchor only and must never sit beside the hero lamppost.
+   Never place the bridge and stepping stones together.
 3. Use each section's existing style of reveal / parallax.  All movement must
    run through the existing shared frame loop via `useHeroParallax` or
    `useParallax`, and stop cleanly for reduced motion.  No direct

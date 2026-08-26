@@ -41,6 +41,7 @@ two worlds.
 | Mountain ridge | `landscapes/mountain-ridge-dark.png` | `landscapes/mountain-ridge-light.png` | Hero floor, behind the content and model. |
 | Park lamppost | `hero/lamppost-left-dark.png` | `hero/lamppost-left-light.png` | Far-left edge, below navigation, no closer than 30px to the wordmark. |
 | Pine pair | `props/pine-pair-dark.png` | `props/pine-pair-light.png` | A secondary edge prop, never adjacent to the lamppost. |
+| Faceted pine pair | `props/pine-faceted-pair-dark.png` | `props/pine-faceted-pair-light.png` | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
 | Canopy tree | `props/canopy-tree-dark.png` | `props/canopy-tree-light.png` | A distinct, softer silhouette for a later section. |
 | Park bench | `props/park-bench-dark.png` | `props/park-bench-light.png` | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds-dark.png` | `props/bushes-reeds-light.png` | A low foreground cover or section seam. |
@@ -52,11 +53,19 @@ two worlds.
 | Hillside cross | `faith/hillside-cross-dark.png` | `faith/hillside-cross-light.png` | A small Faith-only lower-corner detail, below the verse. |
 | Pine grove | `props/pine-grove-dark.png` | `props/pine-grove-light.png` | A richer edge anchor for one later section; never beside the lamppost. |
 
+The **Faceted pine pair** is the default tree treatment for this kit: it has
+clear illustrated facets and an expressive silhouette without naturalistic
+foliage.  Keep the more painterly `pine-grove` files as an optional variation;
+do not substitute them for the faceted pair by default and never remove either
+family when adding further tree props.
+
 ## Richer-detail family
 
 `wayfinding-post`, `stone-footbridge`, `garden-arch`, `stepping-stones`,
 `hillside-cross`, and `pine-grove` deliberately carry more facets than the
-first foliage props.
+first foliage props.  The faceted pine pair deliberately stays one step
+cleaner than these story anchors: it is detailed graphic art, not a realistic
+painted tree.
 They are the kit's **story anchors**: use one, at a small scale, to suggest a
 place without turning a content section into an illustrated scene.  Their dark
 versions are materially deeper midnight blue; their light partners are paler
