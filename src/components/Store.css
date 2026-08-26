@@ -4,10 +4,31 @@
    the page floor in temperature. The shop is not a mood piece, and a heavy
    scene behind a price is the wrong kind of persuasion.                     */
 
+/* ── the triple, and why it is half tokens and half hexes ─────────────────
+   tokens.css claims a band is the ONLY place its number is written down. It
+   was not: four of these six were that same number typed again, and a nudge
+   to a band would have moved the home page and left this one behind. Each one
+   that has an owner now reads its owner; the two that have none stay literal,
+   because inventing a token for them is a different change.
+
+   --bg2 and not --band-foot, though they are the same number: --band-foot is
+   an ALIAS of --bg2, and this page's ceiling is not the footer. Where a band
+   name would be a lie the underlying token is what to read.
+
+   --band-apps for the floor is the awkward one, and worth naming: this page
+   does NOT sit where Apps sits — the header above says between Faith and the
+   page floor — the floor simply IS that band's number, and --band-apps is its
+   only owner. Rule 2 gives a number one home, so it reads the home it has. If
+   the Store ever wants a floor of its own it gets its own token in tokens.css,
+   not a second hex here.
+
+   --tint-mid has no owner in dark and does in light, which is why this block
+   and the light one below are not each other's mirror. That is the palette as
+   it stands, not an oversight; matching them would move a pixel.           */
 .store {
-  --tint-top: #0b0b10;
+  --tint-top: var(--bg2);
   --tint-mid: #0a0c14;
-  --tint-bot: #08080c;
+  --tint-bot: var(--band-apps);
   min-height: 100vh;
   min-height: 100svh;
   /* The nav sits over the top of the page; without this the kicker starts
@@ -15,10 +36,15 @@
   padding-top: clamp(104px, 12vw, 156px);
 }
 
+/* Read against the dark block: the ceiling has an owner there and none here,
+   the mid has one here and none there. --band-origin is the same coincidence
+   --band-apps is above — this page's middle is not the Origin band, it is that
+   band's number, and that band is its only owner. --bg and not --band-outro
+   for the floor, for the reason the dark block gives. */
 [data-theme='light'] .store {
   --tint-top: #f2f3f7;
-  --tint-mid: #eef0f6;
-  --tint-bot: #f6f6f8;
+  --tint-mid: var(--band-origin);
+  --tint-bot: var(--bg);
 }
 
 .store__grid {

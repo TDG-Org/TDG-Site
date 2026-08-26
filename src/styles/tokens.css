@@ -206,15 +206,38 @@
      art kit's -dark and -light ridges read, so a seam and the PNG beside it
      finally agree.
 
-     94% and not 92 or 96, chosen against a measurement rather than by eye:
-     .card's own face — --surface over its section, the site's quietest plane
-     that is still deliberately visible — is dL* 3.6 in dark and 2.4 in light.
-     94% puts the eight seams at dL* 4.3-6.2 dark and 4.6-4.9 light: above a
-     card face, because a seam is usually masked by --seam-fade below and so
-     paints most of its band at part opacity, and nowhere near the dL* 8-11
-     that 90% gives, which would be eight grey stripes across the page. The
-     two themes land within ~1 of each other, so neither reads louder.
-     Verified as numbers, NOT yet on a screen.                              */
+     94% and not 92 or 96, chosen against a measurement rather than by eye.
+     The anchor is .card's own face — --surface over its section, the site's
+     quietest plane that is still deliberately visible — taken at the quietest
+     it gets across the six banded sections: dL* 3.6 in dark, which is the
+     Outro's and the low end of a tight 3.6-4.6, and 2.4 in light, which is
+     the Apps band's and the low end of a much wider 2.4-5.6.
+
+     94% puts the SIX seams this page actually draws — origin, apps, tools,
+     building, faith, outro — at dL* 5.0-6.1 dark and 4.6-4.8 light: above
+     that anchor in both themes, because a seam is usually masked by
+     --seam-fade below and so paints most of its band at part opacity, and
+     nowhere near the dL* 7.7-10.6 that 90% gives, which would be six grey
+     stripes across the page. Dark runs 0.4 to 1.3 higher than light across
+     the six, so neither reads louder.
+
+     But "above a card face" is a floor in DARK ONLY, and this used to claim
+     it flatly. --surface is a 4.5% white wash in dark, so a card sits a
+     near-constant 3.6-4.6 off whatever band it is on and every seam clears
+     every one of them. In light --surface is OPAQUE, so the distance is only
+     how far the band happens to be from white — 2.4 on apps, 5.6 on tools —
+     and the light seams clear apps, building and the Outro while sitting
+     UNDER the card face on origin, tools and faith. That is a property of an
+     opaque light surface, not of the step, and 94% stands. It is spelled out
+     because a number offered as a calibration has to be re-derivable from
+     what is written beside it, and the flat version was not.
+
+     Six and not eight. base.css declares --seam-fill for #top and .footer
+     too, and this line used to count them; neither renders a `Seam` — the
+     live DOM has exactly six svg.scene__seam — so neither was ever in these
+     numbers, and the hero's band was what dragged the dark range down to 4.3.
+     Recomputed for the six that exist. 94% is unchanged; only the population
+     it is quoted over is. Verified as numbers, NOT yet on a screen.         */
   --seam-step: 94%;
 
   /* A seam that wants to dissolve rather than stop at a line masks itself

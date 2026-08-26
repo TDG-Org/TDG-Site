@@ -255,6 +255,22 @@ stop {
    blends ever snap instead of waving, this indirection is the first suspect,
    and the fix is to state the hexes per theme again rather than to unpick the
    bands.                                                                   */
+
+/* ── two of these eight have no Seam, deliberately ────────────────────────
+   #top and .footer are the ends of the page, and NEITHER draws a `Seam`
+   today: Hero.tsx and Footer.tsx render none, and the live DOM has exactly
+   six `svg.scene__seam` — origin, apps, tools, building, faith, outro. These
+   two are kept so the table has an entry per band for the day one is added,
+   and because .footer's is the only consumer --band-foot has. They are NOT
+   part of the 94% working in tokens.css, which measured the six that exist.
+
+   #top also carries a trap, so read this before you use it. It is not only
+   the hero: About, AppPage, Store and #/dev all give their outer section
+   `id="top"` too, so on those four pages --seam-fill resolves to the HERO
+   band — measured on #/store, `color-mix(in srgb, #030304 94%, #f2f2f5)`,
+   which is not that page's colour and never was. A seam added to one of them
+   mixes its own page's band by hand, the way scene/README.md's "a seam that
+   reaches across a boundary" paragraph shows. Do not trust this line there. */
 #top {
   --seam-fill: color-mix(in srgb, var(--band-hero) var(--seam-step), var(--text));
 }
@@ -296,6 +312,9 @@ stop {
 .outro {
   --seam-fill: color-mix(in srgb, var(--band-outro) var(--seam-step), var(--text));
 }
+/* The other end of the page, and the second of the two with no Seam behind
+   it — see the note above #top. Unlike #top this one has no trap in it: the
+   class is the footer's alone, so the value is right if a seam ever wants it. */
 .footer {
   --seam-fill: color-mix(in srgb, var(--band-foot) var(--seam-step), var(--text));
 }

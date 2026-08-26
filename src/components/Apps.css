@@ -72,6 +72,16 @@
   bottom: 0;
   height: clamp(40px, 5vw, 76px);
   width: auto;
+  /* bushes-reeds-{dark,light}.webp are both 1000x563. Stated so `width: auto`
+     resolves to a WIDTH before the file arrives: this is loading="lazy", so
+     naturalWidth is 0 until then and the element measured 0x72 at 1440px.
+     Nothing shifts on screen — it is absolutely positioned — but
+     `useParallax` takes its drift target from `r.top + r.height / 2` and the
+     clearances above are described as structural, which a zero-width box
+     makes briefly untrue. The bare ratio, not `auto <ratio>`, because the
+     point is the case where there is no intrinsic ratio yet. Re-measure after
+     any art swap: a ratio that disagrees with the file letterboxes it. */
+  aspect-ratio: 1000 / 563;
   opacity: var(--art-far);
 }
 

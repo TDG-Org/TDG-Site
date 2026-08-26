@@ -8,10 +8,18 @@
    behaviour, same keyboard and screen-reader contract, different surface. See
    src/lib/sections.tsx.                                                     */
 
+/* The ceiling and the floor are --band-apps rather than a hex that agrees with
+   it, because "sits where Apps sits" above is a decision and not a
+   coincidence: nudge that band and this page has to come with it. tokens.css
+   says the bands are the ONLY place those numbers are written down, and until
+   this line they were written down here too — rule 2's second half, and the
+   concrete failure it prevents is the home page moving while every app page
+   stays put. --tint-mid is this page's own value, between the two, and has no
+   token to point at; it stays a literal until it has an owner. */
 .appview {
-  --tint-top: #08080c;
+  --tint-top: var(--band-apps);
   --tint-mid: #090a10;
-  --tint-bot: #08080c;
+  --tint-bot: var(--band-apps);
   min-height: 100vh;
   min-height: 100svh;
   /* The nav sits over the top of the page; without this the Back control
@@ -19,10 +27,18 @@
   padding-top: clamp(96px, 11vw, 140px);
 }
 
+/* The floor is the same decision as the dark block's. The CEILING is not: in
+   light this page starts on --bg, the page surface, where in dark it starts on
+   the Apps band. That asymmetry is what the two hexes already said, so it is
+   recorded rather than tidied — making the two themes read the same token here
+   would move a pixel, which this edit may not.
+   --bg and not --band-outro, though the two are the same number: --band-outro
+   is an ALIAS of --bg, and an app page's ceiling is not the Outro. Where a
+   band name would be a lie, the token that owns the number is what to read. */
 [data-theme='light'] .appview {
-  --tint-top: #f6f6f8;
+  --tint-top: var(--bg);
   --tint-mid: #f1f2f6;
-  --tint-bot: #f8f8fa;
+  --tint-bot: var(--band-apps);
 }
 
 .appview__grid {

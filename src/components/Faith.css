@@ -58,6 +58,18 @@
      is solid in the file, so the 8px that goes below the edge costs nothing. */
   bottom: -8px;
   height: calc(var(--faith-pad-y) - 36px);
+  /* The 3:2 the comment above relies on, stated rather than waited for.
+     hillside-cross-{dark,light}.webp are both 1000x667, and the file is
+     loading="lazy", so until it arrives naturalWidth is 0 and this measured
+     0x114 at 1440px — the "171x114 in the corner" above was true only after
+     the load. Nothing moves on screen either way, the layer being absolutely
+     positioned, but `useParallax` takes its drift target from
+     `r.top + r.height / 2` and would aim at a zero-width box first. The bare
+     ratio, not `auto <ratio>`: the case being fixed is the one with no
+     intrinsic ratio yet. Re-measure if the art is ever redrawn — a ratio that
+     disagrees with the file letterboxes it, and here that would be visible on
+     a cross. */
+  aspect-ratio: 1000 / 667;
   opacity: var(--art-far);
 }
 

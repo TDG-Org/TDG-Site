@@ -94,12 +94,33 @@
     right: -5vw;
     bottom: 60px;
     width: min(26vw, 560px);
+    /* fog-veil-{dark,light}.webp are both 1600x533, and the same reasoning as
+       the stones below: loading="lazy" means naturalHeight is 0 until the file
+       lands, and this measured 374x0 at 1440px until then. It is a `ThemedArt`
+       like the stones, so `useParallax` reads `r.top + r.height / 2` on it and
+       a flat box puts the drift target 62px off where the loaded layer wants
+       it — the smaller of the two errors on this section, the stones being
+       97px — and the clearances the comment above calls structural are only
+       true once the file has arrived. Bare ratio, not `auto <ratio>`. */
+    aspect-ratio: 1600 / 533;
     opacity: var(--art-far);
   }
   .origin__stones {
     right: -2vw;
     bottom: -30px;
     width: min(24vw, 500px);
+    /* stepping-stones-{dark,light}.webp are both 1000x563. Stated so the box
+       has a HEIGHT before the file arrives: these are loading="lazy", so
+       naturalHeight is 0 until then and the element measured 346x0 at 1440px.
+       Nothing shifts on screen when it lands — the art is absolutely
+       positioned — but `useParallax` takes its drift target from
+       `r.top + r.height / 2`, so it aims at a flat box and then re-aims when
+       the image loads, which also makes the clearances the comment above
+       calls invariants briefly untrue. Not `aspect-ratio: auto <ratio>`: the
+       bare ratio is what holds before there is an intrinsic one to prefer.
+       Re-measure after any art swap; a ratio that disagrees with the file
+       would letterbox it silently. */
+    aspect-ratio: 1000 / 563;
     opacity: var(--art-mid);
   }
 }
