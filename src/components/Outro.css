@@ -1,14 +1,49 @@
 .section.outro {
   --outro-pad-x: clamp(18px, 4vw, 40px);
-  /* .outro__makers is 880px wide at most and centred inside this section's
-     content box, so this expression IS its left edge, measured from the same
-     padding box an absolutely positioned child is measured from. The arch is
-     placed against it rather than against a number somebody eyeballed, which
-     is what makes "never over the copy" a property of the CSS instead of a
-     claim about two screenshots. */
-  --outro-gutter: max(var(--outro-pad-x), calc((100% - 880px) / 2));
+  /* ── where the arch is allowed to reach ─────────────────────────────────
+     The old bound was `.outro__makers`' own left edge — the 880px block the
+     copy sits inside — and it is far too conservative, because that block is
+     mostly empty margin: at 1440 it starts at x275 and the first ink in it is
+     at x455. Standing the arch to the left of x275 left a 216px slice in a
+     gutter and nothing else, which is why it had to be hidden below 1119px.
+
+     This is the real bound, and it is exact rather than measured. `.outro__copy`
+     is `max-width: 540px; margin: 0 auto` inside a block that is itself
+     centred, so wherever that block's edges are, the copy's own left edge is
+
+         padX + (100% - 2 x padX - blockW)/2 + (blockW - 540)/2  =  (100% - 540)/2
+
+     for every block width at or above 540 — the block width cancels out
+     completely. So `50% - 270px` IS the leftmost edge of the copy's box at
+     every viewport this site supports, and the arch is placed 40px short of it.
+     The box, not the ink: the text inside is centred, so its box is a strict
+     superset and clearing the box clears the words by more.
+
+     The heading and the kicker sit in the wider 880px block, but both are
+     centred too and neither is anywhere near this: at 1440 the heading's ink
+     starts at x509 against the copy's x455, and it would have to grow to 620px
+     wide before it reached the arch.
+
+     It is stated as an INSET FROM THE RIGHT, `50% + 270px`, because that is
+     what the `right` property below wants and the conversion is the one place
+     this can go wrong. Written as the left-hand coordinate — `50% - 270px` —
+     and then fed to `right`, it puts the arch's edge 540px on the WRONG side
+     of the copy and straight across it, which is exactly what it did until it
+     was measured: ink x536..936 against copy x445..985. Percentages in `right`
+     resolve against the containing block's WIDTH, so the two forms are both
+     valid CSS and only one of them is this distance. */
+  --outro-copy-inset: calc(50% + 270px);
+  --outro-arch-gap: 40px;
+  --outro-arch-w: clamp(230px, 29vw, 420px);
   background-color: var(--bg);
-  padding: clamp(72px, 9vw, 110px) var(--outro-pad-x);
+  /* Taller than it was, and the extra is what the arch stands in. At
+     clamp(72px, 9vw, 110px) this section was 474px tall at 1440 and an arch
+     that fitted inside it was 316px wide — barely more than the one being
+     replaced. At 11vw it is 571px, the arch is 418px wide and 626px tall, and
+     it fits between the seam and the section's own bottom edge with nothing
+     cropped. The air also belongs here on its own account: this is the last
+     thing before the GitHub strip and the footer. */
+  padding: clamp(88px, 11vw, 168px) var(--outro-pad-x);
 }
 
 /* Same wrapper trick as Tools.css — see there for why the drift is on a
@@ -61,32 +96,71 @@
   );
 }
 
-/* The threshold. It stands BESIDE the copy, never around it: its right edge
-   lands 18px short of --outro-gutter, which is the makers note's own left
-   edge, and whatever will not fit runs off the page and is taken by the
-   section's `overflow: hidden`. At 1440px the whole arch fits in the gutter
-   with 18px to spare; narrower, you see the near column and the spring of the
-   crown, which is what a threshold looks like from inside it.
+/* ── the threshold ─────────────────────────────────────────────────────────
+   It stands BESIDE the copy, never around it — the kit is explicit that the
+   arch is a far-edge threshold and never a content container. Its right edge
+   lands `--outro-arch-gap` short of `--outro-copy-inset`, which is the exact
+   left edge of the copy's own box at every width (the derivation is up at the
+   top of this file), and whatever will not fit runs off the left of the page
+   and is taken by the section's `overflow: hidden`.
+
+   ## What changed, and why it is not just a bigger number
+
+   The arch was 150–230px wide and pinned to the left of an 880px block that is
+   mostly empty margin, so it lived in a gutter and had to be hidden below
+   1119px. Placing it against the copy's real edge instead frees roughly 180px
+   at 1440, and the taller section frees the height to match: at 1440 it is now
+   418px wide and 626px tall, fully visible, against a 216x324 slice before.
+   That is the single largest piece of art on the page and it is the last thing
+   you walk through, which is the right place for it.
+
+   ## Nothing is cropped, at any width, and that is arithmetic
+
+   `garden-arch` is 1000x1500 in the .webp the site loads and its ink fills
+   y 2.5%..96.9%, so a box `w` wide is `1.5w` tall. The section is
+   `2 x padding + 254px` of makers note, and `bottom: -76px` beds the feet
+   below the edge. The top of the box therefore sits at
+
+       section height + 76 - 1.5w
+
+   which is +21px at 1440, +36px at 1920, +55px at 1280 and +110px at 1024 —
+   positive everywhere, so the crown never meets the section's top edge and
+   there is no cut to hide. Where it comes closest it is also behind the seam,
+   which is 79–90px tall there.
+
+   ## Why 76px of bedding
+
+   -0.075 can lift this layer by 57px at 1440x900 (`useParallax` moves a layer
+   by at most (vh + h)/2 x |factor| while any part of it is on screen), and an
+   arch whose feet are off the ground reads as a sticker. 76px keeps them under
+   the edge with 19px in hand at the worst frame, and 76px of a 626px image is
+   the base rocks and the lower lip of the plinth — the part that is drawn to
+   be cropped.
 
    The glow around the stones is painted into the file's own alpha. No
    drop-shadow, no blur, no filter here. */
 .outro__arch {
-  right: calc(100% - var(--outro-gutter) + 18px);
-  /* Bedded into the boundary rather than resting on it: 0.04 can lift the arch
-     24px on a 1200px viewport, and an arch whose feet are off the ground reads
-     as a sticker. 16px of a 250-345px image is the base rocks' lower lip. */
-  bottom: -16px;
-  width: clamp(150px, 15vw, 230px);
+  right: calc(var(--outro-copy-inset) + var(--outro-arch-gap));
+  bottom: -76px;
+  width: var(--outro-arch-w);
+  /* 1000x1500 is the .webp the site loads, not the 1024x1536 PNG source.
+     Stated because this is a lazy image: until it arrives `naturalWidth` is 0,
+     a `height: auto` box measures zero, and the arithmetic above would briefly
+     be describing a box that is not there. */
+  aspect-ratio: 1000 / 1500;
   opacity: var(--art-near);
 }
 
-@media (max-width: 1119px) {
-  /* Below this the makers note has grown into the gutter and there is nothing
-     left to stand an arch in — a 40px slice of one is a smudge, not a
-     threshold. The kit's rule 3 already takes the peripheral props off at
-     640px; an arch needs more room than that to still read as an arch, so it
-     goes earlier. This is the one beat of the four that does not survive to
-     mobile; the seam carries the boundary at every width. */
+@media (max-width: 839px) {
+  /* The bound above is a fraction of the viewport, so the visible slice of the
+     arch shrinks with it: 132px at 900px wide, 112px at 860, 82px at 800. Below
+     about 100px you are looking at the outer face of one column with no crown
+     over it, which is a stone stripe rather than a threshold — so it goes at
+     840. That is 280px lower than the 1119px this used to need, because the
+     arch is no longer squeezed into an 880px block's margin.
+
+     This is still the one beat of the four that does not survive to mobile;
+     the seam carries the boundary at every width. */
   .outro__arch {
     display: none;
   }

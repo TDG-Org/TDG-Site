@@ -1,11 +1,25 @@
+/* ── the floor: the band of section under the pills ────────────────────────
+   Named here AND applied here so the two cannot drift apart. The whole scene
+   layer is positioned FROM this number, so a padding that quietly moved
+   somewhere else would put art through the pills with nothing to catch it.
+
+   It used to be `.section`'s own `clamp(72px, 9vw, 130px)`, and that is why
+   the pines were 78–132px wide. The band is the only place a layer can be:
+   `.card` and `.building__pill` both paint `var(--surface)`, which in the dark
+   theme is `rgba(255,255,255,0.045)` — 95% transparent — so art parked behind
+   them is read THROUGH them rather than hidden by them. (In light `--surface`
+   is `#ffffff` and it would be hidden; the rule has to hold in both themes, so
+   the dark one sets it.) A bigger floor is what buys scale, and this section is
+   the page's quiet contrast anchor so it takes the smallest of the four. */
 .section.building {
-  /* base.css's own .section floor, named here AND applied here so the two
-     cannot drift apart. The scene layer is positioned FROM this number — the
-     pines and the fog are sized to stay under it — so a padding that quietly
-     moved somewhere else would put art through the pills with nothing to
-     catch it. One name, one value, both uses. */
-  --building-floor: clamp(72px, 9vw, 130px);
-  --building-pine-w: clamp(78px, 9vw, 132px);
+  --building-floor: clamp(180px, 18vw, 300px);
+  --building-pine-w: clamp(160px, 19vw, 340px);
+  /* The distance from the pills' bottom edge to the TOP of the pines' ink,
+     which is what the `bottom` below is written to produce. Drift comes out of
+     it, and the worst case is not the widest window: -0.06 is worth 39px at
+     1440x900 but 50px on a 900x1400 one, where the clamp is at its floor. 70px
+     left 20px there once it was measured, so the floor is 84px. */
+  --building-pine-clear: clamp(84px, 8vw, 130px);
   padding-bottom: var(--building-floor);
 }
 
@@ -65,20 +79,26 @@
    ends are dealt with rather than hoped about:
 
    - object-fit crops a band out of the MIDDLE of the file instead of squashing
-     a 3:1 image into a 10:1 box. At 55% the file's own bottom edge lands below
-     the box at every width the site supports — it is 126px under it at 1440px
-     and still 9px under it at 320px — and the box itself sits 30px below the
-     section, so `overflow: hidden` takes the cut away entirely.
+     a 3:1 image into a 6:1 box. At 55% the file's own bottom edge lands below
+     the box at every width the site supports — re-measured against the taller
+     floor, it is 106px under it at 1440px, 198px at 1920px and still 18px
+     under it at 320px — and the box itself sits 44px below the section, so
+     `overflow: hidden` takes the cut away entirely.
    - the mask dissolves the top, which is where the speckle is.
 
-   Height is the floor exactly, pushed down by 30px, so the top of the box is
-   30px clear of where the pills stop at every width. Nothing here recolours a
-   pixel; the -dark and -light files are separate artwork.                    */
+   Height is the floor exactly, pushed down by 44px, so the top of the box is
+   44px clear of where the pills stop at every width — and 34px of that is left
+   after the 10px of drift +0.018 can carry at 1440x900. It was 30px, which
+   measured 15px of clearance once the pills' own ink box was the thing being
+   measured against rather than their row. The mask means the first 58% of the
+   box paints almost nothing anyway, so the real mist starts far below that
+   edge. Nothing here recolours a pixel; the -dark and -light files are
+   separate artwork.                                                         */
 .building__fog {
   left: -2%;
   width: 104%;
   height: var(--building-floor);
-  bottom: -30px;
+  bottom: -44px;
   object-fit: cover;
   object-position: 50% 55%;
   opacity: var(--art-far);
@@ -87,18 +107,59 @@
 }
 
 /* The faceted pair, not pine-grove: the grove is painterly green and brown and
-   does not speak this site's flat graphic language.
+   does not speak this site's flat graphic language. Not `tall-pine` either —
+   the kit says to use that one alone, and it is used alone two sections up in
+   #apps, where a tree cropped by the frame is the point. Here the trees are
+   meant to be across the water.
 
    Drawn at a tree's full height and cropped by the section's own bottom edge,
-   so what you see is crowns rising from behind the bank. That crop is also the
-   guarantee: the top of the box is `floor - 24px` at every width by
-   construction, so it is 24px clear of the pills whether the pills wrap to one
-   row or three. 1.5 is the file's own 1024x1536.                             */
+   so what you see is crowns rising from behind the bank. The file is
+   1000x1500 in the .webp the site loads and its ink runs y 1.6%..98.3% —
+   measured off the source PNG's alpha, not eyeballed — so for a box `w` wide:
+
+       element height = 1.5w
+       ink top above the element's bottom = 0.984 x 1.5w = 1.476w
+
+   and `bottom: floor - clear - 1.476w` puts the crowns exactly `clear` below
+   the pills at every width, whether the pills wrap to one row or three. At
+   1440 that is 158px of visible tree, 199px of ink wide — where the first pass
+   showed a 132px-wide box 24px clear of the pills, and measured 132x0 in the
+   live DOM because a lazy image with `height: auto` has no height until it
+   arrives. Hence the `aspect-ratio`. */
 .building__pines {
-  right: clamp(6px, 2.5vw, 44px);
+  right: clamp(-40px, -2vw, 6px);
   width: var(--building-pine-w);
-  bottom: calc(var(--building-floor) - 24px - var(--building-pine-w) * 1.5);
+  /* 1000x1500 is the .webp, not the 1024x1536 PNG source. Stated so the box is
+     the right size before a lazy image arrives; re-measure after any art swap,
+     because a ratio that disagrees with the file letterboxes it. */
+  aspect-ratio: 1000 / 1500;
+  bottom: calc(var(--building-floor) - var(--building-pine-clear) - var(--building-pine-w) * 1.476);
   opacity: var(--art-mid);
+}
+
+/* Guardrail 7 of the kit, and the width has a reason: 640 is where this
+   section's feature card drops to one column and the pills wrap to three rows,
+   which is where it is tallest and its bottom band is the only air left in it.
+   Measured cost of keeping them: at 375px the visible crowns would be 110px of
+   a 240px tree with 70px of clearance and 43px of drift, which is a spike
+   rather than a treeline. The fog stays — it is full width, it has no
+   neighbour to collide with, and a bank of mist at 375px is still a bank of
+   mist. The floor goes back to `.section`'s own value in the same breath, so
+   the page is not holding 180px open for art it is not drawing. */
+@media (max-width: 640px) {
+  .section.building {
+    --building-floor: clamp(72px, 9vw, 130px);
+  }
+  .building__pines {
+    display: none;
+  }
+  /* The push-down is a fixed 44px and the band here is only 72px, so the mist
+     would be a 28px strip. 26px is the same trade one size down: the mask still
+     hides the file's speckled top edge, and +0.018 is worth 8px of drift at
+     375x812, so 18px of the clearance survives. */
+  .building__fog {
+    bottom: -26px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

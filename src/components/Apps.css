@@ -18,81 +18,184 @@
 }
 
 /* ── the treeline ──────────────────────────────────────────────────────────
-   This section's beat in the page's one walk, and the quietest of the six on
-   purpose: `#apps` is `.section--flat`, the contrast anchor between two
-   blended sections, so the art here is meant to be less than its neighbours'
-   rather than more. See the note beside these in Apps.tsx.
+   This section's beat in the page's one walk, and still the quieter of the two
+   flat anchors on purpose: `#apps` is the contrast anchor between two blended
+   sections, so the art here is meant to be less than its neighbours' rather
+   than more. See the note beside these in Apps.tsx.
 
-   ## Why the heights are clamps against the section's own padding
+   ## The floor is what makes the art big, and why the art cannot go anywhere else
 
-   The rule is that the art never touches the grid, the heading, the lede or
-   the nudge, and "never" has to be structural rather than checked once at one
-   width. Both props are anchored to the section's BOTTOM edge, and the
-   section's own `padding-bottom` is `clamp(72px, 9vw, 130px)` from base.css.
-   Every one of the three terms below is smaller than the matching term above,
-   so the prop is shorter than the padding at every viewport width there is —
-   it physically cannot reach the bottom of the grid. That is rule 6: one set
-   of numbers taken from the parent, not a measurement taken at 1440px and
-   hoped for elsewhere.
+   Everything in the scene layer is positioned FROM `--apps-floor`, the band of
+   section below the last card row. That is not a stylistic choice about where
+   scenery looks nice; it is the only place a layer can be without being read
+   through the copy. `.card` is `background-color: var(--surface)`, which in the
+   dark theme is `rgba(255,255,255,0.045)` — a card is 95% TRANSPARENT, so a
+   prop parked behind the grid is not hidden by the grid, it shows through it,
+   underneath the body copy. (In light `--surface` is `#ffffff` and it would be
+   hidden. The rule has to be true in both themes, so the dark one sets it.)
 
-   ## Why both are `--art-far` and neither has a filter
+   So the floor grew from `clamp(72px, 9vw, 130px)` to `clamp(200px, 20vw,
+   340px)`, and that is where the scale came from: 173px of visible pine and
+   156px of reeds at 1440, where the first pass had a 116px-tall pine pair and
+   a 76px strip of reeds tucked into the two corners.
 
-   `--art-far` is the quiet end of the kit's range in both themes, which is
-   where a contrast-anchor section belongs. The number is a token because the
-   restraint of this kit is one decision for the whole page; writing 0.5 here
-   is how a page ends up loud in one band and invisible in the next. And
-   nothing recolours a pixel: `ThemedArt` swaps the -dark and -light artwork,
-   which are separate drawings, and a `filter: invert()` over one of them would
-   undo the choice the illustrator already made.                            */
+   ## The clearances are arithmetic
 
+   Each rule below sets `bottom` to `floor - clear - <ink top offset>`, where
+   the ink offset comes from the file's own alpha channel, measured rather than
+   guessed. The result is that the TOP of each prop's ink sits exactly `clear`
+   below the grid's bottom edge at every width there is — whatever the copy
+   wraps to, whatever the grid's column count does, and whatever the clamps
+   resolve to. Worst-case drift is then subtracted from that clearance and
+   checked, not hoped about: `useParallax` moves a layer by at most
+   (vh + h)/2 x |factor| while any part of it is on screen.
+
+   ## Opacity, and no filter
+
+   Tokens, never a number: the restraint of this kit is one decision for the
+   whole page, and seven sections each guessing it is how a page ends up loud
+   in one band and invisible in the next. `--art-mid` for the pine, which is
+   this section's near plane — and `--art-mid` rather than the `--art-near`
+   #tools gives its foreground, because this is the flat contrast anchor and
+   has to stay the quieter of the two. `--art-far` for the reeds, which are
+   across the clearing. And nothing recolours a pixel — `ThemedArt` swaps the
+   -dark and -light artwork, which are separate drawings, and a
+   `filter: invert()` over one of them would undo the choice the illustrator
+   already made.                                                             */
+
+.section.apps {
+  --apps-floor: clamp(200px, 20vw, 340px);
+  --apps-pine-w: clamp(200px, 26vw, 460px);
+  /* The near plane carries the section's biggest factor and its pointer sway,
+     and both come out of this clearance. The worst case is not the widest
+     window — drift scales with the LAYER's height as well as the viewport's,
+     and this layer is 1.5x its own width: -0.08 is worth 59px at 1440x900 but
+     70px on a 900x1400 one, where the clamp sits on its floor. So the floor is
+     100px and not 8vw's 72. */
+  --apps-pine-clear: clamp(100px, 8vw, 130px);
+  /* The reeds sit further back, so they clear by LESS and rest higher up the
+     band — a far thing sits high on the picture plane. +0.035 is worth 19px at
+     1440x900, so most of this is real clearance rather than drift budget. */
+  --apps-reed-w: clamp(220px, 24vw, 440px);
+  --apps-reed-clear: clamp(80px, 7vw, 115px);
+  padding-bottom: var(--apps-floor);
+}
+
+/* Same wrapper trick as Tools.css and Building.css: the drift goes on a
+   zero-height box because `useParallax` is typed to HTMLElement and `Seam`
+   takes no ref, and no height means the hook reads the boundary's own distance
+   from the viewport centre. See Tools.css for the long version. */
+.apps__seam-drift {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: translate;
+}
 .apps__seam {
   /* base.css sets --seam-fill for #apps, next to the band tints it has to
      agree with. Do not restate the colour here — see scene/README.md. */
   color: var(--seam-fill);
 }
 
-/* The structural anchor. Right edge, small, bottom-anchored, and running off
-   the edge rather than ending in mid-air inside the shell — which is what
-   `max-width: none` on `.scene__art` is for. The section is `overflow: hidden`
-   so nothing it overhangs can scroll the page sideways. */
-.apps__pines {
-  right: 0;
-  bottom: 0;
-  height: clamp(64px, 8vw, 116px);
-  width: auto;
-  opacity: var(--art-far);
+/* ── the pine: the structural anchor, and the near plane ───────────────────
+   `tall-pine` is 1000x1500 in the file the site loads and its ink runs
+   y 0.3%..99.9% — it fills its own frame top to bottom, which is what makes it
+   the piece to use when a tree should be cropped by the frame rather than
+   stood on a lawn, and why the kit says to use it alone. So for a box `w`
+   wide:
+
+       element height = 1.5w
+       ink top above the element's bottom = 0.997 x 1.5w = 1.4955w
+
+   and `bottom: floor - clear - 1.4955w` puts the crown exactly `clear` below
+   the grid at every width there is. At 1440 that is 173px of tree, 313px of
+   ink wide, with the other three quarters of the drawing below the section's
+   own edge — where the first pass had a 116px-tall whole pine pair sitting in
+   a corner.
+
+   Drift at -0.08 is 59px at 1440x900 and 70px on a 900x1400 window, plus 5px
+   of pointer sway, against 100–130px of clearance. The sway is on the wrapper
+   and the drift on the <img>, one writer per element — Apps.tsx's `useSway`
+   has the reasoning, and the wrapper is the art's own box rather than the
+   section so `will-change` promotes a few hundred pixels and not a viewport.
+
+   Running off the right edge is deliberate and safe: the section is
+   `overflow: hidden`, which is also what `max-width: none` on `.scene__art` is
+   there to be used with. Measured at 320/375/640/768/900/1024/1440/1920,
+   `documentElement.scrollWidth` equals `clientWidth` at every one. */
+.apps__pine-sway {
+  position: absolute;
+  right: clamp(-90px, -6vw, -20px);
+  width: var(--apps-pine-w);
+  /* Stated rather than taken from the file, because these are lazy images:
+     until one arrives `naturalWidth` is 0, a `height: auto` box measures zero,
+     and every clearance described above would briefly be describing a box that
+     is not there. Re-measure after any art swap — a ratio that disagrees with
+     the file letterboxes it. */
+  aspect-ratio: 1000 / 1500;
+  bottom: calc(var(--apps-floor) - var(--apps-pine-clear) - var(--apps-pine-w) * 1.4955);
+  pointer-events: none;
+  will-change: translate;
+}
+.apps__pine {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--art-mid);
 }
 
-/* Optional low foliage, opposite corner, shorter again. It drifts where the
-   pines do not: a prop anchored to an edge reads as part of the place, and
-   giving every layer its own drift is how a page starts to feel like it is
-   sliding. The factor is small enough that it never leaves its own band. */
+/* ── the reeds: low cover across the clearing, and the far plane ───────────
+   `bushes-reeds` is 1000x563 and its ink runs y 10.2%..90.2%, so
+
+       element height = w / 1.7762 = 0.563w
+       ink top above the element's bottom = 0.898 x 0.563w = 0.5056w
+
+   Smaller than the pine, and its ink BOTTOM lands about 30px above the
+   section's own edge rather than running off it — a thing at a distance rests
+   on a ground line inside the picture, where the near thing walks out of the
+   bottom of it. Its factor is positive against the pine's negative, so the two
+   planes travel in opposite directions, which is the whole depth read in this
+   section. 19px of drift at 1440x900 against 115px of clearance. */
 .apps__reeds {
-  left: 0;
-  bottom: 0;
-  height: clamp(40px, 5vw, 76px);
-  width: auto;
-  /* bushes-reeds-{dark,light}.webp are both 1000x563. Stated so `width: auto`
-     resolves to a WIDTH before the file arrives: this is loading="lazy", so
-     naturalWidth is 0 until then and the element measured 0x72 at 1440px.
-     Nothing shifts on screen — it is absolutely positioned — but
-     `useParallax` takes its drift target from `r.top + r.height / 2` and the
-     clearances above are described as structural, which a zero-width box
-     makes briefly untrue. The bare ratio, not `auto <ratio>`, because the
-     point is the case where there is no intrinsic ratio yet. Re-measure after
-     any art swap: a ratio that disagrees with the file letterboxes it. */
+  left: clamp(-80px, -5vw, -16px);
+  width: var(--apps-reed-w);
   aspect-ratio: 1000 / 563;
+  bottom: calc(var(--apps-floor) - var(--apps-reed-clear) - var(--apps-reed-w) * 0.5056);
   opacity: var(--art-far);
 }
 
-/* Guardrail 7 of the kit: the peripheral props come off at 640px. Both, not
-   just the pines — at one column this section is very tall and its bottom
-   padding is the only air left in it, and the art is what disappears first
-   when vertical space runs out. */
+/* Guardrail 7 of the kit: the peripheral props come off at 640px. Both, and
+   this is the width for a reason rather than because the last pass used it —
+   640 is where this grid drops to one column, which is where the section is at
+   its tallest and its bottom band is the only air left in it. Below it the
+   floor would be 200px of empty page held open for art that is not being
+   drawn, so the floor goes back to `.section`'s own value in the same breath.
+   And once it does, the clearances below exceed the whole band — the pine's
+   100px floor alone is more than the 72px of padding left at 375px — so there
+   is no version of this that both fits and is worth looking at. */
 @media (max-width: 640px) {
-  .apps__pines,
+  .section.apps {
+    --apps-floor: clamp(72px, 9vw, 130px);
+  }
+  .apps__pine-sway,
   .apps__reeds {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Every hook here resolves to a zero translate at motionIntensity 0 —
+     `useParallax` by construction, `useSway` because it multiplies by `mi`,
+     and `usePointer` returns 0,0 as well — so all three layers rest exactly
+     where they composed, visible and still. The compositor hints would be
+     promoted layers paid for and never used. Same trade as scene/Scene.css
+     makes for the art. */
+  .apps__seam-drift,
+  .apps__pine-sway {
+    will-change: auto;
   }
 }
 

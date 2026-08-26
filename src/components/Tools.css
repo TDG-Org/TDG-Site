@@ -1,7 +1,37 @@
-/* Extra bottom padding keeps every card clear of the neon band. */
+/* ── the floor: the band of section under the last card row ────────────────
+   One name, one value, and everything in the scene layer is positioned FROM
+   it, the way Building.css does it. It is the only place on this page big art
+   can go, and that is a structural fact rather than a preference:
+   `.card` is `background-color: var(--surface)`, which in the dark theme is a
+   4.5% white wash — so a card is 95% TRANSPARENT and a layer parked behind the
+   grid is not hidden by it, it is read through it, directly under the copy.
+   (In light `--surface` is `#ffffff` and it would be hidden; the rule has to
+   hold in both themes, so it is the dark one that sets it.)
+
+   So the floor is what buys scale. It was 120–190px, which is why the bridge
+   was 132px wide and read as a postage stamp; at 210–380px the same bridge is
+   46vw with 90–170px of clearance above its highest ink, and the boulders have
+   somewhere to be. Every art rule below subtracts its clearance from this
+   number, so "never over a card" is arithmetic and not a screenshot.
+
+   The extra height also keeps every card clear of the neon band, which is what
+   this padding was originally for. */
 .section.tools {
+  --tools-floor: clamp(210px, 22vw, 380px);
+  /* The bridge, and its clearance from the grid above it. The clearance is the
+     distance from the grid's bottom edge to the TOP of the bridge's ink, which
+     is what the `bottom` below is written to produce. */
+  --tools-bridge-w: clamp(240px, 46vw, 760px);
+  --tools-bridge-clear: clamp(90px, 10vw, 170px);
+  /* The boulders sit lower and nearer, so they clear by more: they carry the
+     biggest factor in the section and the only pointer sway, and both of those
+     are spent out of this number. The floor is 126px rather than 110 because
+     the worst case is not the widest window — -0.115 is worth 69px at 1440x900
+     and 91px on a 900x1400 one, where the clamp is sitting on its floor. */
+  --tools-rock-w: clamp(200px, 27vw, 480px);
+  --tools-rock-clear: clamp(126px, 13vw, 220px);
   padding-top: clamp(72px, 9vw, 120px);
-  padding-bottom: clamp(120px, 14vw, 190px);
+  padding-bottom: var(--tools-floor);
 }
 
 .tools__sun,
@@ -212,12 +242,14 @@
 
 /* ── the scene layer ───────────────────────────────────────────────────────
    Beat four of the walk: you cross a stone footbridge. Origin, three sections
-   up, is already a path of stepping stones, so this bridge is kept small and
-   far — a bridge on the horizon rather than a bridge you are standing on —
-   because restating that beat at full size would collapse two stops of the
-   walk into one. The kit's README is explicit that the footbridge and the
-   stepping stones are used instead of each other, and three sections is what
-   buys them both a place.                                                   */
+   up, is already a path of stepping stones, and the kit's README is explicit
+   that the footbridge and the stepping stones are used instead of each other —
+   three sections is what buys them both a place.
+
+   Two layers, which is what a foreground and a background need: the bridge is
+   the structural anchor and the boulder cluster is the low near cover the
+   kit's guardrail 8 allows beside one. Nothing else goes in here; a third
+   piece would be an illustrated scene rather than a place suggested.        */
 
 /* The seam's drift is on a wrapper, not on the <svg>: useParallax is typed to
    HTMLElement and Seam takes no ref, and a wrapper is also where the drift can
@@ -248,27 +280,112 @@
   color: var(--seam-fill);
 }
 
-/* The bridge's box lives ENTIRELY inside this section's own bottom padding —
-   the band under the last card row — which is why it can never reach a card
-   whatever the copy wraps to. Every term is vw, the same unit padding-bottom
-   is in, so the clearance holds at every width instead of at the two widths
-   somebody happened to look at: bottom + width / 1.767 stays under
-   clamp(120px, 14vw, 190px) from 320px up. 1.767 is the file's own 1673x947.
-   --art-far, and drawn first, because the brief for this section is that the
-   art is the quietest thing in it. */
+/* ── the bridge ────────────────────────────────────────────────────────────
+   46vw wide and running off the left edge, where it used to be 132px tucked
+   into a corner. At 1440 that is 642px of stone and water, 173px of it above
+   the section's bottom edge with the rest cropped by it, which is what puts
+   you level with the water instead of looking down at a model of a bridge.
+
+   ## The clearance is arithmetic, not a screenshot
+
+   `stone-footbridge` is 1600x900 in the file the site loads, and its ink —
+   measured off the source PNG's alpha channel, not eyeballed — occupies
+   y 26.5%..80.0% of the frame. So for a box `w` wide:
+
+       element height   = w / 1.7778  = 0.5625w
+       ink top    above the element's bottom = 0.735 x 0.5625w = 0.4134w
+       ink height                            = 0.535 x 0.5625w = 0.3009w
+
+   Setting `bottom` to `floor - clear - 0.4134w` therefore puts the top of the
+   INK exactly `clear` below the grid at every width there is, whatever the
+   copy wraps to and whatever `w` resolves to. The ink's bottom lands below the
+   section's own edge, so the water is cropped rather than ending in mid-air.
+
+   Worst-case drift is added on top of that and it still fits: `useParallax`
+   can move a layer by at most (vh + h)/2 x |factor| while any part of it is on
+   screen, which at 1440x900 is 29px against 144px of clearance, and 47px
+   against the same 144 on a 1400px-tall window.
+
+   `--art-mid`, not `--art-far`: at this size the far end of the range leaves
+   it a smear, and it is no longer the quietest thing in the section — the seam
+   above it is. Nothing recolours a pixel; -dark and -light are separate
+   drawings. */
 .tools__bridge {
-  left: clamp(8px, 3vw, 56px);
-  bottom: clamp(28px, 3.2vw, 44px);
-  width: clamp(96px, 9.6vw, 132px);
-  opacity: var(--art-far);
+  left: clamp(-72px, -4vw, -12px);
+  width: var(--tools-bridge-w);
+  /* Stated rather than inherited from the file, because these are lazy images:
+     until one arrives `naturalWidth` is 0, a height:auto box measures 0, and
+     every clearance below would be briefly describing a box that is not there.
+     1600x900 is the .webp the site actually loads. */
+  aspect-ratio: 1600 / 900;
+  bottom: calc(var(--tools-floor) - var(--tools-bridge-clear) - var(--tools-bridge-w) * 0.4134);
+  opacity: var(--art-mid);
+}
+
+/* ── the boulders: the near shore ──────────────────────────────────────────
+   The nearest layer on this section and the only one on the page that follows
+   the cursor. `boulder-cluster` is 1000x750 and its ink runs y 28.7%..99.9% —
+   it is drawn to be cropped by the bottom of a frame — so:
+
+       element height = 0.75w
+       ink top above the element's bottom = 0.712 x 0.75w = 0.535w
+
+   and the same construction as the bridge puts its ink top `--tools-rock-clear`
+   below the grid at every width. That clearance is bigger than the bridge's
+   because more is spent out of it here: 66px of scroll drift at 1440x900, and
+   7px of pointer sway on top, leaving 115px.
+
+   The sway is on the wrapper and the drift on the <img>, one writer per
+   element — Tools.tsx's `useSway` has the reasoning. The wrapper is the art's
+   own box rather than the section, so `will-change` promotes a few hundred
+   pixels and not a viewport.
+
+   `--art-near`: it is the closest thing to the reader in this section and it
+   is a dark mass, which is what a foreground silhouette should be. */
+.tools__rocks-sway {
+  position: absolute;
+  right: clamp(-56px, -3vw, -10px);
+  width: var(--tools-rock-w);
+  aspect-ratio: 1000 / 750;
+  bottom: calc(var(--tools-floor) - var(--tools-rock-clear) - var(--tools-rock-w) * 0.535);
+  pointer-events: none;
+  will-change: translate;
+}
+.tools__rocks {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--art-near);
+}
+
+/* Below this the whole scene lives in a much shorter floor and the boulders
+   stop being a second layer and start being a lid on the bridge: measured at
+   375px they overlap its ink by 59px, and they still clear it by 54px at
+   480px. 640 is where the kit takes peripheral props off anyway, and it is the
+   width at which this section drops to one card column and its own height is
+   the thing that needs the air. The bridge stays — it is the beat, it is the
+   structural anchor, and in the mobile floor below it is 233px wide with its
+   whole ink visible. */
+@media (max-width: 640px) {
+  .section.tools {
+    /* The band existed for the art. When the second layer comes off, the space
+       goes back to the page rather than sitting there as a hole. */
+    --tools-floor: clamp(130px, 15vw, 190px);
+    --tools-bridge-clear: 56px;
+  }
+  .tools__rocks-sway {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* useParallax resolves to a zero translate at motionIntensity 0, so the seam
-     rests exactly where it composed — visible and still — and the compositor
-     hint would be a promoted layer paid for and never used. Same trade as
-     scene/Scene.css makes for the art. */
-  .tools__seam-drift {
+  /* Every hook here resolves to a zero translate at motionIntensity 0 —
+     `useParallax` by construction, `useSway` because it multiplies by `mi` —
+     so all three layers rest exactly where they composed, visible and still.
+     The compositor hints would be promoted layers paid for and never used.
+     Same trade as scene/Scene.css makes for the art itself. */
+  .tools__seam-drift,
+  .tools__rocks-sway {
     will-change: auto;
   }
 }

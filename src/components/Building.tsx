@@ -20,8 +20,23 @@ function NextUpPill({ label, index }: { label: string; index: number }) {
 }
 
 export function Building() {
-  const blob = useParallax<HTMLDivElement>(-0.1)
-  const seam = useParallax<HTMLDivElement>(0.03)
+  /* ── the depth ladder ─────────────────────────────────────────────────────
+     `useParallax` writes `centreOffset * -factor`, so a positive factor climbs
+     more slowly than the page — distance — and a negative one moves against
+     it — nearness. The first pass had 0.012 / 0.02 / 0.03, three positives
+     inside a fifth of a percent of each other, which is three layers agreeing
+     with each other rather than three planes.
+
+        +0.07  the blob   warm glow behind everything
+        +0.018 the fog    the far bank, all but still
+        +0.022 the seam   the boundary, still
+        -0.06  the pines  crowns on the near side of the mist
+
+     This is the page's flat contrast anchor and it stays the quietest of the
+     four beats in this pass: the spread is 0.078, against #tools' 0.145, and
+     nothing here follows the cursor. */
+  const blob = useParallax<HTMLDivElement>(0.07)
+  const seam = useParallax<HTMLDivElement>(0.022)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const reveal = useReveal<HTMLDivElement>('scale', 0)
   const tilt = useTilt<HTMLDivElement>()
@@ -30,28 +45,33 @@ export function Building() {
     <section id="building" className="section section--flat building">
       {/* ── the walk, beat five: the far bank ───────────────────────────────
           You have just crossed the water in #tools; this is the ground on the
-          other side. Three layers on three rates, which is what reads as
-          depth — 0.012 for the fog out at the back, 0.02 for the pines, 0.03
-          for the seam, which is the near bank you have just stepped onto. Five
-          layers at similar rates would read as noise, so there are three and
-          no bench.
+          other side. Two pieces of art and a seam, which is the kit's whole
+          budget: a bank of mist for the far plane and the faceted pines for
+          the near one, and no bench.
 
-          The pines sit between the other two rather than out in front,
-          because they are cropped by this section's own bottom edge: what you
-          see is crowns standing BEYOND the ground, not a tree in the
-          foreground. That is also the safe answer — their box clears the pills
-          by exactly 24px, and a factor that could travel further than that
-          would put a tree through a pill on a tall window. 0.02 tops out at
-          12px on a 1200px viewport.
+          The faceted pair rather than #apps' `tall-pine`, and the two are not
+          interchangeable. `tall-pine` is one oversized tree drawn to run out of
+          its own frame, which is what standing under a treeline looks like;
+          the pair is a whole small stand, which is what trees look like across
+          water. The kit says to use the tall one alone, so the two live two
+          sections apart and each does the thing it was drawn for.
 
-          This is the page's flat contrast anchor, so it stays quieter than the
-          blended sections either side of it: the pines take --art-mid rather
-          than the --art-near a prop at an edge would normally get. */}
+          The pines are cropped by this section's own bottom edge, so what you
+          see is crowns standing BEYOND the ground rather than a tree in the
+          foreground — but they are the near plane here, in front of the mist,
+          which is why they carry the one negative factor in the section.
+
+          None of this is kept off the pills by being drawn before `.shell`.
+          `.card` and `.building__pill` both paint `var(--surface)`, which is a
+          4.5% white wash in the dark theme — 95% transparent — so a layer
+          behind them is read straight through them. What keeps it off the copy
+          is that every box lives inside this section's own floor; Building.css
+          does that arithmetic. */}
       <div ref={seam} className="building__seam-drift" aria-hidden="true">
         <Seam shape="dune" edge="top" className="building__seam" />
       </div>
-      <ThemedArt art="atmosphere/fog-veil" className="building__fog" factor={0.012} />
-      <ThemedArt art="props/pine-faceted-pair" className="building__pines" factor={0.02} />
+      <ThemedArt art="atmosphere/fog-veil" className="building__fog" factor={0.018} />
+      <ThemedArt art="props/pine-faceted-pair" className="building__pines" factor={-0.06} />
 
       <div className="texture building__scan" aria-hidden="true" />
       <div ref={blob} className="blob building__blob" aria-hidden="true" />

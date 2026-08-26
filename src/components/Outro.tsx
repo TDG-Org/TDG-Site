@@ -10,7 +10,13 @@ import './Outro.css'
 export function Outro() {
   const makers = useReveal<HTMLDivElement>('wipe', 0)
   const card = useReveal<HTMLDivElement>('rise', 0)
-  const seam = useParallax<HTMLDivElement>(0.024)
+  /* Two layers, and they disagree about which way to go — which is the whole
+     of what makes a boundary read as behind something. `useParallax` writes
+     `centreOffset * -factor`, so +0.03 on the seam climbs more slowly than the
+     page and sits at the back, and -0.075 on the arch moves against it and
+     comes forward. The first pass had +0.024 and +0.04: same direction, within
+     a percent and a half of each other, so nothing moved against anything. */
+  const seam = useParallax<HTMLDivElement>(0.03)
 
   return (
     <>
@@ -37,11 +43,17 @@ export function Outro() {
         <div ref={seam} className="outro__seam-drift" aria-hidden="true">
           <Seam shape="steps" edge="top" className="outro__seam" />
         </div>
-        {/* The nearest art on the page and the one that drifts most — you are
-            walking through this, not looking at it. useParallax only ever
-            writes a vertical translate, so the 18px it keeps off the copy is
-            never spent by the motion. */}
-        <ThemedArt art="props/garden-arch" className="outro__arch" factor={0.04} />
+        {/* The nearest art in this section and the one that drifts most — you
+            are walking through this, not looking at it. It is now 29vw wide
+            and taller than the makers note, where it used to be 216px tucked
+            in a gutter, and the room for that came from this section's own
+            padding rather than from the copy: see Outro.css.
+
+            `useParallax` only ever writes a VERTICAL translate, so the 40px it
+            keeps off the copy cannot be spent by the motion, however large the
+            factor gets. That is what lets this one be the loudest layer in the
+            section without the clearance becoming a thing to re-check. */}
+        <ThemedArt art="props/garden-arch" className="outro__arch" factor={-0.075} />
 
         <div ref={makers} className="outro__makers">
           <div className="kicker outro__kicker">

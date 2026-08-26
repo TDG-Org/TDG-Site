@@ -1,14 +1,68 @@
+import { useEffect, useRef } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
+import { onFrame } from '../lib/motion'
 import { useParallax } from '../hooks/useParallax'
+import { usePointer } from '../hooks/usePointer'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ImageSlot } from './ImageSlot'
 import { AppIcon } from './AppIcon'
-import { StillArt, ThemedArt } from './scene/ThemedArt'
+import { ThemedArt } from './scene/ThemedArt'
 import { Seam } from './scene/Seam'
 import { APPS, GITHUB_ORG, type AppCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
 import './Apps.css'
+
+/** How far the pine slides with the cursor, in px at full deflection. It is
+ *  deliberately 60% of the amount `#tools` gives its boulders: two things on
+ *  the page follow the pointer and the quieter of the two sections gets the
+ *  quieter of the two. */
+const SWAY_X = 8
+const SWAY_Y = 5
+
+/**
+ * Mouse parallax for the one layer in this section close enough to earn it.
+ *
+ * **This is a copy of `useSway` in Tools.tsx and the two must stay in step.**
+ * It is fifteen lines and there are two of them; if a third section ever wants
+ * one it stops being worth duplicating and belongs in `src/hooks/` beside
+ * `usePointer`, which is where the shared half of this already lives.
+ *
+ * The three things it has to get right, all of which Tools.tsx explains at
+ * length: the sway goes on a WRAPPER because `useParallax` owns
+ * `element.style.translate` outright and two writers on one element race
+ * inside a frame; there is no lerp and no `hold()` because `usePointer`
+ * already damps, already holds while converging and already snaps when it
+ * lands, so this writes a pure function of two numbers that are correct on the
+ * frame they are read; and it checks its own rect, because `useOffscreenPause`
+ * stamps an attribute and an `onFrame` subscriber cannot see one.
+ *
+ * At `mi === 0` both terms are zero, so the layer rests exactly where it
+ * composed — visible and still, which is what the art kit asks for.
+ */
+function useSway<T extends HTMLElement>(x: number, y: number) {
+  const ref = useRef<T | null>(null)
+  const pointer = usePointer()
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let painted = ''
+
+    return onFrame(({ vh, mi }) => {
+      const r = el.getBoundingClientRect()
+      if (r.bottom <= 0 || r.top >= vh) return
+      const next = `${(pointer.x * x * mi).toFixed(2)}px ${(pointer.y * y * mi).toFixed(2)}px`
+      if (next === painted) return
+      painted = next
+      return () => {
+        el.style.translate = next
+      }
+    })
+  }, [pointer, x, y])
+
+  return ref
+}
 
 function AppTile({ app, index }: { app: AppCard; index: number }) {
   const reveal = useReveal<HTMLElement>('card3d', index % 4)
@@ -77,7 +131,32 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
 }
 
 export function Apps() {
-  const blob = useParallax<HTMLDivElement>(-0.14)
+  /* ── the depth ladder ─────────────────────────────────────────────────────
+     Sign first: `useParallax` writes `centreOffset * -factor`, so a POSITIVE
+     factor climbs more slowly than the page and reads as distance, and a
+     negative one moves against it and reads as near. Three layers that only
+     differed in magnitude is what the first pass had, and it looked like one
+     layer with a bit of jitter.
+
+        +0.06  the blob   sky glow behind everything
+        +0.02  the seam   the ridge at the boundary, barely drifting
+        +0.035 the reeds  scrub across the clearing, small and far
+        -0.08  the pine   the tree at the frame edge, near, and swaying
+
+     The pine and the reeds go opposite ways, and that is the pair that carries
+     the depth: 0.115 of relative travel between them where the first pass had
+     0.03 between its two props, and a foreground moving against a background
+     rather than both of them agreeing. -0.08 rather than the -0.11 this
+     started at, because the pine is 690px tall at 1920 and drift scales with
+     the layer's own height — at -0.11 a 900x1400 window spent 96px of the
+     clearance and left the visible tree a 72px spire.
+
+     `#apps` is `.section--flat` and stays the quieter of the two flat anchors
+     on purpose: its foreground is `--art-mid` where `#tools` gives its
+     foreground `--art-near`, and its sway is 8/5px against `#tools`' 12/7. */
+  const blob = useParallax<HTMLDivElement>(0.06)
+  const seam = useParallax<HTMLDivElement>(0.02)
+  const sway = useSway<HTMLDivElement>(SWAY_X, SWAY_Y)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('scale', 2)
 
@@ -91,19 +170,38 @@ export function Apps() {
           lamppost, a path of stepping stones, a treeline, a footbridge, a
           hillside cross, a garden arch — and this is the treeline.
 
-          It is deliberately the quietest of the six. `#apps` is
-          `.section--flat`, the contrast anchor between two blended sections,
-          and turning it into a third scene would cost the page the one place
-          it stops for breath. So: one structural anchor, one band of low
-          foliage, both anchored to the bottom edge and both at `--art-far`.
-          That is the whole budget the kit's guardrail 8 allows, and it is
-          spent at the quiet end of it.
+          `props/tall-pine` and not the faceted pair, because the kit added a
+          piece for exactly this: one oversized edge prop drawn to be cropped
+          by the frame, to be used ALONE rather than beside another pine
+          family. A tree that runs out of the top of its own picture is what a
+          treeline looks like from underneath it; two small whole trees is what
+          a treeline looks like on a map. The faceted pair keeps its place two
+          sections down in #building, where the trees are meant to be across
+          the water and small — and the kit is explicit that the tall one is
+          used ALONE, never beside another pine family, which is why those two
+          live two sections apart.
 
-          Order matters. These come after the dots and the blob so they sit
-          over the texture, and before `.shell` — which carries `z-index: 1` —
-          so nothing here can ever paint over a card. */}
-      <StillArt art="props/pine-faceted-pair" className="apps__pines" />
-      <ThemedArt art="props/bushes-reeds" className="apps__reeds" factor={0.05} />
+          The pine is the near plane and it is the one that follows the cursor;
+          the reeds are the far one and go the other way. It is still the
+          quieter of the two flat sections: `#apps` is the contrast anchor
+          between two blended ones, so the pine takes `--art-mid` where #tools'
+          foreground takes `--art-near`, and the sway is 8/5px against #tools'
+          12/7.
+
+          Order matters, and it matters more than it did. These sit after the
+          dots and the blob so they are over the texture, and before `.shell` —
+          which carries `z-index: 1` — so the whole scene layer is under the
+          cards. That is NOT what keeps them off the copy: `.card` is
+          `background-color: var(--surface)`, a 4.5% white wash in the dark
+          theme, so a card is 95% transparent and art behind the grid would be
+          read straight through it. What keeps them off the copy is that both
+          boxes live entirely inside this section's own floor — see Apps.css. */}
+      <ThemedArt art="props/bushes-reeds" className="apps__reeds" factor={0.035} />
+      {/* The sway box is the pine's own box, not the section: see useSway.
+          One writer per element — pointer here, scroll on the <img> inside. */}
+      <div ref={sway} className="apps__pine-sway" aria-hidden="true">
+        <ThemedArt art="props/tall-pine" className="apps__pine" factor={-0.08} />
+      </div>
 
       {/* The boundary above, wearing a shape instead of a straight line. It is
           painted `var(--seam-fill)`, which base.css sets for `#apps` beside the
@@ -113,8 +211,17 @@ export function Apps() {
           `peaks`: a low, many-faceted profile reads as a distant treeline,
           where `peaks` at 44–90px across a whole viewport is a mountain range
           and would be the loudest thing in a section that is meant to be the
-          calm one. */}
-      <Seam shape="ridge" edge="top" className="apps__seam" />
+          calm one.
+
+          It drifts now, where it used to be nailed to the edge. Same wrapper
+          trick as Tools.css — the drift goes on a zero-height box because
+          `useParallax` is typed to HTMLElement and `Seam` takes no ref, and a
+          zero height means the hook reads the BOUNDARY's distance from the
+          viewport centre rather than a box whose middle moves with however
+          tall the band happens to be at this width. */}
+      <div ref={seam} className="apps__seam-drift" aria-hidden="true">
+        <Seam shape="ridge" edge="top" className="apps__seam" />
+      </div>
 
       <div className="shell apps__shell">
         <div ref={head} className="apps__head">
