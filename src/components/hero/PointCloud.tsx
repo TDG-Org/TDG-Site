@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { onFrame } from '../../lib/motion'
-import { onDprChange } from '../../lib/dpr'
+import { MAX_DPR, onDprChange } from '../../lib/dpr'
 import { useTheme } from '../../theme/ThemeProvider'
 import { buildShapes } from './shapes'
 
@@ -143,7 +143,10 @@ export function PointCloud() {
         return
       }
       // A soft point cloud gains nothing from 2x, and it costs 4x the fill.
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      // That argument is the one `lib/dpr.ts` states for the whole site, and
+      // it was written from this file — where it used to be a bare literal
+      // with no name on it, in the one place that owned the reasoning.
+      dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
       const nw = Math.round(cw * dpr)
       const nh = Math.round(ch * dpr)
       if (nw === W && nh === H) return

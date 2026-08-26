@@ -284,7 +284,9 @@
    edge, so the section's overflow cuts the band rather than the path's own
    straight top edge cutting it. Without it a +0.03 factor slides that edge
    13.5px clear of the boundary on a 900px viewport and draws a line across the
-   page. Apps.css carries the full derivation and the reason it is a vh.
+   page. It is a token now — tokens.css, beside --seam-step, which carries why
+   the number is 4vh; Apps.css carries the artefact itself. This rule used to
+   declare it, and so did three other stylesheets, for one decision.
 
    The colour is on the WRAPPER and not on the <svg>, which is also a fix
    rather than plumbing: base.css's `transition: var(--t-theme)` list covers
@@ -304,7 +306,6 @@
   left: 0;
   right: 0;
   height: 0;
-  --seam-lift: 4vh;
   color: var(--seam-fill);
   pointer-events: none;
   will-change: translate;

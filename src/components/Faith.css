@@ -26,14 +26,20 @@
    hook read the BOUNDARY's own distance from the viewport centre rather than a
    box whose middle moves with however tall the band is at this width.
 
-   `--seam-lift` is on the HANGING band only. A `Seam` path is solid from y = 0
-   down to its silhouette, so it carries a straight horizontal top edge, and
-   +0.034 — the largest boundary factor on the page — slides that edge 15.3px
-   clear of the join on a 900px viewport and draws a line across it. The lift
-   is a strip of the band's own ink painted above its top edge, so the
+   `--seam-lift` is spent by the HANGING band only. A `Seam` path is solid from
+   y = 0 down to its silhouette, so it carries a straight horizontal top edge,
+   and +0.034 — the largest boundary factor on the page — slides that edge
+   15.3px clear of the join on a 900px viewport and draws a line across it. The
+   lift is a strip of the band's own ink painted above its top edge, so the
    section's overflow cuts the band rather than the path cutting it. Apps.css
-   carries the full derivation and why 4vh is right in every window. The RISING
-   band needs none: it is `edge="bottom"`, so its mass is at the bottom and its
+   carries the artefact; the number is `--seam-lift` in tokens.css, which has
+   why 4vh is right in every window.
+
+   The RISING band takes none, and since the promotion that is a fact about
+   this file rather than about the token: `--seam-lift` sits on `:root` and
+   inherits into both wrappers, so what makes a boundary spend it is having a
+   `::before` at all — and `.faith__climb-drift` has none and wants none. It is
+   `edge="bottom"`, so its mass is at the bottom and its
    own top is transparent, and there is no edge there to expose.
 
    The colour is on the wrappers, not on the `<svg>`s, and that is a fix rather
@@ -58,7 +64,6 @@
    invisible. Hard-edged all the way, because it is the nearer of the two and a
    near edge is a hard one. */
 .faith__seam-drift {
-  --seam-lift: 4vh;
   color: var(--seam-fill);
 }
 .faith__seam-drift::before {
@@ -122,13 +127,15 @@
 
    ## The ink
 
-   92% of the band toward --text, against --seam-fill's 94% on the band above.
-   That pair is a page rule and not a choice made here: 94 is the primary band
-   at all five joins, 92 is the second band wherever a boundary has one, and
-   the second band is always the masked one. Apps.css carries the computed L*
-   table both numbers were picked from; for this band it reads 6.06 (94, solid)
-   against 8.33 (92, solid) and 4.21 (92 under the mask's midpoint) in dark,
-   and 4.63 / 6.18 / 2.46 in light.
+   `--seam-step-2` of the band toward --text, against --seam-fill's
+   `--seam-step` on the band above. That pair is a page rule and not a choice
+   made here: 94 is the primary band at all five joins, 92 is the second band
+   wherever a boundary has one, and the second band is always the masked one.
+   Both are tokens now, and tokens.css carries the computed L* table they were
+   picked from — it was a literal 92% in this rule and in Apps.css until this
+   pass. For THIS band the same method reads 6.06 (94, solid) against 8.33 (92,
+   solid) and 4.21 (92 under the mask's midpoint) in dark, and 4.63 / 6.18 /
+   2.46 in light.
 
    So it is closer to the ink than the page's calibrated seam step and still the
    QUIETER of the two once the mask is applied — this band paints most of its
@@ -146,7 +153,7 @@
    channel and not a colour — the #000 paints nothing.                       */
 .faith__climb-drift {
   top: clamp(38px, 4.6vw, 68px);
-  color: color-mix(in srgb, var(--band-faith) 92%, var(--text));
+  color: color-mix(in srgb, var(--band-faith) var(--seam-step-2), var(--text));
 }
 .faith__climb {
   /* `Seam.css` anchors an `edge="bottom"` band with `bottom: 0`, because that
@@ -284,19 +291,50 @@
   justify-content: center;
   margin-bottom: 40px;
 }
+/* ── it is a mark, not a control, and it no longer pretends otherwise ──────
+   `Faith.tsx` renders this as `<div className="faith__cross" aria-hidden>`
+   with no `tabindex`, so it is decoration that a screen reader is explicitly
+   told to skip. It used to carry `:hover` and `:focus-visible` together, both
+   lifting it 4px and swapping the drop-shadow for a doubled --cross-glow, over
+   0.9s.
+
+   **The focus half could never fire.** `:focus-visible` needs a focusable
+   element, a `<div>` with no `tabindex` is not one, and nothing here ever gave
+   it one. It is the state `Origin.tsx` records removing from the opposite
+   direction — an `<article>` with `tabIndex={0}` that "looks focusable, takes
+   a tab stop, and does nothing at all" — except this one did not even take the
+   tab stop, so what it announced in the stylesheet was keyboard support that
+   was not there.
+
+   **The hover half fired, and should not have.** A 0.9s transform offered to
+   one class of visitor, a sighted mouse user, on an element that is inert,
+   unannounced and unreachable any other way. Every other `:hover` in this
+   folder is on a real control — a button, a link, a fold head, a row that
+   toggles — and rule 5's "custom-style every interactive element and every
+   state" has an inverse this was on the wrong side of.
+
+   **It also outran reduced motion.** `base.css` pauses every ANIMATION on the
+   page; it cannot touch a transition, which is exactly what a component's own
+   `prefers-reduced-motion` block is for, and this had none. So the one moving
+   thing in this section for a visitor who asked for less was a 0.9s lift on a
+   decoration. Deleting the state deletes that hole too, where a block would
+   only have patched it.
+
+   `pointer-events: none` is the positive half and the reason this cannot come
+   back by accident: it puts the cross in the same family as every other
+   decorative layer on the page — `Scene.css` declares it for all three art
+   components, `Stage` for the whole backdrop, `.faith__field` and
+   `.faith__rays` just below. Guardrail made structural instead of remembered.
+
+   Nothing about the resting cross moves. The `drop-shadow` that makes it read
+   was always unconditional and is untouched; what has gone is a state that
+   only a mouse could reach and only on something that does nothing.        */
 .faith__cross {
   position: relative;
   width: 60px;
   height: 112px;
   filter: drop-shadow(0 0 22px var(--glow));
-  transition:
-    transform 0.9s cubic-bezier(0.16, 0.84, 0.24, 1),
-    filter 0.7s ease;
-}
-.faith__cross:hover,
-.faith__cross:focus-visible {
-  transform: scale(1.09) translateY(-4px);
-  filter: drop-shadow(0 0 13px var(--cross-glow)) drop-shadow(0 0 48px var(--cross-glow));
+  pointer-events: none;
 }
 .faith__cross svg {
   position: absolute;

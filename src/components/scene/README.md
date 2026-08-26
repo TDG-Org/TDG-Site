@@ -38,10 +38,10 @@ three had grown one by the time anybody read it.
 | `ThemedArt` | `Apps` (reeds, tall pine) · `Building` (fog veil, faceted pines) · `Tools` (footbridge, boulders) · `Outro` (garden arch) |
 | `ThemedHeroArt` | **Nobody.** Kept on purpose — see below. |
 | `StillArt` | `Hero` (rear ridge, main ridge, tall pine) · `Origin` (snow bank, lamppost) |
-| `Seam` | `Apps` · `Tools` · `Building` · `Faith` · `Outro` — five, every one `edge="top"` |
+| `Seam` | `Apps` ×2 · `Faith` ×2 · `Tools` · `Building` · `Outro` — **seven**, across five boundaries, and one of the seven is `edge="bottom"` |
 | `Stage` | `Hero` (the whole pinned valley) · `Origin` (the cabin) |
 | `Moon` | `Hero` (on the horizon) · `faith/Summit.tsx` (behind the cross) |
-| `Snow` | **Nobody.** Kept on purpose — see below. |
+| `Snow` | `Origin` (the near flake layer, in front of the cabin) |
 
 **The moon is the thread the page is strung on.** It rests on the hero's
 horizon and it arrives five sections later behind the cross on the Faith
@@ -72,26 +72,34 @@ margin — the same number `Stage` guards on and for the same reason, since an
 section-level contract, `.faith-summit-host`, the way `Stage.css` ships
 `.stage-host`, and its header says so.
 
-### Two exports here have no caller, and both are kept
+### One export here has no caller, and it is kept
 
-`ThemedHeroArt` and `Snow`. One rule, applied to both, because two unused
-exports resolved two different ways is worse than either answer:
+`ThemedHeroArt`, and only it. The rule it is kept under:
 
 > **An export with no caller is kept only when its absence would push the next
 > builder toward something worse — and only if this file says out loud that it
 > has no caller and why. Otherwise it goes.**
 
-**Neither costs a byte, and that was checked rather than assumed.** `Snow.tsx`
-is imported by nothing, so it never enters the module graph — a production
-build with sourcemaps names `Moon.tsx`, `Seam.tsx`, `Stage.tsx` and
-`ThemedArt.tsx` among its sources and not `Snow.tsx`.
+**It costs no bytes, and that was checked rather than assumed.**
 `ThemedHeroArt` is an unused export of a module that *is* imported, so Rollup
-shakes the function out: the same sourcemaps map `ThemedArt.tsx` lines 28–67,
-91–102 and 139–141 into the bundle — `Art`, `ThemedArt` and `StillArt` — and
-nothing in between, which is exactly `ThemedHeroArt`'s body.
+shakes the function out: a production build's sourcemaps map `ThemedArt.tsx`
+lines 28–67, 91–102 and 139–141 into the bundle — `Art`, `ThemedArt` and
+`StillArt` — and nothing in between, which is exactly `ThemedHeroArt`'s body.
 
 What a dead export actually costs is a reader's confidence, and this section is
-the price of keeping these two.
+the price of keeping it.
+
+**`Snow` used to be the second, and it has a caller now.** `Origin.tsx` mounts
+it as `<Snow className="origin__flakes" density={NEAR_SNOW} />`, a near flake
+layer in front of `origin/CabinScene.tsx`'s own in-scene snow — two depths at
+one boundary rather than one. So the paragraph that used to sit here, ending
+"if a later pass finds this still true and still has no caller, delete the
+file", is answered: the file stays because something draws it.
+
+**The bytes line went with it.** "Neither costs a byte" was true only while
+nothing imported `Snow.tsx`; it is in the module graph now and a build's
+sourcemaps name it. That is the kind of claim that goes stale in silence —
+re-read it off a build rather than off this sentence.
 
 **`ThemedHeroArt` stays because deleting it re-opens a bug.** The three art
 components are not three conveniences; being three is the *mechanism* that
@@ -104,20 +112,16 @@ which is the bug. The capability is still live either way — `Faith.tsx` calls
 `useHeroParallax` directly on a `<div>` for its rays — so what would go is only
 the safe way to spend it on a piece of the art kit.
 
-**`Snow` stays for the weaker version of the same reason, and its position is
-the one to re-examine first.** It has no caller because the job it was written
-for went elsewhere: `origin/CabinScene.tsx` draws its snow inside the 3D scene,
-so the DOM canvas was never needed. That is a settled outcome, not a pending
-one, and it is fair to say so. What keeps it is that a section wanting weather
-without a 3D scene is still a plausible thing, and the mistakes it already
-answers are exactly the ones a fresh canvas makes: the 30Hz cap, `dpr` capped
-at 1.5, the draw inside the tick rather than in the write closure, the still
-field under reduced motion, and the three ways a canvas silently blanks itself
-(a resize, a DPR change, a theme swap). `Starfield` and the deleted
-`OriginField` each learned those separately; this is the third and the one with
-them written down. **If a later pass finds this paragraph still true and still
-has no caller, delete the file** — the reasoning above is worth keeping in a
-commit message, not in a module nobody imports.
+**`Snow` is not in this section any more.** It sat here on the weaker version
+of the same argument, while `origin/CabinScene.tsx`'s in-scene snow looked as
+though it had made the DOM canvas unnecessary. It had not: `Origin.tsx` draws
+both, the canvas in FRONT of the scene, because a near layer sized to the
+section's own box is a different thing from flakes inside a 3D frustum. The
+mistakes the file already answers — the 30Hz cap, `MAX_DPR`, the draw inside
+the tick rather than in the write closure, the still field under reduced
+motion, and the three ways a canvas silently blanks itself (a resize, a DPR
+change, a theme swap) — are paying for themselves on the page now instead of
+in a module nobody imported.
 
 ---
 
@@ -156,9 +160,13 @@ and it stays in the repo; the `.webp` beside it is the same artwork with its
 alpha channel intact (`yuva420p`), downscaled to the size it is actually
 painted at. A single cutout is up to 2.10 MB as a PNG, at 2172px wide, for a
 layer that lands at a few hundred CSS pixels; the WebP derivative is a ~93%
-cut across the whole kit. The home page draws **twelve** of these across six
+cut across the whole kit. The home page draws **thirteen** of these across six
 sections — Faith draws none, it authors its own terrain — plus four more as
-app-card covers.
+app-card covers. Counted with `grep -rn '<ThemedArt\|<StillArt' src/`: eight
+`ThemedArt` (Building 3, Apps 2, Tools 2, Outro 1) and five `StillArt` (Hero 3,
+Origin 2). It said twelve until `atmosphere/fog-veil` was placed a SECOND time
+in `#building`, at the boundary as well as on the floor — same file, same URL,
+same request, so the byte figures did not move and the layer count did.
 
 **The kit's own byte figures are in
 [`public/assets/parallax/README.md`](../../../public/assets/parallax/README.md)
@@ -316,7 +324,23 @@ band as that band is from white, and the light seams on `#origin`, `#tools` and
 step, and 94% stands either way.
 
 **Five boundaries carry one today** — `#apps`, `#tools`, `#building`, `#faith`
-and the Outro, every one of them `edge="top"`.
+and the Outro — but that is five *joins* and **seven** `<Seam>`s, because two
+of them carry two bands. `grep -rn '<Seam' src/` is the population: `#apps`
+hangs a far treeline with a nearer canopy over it, and `#faith` hangs a bank
+from above while a range climbs to meet it.
+
+**Six are `edge="top"`; one is not.** `#faith`'s rising range is
+`edge="bottom"` — the only one on the page — because what it wants is the
+mirrored path, mass at the bottom and silhouette rising, at a boundary that is
+still a section's TOP. `Faith.css` flips the anchor back to the wrapper's own
+origin for exactly that and says why. Do not read `edge` here as "which end of
+the section"; read it as "which way the shape points".
+
+**Where a boundary carries two bands, the second one takes `--seam-step-2`.**
+94% is the primary band at all five joins and 92% is the second, always the
+masked one — both tokens in `tokens.css`, which carries the L\* table they were
+picked from. They were two literal `92%`s in `Apps.css` and `Faith.css` until a
+later pass.
 
 **`#origin` used to be the sixth and is not any more.** Its boundary is now the
 `landscapes/snow-bank` cutout in `Origin.tsx`: a drift whose crest stands up

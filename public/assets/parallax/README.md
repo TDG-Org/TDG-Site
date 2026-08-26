@@ -6,9 +6,12 @@ See [Two files per artwork](#two-files-per-artwork) below — it is the first
 thing to read before adding anything here.
 
 The kit is wired in, through `ThemedArt` and `StillArt` in
-[`src/components/scene/`](../../../src/components/scene/README.md) — twelve
+[`src/components/scene/`](../../../src/components/scene/README.md) — thirteen
 layers across six sections of the home page, plus four more as app-card covers
-in `KeyArt.tsx`.  (`ThemedHeroArt` is the third of those components and has no
+in `KeyArt.tsx`.  Thirteen layers, not thirteen pieces: `atmosphere/fog-veil`
+is drawn TWICE in `#building` and the same file answers both, so the layer
+count is one ahead of the piece count.  It read twelve until the second one
+was placed.  (`ThemedHeroArt` is the third of those components and has no
 caller at the moment; `scene/README.md` says why it is kept.)  It stays what it
 always was: framing layers.  The hero's wordmark, point cloud, shafts and copy
 remain the primary scene, and every guardrail below still holds.
@@ -129,7 +132,7 @@ column — this table has already been out of date once.
 | Canopy tree | `props/canopy-tree` | Not placed. | A distinct, softer silhouette for a later section. |
 | Park bench | `props/park-bench` | Not placed. | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds` | **Apps**, the low cover along that section's floor. | A low foreground cover or section seam. |
-| Fog veil | `atmosphere/fog-veil` | **Building**, the far backdrop behind its pines. | Far backdrop; place behind mountains and props. |
+| Fog veil | `atmosphere/fog-veil` | **Building, twice** — the far backdrop behind its pines, and a shallow band cropped out of the same file at the section's top boundary. One URL, one request, two layers. `props/tall-pine` is also drawn twice on the home page, but in two different sections — this is the only piece drawn twice inside ONE. | Far backdrop; place behind mountains and props. |
 | Wayfinding post | `props/wayfinding-post` | Not placed. | Origin's far edge; its boards must stay blank. |
 | Stone footbridge | `landscapes/stone-footbridge` | **Tools** — not Origin, which this row used to say. Also the Music Everything app cover, where its repeating arches read as a bar line. | A low seam, used instead of—not with—the stepping stones. |
 | Garden arch | `props/garden-arch` | **Outro**, the far-edge threshold. Also the Makullveny app cover. | A far-edge threshold, never a content container. |

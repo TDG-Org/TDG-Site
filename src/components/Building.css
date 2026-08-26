@@ -32,8 +32,9 @@
    straight horizontal top edge, and +0.022 slides that edge 9.9px clear of the
    boundary on a 900px viewport — a line drawn across the page at exactly the
    join this pass exists to hide. The lift means the section's overflow cuts
-   the band instead of the path cutting it. Apps.css has the derivation and why
-   4vh is right in every window.
+   the band instead of the path cutting it. Apps.css has the artefact; the
+   number is `--seam-lift` in tokens.css, which has why 4vh is right in every
+   window. This rule declared it, and so did three others, for one decision.
 
    The colour moved here from the <svg> in the same edit, and that is a second
    fix: base.css's `transition: var(--t-theme)` list covers `div` and not `svg`
@@ -48,7 +49,6 @@
   left: 0;
   right: 0;
   height: 0;
-  --seam-lift: 4vh;
   color: var(--seam-fill);
   pointer-events: none;
   will-change: translate;

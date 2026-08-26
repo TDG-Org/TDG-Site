@@ -1,6 +1,6 @@
 import { useEffect, useRef, type JSX } from 'react'
 import { onFrame, wake } from '../../lib/motion'
-import { onDprChange } from '../../lib/dpr'
+import { MAX_DPR, onDprChange } from '../../lib/dpr'
 
 type Flake = {
   x: number
@@ -25,10 +25,6 @@ type Flake = {
  * its own diameter.
  */
 const HZ = 30
-
-/** Sub-pixel snow gains nothing from a retina backing store, and it costs the
- *  square of the ratio in fill. Same cap as `Starfield` and `PointCloud`. */
-const MAX_DPR = 1.5
 
 /** One flake per this many CSS px² before the machine and density scaling. */
 const AREA_PER_FLAKE = 13000
@@ -270,8 +266,9 @@ export function Snow({
      * two array allocations. `lib/motion.ts` skips its own first callback for
      * exactly this and says so; `hero/PointCloud.tsx` compares the same two
      * backing-store numbers this does. (`hero/Starfield.tsx` is the pattern for
-     * everything else in this file and is the one place that still has neither
-     * — it is not this component's to fix.)
+     * everything else in this file and was the one place that still had
+     * neither. It has both now — this fix was carried back to it in a later
+     * pass, which is why the two `fit`s read alike.)
      */
     const fit = () => {
       const cw = cv.clientWidth

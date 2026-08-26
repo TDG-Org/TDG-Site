@@ -117,14 +117,11 @@
    With `lift >= d_max` the union always starts at or above the boundary, so
    the top edge can never be seen at any scroll position, in either direction.
 
-   **4vh, and it is a vh on purpose.** The drift is a fraction of the viewport
-   HEIGHT, so a lift in pixels would be right on one window and wrong on the
-   next. 4vh covers a factor of 0.08 (4 = 100 * f / 2 solved for f) and the
-   largest factor at any boundary on this page is #faith's 0.034, so every band
-   has better than twice the cover it needs. `vh` and not `svh`: 100vh is the
-   LARGE viewport, which is never smaller than the `window.innerHeight` the
-   frame loop measures, so the inequality holds on a phone with its chrome
-   showing as well as with it hidden.
+   **The number is 4vh and it is a token now** — `--seam-lift` in tokens.css,
+   beside `--seam-step` and `--seam-fade`, which carries why it is 4 and why it
+   is a `vh` rather than a px. It was declared four times, once per section
+   stylesheet, and it is one decision about four boundaries. What stays here is
+   the artefact and the geometry above, because #apps is where they were found.
 
    The colour moves to the WRAPPER for this, and that is a second fix rather
    than plumbing. `--seam-fill` used to be set on the `<svg>`, and base.css's
@@ -145,7 +142,6 @@
      band happens to be at this width. All five boundaries then drift by the
      same law. */
   height: 0;
-  --seam-lift: 4vh;
   pointer-events: none;
   will-change: translate;
 }
@@ -171,33 +167,15 @@
 }
 
 /* ── the near branches ─────────────────────────────────────────────────────
-   ## 94 / 92, and it is a rule rather than a per-boundary guess
+   ## 94 / 92, and it is a page rule rather than a per-boundary guess
 
    `--seam-step`'s 94% is the page's calibrated boundary ink and it stays the
-   PRIMARY band at all five joins. 92% is the SECOND band wherever a boundary
-   has one, and it is always the masked one — here, and on #faith's rising
-   range. Two numbers for the whole page instead of five sections each picking
-   their own, which is the same argument tokens.css makes for --seam-step
-   itself.
-
-   Computed rather than eyeballed, as CIE L* against the band the shape is
-   drawn on, at the alpha the mask actually leaves:
-
-       theme   band        step  alpha   dL* vs the band
-       dark    apps          94   1.00       5.14
-       dark    apps          92   1.00       7.50
-       dark    apps          92   0.55       3.44
-       light   apps          94   1.00       4.76
-       light   apps          92   1.00       6.36
-       light   apps          92   0.40       2.53
-
-   The 94 rows reproduce the 5.0–6.1 dark / 4.6–4.8 light that tokens.css
-   records for --seam-step, which is what says the method here matches the one
-   that number was picked with. 92 is 2.4 dark / 1.6 light clear of it at full
-   alpha — enough to read as a different plane at a soft edge, and nowhere near
-   the 9.6–10.6 / 7.7–8.0 that tokens.css measured for a 90% step and rejected
-   as a grey stripe. It also sits inside the range this page already paints
-   ridges at: faith/Summit.css runs 87 / 91 / 95% for its three.
+   PRIMARY band at all five joins. `--seam-step-2`'s 92% is the SECOND band
+   wherever a boundary has one, and it is always the masked one — here, and on
+   #faith's rising range. Two tokens for the whole page instead of each section
+   picking its own second ink, which is the argument tokens.css already makes
+   for --seam-step itself; both numbers and the computed L* table they were
+   picked from are there, and deliberately not repeated here.
 
    Toward `--text` rather than toward a lighter or a darker literal, so one
    declaration is correct in both themes: lifted above a near-black sky, dropped
@@ -236,7 +214,7 @@
    no negative margin. Re-do this table before changing the factor, the clamp
    or the section's padding.                                                 */
 .apps__canopy-drift {
-  color: color-mix(in srgb, var(--band-apps) 92%, var(--text));
+  color: color-mix(in srgb, var(--band-apps) var(--seam-step-2), var(--text));
 }
 .apps__canopy {
   height: clamp(50px, 5.8vw, 96px);

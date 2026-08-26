@@ -44,10 +44,26 @@ const PARK_MARGIN = 400
  * Uses the standalone `translate` property so any `transform` the element
  * already carries (centring, rotation) survives untouched.
  *
- * Seventeen of these run on the home page alone — counted in the live DOM, not
- * from the call sites, because seven of the seventeen are `scene/ThemedArt`'s
- * own subscriber rather than a `useParallax(` a section wrote. Off screen they
- * now cost the rect and nothing else — see `PARK_MARGIN`.
+ * **Twenty of these run on the home page**, and this header is the one place
+ * that number lives — `src/hooks/README.md` points here for it and deliberately
+ * does not repeat it, because a figure written down twice is one that will
+ * eventually disagree with itself.
+ *
+ * Two greps, because a call site is not a subscriber: `grep -rn 'useParallax<'
+ * src/` gives twelve on the home page — Apps 3 (blob, seam, canopy), Faith 3
+ * (blob, seam, climb), Building 2, Tools 2, Origin 1, Outro 1 — and skips
+ * `About.tsx`, `AppPage.tsx` and `Store.tsx`, which are other routes, and this
+ * file's own declaration. `grep -rn '<ThemedArt' src/` gives eight more on the
+ * home page — Building 3, Apps 2, Tools 2, Outro 1 — each of which is one more
+ * subscriber through `scene/ThemedArt.tsx`'s single `useParallax<` above.
+ * Twelve plus eight.
+ *
+ * It was seventeen (ten plus seven) when this line was last counted, so re-run
+ * both greps rather than trusting the arithmetic. `<StillArt>` is NOT in it —
+ * it calls neither hook and writes nothing, which is `ThemedArt.tsx`'s whole
+ * reason for being three components.
+ *
+ * Off screen they now cost the rect and nothing else — see `PARK_MARGIN`.
  */
 export function useParallax<T extends HTMLElement>(factor: number) {
   const ref = useRef<T | null>(null)
@@ -62,6 +78,35 @@ export function useParallax<T extends HTMLElement>(factor: number) {
       const r = el.getBoundingClientRect()
       const centreOffset = r.top + r.height / 2 - vh / 2
       const target = centreOffset * -factor * mi
+
+      /* ── reduced motion snaps to the identity; it never eases to it ───────
+         The rule is `usePointer.ts`'s and it is the page's: "an eased return
+         IS motion, and the one moment it would ever play is the moment
+         somebody asked for less of it." The cabin and the snow already agree;
+         this hook did not, and it is the one with the most layers on it — a
+         visitor who TOGGLED the preference mid-session watched every parallax
+         layer on the page glide to rest, about seventeen frames of exactly the
+         motion they had just asked to stop.
+
+         One assignment, and it is deliberately placed to leave the three
+         things around it alone.
+
+         **It cannot swallow the identity write.** `current` is set to the
+         target rather than returned on, so the frame falls through to the
+         write path below and emits `0 0.00px` exactly once — after which
+         `next === painted` suppresses every frame after it, which is the same
+         mechanism that already stops a settled lerp rewriting its own string.
+         A `return` here instead would leave whatever drift was last painted
+         sitting on the element forever.
+
+         **It cannot hold the loop.** With `current === target` the convergence
+         test below is 0 and `hold()` is skipped, so the loop parks on the
+         frame after the toggle. `motion.ts` wakes it for the preference change
+         itself, which is what makes the one frame happen at all.
+
+         **And it changes nothing while `mi > 0`**, where the branch is never
+         taken and the lerp runs exactly as it did. */
+      if (mi === 0) current = target
 
       /* ── parked: nobody can see this layer ────────────────────────────────
          The rect read stays, because the guard is what needs it — and it has to
@@ -157,7 +202,7 @@ export function useParallax<T extends HTMLElement>(factor: number) {
  * subscribers and it held there; a guard whose only saving is one style write
  * cannot pay for a per-frame measurement at any count where the measurement is
  * the larger half, and one is where that is most obvious. Next door the same trade
- * is worth taking because the rect is already paid for AND because seventeen
+ * is worth taking because the rect is already paid for AND because twenty
  * layers take it. Do not read the falling number as a reason to revisit this:
  * it is the same conclusion with less doubt in it.
  *
@@ -177,7 +222,7 @@ export function useParallax<T extends HTMLElement>(factor: number) {
  * about, where deleting one line would silently hide a layer. Rebuild it only
  * with that cost stated.
  *
- * If this ever grows a lerp, or grows to `useParallax`'s seventeen, guard it on
+ * If this ever grows a lerp, or grows to `useParallax`'s twenty, guard it on
  * the LIVE box — the element's rect corrected by the drift about to be written
  * — and never on the frozen one. The drift here scales with total scroll rather
  * than with the viewport, so no fixed margin can absorb it.

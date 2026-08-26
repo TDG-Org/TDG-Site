@@ -40,7 +40,29 @@
   --accent-soft: rgba(255, 255, 255, 0.07);
   --glow: rgba(255, 255, 255, 0.2);
   --warm: #f5c98a;
-  --nav-scrolled: rgba(9, 7, 17, 0.72);
+  /* ── --nav-scrolled was here, in both themes, and is gone ────────────────
+     A flat ink for the nav's scrolled state, declared per theme and read by
+     nothing: `grep -rn -- '--nav-scrolled' src/` returned these two
+     declarations and no consumer at all. Pre-existing — it did not arrive in
+     this pass and no change here orphaned it.
+
+     Deleted under the rule components/scene/README.md states for an export
+     with no caller: kept only where its absence would push the next builder
+     toward something worse, and only if the file says out loud that it has no
+     consumer and why. Neither half held. It has no siblings whose table it
+     completes — unlike the three --seam-fill lines base.css keeps and argues
+     at length, where deleting one of eight would leave an asymmetry a reader
+     has to go and investigate.
+
+     And its presence had already failed at the one job it could have done.
+     The scrolled nav IS drawn: `.nav__veil` in Nav.css fades in on
+     `[data-scrolled='true']`, and it writes its own literal rgba() three
+     stops at a time, twice, once per theme — with the light triple
+     `245, 243, 251` matching this token's exactly. A token the one thing it
+     was for stepped over is not preventing anybody from writing a colour; it
+     is the evidence that it did not. That is Nav.css's bug to fix, and the
+     fix is a token declared here at that moment, sized to the gradient it
+     actually has to feed rather than to a flat fill nothing ever used.     */
   --card-shadow: 0 22px 54px -26px rgba(0, 0, 0, 0.72);
   /* ── the ink #origin's arrival shadow is drawn with ─────────────────────
      The soft dark edge above #origin, so the section reads as a sheet
@@ -394,6 +416,100 @@
      still numbers only, NOT yet checked on a screen.                        */
   --seam-step: 94%;
 
+  /* ── the SECOND band's step, where a boundary carries two ────────────────
+     94% above is the primary band at all five joins. This is the second one,
+     and the second one is always the masked one: #apps' near canopy over its
+     far treeline, and #faith's rising range under its hanging bank. Two
+     boundaries carry two bands today — `grep -rn 'seam-step-2' src/` is the
+     population, and it was two literal 92%s in two stylesheets until this
+     pass.
+
+     It is here for exactly the reason --seam-step is: it is ONE decision. Two
+     sections each picking the second band's ink separately is how a page goes
+     loud in one band and invisible in the next, which is the same sentence
+     the --art-* block above makes about the kit's opacities.
+
+     92 and not 90 or 93, and the working lives here rather than in a section
+     stylesheet, the way --seam-step's does. Computed as CIE L* against the
+     band the shape is drawn on, at the alpha the mask actually leaves:
+
+       theme   band   step  alpha   dL* vs the band
+       dark    apps     94   1.00       5.14
+       dark    apps     92   1.00       7.50
+       dark    apps     92   0.55       3.44
+       light   apps     94   1.00       4.76
+       light   apps     92   1.00       6.36
+       light   apps     92   0.40       2.53
+
+     The 94 rows reproduce the 5.0-6.1 dark / 4.6-4.8 light this file records
+     for --seam-step, which is what says the two numbers were picked by one
+     method. 92 clears 94 by 2.4 dark / 1.6 light at full alpha — enough to
+     read as a different plane at a soft edge — and is nowhere near the
+     9.6-10.6 / 7.7-8.0 a 90% step gives, which this file rejected as a grey
+     stripe. It also sits inside the range faith/Summit.css already paints its
+     three ridges at, 87 / 91 / 95.
+
+     Toward --text for the same single reason 94 is, so one declaration is
+     correct in both themes. Single value, like --seam-step and for the same
+     reason: the ink it steps toward already carries the theme.
+
+     Promoting it moved no pixel. Resolved before and after, both consumers,
+     both themes: #apps' canopy #1b1b1f dark / #e6e6e8 light, #faith's climb
+     #1e1f27 dark / #dddee5 light — a var() substituting the identical
+     percentage into the identical color-mix.                               */
+  --seam-step-2: 92%;
+
+  /* ── how much of its own ink a seam's wrapper backfills ABOVE its top ────
+     Not a colour and not an opacity: a LENGTH, and the fourth member of the
+     seam family for the same reason as the other three — one decision, four
+     boundaries, one place.
+
+     A `Seam` path is solid from the TOP of its viewBox down to the
+     silhouette, so it carries a straight horizontal edge across the whole
+     width. That edge is invisible only while it sits exactly on the section's
+     boundary, where the section's own overflow cuts it — and it does not sit
+     there. `useParallax` writes `centreOffset * -factor`, which for a
+     zero-height wrapper at a section's top edge is `factor * (vh/2 - top)`, so
+     a positive factor pushes the band DOWN by up to `factor * vh/2` once the
+     boundary has passed the middle of the screen and the straight edge comes
+     out from behind the join with a strip of bare band above it.
+
+     So each drift wrapper paints a solid strip of its own ink from its top
+     edge UPWARD, and the section's overflow cuts THAT instead of cutting the
+     path:
+
+       ::before spans [d - lift, d]      the backfill
+       the seam spans [d, d + height]    the shape
+       union     spans [d - lift, d + height]
+
+     With `lift >= d_max` the union always starts at or above the boundary, so
+     the top edge can never be seen at any scroll position in either direction.
+
+     **4vh, and it is a vh on purpose.** The drift is a fraction of the
+     viewport HEIGHT, so a lift in pixels would be right on one window and
+     wrong on the next. 4vh covers a factor of 0.08 (4 = 100 * f / 2 solved for
+     f) and the largest factor at any boundary on this page is #faith's 0.034,
+     so every band has better than twice the cover it needs. `vh` and not
+     `svh`: 100vh is the LARGE viewport, never smaller than the
+     `window.innerHeight` the frame loop measures, so the inequality holds on a
+     phone with its chrome showing as well as with it hidden.
+
+     **Two of the seven seams deliberately consume nothing.** The token
+     inherits everywhere; what makes a boundary take the lift is having a
+     `::before` at all. `.faith__climb-drift` is `edge="bottom"`, so its mass
+     is at the bottom and its own top is transparent — there is no edge there
+     to expose. `.outro__seam-drift` opens its mask on `transparent`, so the
+     fix is inside the mask rather than beside it. Both files say so at the
+     rule. Neither writes the token and neither reads it.
+
+     Apps.css carries the artefact itself — the two-depth canopy is where it
+     was found, and its block has the per-boundary drift in px at the five
+     factors this page uses. It was declared four times, once per section
+     stylesheet, until this pass; `grep -rn -- '--seam-lift' src/` is the
+     population. Promoting it moved no pixel: four `height: var(--seam-lift)`
+     rules resolved 4vh before and resolve 4vh after.                       */
+  --seam-lift: 4vh;
+
   /* A seam that wants to dissolve rather than stop at a line masks itself
      with a gradient; this is the alpha that gradient is still at halfway
      down, so every seam on the page dissolves at the same rate. Higher in
@@ -423,7 +539,7 @@
   --accent-soft: rgba(20, 20, 26, 0.055);
   --glow: rgba(20, 20, 26, 0.16);
   --warm: #b8763a;
-  --nav-scrolled: rgba(245, 243, 251, 0.82);
+  /* --nav-scrolled was here too, and went with its dark twin. See :root. */
   --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
   /* the same ink --card-shadow above uses in light, at the alpha a
      section-sized blur can carry without reading as a bruise across the

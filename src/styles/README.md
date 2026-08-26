@@ -41,15 +41,16 @@ in the same edit.
 | Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
 | The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
-| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-fade` `--terrain-haze` `--terrain-haze-rear` |
+| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-step-2` `--seam-lift` `--seam-fade` `--terrain-haze` `--terrain-haze-rear` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
 `--live-*` is per theme deliberately: one hardcoded `#4ea36a` failed AA in both.
 `--danger` is per theme for the same reason. Its `-soft` and `-border` are
 not — the red they are mixed from is the same in both — so they are declared
 once on `:root` and are deliberately absent from the light block. `--seam-step`
-is single for a better reason: it steps toward `--text`, which already carries
-the theme, so one percentage is correct in both.
+and `--seam-step-2` are single for a better reason: they step toward `--text`,
+which already carries the theme, so one percentage is correct in both.
+`--seam-lift` is single because it is a length and has no theme to have.
 
 ### The bands of the page
 
@@ -94,7 +95,7 @@ working. Lightness is held to a tenth of a unit in both themes, which is why
 `--seam-step`'s calibration did not have to be re-derived: that step is a fixed
 6% blend toward `--text`, so it tracks lightness and nothing else.
 
-### The scene layer tokens: three opacities, two dissolve rates, two inks
+### The scene layer tokens: three opacities, two dissolve rates, a length, two steps, two inks
 
 `--art-far` / `--art-mid` / `--art-near` are the opacities the transparent art
 kit in `public/assets/parallax/` is drawn at, by how far back the layer reads,
@@ -104,6 +105,22 @@ four are plain **numbers** because they multiply artwork that is **already**
 the right colour for the theme — the kit ships separate `-dark` and `-light`
 files and its own README is explicit that a CSS filter must never stand in for
 that swap.
+
+**`--seam-step-2` is the second band's step, where a boundary carries two.**
+94% is the primary band at all five joins; 92% is the second, and the second is
+always the masked one — `#apps`' near canopy over its far treeline, and
+`#faith`'s rising range under its hanging bank. `tokens.css` carries the
+computed L\* table both numbers were picked from. It was a literal `92%` in two
+section stylesheets, which is two sections separately deciding one thing.
+
+**`--seam-lift` is the odd one out: a length, `4vh`.** It is how much of its own
+ink a seam's drift wrapper backfills ABOVE its top edge, so that parallax cannot
+slide a `Seam` path's straight horizontal top edge out from behind the join and
+draw a line across the page. Four section stylesheets declared it; `tokens.css`
+carries why 4 and why a `vh` rather than a px, and `Apps.css` carries the
+artefact. Theme-independent, so it has no light twin — and unlike the tokens
+above it, a boundary opts out by having no `::before` rather than by not
+declaring it.
 
 `--terrain-haze` and `--terrain-haze-rear` are the two that are **colours**,
 and they are here for the same reason the numbers are: they are properties of

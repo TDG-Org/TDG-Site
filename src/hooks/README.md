@@ -86,6 +86,15 @@ Lerps per second rather than per frame, so 144 Hz feels like 60 Hz — through
 `settle()` in [`../lib/motion.ts`](../lib/README.md), which every damped thing
 on this site shares.
 
+**Zero under reduced motion, and it SNAPS there rather than easing.** Same rule
+`usePointer` states and for the same reason: an eased return is itself motion,
+and the one moment it would ever play is the moment somebody asked for less of
+it. It used to lerp to rest, so a visitor who *toggled* the preference
+mid-session watched every parallax layer on the page glide to a stop — about
+seventeen frames of exactly what they had just asked to stop. The identity is
+still written once rather than swallowed, and the loop parks on the next frame
+because a snapped layer never calls `hold()`.
+
 **Your layer stops updating 400px outside the viewport.** That is a contract,
 not an implementation detail: while it is parked nothing is written to
 `element.style.translate`, so the value sitting there is the one from the last

@@ -56,8 +56,11 @@
    and the svg inherits the animated value, which `currentColor` then resolves
    against.
 
-   No `--seam-lift` here, and that is the one thing this boundary does not need
-   — see the mask below. */
+   No `::before` here, so this wrapper spends no `--seam-lift`, and that is the
+   one thing this boundary does not need — see the mask below. (The token is on
+   `:root` since it was promoted out of four section stylesheets, so it reaches
+   this element and simply has no backfill to size. Absence is the missing
+   pseudo-element, not a missing declaration.) */
 .outro__seam-drift {
   position: absolute;
   top: 0;

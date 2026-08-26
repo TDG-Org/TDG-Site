@@ -58,7 +58,21 @@ function ThemeToggle() {
     >
       <span className="nav__knob">
         <span className="nav__moon">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+            /* Both, and it matters more here than anywhere. These two icons
+               live INSIDE the theme button, and an inline <svg> takes a tab
+               stop of its own in IE and older Edge whatever aria says — so the
+               stop lands between the nav links and the control they sit in,
+               on an element that does nothing when you press it. Every other
+               decorative svg on the site pairs the two; `CrossGlyph.tsx` has
+               the same note. */
+            focusable="false"
+          >
             <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
           </svg>
         </span>
@@ -72,6 +86,7 @@ function ThemeToggle() {
             strokeWidth="2"
             strokeLinecap="round"
             aria-hidden="true"
+            focusable="false"
           >
             <circle cx="12" cy="12" r="4.1" />
             <path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.5 1.5M17.3 17.3l1.5 1.5M18.8 5.2l-1.5 1.5M6.7 17.3l-1.5 1.5" />

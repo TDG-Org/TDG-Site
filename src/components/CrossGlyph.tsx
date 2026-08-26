@@ -57,7 +57,19 @@ export function CrossGlyph({ variant = 'hero', className }: Props) {
         ]
 
   return (
-    <svg viewBox="0 0 42 100" aria-hidden="true" className={className}>
+    <svg
+      viewBox="0 0 42 100"
+      aria-hidden="true"
+      /* Both, not either. `aria-hidden` takes it out of the accessibility
+         tree; IE and older Edge still give every inline <svg> a tab stop of
+         its own, and `focusable="false"` is the only thing that removes it —
+         so without this the page carries three empty tab stops, one per
+         instance of this glyph. `scene/Moon.tsx`, `scene/Seam.tsx`,
+         `faith/Summit.tsx` and `KeyArt.tsx` all pair the two; this file and
+         `Nav.tsx`'s toggle icons were the last that did not. */
+      focusable="false"
+      className={className}
+    >
       <defs>
         <linearGradient id={id} x1="6%" y1="0%" x2="94%" y2="100%">
           {stops.map((s) => (
