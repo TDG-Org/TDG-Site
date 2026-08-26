@@ -1,0 +1,233 @@
+/* ── An app card's key art ─────────────────────────────────────────────────
+   The look of the cover KeyArt.tsx draws. Every number the composition is
+   made OF is in the component, in viewBox units; everything here is colour,
+   voice and the two things a stylesheet has to own — where the element sits
+   and how it takes a pointer.
+
+   ## Why this palette is written down here and not in tokens.css
+
+   Two reasons, and they are different reasons.
+
+   The first is ownership: tokens.css belongs to another builder right now, so
+   nothing new goes into it in this change.
+
+   The second is the one that matters, and it would hold anyway. **This art is
+   deliberately theme-independent.** Not one value below has a
+   [data-theme='light'] twin, and that is not an oversight — it is the same
+   decision AGENTS.md §4 records for the always-dark auth modal. Bible
+   Educator's cover is a fixed dark raster sitting in the same grid; a
+   neighbour that turned pale in light mode would leave one dark card in a row
+   of light ones, which reads as broken art rather than as a theme. A token in
+   tokens.css that pointedly refused to move with the theme would be a
+   contradiction sitting in the file whose entire job is the theme, and the
+   next person to tidy it would give it a light value in good faith.
+
+   So the palette is scoped to the component, declared ONCE on `.keyart`, and
+   used by name below. Rule 2 still holds — no rule here writes a colour
+   inline, and there is no literal anywhere in the SVG markup. Rule 3's "both
+   themes" is answered by the paragraph above rather than by a second block.
+
+   The card AROUND the art still reskins normally: its border, its surface,
+   the hairline under the cover, and the title and copy beneath it. Only the
+   cover is fixed, the way a photograph on a page is fixed.               */
+
+.keyart {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  /* The slot is exactly 16/10 and so is the viewBox, so `meet` letterboxes by
+     nothing. This is the guarantee rather than the hope: if sub-pixel rounding
+     ever leaves a sliver, it is painted in the same ink the composition's own
+     corner is, instead of showing the card's --bg2 through a hairline gap. */
+  background-color: var(--keyart-ink);
+
+  /* The card is one big link. A click anywhere on the cover has to reach
+     .card__cover, and a drag across the grid must not select five app names
+     out of art that is aria-hidden in the first place. */
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+
+  /* ── the fixed palette ───────────────────────────────────────────────────
+     Base values, overridden per scene below. Only the three tone values and
+     the light move; the type stays identical across all five, which is what
+     makes six cards read as one set rather than five designs.            */
+
+  /* the deep base, and the lift it grades toward at the top right */
+  --keyart-ink: #0a0a0e;
+  --keyart-lift: #1b1b24;
+  /* the light source, high and to the right, the way the reference's window is */
+  --keyart-glow: #6f7590;
+  --keyart-glow-a: 0.34;
+
+  /* The type. Warm off-white against cool ink, matching the raster's cream,
+     and one accent for the fact strip — deliberately the same amber on all
+     five, because that strip is the thread that ties them to Bible Educator's
+     cover more than anything else in the composition does. */
+  --keyart-title: #f4ede2;
+  --keyart-line: #cfcbd6;
+  --keyart-fact: #e0aa63;
+  --keyart-rule: #6a6472;
+  --keyart-byline: #9a94a4;
+  --keyart-ring: rgba(255, 255, 255, 0.14);
+
+  /* How far down the one cutout is pushed. Below the kit's own 0.50–0.72 for
+     props on purpose: on a section the art is the only thing in that band, and
+     here it is sharing a frame with a title at 112 units. Rendered at 0.3 first
+     and the ridge and the pines both vanished into their own ink; this is the
+     value at which they read as a place without competing with the type. */
+  --keyart-art: 0.42;
+}
+
+/* ── the five moods ────────────────────────────────────────────────────────
+   One family, five temperatures, so a grid of six covers does not read as one
+   cover printed six times. Which app got which, and why, is in SCENE_ART in
+   the component — the reason belongs beside the art it picks.            */
+
+/* Say2Quill · cold blue night */
+.keyart[data-scene='pines'] {
+  --keyart-ink: #070a10;
+  --keyart-lift: #1a2434;
+  --keyart-glow: #7e97c4;
+}
+
+/* Makullveny · warm lamplight, the nearest of the five to Bible Educator */
+.keyart[data-scene='arch'] {
+  --keyart-ink: #0d0906;
+  --keyart-lift: #2a1d12;
+  --keyart-glow: #d9a469;
+  --keyart-glow-a: 0.3;
+}
+
+/* DevFleet · indigo distance */
+.keyart[data-scene='ridge'] {
+  --keyart-ink: #08080f;
+  --keyart-lift: #1d1c2e;
+  --keyart-glow: #8d86c0;
+}
+
+/* Music Everything · slate blue-green */
+.keyart[data-scene='bridge'] {
+  --keyart-ink: #070c0d;
+  --keyart-lift: #17262a;
+  --keyart-glow: #74a6a6;
+}
+
+/* TDG Veditor · plum graphite. No cutout, so the light is the whole backdrop
+   and carries a little further than it does where art shares the frame. */
+.keyart[data-scene='dusk'] {
+  --keyart-ink: #0a070c;
+  --keyart-lift: #241a2b;
+  --keyart-glow: #a688b4;
+  --keyart-glow-a: 0.4;
+}
+
+/* ── the backdrop ─────────────────────────────────────────────────────────
+   Gradient stops are CSS properties, so every colour in the SVG arrives from
+   a name here and the markup holds none. Where a stop has to be "nothing" it
+   is the scene's own ink at zero alpha rather than a keyword, which keeps the
+   fade neutral instead of greying out through white.                     */
+
+.keyart__tone-0 {
+  stop-color: var(--keyart-ink);
+}
+.keyart__tone-1 {
+  stop-color: var(--keyart-lift);
+}
+
+.keyart__glow {
+  opacity: var(--keyart-glow-a);
+}
+.keyart__glow-0 {
+  stop-color: var(--keyart-glow);
+  stop-opacity: 1;
+}
+.keyart__glow-1 {
+  stop-color: var(--keyart-glow);
+  stop-opacity: 0.34;
+}
+.keyart__glow-2 {
+  stop-color: var(--keyart-glow);
+  stop-opacity: 0;
+}
+
+.keyart__art {
+  opacity: var(--keyart-art);
+}
+
+.keyart__scrim-0 {
+  stop-color: var(--keyart-ink);
+  stop-opacity: 0.92;
+}
+.keyart__scrim-1 {
+  stop-color: var(--keyart-ink);
+  stop-opacity: 0.5;
+}
+.keyart__scrim-2 {
+  stop-color: var(--keyart-ink);
+  stop-opacity: 0;
+}
+
+.keyart__vignette-0 {
+  stop-color: var(--keyart-ink);
+  stop-opacity: 0;
+}
+.keyart__vignette-1 {
+  stop-color: var(--keyart-ink);
+  stop-opacity: 0.55;
+}
+
+.keyart__ring {
+  fill: none;
+  stroke: var(--keyart-ring);
+  /* viewBox units: the icon is drawn at 168 of them and painted at about 42px
+     in a four-column grid, so this is the site's hairline at that scale. */
+  stroke-width: 2;
+}
+
+/* ── the type ─────────────────────────────────────────────────────────────
+   Sizes are set per element by the component, from the constants at the top
+   of KeyArt.tsx, because they are part of the grid. Only the face, the weight
+   and the colour are here.
+
+   The site's own four fonts, inherited from the page: an inline SVG in the
+   DOM resolves font-family the same way any element does, so these are the
+   same faces the card's own title and copy are set in.
+
+   500 on the serif, not 700: index.html loads exactly one weight of Cormorant
+   Garamond and 700 would be a browser-synthesised bold, which a high-contrast
+   serif wears badly. The size carries the weight instead — see the note on
+   TITLE in KeyArt.tsx.                                                    */
+
+.keyart__title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  fill: var(--keyart-title);
+}
+
+.keyart__line {
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: -0.004em;
+  fill: var(--keyart-line);
+}
+
+.keyart__facts {
+  font-family: var(--font-body);
+  font-weight: 600;
+  fill: var(--keyart-fact);
+}
+
+.keyart__rule {
+  fill: var(--keyart-rule);
+}
+
+.keyart__byline {
+  font-family: var(--font-body);
+  font-weight: 500;
+  fill: var(--keyart-byline);
+}

@@ -1,3 +1,31 @@
+/* ── two values the hero owns that have to reach outside it ────────────────
+   The ideal home for both of these is tokens.css, beside --card-shadow and
+   the rest of the palette. They are here because the only consumer of either
+   is this component and the hook it exports, and because a colour stated in
+   ONE theme is the bug rule 3 is about — which is what both of these were
+   before: a black shadow composed in JavaScript with no light variant, and a
+   white glint with no light variant. Stating both halves is the fix; where
+   they live is the smaller question.                                       */
+:root {
+  /* The ink Origin's arrival shadow is drawn with. useHeroTakeover scales it
+     with color-mix and never composes a colour of its own. */
+  --hero-takeover-ink: rgba(0, 0, 0, 0.6);
+  /* The sweep that crosses "DG". --edge-hi is the site's highlight ink, per
+     theme, and 96% of its dark value is 0.912 — the same near-white the
+     glint has always been, to within 0.008 of alpha. */
+  --hero-glint: color-mix(in srgb, var(--edge-hi) 96%, transparent);
+}
+:root[data-theme='light'] {
+  /* the same ink --card-shadow uses in light, at the alpha a section-sized
+     90px blur can carry without reading as a bruise across the boundary */
+  --hero-takeover-ink: rgba(23, 18, 45, 0.3);
+  /* In light the wordmark is dark type on a pale scene, so the highlight is
+     ink, exactly as .hero__shaft-core inverts twenty lines below. 34% of
+     --edge-hi is 0.238 — a shade under the shaft's own 0.22, because the
+     glint crosses a gradient that is already dark at one end. */
+  --hero-glint: color-mix(in srgb, var(--edge-hi) 34%, transparent);
+}
+
 .hero {
   position: relative;
   /* svh is the viewport with the mobile browser chrome showing, so the bottom
@@ -9,6 +37,28 @@
   overflow: hidden;
   background-color: var(--hero-bg);
   z-index: 1;
+  /* ── the vertical room the terrain has ───────────────────────────────────
+     The copy column is centred in the hero and measures ~412px tall, so its
+     floor sits about 50vh + 206px down, and the bottom strip's ceiling is
+     100vh - 56px. That leaves 50vh - 262px of clear band between the two.
+     24px of it stays as air, so no piece of terrain rises more than
+     50vh - 230px above the hero's own floor — and on a viewport with no band
+     at all this reaches 0px and the terrain simply is not drawn, which is
+     the art kit's own rule: the art is what disappears first when vertical
+     space runs out. */
+  --art-band: max(0px, calc(50vh - 230px));
+  /* ── the floor under Origin's lag ────────────────────────────────────────
+     useHeroTakeover eases Origin UP into its layout position rather than
+     lifting it out of one, so while it is arriving it sits up to 120px below
+     where the document put it. `translate` does not move layout, so that
+     would leave a band of the page's own --bg between the hero's floor and
+     Origin's ceiling. This is a copy of the hero's border box painted 150px
+     lower, behind the hero's own background and behind Origin (z-index 4),
+     so the band is --hero-bg — which is the --band-hero token Origin's
+     --tint-top is built from. The boundary therefore has no colour in it at
+     all, in either theme, and once Origin has arrived the band is covered.
+     Stay taller than TAKEOVER_LAG in Hero.tsx. */
+  box-shadow: 0 150px 0 var(--hero-bg);
 }
 
 .hero__sky {
@@ -109,6 +159,140 @@
   inset: 0;
   pointer-events: none;
   background: var(--hero-vignette);
+}
+
+/* ── the valley ────────────────────────────────────────────────────────────
+   Two layers of terrain from public/assets/parallax/, drawn by ThemedHeroArt
+   so both ride the hero's own displacement. The stack, back to front, is
+   guardrail 5 of that folder's implementation brief:
+
+     sky · fog · ridge (z-index 0)  →  point cloud (2)  →  lamppost (2, later
+     in the DOM)  →  hero content and strip (3)  →  nav (its own layer)
+
+   z-index 0 rather than 1 on purpose: 1 would also lift the terrain over the
+   light shafts, the dust, the grain and the vignette, all of which sit at
+   auto. Atmosphere belongs OVER scenery — the shafts should rake across the
+   ridge, and the vignette should darken its corners with everything else's.
+   Painting order inside the 0/auto group is DOM order, and these two are
+   declared immediately after .hero__sky.
+
+   Nothing here filters, tints or recolours: the -dark and -light files are
+   separate artwork for two different contrast ranges, and the opacity is
+   --art-far from tokens.css, per theme. See scene/README.md.
+
+   ── the two numbers each layer is placed with ────────────────────────────
+   --terrain-w is HORIZONTAL SCALE and nothing else. It is always at least
+   132vw / 160vw, because a ridge that stops short of the viewport's edges is
+   an island rather than a horizon — an earlier version capped it at 1560px
+   and measured 175px of empty sky either side of it at 1920. The vh term is
+   the floor for a phone, where the bottom strip wraps to three rows and eats
+   118px: sized off viewport WIDTH alone the ridge measured entirely behind
+   that strip at 375px.
+
+   --art-rise is HOW FAR THE LAYER STANDS ABOVE the hero's floor, and it is
+   what keeps the art off the copy. Each layer's natural rise is a fixed
+   fraction of its own width, because both files are 2172x724 and the feature
+   that matters is at a known place in them: the ridge's ink starts at 51.5%
+   of the file height, the fog's mask opens at 44%. Bleed the box 4% of its
+   width below the hero's floor — the cut that makes the ridge continue
+   behind Origin rather than end in mid-air — and those become 0.12167 * w
+   and 0.14667 * w. --art-band on .hero caps both; whatever is left over goes
+   into the bleed, so a crowded viewport lowers the ridgeline instead of
+   shrinking the mountains. `bottom` is therefore derived, not chosen:
+   rise - head * width, where head is the same fraction measured from the
+   box's own bottom edge.
+
+   The third term in each --art-rise, 250px and 200px, is restraint rather
+   than geometry: without it a 1440-tall window grew 308px of mountain, which
+   is a landscape and not the quiet frame the kit asks for. It also puts the
+   fog's edge 20-50px above the ridgeline on any roomy viewport, which is the
+   only depth cue the two have when --art-band is what is binding.
+
+   Measured clearance, ridge silhouette down to the CTA row, all positive:
+     1920x1080 +129 · 1400x1200 +196 · 1440x900 +44 · 640x900 +122
+     1400x800   +26 · 1280x700   +34 · 1280x600 +34 · 375x812 +62
+     375x667  (the ridge sits entirely behind the strip) · 320x720 +17
+   Before the cap existed the same run measured +6.6px at 1400x800 and a
+   46px overlap at 1280x700.                                               */
+.hero__fog,
+.hero__ridge {
+  left: 50%;
+  /* transform, NOT translate: useHeroParallax owns `translate` outright and
+     rewrites the whole value every frame, so a centring translate would be
+     gone by the next one. Scene.css makes the same point from its end. */
+  transform: translateX(-50%);
+  width: var(--terrain-w);
+  height: auto;
+  /* stated as well as intrinsic, so the layer holds its box before the PNG
+     arrives and the composition does not assemble itself in two steps */
+  aspect-ratio: 2172 / 724;
+  bottom: calc(var(--art-rise) - var(--terrain-w) * var(--art-head));
+  z-index: 0;
+  opacity: var(--art-far);
+}
+.hero__fog {
+  --terrain-w: max(160vw, 176vh);
+  --art-head: 0.18667;
+  --art-rise: min(calc(var(--terrain-w) * 0.14667), var(--art-band), 250px);
+  /* The veil's top edge carries a faint speckle in the artwork. Fade it into
+     the sky rather than let it read as noise; the bottom is bled past the
+     hero's floor instead, because a straight cut across the hero is worse
+     than no fog at all. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 44%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 44%);
+}
+.hero__ridge {
+  --terrain-w: max(132vw, 148vh);
+  --art-head: 0.16167;
+  --art-rise: min(calc(var(--terrain-w) * 0.12167), var(--art-band), 200px);
+}
+
+/* ── the lamppost ──────────────────────────────────────────────────────────
+   The one peripheral prop the hero gets. No bench, no trees: the brief keeps
+   those for the sections below so the establishing shot stays quiet.
+
+   It is placed against the CONTENT COLUMN's left gutter rather than against
+   the viewport edge, because the thing it must never come near is the
+   wordmark, and the wordmark starts at the content column. The gutter is
+   everything left of that column — (hero width - 1240) / 2 plus the column's
+   own padding, which above 1244px has already clamped to 56px — and the lamp
+   is centred in it.
+
+   The file is 1024x1536 with the lamp painted down the middle: only x 37.7%
+   to 62.2% of the box is ever ink, the rest is transparent margin and the
+   glow that is painted into the PNG's own alpha (which is why there is no
+   CSS glow here). Centring the box in the gutter therefore leaves
+   gutter/2 - 0.122 * width of clearance, and the 1400px floor below is
+   chosen so that number stays above 30px at every viewport HEIGHT this can
+   be drawn at as well. Measured, lamp ink to the wordmark's left edge:
+     1400x1200 +36.9 (the tightest, and the one the 1400px floor is set by,
+     because --lamp-h has reached its 330px cap there) · 1400x800 +42 ·
+     1440x900 +49 · 1920x1080 +167.
+   And to the strip's top edge: +33 to +35 at every one of them. The lamp's
+   ink also never comes within reach of the point cloud — 40px in from the
+   left at its worst, against a model that starts 702px in.                 */
+.hero__lamp {
+  /* below 1400px the gutter cannot hold it 30px clear of the wordmark, and
+     art is what disappears first when space runs out */
+  display: none;
+}
+@media (min-width: 1400px) {
+  .hero__lamp {
+    /* capped in px as well as vh so a tall window does not grow it into the
+       copy: the clearance above is computed against this cap */
+    --lamp-h: min(34vh, 330px);
+    --lamp-w: calc(var(--lamp-h) * 2 / 3);
+    --gutter: calc((100% - 1240px) / 2 + 56px);
+    display: block;
+    width: var(--lamp-w);
+    height: var(--lamp-h);
+    left: calc(var(--gutter) / 2 - var(--lamp-w) / 2);
+    /* clear of the bottom strip: the art's own alpha stops at 98% of the box,
+       and the strip is 56px tall at every width this is drawn at */
+    bottom: 84px;
+    z-index: 2;
+    opacity: var(--art-mid);
+  }
 }
 
 /* ── point cloud ───────────────────────────────────────────────────────── */
@@ -239,10 +423,16 @@
    a different order of magnitude from the continuous, page-wide animations
    the rest of this codebase keeps off the paint path. It still parks fully
    off-frame at rest, which is where the site-wide
-   `animation-play-state: paused !important` under reduced motion freezes it. */
+   `animation-play-state: paused !important` under reduced motion freezes it.
+
+   The sweep is --hero-glint, declared per theme at the top of this file. It
+   was a bare rgba(255,255,255,0.92) with no light override — unlike
+   .hero__shaft-core just above, which has had one for exactly this reason —
+   so in the light theme a near-white band crossed dark type every eleven
+   seconds. Dark is unchanged to within 0.008 of alpha. */
 .hero__dg {
   background-image:
-    linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.92) 50%, transparent 60%),
+    linear-gradient(100deg, transparent 40%, var(--hero-glint) 50%, transparent 60%),
     var(--hero-dg);
   background-size: 400% 100%, 100% 100%;
   background-repeat: no-repeat, no-repeat;
@@ -275,6 +465,85 @@
   font: 300 19px/1.62 var(--font-body);
   color: var(--hero-tag);
   text-wrap: pretty;
+  /* ── the box is reserved, not measured every nine seconds ────────────────
+     The five lines in HERO_TAGLINES are different lengths and wrap to
+     different heights. Let the paragraph size to whichever one is showing
+     and the CTA row under it steps up and down every time a line changes —
+     the same bug the Store card's fixed min-height exists to stop, one
+     section over. So the box is reserved for the tallest line at the widest
+     the paragraph is ever drawn, and re-reserved at each breakpoint where
+     the column narrows and the wrap count goes up.
+
+     MEASURED, in the real face at 300 19px/1.62 with text-wrap: pretty, and
+     measured across every PREFIX of every line rather than the finished
+     sentences — the caret is an inline box, so a half-typed line can push a
+     word onto a row the completed line does not use, and reserving for the
+     finished text alone would still let the box grow mid-word.
+
+     Worst height, all five lines, all prefixes, caret included:
+       452px column (>=~500px wide) .. 62px  (2 rows of 30.78px)
+       382px / 339px / 324px column ... 62px
+       309px column (~345px wide) .... 92px  (3 rows)
+       284px column (320px wide) ..... 92px
+     The crossover is between a 309px and a 324px column, so the second
+     reservation starts at 359px, the widest viewport measured at 3 rows. */
+  min-height: 62px;
+  /* the caret is an inline box on the same baseline as the text */
+  --caret-w: 2px;
+}
+
+/* The typing itself. Decorative four ways over in Tagline.tsx; here it is
+   just an inline run so it wraps inside the paragraph like prose. */
+.hero__tagline-typed {
+  display: inline;
+}
+
+.hero__tagline-caret {
+  display: inline-block;
+  width: var(--caret-w);
+  height: 1.02em;
+  margin-left: 3px;
+  vertical-align: -0.17em;
+  background: currentColor;
+  opacity: 0.8;
+}
+/* Steady while characters are landing — a caret that blinks WHILE you type
+   is the one thing real terminals do not do. It blinks only on the empty
+   beat between two lines, and it is a CSS animation, so the site-wide
+   reduced-motion rule in base.css pauses it without a line of JavaScript. */
+.hero__tagline[data-phase='gap'] .hero__tagline-caret {
+  animation: taglineCaret 1.06s steps(1, end) infinite;
+}
+/* At rest the line is finished prose and should read as finished prose, so
+   the caret leaves rather than sitting there flashing for five seconds. */
+.hero__tagline[data-phase='rest'] .hero__tagline-caret {
+  opacity: 0;
+  transition: opacity 0.45s ease 0.65s;
+}
+/* reduced motion: one whole line, no caret at all, nothing running */
+.hero__tagline[data-phase='static'] .hero__tagline-caret {
+  display: none;
+}
+@keyframes taglineCaret {
+  0%,
+  52% {
+    opacity: 0.8;
+  }
+  53%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__tagline-caret {
+    display: none;
+  }
+}
+/* the column is 309px or narrower here and the longest line takes three rows */
+@media (max-width: 359px) {
+  .hero__tagline {
+    min-height: 92px;
+  }
 }
 
 .hero__ctas {

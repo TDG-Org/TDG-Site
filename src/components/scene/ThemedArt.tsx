@@ -41,7 +41,18 @@ function Art({
     <img
       ref={elementRef}
       className={`scene__art${moves ? ' scene__art--moves' : ''} ${className}`}
-      src={asset(`assets/parallax/${art}-${theme}.png`)}
+      /* `.webp`, not `.png`, and this is not a preference.
+         The kit ships both: the PNG is the source art the illustrator's tool
+         emits and it stays in the repo, but it is up to 2.1 MB per cutout at
+         2172px wide for a layer that paints at a few hundred CSS pixels — 28
+         files, 28.0 MB, and every section of the home page draws one. The WebP
+         derivative beside it is the same artwork with its alpha intact
+         (`yuva420p`), downscaled to the width it is actually painted at: 2.0 MB
+         for the whole kit, a 93% cut, and roughly 3–4 MB off first load on a
+         site that measured its own idle main thread down to 0.1 ms/s. Point
+         this back at `.png` and you hand all of that back.
+         `asset()`, never a leading slash — rule 15. */
+      src={asset(`assets/parallax/${art}-${theme}.webp`)}
       alt=""
       aria-hidden="true"
       loading="lazy"

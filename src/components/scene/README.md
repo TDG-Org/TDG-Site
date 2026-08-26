@@ -4,15 +4,15 @@ Two primitives and their stylesheets. Between them they are the only way art
 from [`public/assets/parallax/`](../../../public/assets/parallax/README.md) and
 the shaped boundaries between sections get onto this page.
 
-**Nothing in this folder is used by anything yet, and that is deliberate.** It
-was written first, on its own, so that the five sections that are about to grow
-scenery all reach for the same three components rather than each inventing an
-`<img>` wrapper with its own idea of what "decorative" means. A folder of unused
-exports is normally a smell; this one is a vocabulary written before the
-sentences, and the moment a section imports from it the smell goes away. If you
-are reading this and the grep still says nothing imports it, that job has not
-been done yet — do not delete it, and do not "tidy" it into the first section
-that needs it.
+**This folder was written before anything used it, and that is deliberate.** It
+came first, on its own, so that the sections about to grow scenery would all
+reach for the same three components rather than each inventing an `<img>`
+wrapper with its own idea of what "decorative" means. They now do — `Hero`,
+`Origin`, `Apps`, `Tools`, `Building`, `Faith` and `Outro` all import from here,
+and none of them builds its own. Keep it that way: a section that needs a piece
+of the art kit imports one of these three, and does not write an `<img>` or a
+path of its own. That is what makes a change like the `.webp` swap below one
+string instead of a hunt.
 
 | | |
 | --- | --- |
@@ -37,10 +37,31 @@ StillArt({ art: ArtName; className: string })
 
 All three render the same decorative `<img>`: `alt=""`, `aria-hidden="true"`,
 `loading="lazy"`, `decoding="async"`, `draggable={false}`, and the `src`
-resolved through `asset()` as `assets/parallax/<art>-<theme>.png`. `className`
+resolved through `asset()` as `assets/parallax/<art>-<theme>.webp`. `className`
 is required rather than optional because a piece of this kit that is not
 positioned and sized by its caller is an absolutely positioned image at 0,0 —
 there is no useful default, so the type asks for one.
+
+### `.webp`, and do not "fix" it back to `.png`
+
+The kit ships both. The `.png` is the source art the illustrator's tool emits
+and it stays in the repo; the `.webp` beside it is the same artwork with its
+alpha channel intact (`yuva420p`), downscaled to the size it is actually
+painted at. The kit is 28.0 MB as PNG and 2.0 MB as WebP — the heaviest single
+prop is 2.10 MB, and the widest piece is 2172px, for layers that land at a few
+hundred CSS pixels. The home page draws twelve of them across seven sections,
+plus four more as app-card covers, so the swap is roughly 3–4 MB off first load.
+
+Nothing catches a regression here. A typecheck cannot see a string, the build
+copies whatever `public/` contains, and the page looks identical either way; the
+only symptom is a visitor waiting. So the extension is typed in exactly two
+places — `ThemedArt.tsx` for everything on the page, `KeyArt.tsx` for the app
+covers — and the reason is written beside both. Nowhere else in `src/` should
+name a file in that folder at all.
+
+`public/assets/parallax/README.md` has the `ffmpeg` command that produced these,
+which is what to run when new art arrives. Art added without its `.webp` 404s —
+there is no fallback here, and a missing decorative image fails silently.
 
 ### Three components, not one with a mode prop
 
@@ -126,50 +147,70 @@ the band and the silhouette hanging down. `edge="bottom"` mirrors that same
 path with `translate(0,120) scale(1,-1)`, so there is exactly one path per
 shape and the two edges cannot drift into two slightly different mountains.
 
-### The seam sets no colour, and this is the whole idea
+### A seam is a shape that contrasts, not a colour that matches
 
-A seam wears `currentColor`, so the section it lives in paints it — and what it
-should be painted with is **that section's own band**, the flat colour of the
-middle of the section. Sitting on the section's top edge in its own colour, it
-reads as that section's mass rising up into the one above it: one band of
-silhouette doing what a hard horizontal line cannot.
+This is the part to read before you place one, because the obvious thing does
+not work and it fails silently.
 
-Painting it `--tint-top` instead would make it invisible, correctly — the
-boundaries already meet on an identical value, which is the whole point of the
-comment above `.section--blend` in `base.css`.
-
-**That colour is already declared for you.** Every band of the page has a name
-in `tokens.css` — `--band-hero`, `--band-origin`, `--band-apps`, `--band-tools`,
-`--band-building`, `--band-faith`, `--band-outro`, `--band-foot` — and
-`base.css` hands each section its own as `--seam-fill`. So the recipe is one
-line in your own stylesheet:
+A seam wears `currentColor`, and the section paints it from `--seam-fill`:
 
 ```css
 .origin__seam { color: var(--seam-fill); }
 ```
 
-Both themes come for free, because the band does. No component stylesheet
-writes a colour, which is rule 2, and the number stays in the one place it is
-written down.
+`base.css` declares `--seam-fill` for every section already, so that one line
+is the whole job and both themes come free.
 
-**The trap it saves you from:** `color: var(--tint-top)` on a seam gets you
-nothing at all. `--tint-top`, `--tint-mid` and `--tint-bot` are registered with
-`@property { inherits: false }` in `tokens.css` — that is what lets the theme
-wave animate them instead of snapping — so a child of the section cannot read
-them, and `var(--tint-top)` inside a seam resolves to the registered initial
-value, `transparent`. The seam renders, correctly, as nothing. `--seam-fill` is
-an ordinary custom property and inherits like any other.
+**Why it is not simply the section's band.** It was, briefly, and it painted
+nothing. `base.css`'s invariant is that adjacent bands meet on an identical
+value — that is the point of the comment above `.section--blend`, and it is
+why the page has no visible lines at its boundaries. But it also means a shape
+drawn *at* a boundary, in *either* neighbour's colour, is drawn exactly where
+the two colours are equal. Measured on `#apps`: `getComputedStyle` gave
+`rgb(8, 8, 12)` for the seam and `rgb(8, 8, 12)` for the section behind it.
+A flat section is the worst case, having only one value at all, but no blend
+boundary is meaningfully better — a 44–90px seam sits inside the first ~3% of
+a tall section, where the gradient has barely left `--tint-top`.
+
+So `--seam-fill` is the section's band stepped `--seam-step` toward `--text`:
+
+```css
+--seam-fill: color-mix(in srgb, var(--band-origin) var(--seam-step), var(--text));
+```
+
+**Toward `--text` on purpose.** It makes one declaration correct in both themes
+for one reason instead of two: the ink is near-white in dark, so the silhouette
+lifts slightly above the sky; near-black in light, so it drops slightly below a
+pale one. That is exactly how the kit's `-dark` and `-light` ridges are drawn
+against their skies, so the seam and the art sitting beside it finally agree
+with each other instead of being two unrelated decisions.
+
+`--seam-step` is 94%, and `tokens.css` shows the working: it puts the eight
+seams at ΔL\* 4.3–6.2 in dark and 4.6–4.9 in light, against a `.card` face —
+the site's quietest deliberately-visible plane — at 3.6 and 2.4. Above a card,
+because a masked seam paints most of its band at part opacity; nowhere near the
+ΔL\* 8–11 that a 90% step gives, which would be eight grey stripes across the
+page.
+
+**The other trap:** `color: var(--tint-top)` on a seam gets you nothing at all,
+for a second and unrelated reason. `--tint-top`, `--tint-mid` and `--tint-bot`
+are registered with `@property { inherits: false }` in `tokens.css` — that is
+what lets the theme wave animate them instead of snapping — so a child of the
+section cannot read them, and `var(--tint-top)` inside a seam resolves to the
+registered initial value, `transparent`. `--seam-fill` and the bands are
+ordinary custom properties and inherit like anything else.
 
 **A seam that reaches across a boundary** — one on a section's *bottom* edge,
-meant to read as the NEXT section climbing into this one — takes that
-section's band directly: `color: var(--band-apps)`. The bands are on `:root`,
-so any element can read any of them; `--seam-fill` is only the convenience for
-the common case.
+meant to read as the NEXT section climbing into this one — mixes that
+section's band the same way:
+`color: color-mix(in srgb, var(--band-apps) var(--seam-step), var(--text))`.
+The bands are on `:root`, so any element can read any of them; `--seam-fill` is
+the convenience for the common case.
 
 **Adding a new section?** Declare its band in `tokens.css`, both themes, and
-its `--seam-fill` in `base.css` beside the others, in the same edit. Build its
-`--tint-*` triple out of bands too, so its top is literally the same token as
-the band above it.
+its `--seam-fill` in `base.css` beside the others, in the same edit, mixed the
+same way. Build its `--tint-*` triple out of bands too, so its top is literally
+the same token as the band above it.
 
 ### `--seam-fade`
 

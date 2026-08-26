@@ -39,19 +39,24 @@ const SHAPES: Record<SeamShape, string> = {
  *
  * **It is filled with `currentColor` and it sets no colour of its own**, which
  * is the whole point: the section paints it, from `--seam-fill`, which
- * `base.css` already declares for every section as that section's own band —
- * the flat colour of its middle, named once in `tokens.css`. Sitting on the
- * section's top edge in its own colour, a seam reads as that section's mass
- * rising into the one above it: one band of silhouette doing what a hard
- * horizontal line cannot.
+ * `base.css` already declares for every section.
  *
  *     .origin__seam { color: var(--seam-fill); }
  *
- * Not `--tint-top`. The boundaries already meet on an identical value, so a
- * seam wearing the tint of its own edge would be describing nothing — and it
- * could not read it anyway, because the tint properties are registered
- * `inherits: false` so the theme wave can animate them, which leaves them
- * unreadable from inside the section. `scene/README.md` has the long version.
+ * `--seam-fill` is that section's band stepped slightly toward `--text`, and
+ * the step is the thing that makes a seam work at all. Painted in a band
+ * flat, a seam is INVISIBLE: `base.css` keeps adjacent bands meeting on an
+ * identical value, so a shape drawn at a boundary in either neighbour's
+ * colour is drawn where the two colours are equal. That was measured, not
+ * guessed — `#apps` gave rgb(8,8,12) for the seam and rgb(8,8,12) for the
+ * section behind it. A seam is a shape that contrasts, not a colour that
+ * matches.
+ *
+ * Stepping toward `--text` is what makes one declaration right in both
+ * themes: near-white ink in dark lifts the silhouette slightly above the sky,
+ * near-black ink in light drops it slightly below a pale one — which is
+ * exactly how the art kit's `-dark` and `-light` ridges are drawn, so the
+ * seam and the PNG beside it agree. `scene/README.md` has the long version.
  *
  * `preserveAspectRatio="none"` because a seam is a proportion of the viewport,
  * not a picture: it stretches to whatever width it is given and takes its
