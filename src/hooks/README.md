@@ -1,7 +1,8 @@
 # `src/hooks/` · the motion hooks
 
-Four hooks. Between them they do all the movement on this site, and every one of
-them runs on the single frame loop in [`../lib/motion.ts`](../lib/README.md).
+Five hooks, in four files. Between them they do all the movement on this site,
+and every one of them runs on the single frame loop in
+[`../lib/motion.ts`](../lib/README.md).
 
 **Never call `requestAnimationFrame` directly, never add a scroll listener, and
 never animate on a `setInterval`.** The loop parks itself when nothing holds it,
@@ -12,7 +13,8 @@ per second on a page nobody is even scrolling.
 | --- | --- |
 | `useReveal(kind, index)` | Brings an element in as it enters the viewport. |
 | `useTilt(soft?)` | Tilts a card toward the cursor and feeds the spotlight. |
-| `useParallax(factor)` | Drifts a decorative layer against its distance from centre. |
+| `useParallax(factor)` | Drifts a decorative layer against its own distance from centre. |
+| `useHeroParallax(factor)` | Drifts a layer with the **hero's** displacement instead of its own. Same file as `useParallax`, and the two must never share an element. |
 | `useOffscreenPause()` | Parks decorative animation in sections nobody can see. |
 
 ---
@@ -39,7 +41,7 @@ At `mi === 0` (reduced motion) it finishes immediately.
 
 ```tsx
 const tilt = useTilt<HTMLElement>()          // cards
-const soft = useTilt<HTMLElement>(true)      // the story timeline rows
+const soft = useTilt<HTMLElement>(true)      // the Origin timeline rows
 ```
 
 Rotates toward the cursor and sets the two custom properties the spotlight
@@ -72,6 +74,33 @@ const blob = useParallax<HTMLDivElement>(-0.12)
 Uses the standalone `translate` property rather than `transform`, so any
 transform the element already carries — centring, rotation — survives untouched.
 Lerps per second rather than per frame, so 144 Hz feels like 60 Hz.
+
+## `useHeroParallax`
+
+```tsx
+const shafts = useHeroParallax<HTMLDivElement>(0.06)
+```
+
+The fifth hook, exported from `useParallax.ts` beside the fourth. It reads
+**the hero's** rect (`#top`) rather than the element's own, so a layer follows
+the hero down as it sinks instead of drifting against its own distance from the
+centre of the viewport.
+
+**Which one you want.** Inside the hero, or in a section that is meant to read
+as still tied to it, use `useHeroParallax` — `Hero.tsx` moves its shafts and its
+content with it, and `Faith.tsx` gives its rays the same ride. Anything else on
+the page uses `useParallax`. There is no lerp in the hero version and it needs
+none: it tracks a rect that is already moving smoothly, so a smoother of its own
+would only add lag.
+
+**Never put both on one element.** Each writes the whole of
+`element.style.translate` every frame from its own source and neither reads what
+the other left, so two writes race inside one frame, the winner depends on
+effect order, and the visible result is art that shakes between two positions.
+This is why `components/scene/ThemedArt.tsx` is three components rather than one
+with a `mode` prop — hooks cannot be called conditionally, so a single component
+would have to call both. Its header comment is the long version, and it is
+worth reading before you "simplify" anything here.
 
 ## `useOffscreenPause`
 

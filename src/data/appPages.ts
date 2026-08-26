@@ -1810,7 +1810,7 @@ const VIDHELPER: AppPage = {
     { label: 'Where it runs', value: 'Your own machine. The instructions are written for Windows 11' },
     { label: 'You will need', value: 'Node.js 18+, yt-dlp and FFmpeg. aria2 is optional and only makes it faster' },
     { label: 'Quality', value: 'Up to 1080p, video and audio merged into one mp4' },
-    { label: 'Status', value: 'Work in progress, at version 1.6' },
+    { label: 'Status', value: 'Work in progress' },
   ],
   sections: [
     {
@@ -2305,8 +2305,16 @@ export const APP_PAGES: AppPage[] = [
   MARANATHA_PAGE,
 ]
 
-/** Every slug the router will accept. Anything else is treated as an unknown hash. */
-export const APP_PAGE_SLUGS: string[] = APP_PAGES.map((page) => page.slug)
+/*
+ * There is deliberately NO list of slugs exported from here.
+ *
+ * The router builds its own from the CARDS (`APP_SLUGS` in `src/lib/route.ts`)
+ * and explains at length why it must never import this file: this is a large
+ * lazy chunk and only a visitor who opens a page should pay to download it. A
+ * slug list exported here would be dead the moment it was written, and the one
+ * that used to live at this spot carried the comment "every slug the router
+ * will accept" — which was never true of it.
+ */
 
 export const pageForSlug = (slug: string): AppPage | undefined =>
   APP_PAGES.find((page) => page.slug === slug)
@@ -2337,8 +2345,27 @@ export function iconForPage(slug: string): { icon: string; shape: IconShape } | 
   return tool ? { icon: tool.icon, shape: tool.iconShape } : undefined
 }
 
-/** The card a page belongs to, for the chips it should carry. */
+/**
+ * The chips a page carries under its title.
+ *
+ * Nine of the ten read them off the card the page was opened from, for the
+ * same reason as the icon and the screenshot above: one place to name a thing,
+ * so a page and its card cannot describe the same app differently.
+ *
+ * MARANATHA is the tenth and it is the odd one, because its "card" is the
+ * Building feature panel — which prints `status` and `note` in prose and has
+ * no `chips` array to read. Left to fall through, the game was the one page in
+ * ten that drew no chip row at all, which looks like a page still loading
+ * rather than like a decision. So its three are named here, beside the page
+ * they belong to and inside the content file, where a chip is data like every
+ * other word on the site. Each one restates something the facts row directly
+ * below it already says, so there is no second claim to go stale. If that
+ * panel ever gains chips of its own, read them from there instead.
+ */
 export function chipsForPage(slug: string): { label: string; hot?: boolean }[] {
+  if (slug === MARANATHA_PAGE.slug) {
+    return [{ label: 'BROWSER' }, { label: 'IN PLAYTEST', hot: true }, { label: 'FREE' }]
+  }
   const app = APPS.find((card) => card.page === slug)
   if (app) return [...app.chips]
   const tool = TOOLS.find((card) => card.page === slug)

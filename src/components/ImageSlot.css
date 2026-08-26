@@ -3,8 +3,13 @@
   inset: 0;
   display: block;
 }
+/* A faint wash over .apps__shot's --bg2, so an empty frame reads as a frame
+   rather than as a hole. It was a literal mid-grey, which happened to look
+   right in both themes by being neither of them — the exact case rule 2 of
+   AGENTS.md names. Mixed off --text instead, it is a light wash in dark and a
+   dark one in light, which is what a neutral grey was standing in for. */
 .slot[data-filled='false'] {
-  background: rgba(127, 127, 127, 0.08);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
 .slot__img {

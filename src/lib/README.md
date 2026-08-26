@@ -25,10 +25,13 @@ change one.
 path needs a `404.html` rewrite to survive a refresh or a shared link, and every
 existing nav item was already a hash anchor.
 
-**Every route carries a leading slash**, and that is load-bearing: `#store` and
-`#story` are one letter apart, and a route that ate a section anchor would break
-the one-page scroll. `#/app/<slug>` also puts the slug behind a segment, so no
-future app name can collide with a section either.
+**Every route carries a leading slash**, and that is load-bearing: a route that
+ate a section anchor would break the one-page scroll. The rule was learned from
+one near miss — the home section used to be `#story`, one letter from `#store`.
+That section is `#origin` now, so that particular pair cannot clash any more,
+and the rule is unchanged regardless: what it buys is that no section anchor
+added in future collides with a route added today. `#/app/<slug>` also puts the
+slug behind a segment, so no future app name can collide with a section either.
 
 ```ts
 type Route =
@@ -92,6 +95,24 @@ less motion. `dt` is clamped to 50 ms so a backgrounded tab does not jump.
 
 **Never call `requestAnimationFrame` yourself, never add a scroll listener, and
 never animate on a `setInterval`.** All three break the parking.
+
+**The one exemption, and what it costs to take.** Something that is not
+animation, that the loop would serve *worse* than a timer does — because the
+loop would be held awake at 60 Hz for work that happens once a second or once a
+session — and that stops on its own may use a plain timer instead. All three
+conditions, not two. **Write the reason at the call site**, in the shape
+`src/feedback/FeedbackDialog.tsx` uses above its countdown interval: name rule
+9, say why the loop is the wrong home for this particular thing, and say when
+the timer dies. An exemption nobody documented is indistinguishable from
+somebody who had not read this file, and the rule stops being enforceable the
+third time that happens.
+
+`isParked()` is exported for checking the claim above rather than for using:
+"did the loop actually park?" is the one thing in this section a screenshot
+cannot settle. `setMotionIntensity()` is the only writer of the intensity
+multiplier and nothing calls it today, so `mi` on the shipped site is 1, or 0
+for a visitor who asked for less motion. The 0–1.5 clamp is the contract for
+whatever turns that knob first, not a range the page uses.
 
 ## `sections.tsx`
 

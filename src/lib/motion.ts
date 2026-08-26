@@ -54,10 +54,29 @@ let wired = false
 /** Total frames the loop has ever run; zero means it has not run yet. */
 export const framesRun = () => frames
 
-/** True while the loop is asleep because nothing needs a frame. */
+/**
+ * True while the loop is asleep because nothing needs a frame.
+ *
+ * Nothing on the page calls this and nothing should: it is here to be ASKED,
+ * from a console or a check, because "did the loop actually park?" is the one
+ * claim in the header above that a screenshot cannot settle. AGENTS.md §7 asks
+ * for measurement rather than eyeballing, and this is the measurement.
+ */
 export const isParked = () => rafId === 0
 
-/** 0–1.5; scales parallax and takeover amounts. 1 is the designed feel. */
+/**
+ * The intensity knob, and what it is worth today.
+ *
+ * `motionIntensity()` clamps to 0–1.5, and 1.5 is reachable only through
+ * `setMotionIntensity` — which nothing in this repo calls. So on the shipped
+ * site this value is exactly 1, or 0 for a visitor who asked for less motion,
+ * and every subscriber's `mi` is one of those two numbers.
+ *
+ * The knob is kept rather than removed because the clamp is the contract for
+ * anything that ever turns it: above 1.5 the hero takeover overshoots its own
+ * section and below 0 layers travel the wrong way. Do not read the range as a
+ * feature the page uses — read it as the range a future caller may use.
+ */
 let intensity = 1
 let reduced = false
 
@@ -75,6 +94,12 @@ export function motionIntensity(): number {
   return reduced ? 0 : Math.max(0, Math.min(1.5, intensity))
 }
 
+/**
+ * The only writer of `intensity`. Nothing calls it yet; see the note there for
+ * why the knob is kept. It wakes the loop because a multiplier that changed
+ * while the page was parked would otherwise not be painted until the next
+ * scroll.
+ */
 export function setMotionIntensity(value: number) {
   intensity = value
   wake()

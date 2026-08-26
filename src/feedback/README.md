@@ -11,7 +11,7 @@ tab (`src/dev/`), and the server contract both halves speak is
 
 | File | What it is |
 | --- | --- |
-| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
+| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also every sentence the form shows that is not a label: the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the contact box's placeholder (`CONTACT_PLACEHOLDER`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
 | `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`). |
 | `ReplyInbox.tsx` | The startup panel that delivers a developer's reply, quoted next to what the person originally wrote. Checks once per sign-in; renders nothing when nothing waits. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
@@ -77,6 +77,11 @@ server's own refusal lands in the error alert, worded to be read.
 - **The kind ids are the server's** (`tdg_feedback_kinds()` in the migration);
   `FEEDBACK_KINDS` here holds only the words the picker shows. Add a kind in
   a migration first, then give it copy here.
+- **A report carries more than the person typed** — the site version, the OS
+  and browser string, and the optional contact line — and the About page's
+  "what do you store about me?" answer ends with *"that is the whole list"*.
+  Add a field to a report and that answer is part of the same change
+  (`src/data/about.ts`). It went a release without naming any of these three.
 - The inbox is opportunistic: a failed read shows nothing and tries again next
   boot. It must never put an error over a page that otherwise works.
 - **The quota read is opportunistic in exactly the same way.** A failed

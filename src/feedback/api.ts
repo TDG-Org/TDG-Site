@@ -31,6 +31,18 @@ export const FEEDBACK_KINDS: FeedbackKind[] = [
 ]
 
 /**
+ * What the optional contact box shows when it is empty.
+ *
+ * Here rather than in the dialog for the reason `FEEDBACK_KINDS` is here: it is
+ * a sentence a visitor reads, and rule 1 keeps those out of components. A
+ * placeholder is doing real work in this field — the label says "How To Reach
+ * You" and the honest answer is "anything at all", which an example says faster
+ * than a sentence can. `Instagram` is a proper noun and keeps its capital
+ * (rule 7); the rest is sentence case, like every other hint on the form.
+ */
+export const CONTACT_PLACEHOLDER = 'My Instagram is @tdgluke'
+
+/**
  * The server's refusals are written to be shown ("pick what kind of feedback
  * this is"), so show them. The `tdg: ` prefix is for server logs; a request
  * that never landed is not a refusal and must not read like one.

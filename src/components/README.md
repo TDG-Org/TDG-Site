@@ -14,8 +14,8 @@ shared primitives every one of these builds on live in
 
 | | |
 | --- | --- |
-| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Story up over it. Its canvases are in `hero/`. |
-| `Story.tsx` | Seven chapters on a timeline that fills as you read. Backed by `story/StoryField.tsx`. |
+| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Origin up over it. Its canvases are in `hero/`. |
+| `Origin.tsx` | Seven chapters on a timeline that fills as you read. Backed by `origin/OriginField.tsx`. |
 | `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. |
 | `Building.tsx` | What is on our screens right now. |
 | `Faith.tsx` | A slow gradient field and one verse. |
@@ -47,16 +47,28 @@ shared primitives every one of these builds on live in
 | `ImageSlot.tsx` | A screenshot slot. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
 | `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph. |
 
-### `hero/` and `story/`
+### `hero/` and `origin/`
 
 Hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx` morphs
 between the twelve forms in `shapes.ts`; `Starfield.tsx` is the dust;
-`StoryField.tsx` is the same technique scaled down to ambient.
+`OriginField.tsx` is the same technique scaled down to ambient.
 
 **No three.js and no WebGL in any of them**, despite `three` being a dependency.
 This is the site's own proven approach. Point counts scale to what the device can
 comfortably paint, and the dust runs at 24 Hz on a capped DPR because nobody can
 tell and it is 2.5× less canvas work for an identical result.
+
+### `scene/`
+
+`ThemedArt` / `ThemedHeroArt` / `StillArt` and `Seam`: the shared vocabulary for
+the transparent-PNG art kit in `public/assets/parallax/` and for the shaped
+boundaries between sections. It was written **before** the sections that use it,
+so that five of them would reach for the same primitives instead of each
+wrapping an `<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools` and
+`Building` draw from it today. Read
+[`scene/README.md`](scene/README.md) before you decorate anything: it has the
+reason there are three art components rather than one with a mode prop, and the
+reason a seam cannot read `--tint-top`.
 
 ---
 
@@ -119,8 +131,12 @@ beside it. In one component:
 - **One button per pack, in every state.** A pack sold three ways opens a
   chooser over the card rather than printing three buttons, and a pack already
   subscribed to opens a *manage* panel from a button of exactly the same size in
-  exactly the same place — measured 530×47 against its neighbour's Buy button.
-  The packs sit in a grid row and unequal action rows are visible immediately.
+  exactly the same place — **measured** against its neighbour's Buy button, not
+  assumed to match. The packs sit in a grid row and unequal action rows are
+  visible immediately. (The numbers from that measurement are recorded once, in
+  §8 of [`AGENTS.md`](../../AGENTS.md), because a size written down in two
+  places is a size that will eventually disagree with itself — and it did:
+  this line used to say 530×47 beside §8's 507×45, both presented as measured.)
 - Chips and cadence that **agree with the plan**. Printing `ONE-TIME · YOURS FOR
   GOOD` over a monthly subscription is the one mistake a shop may not make.
 - A **derived** saving, so `Save $22.88` cannot disagree with the two prices it

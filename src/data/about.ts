@@ -25,8 +25,17 @@ import { CONTACT, GITHUB_ORG } from './content'
  *
  * The facts behind these came from `src/data/store.ts` (what is sold, and that
  * Stripe holds the payment), `supabase/README.md` and `src/auth/` (what an
- * account is and what it stores), `src/dev/README.md` (what a developer can
- * see and do, and what deleting an account means), and each app's own repo.
+ * account is and what it stores), `src/badges/` (the marks an account can
+ * carry), `src/feedback/api.ts` and the `user_feedback` migration (what rides
+ * along with a report, which is more than the person typed), `src/dev/README.md`
+ * (what a developer can see and do, and what deleting an account means), and
+ * each app's own repo.
+ *
+ * **A shipped feature that stores something new lands in these answers in the
+ * same commit.** The "what do you store about me?" answer ends with "that is
+ * the whole list", which is a promise the page cannot keep by itself: feedback
+ * shipped, three more things were stored, and the list said nothing about them
+ * for a release. If you add a table, a column or a field, come here first.
  */
 
 export type AboutPage = {
@@ -228,7 +237,7 @@ export const ABOUT: AboutPage = {
             },
             {
               q: 'What do you store about me?',
-              a: 'If you never sign in, nothing. This site has no analytics, and the only thing it keeps in your browser is whether you chose light or dark. If you do sign in: the email you signed up with, the username and display name you chose, a bio if you write one, which subscription tier you hold, which packs you have bought, and the record of the payments behind them. That is the whole list.',
+              a: 'If you never sign in, nothing. This site has no analytics, and the only thing it keeps in your browser is whether you chose light or dark. If you do sign in: the email you signed up with, the username and display name you chose, a bio if you write one, which subscription tier you hold, which packs you have bought, the record of the payments behind them, and any badges we have put on the account. If you send us feedback, that report is kept too: what you wrote, the contact line if you filled that optional box in, and — attached for us rather than typed by you — which operating system and browser you sent it from, and which version of this site you were looking at, because a bug report without those is usually a bug we cannot find. That is the whole list.',
             },
             {
               q: 'Where does the stuff I make actually live?',
@@ -236,7 +245,7 @@ export const ABOUT: AboutPage = {
             },
             {
               q: 'Can I delete my account?',
-              a: 'Yes, and not with a button yet. There is no self-serve delete on this site today: write to us and we will remove the account and everything attached to it by hand. When there is a button, this answer changes.',
+              a: 'Yes, and not with a button yet. There is no self-serve delete on this site today: write to us and we will remove the account and everything attached to it by hand. One thing outlives it on purpose. A feedback report you sent stops being linked to you, and the message itself stays, because the bug it describes is still there after the account is gone. When there is a button, this answer changes.',
             },
             {
               q: 'Is anything third party involved?',
@@ -265,7 +274,7 @@ export const ABOUT: AboutPage = {
             },
             {
               q: 'Who can see my account from your side?',
-              a: 'We can. There is a developer console on this site that the two of us can reach, and it can see an account’s identity, its tier and what it has bought, and can suspend or delete it. It cannot see your notes, your books or anything else on your machine, because none of that reaches us in the first place. Every action it takes is written to a log next to the change.',
+              a: 'We can. There is a developer console on this site that the two of us can reach, and it can see an account’s identity, its tier, what it has bought and every feedback report it has sent, and it can suspend or delete the account. It cannot see your notes, your books or anything else on your machine, because none of that reaches us in the first place. Every action it takes is written to a log next to the change.',
             },
           ],
         },

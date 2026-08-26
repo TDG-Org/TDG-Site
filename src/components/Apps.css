@@ -17,6 +17,75 @@
   filter: blur(30px);
 }
 
+/* ── the treeline ──────────────────────────────────────────────────────────
+   This section's beat in the page's one walk, and the quietest of the six on
+   purpose: `#apps` is `.section--flat`, the contrast anchor between two
+   blended sections, so the art here is meant to be less than its neighbours'
+   rather than more. See the note beside these in Apps.tsx.
+
+   ## Why the heights are clamps against the section's own padding
+
+   The rule is that the art never touches the grid, the heading, the lede or
+   the nudge, and "never" has to be structural rather than checked once at one
+   width. Both props are anchored to the section's BOTTOM edge, and the
+   section's own `padding-bottom` is `clamp(72px, 9vw, 130px)` from base.css.
+   Every one of the three terms below is smaller than the matching term above,
+   so the prop is shorter than the padding at every viewport width there is —
+   it physically cannot reach the bottom of the grid. That is rule 6: one set
+   of numbers taken from the parent, not a measurement taken at 1440px and
+   hoped for elsewhere.
+
+   ## Why both are `--art-far` and neither has a filter
+
+   `--art-far` is the quiet end of the kit's range in both themes, which is
+   where a contrast-anchor section belongs. The number is a token because the
+   restraint of this kit is one decision for the whole page; writing 0.5 here
+   is how a page ends up loud in one band and invisible in the next. And
+   nothing recolours a pixel: `ThemedArt` swaps the -dark and -light artwork,
+   which are separate drawings, and a `filter: invert()` over one of them would
+   undo the choice the illustrator already made.                            */
+
+.apps__seam {
+  /* base.css sets --seam-fill for #apps, next to the band tints it has to
+     agree with. Do not restate the colour here — see scene/README.md. */
+  color: var(--seam-fill);
+}
+
+/* The structural anchor. Right edge, small, bottom-anchored, and running off
+   the edge rather than ending in mid-air inside the shell — which is what
+   `max-width: none` on `.scene__art` is for. The section is `overflow: hidden`
+   so nothing it overhangs can scroll the page sideways. */
+.apps__pines {
+  right: 0;
+  bottom: 0;
+  height: clamp(64px, 8vw, 116px);
+  width: auto;
+  opacity: var(--art-far);
+}
+
+/* Optional low foliage, opposite corner, shorter again. It drifts where the
+   pines do not: a prop anchored to an edge reads as part of the place, and
+   giving every layer its own drift is how a page starts to feel like it is
+   sliding. The factor is small enough that it never leaves its own band. */
+.apps__reeds {
+  left: 0;
+  bottom: 0;
+  height: clamp(40px, 5vw, 76px);
+  width: auto;
+  opacity: var(--art-far);
+}
+
+/* Guardrail 7 of the kit: the peripheral props come off at 640px. Both, not
+   just the pines — at one column this section is very tall and its bottom
+   padding is the only air left in it, and the art is what disappears first
+   when vertical space runs out. */
+@media (max-width: 640px) {
+  .apps__pines,
+  .apps__reeds {
+    display: none;
+  }
+}
+
 .shell.apps__shell {
   max-width: 1180px;
 }

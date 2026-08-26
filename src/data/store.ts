@@ -226,15 +226,6 @@ export function formatUsd(cents: number): string {
 }
 
 /**
- * Is this pack's checkout a Stripe TEST-mode one?
- *
- * Stripe's test Payment Links are `buy.stripe.com/test_…` and its live ones are
- * `buy.stripe.com/…`, so the mode is readable straight off the URL with no key
- * and no request. Worth reading, because a test link is not broken. It is a
- * real checkout page that simply refuses every real card, and a customer who
- * meets one is told nothing about why. The card says it plainly instead.
- */
-/**
  * Is this pack RENTED rather than bought?
  *
  * Asked of the plans rather than of the pack id, so the answer stays true if
@@ -264,6 +255,15 @@ export function annualSavingCents(plans: readonly StorePlan[]): number | null {
   return saved > 0 ? saved : null
 }
 
+/**
+ * Is this pack's checkout a Stripe TEST-mode one?
+ *
+ * Stripe's test Payment Links are `buy.stripe.com/test_…` and its live ones are
+ * `buy.stripe.com/…`, so the mode is readable straight off the URL with no key
+ * and no request. Worth reading, because a test link is not broken. It is a
+ * real checkout page that simply refuses every real card, and a customer who
+ * meets one is told nothing about why. The card says it plainly instead.
+ */
 export function isTestLink(pack: StorePack): boolean {
   return new URL(pack.paymentLink).pathname.startsWith('/test_')
 }

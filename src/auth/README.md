@@ -53,6 +53,20 @@ here, so the site says one thing about one situation however it found out.
 somebody to reset a password that was right all along, which is why
 `OFFLINE_MESSAGE` exists.
 
+**A refusal the browser makes has no code to match**, because no request was
+sent. Those are `FORM_REFUSAL` in the same file — a plain object, deliberately
+not extra arms of `authMessage`, because an arm with an invented code that no
+server can send is an arm the next reader cannot tell from a real one.
+`usernameShapeProblem` and `USERNAME_RULE` are the same idea: the check and the
+sentence explaining it are one fact, and `USERNAME_RULE` is composed from
+`USERNAME_MIN` and `USERNAME_MAX` so the prose cannot drift from the numbers.
+`AuthModal.tsx` imports all of it and states none of it.
+
+**There is no password length anywhere in this folder or in the modal.** The
+minimum is a Supabase dashboard setting that can move with no build here, so
+the only refusal that stays true is GoTrue's own `weak_password` sentence,
+passed through. The modal's strength meter is an opinion, not a gate.
+
 ## `sessionGuard.ts` · the hour nothing can reach into
 
 "Sign Out Everywhere" in the Developer console deletes every row the account has
@@ -97,8 +111,19 @@ checks for itself. Never move a permission decision into this folder.
 
 ## Rules for changing anything here
 
-- **Never reveal whether an account exists.** The endpoint's vocabulary is small
-  on purpose; keep any new error inside it.
+- **Never reveal whether an account exists — with one named exception, at
+  sign-up.** Sign-in and password reset must not, and `tdg-site-account`'s
+  vocabulary is deliberately small so that they cannot; keep any new error
+  inside it. The exception is in `AuthProvider.tsx`, with its reasoning written
+  beside it: GoTrue answers a sign-up for an address it already knows with a
+  success shaped exactly like a new one — a user object, no session, and an
+  empty `identities` array as the only tell — so left alone the form tells
+  somebody who already has an account to go and wait for a confirmation email
+  that is never coming. Saying so plainly costs the anti-enumeration property,
+  which is a trade worth making on a site this size. **That is the only place
+  the trade is made.** Anything else that would leak existence needs its own
+  paragraph of reasoning before it ships, or it is an oversight wearing the
+  same clothes.
 - **Never put a secret in this folder.** The publishable key is not one; a
   service-role key would be, and there is no place for it in a static site.
 - **A new refusal gets a code and an entry in `wording.ts`**, never an inline

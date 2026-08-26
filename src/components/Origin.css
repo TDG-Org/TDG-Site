@@ -1,0 +1,555 @@
+.origin {
+  z-index: 4;
+  will-change: translate, scale;
+
+  /* ── the row's one set of measurements ───────────────────────────────────
+     A chapter's prose now sits in a panel BELOW the heading rather than in the
+     same column as the title, so the indent that keeps the two aligned has to
+     be stated somewhere both can read it. Rule 6: one set of variables on the
+     common parent, never a literal here and a different literal there.
+
+     The numeral is given a width rather than left to its own glyphs, because
+     the panel's indent is derived from it and an intrinsic width would drift
+     the moment the webfont failed and Georgia's much wider lining figures
+     stood in. The clamp has room for those: at every step it is wider than
+     "01" set in Georgia at the matching numeral size. */
+  --origin-numeral-w: clamp(52px, 6.8vw, 82px);
+  --origin-gap: clamp(14px, 2.4vw, 30px);
+  /* the reading column inside a row: the title, the prose and the chevron all
+     end on this same right edge */
+  --origin-col: 620px;
+  --origin-head-w: calc(var(--origin-numeral-w) + var(--origin-gap) + var(--origin-col));
+  /* the row's own two paddings, here rather than in the rule that writes them,
+     because the chevron is positioned against both */
+  --origin-inset: clamp(58px, 7vw, 92px);
+  --origin-pad: 26px;
+  --origin-mark: 22px;
+}
+
+/* The section's own background, not another floating layer: a broad soft
+   band at the top (hero's light continuing down past the seam) and a warm
+   pool low on the opposite side, over the same three-stop tint blend every
+   other section uses. Both stay clear of the text column (.origin__intro is
+   left-aligned, max 660px) and low-alpha enough not to touch contrast. */
+.origin.section--blend {
+  background-image:
+    radial-gradient(1200px 480px at 50% -8%, var(--glow), transparent 60%),
+    radial-gradient(1000px 720px at 4% 100%, var(--origin-glow-warm), transparent 68%),
+    linear-gradient(
+      180deg,
+      var(--tint-top) 0%,
+      var(--tint-mid) 30%,
+      var(--tint-mid) 70%,
+      var(--tint-bot) 100%
+    );
+  transition:
+    var(--t-theme),
+    var(--t-tint),
+    --origin-glow-warm 0.6s ease var(--wave-delay, 0ms);
+}
+
+.origin__field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.origin__grid {
+  opacity: 0.72;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 76px 76px;
+  -webkit-mask-image: radial-gradient(74% 70% at 22% 30%, #000, transparent 78%);
+  mask-image: radial-gradient(74% 70% at 22% 30%, #000, transparent 78%);
+}
+
+.origin__blob {
+  top: 8%;
+  right: 6%;
+  width: 420px;
+  height: 420px;
+  filter: blur(24px);
+}
+
+/* ── the path, and the seam it arrives over ───────────────────────────────
+   One structural anchor plus one far layer, and nothing else — the art kit's
+   guardrail 8. See public/assets/parallax/README.md and scene/README.md.
+
+   Both are placed by `right` and `width` in vw so their LEFT edge tracks the
+   viewport rather than a breakpoint: it lands at 102vw − min(24vw, 500px) for
+   the stones and 105vw − min(26vw, 560px) for the fog, which is right of the
+   reading column's own right edge at every width this rule applies at. The
+   parallax on them is vertical only (useParallax writes `translate: 0 Npx`),
+   so no amount of drift can carry either across the copy.
+
+   Opacity is a token, never a number: --art-far for the fog, --art-mid for
+   the stones. Nothing here filters or recolours — the -dark and -light files
+   are separate artwork and the kit is explicit that a filter must not stand
+   in for the swap. */
+@media (min-width: 1120px) {
+  .origin__fog {
+    right: -5vw;
+    bottom: 60px;
+    width: min(26vw, 560px);
+    opacity: var(--art-far);
+  }
+  .origin__stones {
+    right: -2vw;
+    bottom: -30px;
+    width: min(24vw, 500px);
+    opacity: var(--art-mid);
+  }
+}
+/* Below that the reading column has the whole shell and there is no empty
+   edge left to stand a prop in, so the art is what goes — it always is. */
+@media (max-width: 1119px) {
+  .origin__fog,
+  .origin__stones {
+    display: none;
+  }
+}
+
+/* The wrapper exists because `Seam` renders the <svg> itself and `useParallax`
+   has to own `translate` on an element of its own. Zero height: the seam
+   inside it is absolutely positioned and takes its own height from Seam.css. */
+.origin__seam-drift {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  will-change: translate;
+}
+/* The colour is declared beside this section's tints in base.css, which is
+   where it has to agree with them (rule 2: no component stylesheet writes a
+   colour). The fallback is `transparent` rather than nothing, because an
+   unresolved var() here would leave `color` to inherit --text and paint a
+   bright slab across the top of the section. --seam-fade is the alpha the
+   dissolve is still at halfway down, so every seam on the page fades at one
+   rate. */
+.origin__seam {
+  color: var(--seam-fill, transparent);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+}
+
+.shell.origin__shell {
+  max-width: 1100px;
+}
+
+.origin__intro {
+  max-width: 660px;
+}
+.h2.origin__heading {
+  margin: 22px 0 24px;
+}
+/* One paragraph, not two: the tag's history and what happened to it, said
+   once. The chapters below carry the detail that used to be up here. */
+.origin__lede {
+  margin: 0;
+  font: 400 18px/1.75 var(--font-body);
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.origin__timeline {
+  position: relative;
+  margin-top: 52px;
+}
+.origin__spine,
+.origin__spine-fill {
+  position: absolute;
+  left: 28px;
+  top: 18px;
+  width: 1px;
+  pointer-events: none;
+}
+.origin__spine {
+  bottom: 22px;
+  background: var(--border);
+}
+.origin__spine-fill {
+  height: 0;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent-2) 72%, transparent);
+  box-shadow: 0 0 12px var(--glow);
+}
+
+.origin__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.origin__row {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  padding: 28px var(--origin-pad) 30px var(--origin-inset);
+  background-color: transparent;
+  border: 1px solid transparent;
+  /* gentle on purpose: 1.05° tilt, 2.5px lift, long settle */
+  transition:
+    transform 0.95s cubic-bezier(0.2, 0.55, 0.24, 1),
+    var(--t-theme);
+}
+.origin__row:hover {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.origin__row[data-turn] {
+  box-shadow: 0 0 40px -16px var(--glow);
+}
+
+/* ── the disclosure ───────────────────────────────────────────────────────
+   The whole row is the toggle: a 22px chevron is a 22px target and the row is
+   the width of the reading column. */
+.origin__row-heading {
+  margin: 0;
+  font: inherit;
+}
+.origin__toggle {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+}
+/* Offset outward, into the row's own padding, so the ring reads as belonging
+   to the row rather than boxing the words. The row is `overflow: hidden` and
+   the smallest padding here is 26px, so nothing clips it. */
+.origin__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 2px;
+}
+
+.origin__sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, var(--accent-soft) 45%, transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.origin__row:hover .origin__sweep {
+  opacity: 1;
+  animation: sweepIn 1.05s cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+.origin__dot {
+  position: absolute;
+  left: 23px;
+  top: 36px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  transition:
+    transform 0.5s ease,
+    var(--t-theme);
+}
+.origin__row:hover .origin__dot {
+  transform: scale(1.55);
+  box-shadow: 0 0 20px 5px var(--glow);
+}
+
+/* ── the same three effects, for a keyboard ───────────────────────────────
+   The trigger is now a child of the row and the sweep, the dot and the pulse
+   are its earlier SIBLINGS, so `~` cannot reach them and the state has to be
+   read off the row with :has().
+
+   These are deliberately separate rules rather than extra selectors on the
+   three :hover rules above: one unsupported :has() invalidates the whole
+   selector LIST it appears in, which would take the hover behaviour down with
+   it on a browser that has no :has(). Split, the worst case is that a
+   keyboard visitor there gets the focus ring and no sweep. */
+.origin__row:has(.origin__toggle:focus-visible) {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.origin__row:has(.origin__toggle:focus-visible) .origin__sweep {
+  opacity: 1;
+  animation: sweepIn 1.05s cubic-bezier(0.3, 0, 0.2, 1);
+}
+.origin__row:has(.origin__toggle:focus-visible) .origin__dot {
+  transform: scale(1.55);
+  box-shadow: 0 0 20px 5px var(--glow);
+}
+
+/* ── the turn's pulse ──────────────────────────────────────────────────────
+   Rebuilt from the two shadows the original keyframes interpolated:
+
+     0%,100%  box-shadow: 0 0 0  0 glow,  0 0 12px 2px glow
+     50%      box-shadow: 0 0 0 7px transparent, 0 0 22px 5px glow
+
+   The first is a hard ring growing from the dot's edge (r 5.5 → 12.5) while
+   its alpha falls to zero: exactly a scale plus an opacity fade. The second
+   is a soft halo whose extent grows 13.5 → 21.5, which is that same halo
+   scaled by 1.593. Both now animate on the compositor and never repaint. */
+.origin__pulse {
+  position: absolute;
+  left: 23px;
+  top: 36px;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+}
+.origin__pulse::before,
+.origin__pulse::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: var(--glow);
+  will-change: transform, opacity;
+}
+/* the ring: radius 12.5 at full size, started at 5.5/12.5 */
+.origin__pulse::before {
+  inset: -7px;
+  animation: pulseRing 3.4s ease-in-out infinite;
+}
+/* the halo: a 7.5px-radius disc under a static 6px blur, the same Gaussian a
+   12px box-shadow blur draws, then scaled */
+.origin__pulse::after {
+  inset: -2px;
+  filter: blur(6px);
+  animation: pulseHalo 3.4s ease-in-out infinite;
+}
+
+/* the animated shadow used to win over :hover, so the turn's dot never showed
+   the hover glow, so keep it that way */
+.origin__row[data-turn]:hover .origin__dot {
+  box-shadow: none;
+}
+.origin__row[data-turn]:has(.origin__toggle:focus-visible) .origin__dot {
+  box-shadow: none;
+}
+
+.origin__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  /* The chevron is out of flow on this same line, so its space is reserved
+     here rather than taken. Below about 345px the phase drops to a second line
+     instead, which is what the wrap is for and reads as two tags rather than
+     as something broken. */
+  padding-right: calc(var(--origin-mark) + 12px);
+  /* ends on the reading column's right edge, which is where the chevron sits */
+  max-width: var(--origin-head-w);
+}
+.origin__chapter {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.18em;
+  color: var(--accent-2);
+}
+.origin__row[data-turn] .origin__chapter {
+  color: var(--accent);
+}
+.origin__phase {
+  font: 500 10px var(--font-mono);
+  letter-spacing: 0.2em;
+  color: var(--faint);
+}
+
+/* Pinned to the row rather than laid out in it.
+   It used to sit in the meta row on a `margin-left: auto`, which is tidy right
+   up until the meta row runs out of width: measured at 320px the tag and the
+   phase came to 181px inside 206px, leaving 25px for a 22px box and its 10px
+   gap, and the chevron wrapped onto a line of its own above the numeral. Out
+   of flow it cannot compete for that width at all.
+
+   It lands on the reading column's right edge — the same edge the title and
+   the prose end on — or on the row's own inner edge at widths where the row is
+   narrower than that column, whichever comes first. Both terms are built from
+   the variables on .origin, so it cannot drift away from the padding it is
+   measured against. The 27px top centres the 22px box on the 20px meta line
+   inside the row's 28px top padding. */
+.origin__mark {
+  position: absolute;
+  top: 27px;
+  left: min(
+    calc(100% - var(--origin-pad) - var(--origin-mark)),
+    calc(var(--origin-inset) + var(--origin-head-w) - var(--origin-mark))
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--origin-mark);
+  height: var(--origin-mark);
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition:
+    transform 0.46s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+.origin__row:hover .origin__mark {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.origin__row:has(.origin__toggle:focus-visible) .origin__mark {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.origin__row[data-open] .origin__mark {
+  transform: rotate(90deg);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.origin__body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--origin-gap);
+  margin-top: 14px;
+}
+.origin__numeral {
+  flex: none;
+  width: var(--origin-numeral-w);
+  font: 500 clamp(40px, 5.2vw, 66px) / 0.86 var(--font-serif);
+  color: var(--faint);
+  opacity: 0.42;
+}
+.origin__title {
+  display: block;
+  margin: 0;
+  max-width: var(--origin-col);
+  font: 600 clamp(21px, 2.4vw, 27px) var(--font-display);
+  color: var(--text);
+}
+
+/* ── the chapter's prose ──────────────────────────────────────────────────
+   0fr → 1fr on a grid row, not `height: auto`, which does not transition, and
+   not a measured max-height, which is wrong on the next resize. The panel
+   opens; the paragraph inside it fades and slides down on its own, a beat
+   later, so the words arrive into a box that is already moving instead of
+   being stretched open with it.
+
+   The delay lives on the OPEN rule only, so shutting runs the other way
+   round: the words leave first and the box follows them down. Long and gentle
+   to match the 0.95s the row itself settles over — a 150ms snap would read as
+   borrowed from another site. */
+.origin__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  padding-left: calc(var(--origin-numeral-w) + var(--origin-gap));
+  transition: grid-template-rows 0.58s cubic-bezier(0.2, 0.75, 0.22, 1);
+}
+.origin__row[data-open] .origin__panel {
+  grid-template-rows: 1fr;
+}
+.origin__panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.origin__copy {
+  margin: 0;
+  padding-top: 10px;
+  max-width: var(--origin-col);
+  font: 400 15.5px/1.68 var(--font-body);
+  color: var(--muted);
+  text-wrap: pretty;
+  opacity: 0;
+  translate: 0 -10px;
+  transition:
+    opacity 0.26s ease,
+    translate 0.26s ease;
+}
+.origin__row[data-open] .origin__copy {
+  opacity: 1;
+  translate: none;
+  transition:
+    opacity 0.4s ease 0.16s,
+    translate 0.46s cubic-bezier(0.2, 0.8, 0.2, 1) 0.16s;
+}
+
+/* ── the way on ───────────────────────────────────────────────────────────
+   The quiet forward link, the same shape as .outro__about: an underline that
+   lights, not a CTA. The home page is deliberately the short version now, so
+   the end of the timeline has to point at the long one. */
+.origin__more-wrap {
+  margin-top: 34px;
+}
+.origin__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border);
+  font: 600 13px var(--font-body);
+  color: var(--accent-2);
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    var(--t-theme);
+}
+.origin__more:hover {
+  border-bottom-color: var(--border-hover);
+  color: var(--text);
+}
+.origin__more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.origin__more-arrow {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.origin__more:hover .origin__more-arrow {
+  transform: translateX(4px);
+}
+
+/* 26px of right padding is generous on a row that is 206px wide inside, and
+   the eight it gives back is the difference between the phase sitting beside
+   the chapter tag and dropping under it on a small phone. */
+@media (max-width: 430px) {
+  .origin {
+    --origin-pad: 18px;
+  }
+  .origin__meta {
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .origin__panel,
+  .origin__copy,
+  .origin__row[data-open] .origin__copy,
+  .origin__mark,
+  .origin__more-arrow {
+    transition: none;
+  }
+  /* The panel still opens and shuts — it just does it at once. What must never
+     happen is a shut-looking row whose text is only at opacity 0: the grid row
+     is what hides the prose here, and the fade is decoration on top of it. */
+  .origin__copy {
+    opacity: 1;
+    translate: none;
+  }
+  /* Both parallax hooks resolve to a zero translate at motionIntensity 0, so
+     the promotion would be a compositor layer paid for and never used. */
+  .origin__seam-drift {
+    will-change: auto;
+  }
+}

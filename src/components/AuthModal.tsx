@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { FORM_REFUSAL, USERNAME_SHAPE, usernameShapeProblem } from '../auth/wording'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import { supabase } from '../lib/supabase'
 import './AuthModal.css'
@@ -11,6 +12,16 @@ function normalizeUsername(raw: string) {
   return raw.trim().replace(/@/g, '')
 }
 
+/**
+ * How strong this password looks, as an OPINION.
+ *
+ * It is not the policy and it must never become the gate. The minimum the
+ * server will accept lives in the Supabase dashboard and can move with no
+ * build here, which is why nothing in this component checks a length before
+ * submitting — see the note beside `FORM_REFUSAL` in `src/auth/wording.ts`.
+ * The 8 below is the meter's own opinion of where "too short" starts, and it
+ * is allowed to be wrong about the server in the safe direction only.
+ */
 function getPasswordStrength(pw: string): { percent: number; label: string } {
   if (!pw) return { percent: 0, label: '' }
   if (pw.length < 8) return { percent: 18, label: 'Too short' }
@@ -399,7 +410,10 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setUsernameStatus('idle')
       return
     }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(normalized)) {
+    // The shape check is `wording.ts`'s, not a second copy of it here: the
+    // sentence the hint prints and the pattern it is about have to be the same
+    // fact, or the form refuses on one rule and explains a different one.
+    if (usernameShapeProblem(normalized)) {
       setUsernameStatus('invalid')
       return
     }
@@ -431,19 +445,19 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     setNotice(null)
     const normalized = normalizeUsername(username)
     if (usernameStatus === 'taken') {
-      setFormError('That username is already taken.')
+      setFormError(FORM_REFUSAL.usernameTaken)
       return
     }
-    if (usernameStatus === 'invalid' || !normalized) {
-      setFormError('Usernames are 3–20 characters: letters, numbers, underscore.')
+    const shapeProblem = usernameShapeProblem(normalized)
+    if (shapeProblem) {
+      setFormError(shapeProblem)
       return
     }
-    if (password.length < 8) {
-      setFormError('Password must be at least 8 characters.')
-      return
-    }
+    // No password-length check on purpose. The minimum is a dashboard setting
+    // this repo cannot see, so the only honest refusal is the server's own —
+    // see the note beside FORM_REFUSAL in src/auth/wording.ts.
     if (password !== confirm) {
-      setFormError("Passwords don't match.")
+      setFormError(FORM_REFUSAL.passwordMismatch)
       return
     }
     setFormError(null)
@@ -470,9 +484,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setSubmitting(false)
       setUsernameStatus(checkError ? 'idle' : 'taken')
       setFormError(
-        checkError
-          ? "Couldn't check that username just now. Try again in a moment."
-          : 'That username was taken a moment ago. Choose another.',
+        checkError ? FORM_REFUSAL.usernameUncheckable : FORM_REFUSAL.usernameTakenJustNow,
       )
       return
     }
@@ -500,11 +512,11 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     setNotice(null)
     const identifier = loginId.trim()
     if (!identifier) {
-      setFormError('Enter your username or email.')
+      setFormError(FORM_REFUSAL.identifierMissing)
       return
     }
     if (!loginPassword) {
-      setFormError('Enter your password.')
+      setFormError(FORM_REFUSAL.passwordMissing)
       return
     }
     setFormError(null)
@@ -523,7 +535,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   async function handleForgotPassword() {
     const identifier = loginId.trim()
     if (!identifier) {
-      setFormError('Type your username or email above first, then hit "Forgot password?" again.')
+      setFormError(FORM_REFUSAL.identifierForReset)
       return
     }
     setFormError(null)
@@ -540,12 +552,10 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
 
   async function handleUpdatePasswordSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (newPassword.length < 8) {
-      setFormError('Password must be at least 8 characters.')
-      return
-    }
+    // No length check here either: `updatePassword` comes back with GoTrue's
+    // own `weak_password` sentence, which is the only one that cannot go stale.
     if (newPassword !== newPasswordConfirm) {
-      setFormError("Passwords don't match.")
+      setFormError(FORM_REFUSAL.passwordMismatch)
       return
     }
     setFormError(null)
@@ -579,7 +589,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     ) : usernameStatus === 'taken' ? (
       <div className="authmodal__hint authmodal__hint--bad">Already taken</div>
     ) : usernameStatus === 'invalid' ? (
-      <div className="authmodal__hint authmodal__hint--bad">3–20 characters: letters, numbers, underscore</div>
+      <div className="authmodal__hint authmodal__hint--bad">{USERNAME_SHAPE}</div>
     ) : undefined
 
   const strength = getPasswordStrength(password)

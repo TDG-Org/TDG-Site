@@ -4,17 +4,44 @@ export const VOLUME_CONTROLLER =
   'https://chromewebstore.google.com/detail/volume-controller/lamahdjkmgpfpcoccinmipdonifnadcf'
 
 export const NAV_LINKS = [
-  { href: '#story', label: 'Story' },
+  { href: '#origin', label: 'Origin' },
   { href: '#apps', label: 'Apps' },
   { href: '#tools', label: 'Tools' },
   { href: '#building', label: 'Building' },
   { href: '#faith', label: 'Faith' },
   // The last two are ROUTES rather than section anchors, because each is its
-  // own page. The slash is what keeps '#/store' from colliding with '#story',
-  // which is one letter away and would otherwise be a coin flip for whoever
-  // matched first; every route since carries it for the same reason.
+  // own page, and every route carries a leading slash. The rule was learned
+  // from one near miss: this section used to be '#story', one letter from
+  // '#/store', which without the slash would have been a coin flip for whoever
+  // matched first. It is '#origin' now, so that pair cannot clash any more, and
+  // the slash stays on every route regardless — it is what stops a section
+  // anchor added later from colliding with a route that already exists.
   { href: '#/about', label: 'About' },
   { href: '#/store', label: 'Store' },
+] as const
+
+/**
+ * The lines the hero types out under the wordmark.
+ *
+ * **The first entry is the one the page always opens on.** It is the line the
+ * site is known by, it is the line every screenshot and every share card
+ * carries, and a visitor who arrives twice should meet the same sentence both
+ * times — so it is fixed, not drawn. The rest are drawn **without repeats**:
+ * one is picked at random, typed, and taken out of the bag, and the bag is only
+ * refilled once every line has had its turn. A plain `Math.random()` per swap
+ * would show the same line twice in a row about one time in four, which reads
+ * as the animation having stalled rather than as chance.
+ *
+ * They are all one sentence, all about the same length, and they all say the
+ * same thing a different way. A line that needs two rows at 375px would move
+ * the CTAs down every time it came up.
+ */
+export const HERO_TAGLINES = [
+  'Brothers building software, games, and tools for the glory of Jesus.',
+  'Two brothers, nights and weekends, building what we wish existed.',
+  'Apps, tools, and games, made to be useful and to point back to Him.',
+  'Building together since 2016, and still going.',
+  'Everything we make, we make for the glory of Jesus.',
 ] as const
 
 /** A real screenshot, served as AVIF with a WebP fallback at 1x and 2x. */
@@ -92,6 +119,78 @@ export const CHAPTERS: Chapter[] = [
 /** See the `iconShape` field below. */
 export type IconShape = 'tile' | 'glyph'
 
+/**
+ * The backdrop a piece of key art is drawn on.
+ *
+ * A small closed vocabulary on purpose, the same way `pageBlocks.ts` is: each
+ * name is one restrained treatment — a tone, a light source, and at most one
+ * cutout from the parallax art kit — and `components/KeyArt.tsx` owns what
+ * each one actually draws. Adding a sixth app picks one of these; it does not
+ * describe a picture here. A scene per app is how a data file turns back into
+ * a component.
+ */
+export type KeyArtScene =
+  /** Cold blue night, a faceted pine pair at the right edge. */
+  | 'pines'
+  /** Warm lamplight, a garden arch at the right edge. The nearest of the five
+   *  to Bible Educator's own cover. */
+  | 'arch'
+  /** Indigo distance, a low mountain ridge running off the right. */
+  | 'ridge'
+  /** Slate blue-green, a stone footbridge low and to the right. */
+  | 'bridge'
+  /** Plum graphite and the light source alone. No cutout at all. */
+  | 'dusk'
+
+/**
+ * A card's own key art: the cover `components/KeyArt.tsx` draws instead of a
+ * screenshot.
+ *
+ * Bible Educator's cover is a raster in `public/shots/`, and the user called it
+ * right; these five are the same composition drawn as an SVG so it stays crisp
+ * at every card width, costs no image bytes for the type, and stays editable in
+ * git. **The layout is identical across all five** — one set of constants at the
+ * top of `KeyArt.tsx` — because that is what makes six cards read as one set.
+ * What varies is the scene and the words.
+ *
+ * The words are held to the same rules as everything else in this folder: the
+ * title is a name, the line is one sentence a stranger can decide from, and
+ * every fact is checkable against that app's own page in `appPages.ts`. Do not
+ * write a capability into a cover that the page does not already claim.
+ */
+export type KeyArtSpec = {
+  /** The app's own icon, the same filename its card already names. */
+  icon: string
+  iconShape: IconShape
+  /** Title Case: it is a name. */
+  title: string
+  /** One sentence, sentence case, ending in a full stop. */
+  line: string
+  /**
+   * Three or four very short facts, joined with `·` on the strip. Sentence case
+   * unless the fact is a proper noun or an acronym, which keep their own form
+   * (`Windows`, `FFmpeg`, `MIDI`, `Git`) — rule 7 of `AGENTS.md`.
+   *
+   * Keep the joined strip under about 56 characters. It is drawn as one line of
+   * SVG text, which cannot wrap, so a long one runs off the right edge instead
+   * of reflowing. Bible Educator's own strip is the length to match: `Free · No
+   * account · Works fully offline · 16 translations`.
+   */
+  facts: string[]
+  /** Which backdrop `KeyArt` draws. */
+  scene: KeyArtScene
+}
+
+/**
+ * The line at the foot of every cover.
+ *
+ * One constant rather than a field on `KeyArtSpec`, because it is the same
+ * sentence on all of them and a per-app field would be five places to state one
+ * thing. It matches Bible Educator's raster word for word — that cover is the
+ * sibling the other five have to sit beside.
+ */
+export const KEY_ART_BYLINE = 'Developed by TDG, The Disciples of God'
+
 export type AppCard = {
   id: string
   index: string
@@ -129,6 +228,21 @@ export type AppCard = {
   download?: { href: string; label: string }
   slotPlaceholder: string
   shot?: Shot
+  /**
+   * Custom key art for this card's cover.
+   *
+   * **`art` and `shot` are not alternatives, and a card that has key art keeps
+   * its `shot`.** They are for two different places: `ImageSlot` prefers `art`
+   * on the card, and `shotForPage()` in `appPages.ts` reads `APPS[].shot` to put
+   * the real screenshot at the head of that app's own page, which is where a
+   * screenshot genuinely belongs — somebody who has opened the page wants to see
+   * the software. A card in a grid at 280px does not: the screenshot is a grey
+   * rectangle at that size, and six of them side by side say nothing.
+   *
+   * Delete a `shot` to "clean up" after adding `art` and the app's page loses
+   * its screenshot silently.
+   */
+  art?: KeyArtSpec
 }
 
 export const APPS: AppCard[] = [
@@ -177,6 +291,14 @@ export const APPS: AppCard[] = [
       alt: 'The Say2Quill dashboard, showing the dictate tab and a live transcript',
       position: 'left top',
     },
+    art: {
+      icon: 'icon-say2quill.webp',
+      iconShape: 'tile',
+      title: 'Say2Quill',
+      line: 'Speak anywhere, and clean text lands where you type.',
+      facts: ['Windows', 'On-device speech', 'No account', 'Works offline'],
+      scene: 'pines',
+    },
   },
   {
     id: 'app-makullveny',
@@ -206,6 +328,14 @@ export const APPS: AppCard[] = [
       alt: 'The Makullveny dashboard in the Cozy Cabin theme, with verse of the day and the app dock',
       position: 'center top',
     },
+    art: {
+      icon: 'icon-makullveny.webp',
+      iconShape: 'tile',
+      title: 'Makullveny',
+      line: 'A calm desk for studying, kept on your own machine.',
+      facts: ['Windows', 'Nine themes', 'Flashcards', 'Kept on your machine'],
+      scene: 'arch',
+    },
   },
   {
     id: 'app-devfleet',
@@ -224,6 +354,14 @@ export const APPS: AppCard[] = [
       alt: 'The DevFleet workspace: a project list on the left and an open project pane on the right',
       position: 'left top',
     },
+    art: {
+      icon: 'icon-devfleet.webp',
+      iconShape: 'glyph',
+      title: 'DevFleet',
+      line: 'Every git repo on your machine, as a live card.',
+      facts: ['Windows', 'Git', 'Sixteen panes', 'Terminal and diff'],
+      scene: 'ridge',
+    },
   },
   {
     id: 'app-music',
@@ -236,6 +374,14 @@ export const APPS: AppCard[] = [
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'MIDI + MIC' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a Music Everything screenshot',
+    art: {
+      icon: 'icon-music-everything.webp',
+      iconShape: 'tile',
+      title: 'Music Everything',
+      line: 'Learn music by playing it, not by reading about it.',
+      facts: ['Desktop', 'Scales and chords', 'Pitch tracking', 'MIDI export'],
+      scene: 'bridge',
+    },
   },
   {
     id: 'app-veditor',
@@ -248,6 +394,14 @@ export const APPS: AppCard[] = [
     chips: [{ label: 'DESKTOP' }, { label: 'IN DEV', hot: true }, { label: 'FFMPEG' }],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a TDG Veditor screenshot',
+    art: {
+      icon: 'icon-veditor.webp',
+      iconShape: 'tile',
+      title: 'TDG Veditor',
+      line: 'Cut, grade, mix, and export it the way you want.',
+      facts: ['Desktop', 'Timeline and grading', 'Nine themes', 'FFmpeg'],
+      scene: 'dusk',
+    },
   },
 ]
 
@@ -315,6 +469,17 @@ export const MARANATHA = {
   heading: 'A Bible game you walk through.',
   copy: 'A video game that runs in a browser tab. You walk a character through the real events of Scripture in a hand-drawn world, with the World English Bible on screen and read aloud on every beat. No install, no login.',
   note: 'Plays in the browser',
+  /**
+   * The chip over the card. Uppercase rather than Title Case because the site's
+   * chips are 9px mono tags and every one of them is set that way — `LIVE`,
+   * `IN DEV`, `EARLY BUILD` — so this is rendered verbatim, not title-cased.
+   *
+   * It lives here rather than in `Building.tsx` because it is a word a visitor
+   * reads (rule 1), and because it and `status` below are about the same card:
+   * two claims typed in two files drift, and this pair already had — the
+   * component said `IN PLAYTEST` eleven lines above a `status` of `Coming soon`.
+   */
+  tag: 'IN PLAYTEST',
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',
   // The game's own home screen. It carries the wordmark, so the panel does not
