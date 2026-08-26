@@ -14,7 +14,7 @@ import {
   WebGLRenderer,
 } from 'three'
 import { clamp01, onFrame, settle, wake } from '../../lib/motion'
-import { onDprChange } from '../../lib/dpr'
+import { MAX_DPR, onDprChange } from '../../lib/dpr'
 
 /**
  * The Origin section's backdrop: a cabin in a snowy forest that the reader
@@ -673,10 +673,10 @@ export function CabinScene({ className }: { className?: string }) {
       const w = cv.clientWidth
       const h = cv.clientHeight
       if (!w || !h) return
-      // MAX_DPR is this site's cap; its own note carries the reasoning and the
-      // three other files that hold a copy of the number. The AREA cap is this
-      // component's own, and it is what makes a canvas stretched over a whole
-      // tall section survivable — see the mount note in the header.
+      // MAX_DPR is this site's cap, imported from `lib/dpr.ts`, whose note
+      // carries the reasoning. The AREA cap below is this component's own, and
+      // it is what makes a canvas stretched over a whole tall section
+      // survivable — see the mount note in the header.
       let dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
       const area = w * h * dpr * dpr
       if (area > MAX_PIXELS) dpr = Math.max(0.75, dpr * Math.sqrt(MAX_PIXELS / area))
@@ -1247,21 +1247,6 @@ const FOG_NEAR = 12
  */
 const FOG_FAR = 100
 
-/**
- * This site's dpr cap, and the fourth copy of it.
- *
- * The reasoning is in `hero/PointCloud.tsx`: a soft point cloud gains nothing
- * from 2x and it costs four times the fill. Flat-shaded facets gain even less.
- * The same 1.5 is `hero/Starfield.tsx`'s MAX_DPR and `scene/Snow.tsx`'s, and
- * PointCloud writes it as a bare literal with no name at all — one decision in
- * four places, correctable in one.
- *
- * `lib/dpr.ts` is where it belongs, and where an earlier version of this note
- * sent readers looking for it. **It is not there.** That file is 44 lines about
- * NOTICING a ratio change — `onDprChange`, which `resize` above uses — and it
- * holds no cap, no 1.5 and no fill argument. Cite it for what it does.
- */
-const MAX_DPR = 1.5
 /**
  * Ceiling on the backing store, in device pixels. 1.5x on a 1440x900 viewport
  * is 2.9M and clears this; a canvas stretched over a whole 2400px section does

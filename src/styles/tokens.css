@@ -40,29 +40,36 @@
   --accent-soft: rgba(255, 255, 255, 0.07);
   --glow: rgba(255, 255, 255, 0.2);
   --warm: #f5c98a;
-  /* ── --nav-scrolled was here, in both themes, and is gone ────────────────
-     A flat ink for the nav's scrolled state, declared per theme and read by
-     nothing: `grep -rn -- '--nav-scrolled' src/` returned these two
-     declarations and no consumer at all. Pre-existing — it did not arrive in
-     this pass and no change here orphaned it.
+  /* ── the nav's scrolled veil, one ink at three alphas ───────────────────
+     `.nav__veil` in Nav.css fades in on `[data-scrolled='true']` and is a
+     180deg gradient: full at the top, roughly half at 55%, out at the bottom.
+     Three names rather than one, because the alphas are NOT a shared ramp the
+     two themes could take one percentage of — light sits heavier at both ends
+     (0.72 / 0.38) than dark does (0.5 / 0.26). One ink plus the
+     `color-mix(in srgb, var(--token) N%, transparent)` rule 2 offers would
+     therefore have had to declare BOTH Ns per theme up here as well: three
+     lines either way, and the version where two of them are bare numbers is
+     the one a reader cannot check against the gradient.
 
-     Deleted under the rule components/scene/README.md states for an export
-     with no caller: kept only where its absence would push the next builder
-     toward something worse, and only if the file says out loud that it has no
-     consumer and why. Neither half held. It has no siblings whose table it
-     completes — unlike the three --seam-fill lines base.css keeps and argues
-     at length, where deleting one of eight would leave an asymmetry a reader
-     has to go and investigate.
+     **A single `--nav-scrolled` was here, in both themes, and is gone. Do not
+     re-add a lone one.** It was a flat ink for this exact state, read by
+     nothing — `grep -rn -- '--nav-scrolled' src/` returned its two
+     declarations and no consumer at all — while `.nav__veil` hand-rolled six
+     literal `rgba()` stops beside it, the light triple `245, 243, 251`
+     matching it to the digit. It was sized to a flat fill this veil never
+     wanted, so the veil stepped over it and rule 2 was broken in the site's
+     most-seen component: a token the one thing it was for walked past is not
+     preventing anybody from writing a colour, it is the evidence that it did
+     not. What the gradient can actually consume is a stop per stop, which is
+     what these are.
 
-     And its presence had already failed at the one job it could have done.
-     The scrolled nav IS drawn: `.nav__veil` in Nav.css fades in on
-     `[data-scrolled='true']`, and it writes its own literal rgba() three
-     stops at a time, twice, once per theme — with the light triple
-     `245, 243, 251` matching this token's exactly. A token the one thing it
-     was for stepped over is not preventing anybody from writing a colour; it
-     is the evidence that it did not. That is Nav.css's bug to fix, and the
-     fix is a token declared here at that moment, sized to the gradient it
-     actually has to feed rather than to a flat fill nothing ever used.     */
+     Unregistered on purpose, unlike --tint-*: `@property` with
+     `inherits: false` would stop them reaching `.nav__veil` from :root at
+     all. The veil transitions `opacity` and nothing else, so its background
+     snaps with the theme exactly as the two hand-written rules did.       */
+  --nav-veil-top: rgba(4, 4, 6, 0.5);
+  --nav-veil-mid: rgba(4, 4, 6, 0.26);
+  --nav-veil-bot: rgba(4, 4, 6, 0);
   --card-shadow: 0 22px 54px -26px rgba(0, 0, 0, 0.72);
   /* ── the ink #origin's arrival shadow is drawn with ─────────────────────
      The soft dark edge above #origin, so the section reads as a sheet
@@ -539,7 +546,12 @@
   --accent-soft: rgba(20, 20, 26, 0.055);
   --glow: rgba(20, 20, 26, 0.16);
   --warm: #b8763a;
-  /* --nav-scrolled was here too, and went with its dark twin. See :root. */
+  /* the veil's three stops in the light ink, heavier at the top and the mid
+     than dark's — :root carries why they are three and why the lone
+     --nav-scrolled that used to sit here is not the shape to re-add */
+  --nav-veil-top: rgba(245, 243, 251, 0.72);
+  --nav-veil-mid: rgba(245, 243, 251, 0.38);
+  --nav-veil-bot: rgba(245, 243, 251, 0);
   --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
   /* the same ink --card-shadow above uses in light, at the alpha a
      section-sized blur can carry without reading as a bruise across the

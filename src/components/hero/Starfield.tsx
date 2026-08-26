@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { onFrame, wake } from '../../lib/motion'
 import { MAX_DPR, onDprChange } from '../../lib/dpr'
-import { useTheme } from '../../theme/ThemeProvider'
 
 type Mote = { x: number; y: number; z: number; phase: number; speed: number; sway: number }
 
@@ -17,13 +16,7 @@ const HZ = 24
  * Not a starfield in the literal sense. The beam is what makes them read.
  */
 export function Starfield() {
-  const { theme } = useTheme()
   const canvas = useRef<HTMLCanvasElement | null>(null)
-  const light = theme === 'light'
-  const lightRef = useRef(light)
-  useEffect(() => {
-    lightRef.current = light
-  }, [light])
 
   useEffect(() => {
     const cv = canvas.current
@@ -44,9 +37,52 @@ export function Starfield() {
 
     let pending = 0
     /* `settled` is a claim about what is currently ON this canvas, so anything
-       that can falsify it has to say so — and writing `cv.width` in `fit`
-       below can. See the note there. */
+       that can falsify it has to say so. Three things can, and each one ends by
+       calling `invalidate`: `fit` writing `cv.width`, the DPR watcher going
+       through that same `fit`, and the theme swap below. `scene/Snow.tsx`'s
+       header carries the long version of why a canvas is not a thing you can
+       stop drawing and assume stays drawn. */
     let settled = false
+    const invalidate = () => {
+      settled = false
+      wake()
+    }
+
+    /**
+     * Which ink the motes are drawn in, kept current by the attribute the
+     * colours actually hang off rather than by React.
+     *
+     * This was a `useTheme()` read mirrored into a ref by a second effect, and
+     * the drawing effect below has `[]` dependencies — so the ref moved and
+     * nothing ever asked it again. With motion on that is invisible: the next
+     * of 24 frames a second picks the new value up. At `mi === 0` there is no
+     * next frame. The tick draws once, sets `settled`, and returns forever, so
+     * a reduced-motion visitor who toggled the theme kept the old theme's dust
+     * for the rest of the visit. **A ref was never the thing missing — the
+     * repaint was.** `scene/Snow.tsx` closes the identical hole this way, and
+     * `origin/OriginField.tsx` did before it was deleted.
+     *
+     * The attribute is safe to read at THIS line, and that is worth checking
+     * rather than assuming: `ThemeProvider` writes it from a parent effect,
+     * which runs after this child's, but `index.html` has already set it from
+     * `localStorage` in a blocking head script — "before first paint so there
+     * is no flash of the wrong scene" — and `<html>` ships with
+     * `data-theme="dark"` besides. So the first read is the real theme, and
+     * the provider's later write is a re-assert of the same value. The
+     * observer is armed for the toggle, and would catch a wrong first read
+     * anyway: its callback is a microtask, which lands before the frame the
+     * `fit` below just woke.
+     */
+    let isLight = false
+    const readTheme = () => {
+      isLight = document.documentElement.getAttribute('data-theme') === 'light'
+    }
+    readTheme()
+    const mo = new MutationObserver(() => {
+      readTheme()
+      invalidate()
+    })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
     /** One mote, at a position the caller picks. Everything else about it is
      *  the mote's own identity — depth, drift rate, sway, phase — and it
@@ -125,8 +161,7 @@ export function Starfield() {
       if (n < motes.length) motes.length = n
       while (motes.length < n) motes.push(makeMote(Math.random() * w, Math.random() * h))
       // the two width/height writes above just blanked the canvas
-      settled = false
-      wake()
+      invalidate()
     }
     fit()
 
@@ -158,7 +193,6 @@ export function Starfield() {
       pending = 0
       settled = mi === 0
       const t = now * 0.001
-      const isLight = lightRef.current
       const span = h + 40
       ctx.clearRect(0, 0, w, h)
       ctx.fillStyle = isLight ? 'rgb(20,20,26)' : 'rgb(214,232,255)'
@@ -189,6 +223,7 @@ export function Starfield() {
       stop()
       ro.disconnect()
       unwatchDpr()
+      mo.disconnect()
     }
   }, [])
 
