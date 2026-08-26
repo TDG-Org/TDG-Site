@@ -195,7 +195,24 @@
    They are `inset: 0` boxes inside the stage's 100svh pin, so the art inside
    positions itself against the pin exactly as it used to position itself
    against the hero. `will-change: translate` because every one of them is
-   written on most frames the page moves.                                    */
+   written on most frames the page moves.
+
+   The two RIDGE wrappers now hold two children each — the file and the haze
+   under it — so they also carry that range's placement variables and its
+   opacity. Both of those moved UP from the <img>, and each move is
+   load-bearing rather than tidying:
+
+     the variables, because a haze anchored to the same ink the art is
+     anchored to has to read the SAME numbers, and rule 6 says one set on the
+     common parent rather than a literal here and a different literal there;
+
+     the opacity, because two 0.5 layers stacked are not one 0.5 layer.
+     Painted separately, the ink over the haze over the sky composites to
+     0.75 ink + 0.25 sky where the ink is, and to 0.5 haze + 0.5 sky one
+     pixel below its cut edge — a dL* 2.0 step in dark, which is a fainter
+     version of the line this whole pass exists to remove. One group opacity
+     on the wrapper makes those two the same arithmetic, and the step is then
+     exactly zero rather than nearly zero.                                   */
 .hero__moon-drift,
 .hero__rear-drift,
 .hero__ridge-drift,
@@ -204,6 +221,10 @@
   inset: 0;
   pointer-events: none;
   will-change: translate;
+}
+.hero__rear-drift,
+.hero__ridge-drift {
+  opacity: var(--art-far);
 }
 
 /* ── the terrain ───────────────────────────────────────────────────────────
@@ -236,6 +257,25 @@
    artwork is drawn 15 percentage points higher inside the same box — so it
    gets a head per theme, below. That is geometry, not colour; the files are
    what they are and one number would put one of them 100px off.
+
+   --art-foot-hi / --art-foot-lo are the same currency at the other end: the
+   HIGHEST and the LOWEST point of the ink's bottom edge, as fractions of the
+   box's width, above the box's bottom edge. The `bottom` column above is a
+   single number per file because it only ever needed the lowest; a haze that
+   has to be at full strength wherever the cut happens needs both, because
+   between them is a band and not a line. Re-scanned per column on the same
+   .webp at the same threshold, and a head-per-theme is a foot-per-theme for
+   the same reason:
+
+                          ink bottom runs      --art-foot-hi  --art-foot-lo
+     mountain-ridge  dark   0.8518-0.9475        0.04941        0.01751
+                     light  0.9099-0.9737        0.03002        0.00876
+     -rear           dark   0.8893-0.9662        0.03690        0.01126
+                     light  0.7974-0.7992        0.06754        0.06692
+
+   That last row is the whole complaint in one line: the rear range's light
+   artwork ends on a cut that deviates by ONE pixel across 1600 of width.
+   Stretched to 124vw it is a ruler laid across the page.
 
    --art-rise is HOW FAR THE INK'S HIGHEST POINT STANDS ABOVE the frame's
    floor. `bottom` is then derived from it and never chosen:
@@ -274,7 +314,6 @@
      arrives and the composition does not assemble itself in two steps */
   aspect-ratio: 2172 / 724;
   bottom: calc(var(--art-rise) - var(--terrain-w) * var(--art-head));
-  opacity: var(--art-far);
 }
 
 /* The far range. Narrower than the main ridge on purpose — a smaller facet
@@ -286,19 +325,29 @@
    skyline BELOW the main ridge's shoulders — so it shows through the main
    ridge's valleys and nowhere else, which is the only place a range behind a
    range should be visible. */
-.hero__rear {
+.hero__rear-drift {
   --terrain-w: max(124vw, 138vh);
   --art-head: 0.10883;
+  --art-foot-hi: 0.0369;
+  --art-foot-lo: 0.01126;
   --art-rise: min(calc(var(--terrain-w) * 0.088), var(--art-band));
+  /* the far range's dissolve — see the haze block below for the pair */
+  --haze-lead: 0.055;
+  --haze-tail: 0.03;
+  --haze-ink: var(--terrain-haze-rear);
 }
-[data-theme='light'] .hero__rear {
+[data-theme='light'] .hero__rear-drift {
   /* the light artwork is drawn higher in the same box — see the table above */
   --art-head: 0.1601;
+  --art-foot-hi: 0.06754;
+  --art-foot-lo: 0.06692;
 }
 
-.hero__ridge {
+.hero__ridge-drift {
   --terrain-w: max(146vw, 160vh);
   --art-head: 0.162;
+  --art-foot-hi: 0.04941;
+  --art-foot-lo: 0.01751;
   /* 0.134 = head 0.162 minus a 0.028 bleed below the floor, which is what
      stops the range ending in mid-air above the bottom strip. 300px is
      restraint: without a ceiling a 1600-tall window grows 340px of mountain,
@@ -309,6 +358,116 @@
     calc(var(--art-band) + var(--terrain-w) * 0.0275),
     300px
   );
+  /* the near range's dissolve */
+  --haze-lead: 0.018;
+  --haze-tail: 0.08;
+  --haze-ink: var(--terrain-haze);
+}
+[data-theme='light'] .hero__ridge-drift {
+  --art-foot-hi: 0.03002;
+  --art-foot-lo: 0.00876;
+}
+
+/* ── where the mountains stop being mountains ──────────────────────────────
+   The site owner's note: "make the bottom of the mountains blend more and
+   perfectly into the story section, and the bottom of the mountains just
+   shows a straight line (BORING) so blend it to make it into a dark bluish
+   sky just like the same color of the mountains."
+
+   Both halves of that are one problem. A cutout ends where its alpha ends,
+   and both ridge files end along a cut that is nearly horizontal — the rear
+   one, in light, to within a single pixel across the whole file (the foot
+   table above). Composited as painted, the step across that cut is dE00 5.11
+   and 14.12 in dark for the near and far ranges, 13.97 and 5.40 in light.
+   That is an edge, and an edge across a whole page reads as a pasted picture.
+
+   ── why a band could not fix it, and a colour that lives HERE can ─────────
+   The obvious move is to bring --band-origin up to meet the mountains. It is
+   necessary but it cannot be sufficient, and the reason is geometric rather
+   than chromatic: the colour immediately under the ridge's foot is not a
+   band at all. The stage is pinned, so what is behind the foot is
+   --hero-sky's outer stop, and what arrives under it later is #origin's
+   --tint-top, which is --band-hero. --band-origin is #origin's --tint-mid
+   and does not reach the top of that section for 30% of its height. So no
+   band value can be the thing the ink stops on. A colour drawn HERE, under
+   the ink, is the only thing that can be.
+
+   (--band-origin moved anyway, because it is the story section the owner
+   named and because it is what this neighbourhood settles into once Origin
+   has taken the frame. tokens.css derives it from this same sampled ink and
+   argues the split between the two themes.)
+
+   ── the shape ────────────────────────────────────────────────────────────
+   Transparent, ramping to the file's own foot ink across --haze-lead, held
+   at full through the whole foot BAND — which is why the foot needed two
+   numbers and not one — then dissolving over --haze-tail. Held at full
+   through the band is the part that matters: wherever a given column's ink
+   happens to stop, the colour behind it is already exactly the colour it
+   stopped on, and one group opacity on the wrapper means "exactly" is
+   arithmetic and not an approximation. dE00 0.000 at the cut, both themes.
+
+   The tail passes through --seam-fade at its own half way point, which is
+   the rate every other dissolve on this page uses and is why this is not a
+   second mechanism. tokens.css owns that number.
+
+   ── and the two rates are NOT the same, which is free depth ──────────────
+   A far range loses itself in haze sooner than a near one, and keeps less
+   edge when it does.
+
+     near (.hero__ridge)  lead 0.018  tail 0.080   crisp, falls a long way
+     far  (.hero__rear)   lead 0.055  tail 0.030   soft high up, gone quickly
+
+   At 1440x900 dark that is: the near haze ramps in over 38px and dies over
+   168px, the far one ramps in over 98px and dies over 54px. So the near
+   range keeps a hard silhouette and a body that sinks a long way; the far
+   one has already begun going soft 30px below its own summit and is finished
+   54px under its foot. Neither number has been looked at on a screen.
+
+   ── it cannot reach the copy, and that is provable rather than measured ──
+   The haze's top edge is at rise - width x (head - foot-hi - lead), i.e.
+   width x (head - foot-hi - lead) BELOW the ink's own highest point. That
+   coefficient is 0.09459 and 0.11398 for the near range in dark and light
+   and 0.01693 and 0.03756 for the far one — positive in all four, so the
+   haze's top is strictly below the ink's peak at every viewport, and the
+   ink's peak is already the thing the clearance budget on `.hero` protects.
+   Computed at 1440x900: 199px, 240px, 30px and 67px below the respective
+   peaks. Against the CTA row the guaranteed floor is 27.9px + width x that
+   coefficient, because --art-rise is capped at --art-band and the CTA row's
+   bottom sits --art-band + 27.9px above the frame's floor; the actual
+   readings at 1440x900 are 169px (near) and 117px (far), the caps not being
+   the binding arm there. So every clearance in the budget is untouched by
+   construction, and the haze's top stop is transparent in any case.        */
+.hero__rear-haze,
+.hero__ridge-haze {
+  /* the three lengths the box and the gradient are both built from, so
+     neither repeats a product the other one has to agree with */
+  --haze-in: calc(var(--terrain-w) * var(--haze-lead));
+  --haze-band: calc(var(--terrain-w) * var(--art-foot-hi) - var(--terrain-w) * var(--art-foot-lo));
+  --haze-out: calc(var(--terrain-w) * var(--haze-tail));
+  position: absolute;
+  /* the art's own placing, restated from the same variables — same width,
+     same centre, same tenth-of-a-width shift left, so the haze cannot slide
+     out from under the range it belongs to at any viewport */
+  left: calc(50% - var(--terrain-w) * 0.1);
+  transform: translateX(-50%);
+  width: var(--terrain-w);
+  /* the art's bottom, then up to the foot's LOWEST point, then --haze-out
+     below that */
+  bottom: calc(
+    var(--art-rise) - var(--terrain-w) * var(--art-head) + var(--terrain-w) * var(--art-foot-lo) -
+      var(--haze-out)
+  );
+  height: calc(var(--haze-in) + var(--haze-band) + var(--haze-out));
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    var(--haze-ink) var(--haze-in),
+    var(--haze-ink) calc(var(--haze-in) + var(--haze-band)),
+    color-mix(in srgb, var(--haze-ink) calc(var(--seam-fade) * 100%), transparent)
+      calc(var(--haze-in) + var(--haze-band) + var(--haze-out) * 0.5),
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 /* ── the moon ──────────────────────────────────────────────────────────────
@@ -342,10 +501,11 @@
   height: var(--moon-w);
   left: calc(62% - var(--moon-w) / 2);
   bottom: calc(var(--art-rise) * var(--moon-sit) - var(--moon-w) / 2);
-  /* the ridge's --art-rise is declared on .hero__ridge, so this needs its own
-     copy of the same expression; both read the same --art-band and the same
-     constants, which is rule 6's "one set of variables on the common parent"
-     as close as a value that depends on --terrain-w can get */
+  /* the ridge's --art-rise is declared on .hero__ridge-drift, which is a
+     different wrapper, so this needs its own copy of the same expression;
+     both read the same --art-band and the same constants, which is rule 6's
+     "one set of variables on the common parent" as close as a value that
+     depends on --terrain-w can get */
   --terrain-w: max(146vw, 160vh);
   --art-rise: min(
     calc(var(--terrain-w) * 0.134),

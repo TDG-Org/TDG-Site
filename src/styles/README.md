@@ -41,7 +41,7 @@ in the same edit.
 | Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
 | The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
-| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-fade` |
+| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-fade` `--terrain-haze` `--terrain-haze-rear` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
 `--live-*` is per theme deliberately: one hardcoded `#4ea36a` failed AA in both.
@@ -82,15 +82,39 @@ Adding a section: its band goes here in both themes, its `--seam-fill` goes in
 `base.css` beside the others, in the same edit, and its tint triple reads bands
 rather than hexes.
 
-### The scene layer tokens are numbers, not colours
+**One of the eight is taken off the artwork rather than chosen.**
+`--band-origin` is the colour the hero ridge's foot actually composites to —
+the sampled foot ink of `landscapes/mountain-ridge`, painted at `--art-far`
+over the hero sky's floor — brought to the band's *own* lightness. That last
+clause is the whole design: dark and light move on different axes because the
+measurement says they must (the gap is `dL* 5.97` and hue-dominated in dark,
+`dL* -64.56` and lightness-dominated in light), and a near-white section band
+cannot give up lightness under seven chapters of prose. `tokens.css` shows the
+working. Lightness is held to a tenth of a unit in both themes, which is why
+`--seam-step`'s calibration did not have to be re-derived: that step is a fixed
+6% blend toward `--text`, so it tracks lightness and nothing else.
 
-`--art-far` / `--art-mid` / `--art-near` are the opacities the transparent-PNG
-art kit in `public/assets/parallax/` is drawn at, by how far back the layer
-reads, and `--seam-fade` is the alpha a seam's soft edge is still at halfway down,
-for a seam that dissolves into the section rather than stopping at a line. They are plain numbers because they multiply artwork that is **already**
+### The scene layer tokens: three opacities, two dissolve rates, two inks
+
+`--art-far` / `--art-mid` / `--art-near` are the opacities the transparent art
+kit in `public/assets/parallax/` is drawn at, by how far back the layer reads,
+and `--seam-fade` is the alpha a soft edge is still at halfway down, for
+anything that dissolves into a section rather than stopping at a line. Those
+four are plain **numbers** because they multiply artwork that is **already**
 the right colour for the theme — the kit ships separate `-dark` and `-light`
 files and its own README is explicit that a CSS filter must never stand in for
 that swap.
+
+`--terrain-haze` and `--terrain-haze-rear` are the two that are **colours**,
+and they are here for the same reason the numbers are: they are properties of
+the shipped files, read off them once. A cutout has a hard alpha edge wherever
+its ink runs out, and both hero ridge files run out along a nearly horizontal
+cut — the rear range's light artwork to within a single pixel across the whole
+file. These are the ink each one stops on, sampled per column off the `.webp`
+that is actually painted, so a gradient drawn under the art can start on
+exactly that value and the step at the cut is zero rather than `dE00` 5 to 14.
+Per theme, like everything else, because they come from two different files.
+`Hero.css` is the only consumer today and carries the geometry.
 
 They are tokens rather than per-section literals because the kit's restraint is
 one decision, not seven. That README gives the ranges (mountains 0.48–0.64 dark

@@ -301,6 +301,25 @@ stop {
 #top {
   --seam-fill: color-mix(in srgb, var(--band-hero) var(--seam-step), var(--text));
 }
+/* ── one band on this page is now taken off the artwork ───────────────────
+   --band-origin was #0a0b12 / #eef0f6 and is #040c19 / #ebf0fb: the colour
+   the hero ridge's foot actually composites to, at this band's own
+   lightness. tokens.css carries the sampling, the two composites and the
+   argument for why dark and light move on different axes.
+
+   Nothing in THIS file changed for it, and that is the point of the bands
+   rather than an oversight. Every boundary still meets on an identical value
+   because both sides of every boundary are the same token, so the whole
+   table below is untouched by a band moving — which is the property the
+   rewrite this file records was for. Resolved before and after, both themes,
+   all 22 --tint-* values: only #origin's --tint-mid differs, and it differs
+   by exactly the band.
+
+   --seam-fill is untouched too, and not by luck: the step is a fixed 6%
+   blend toward --text, so it tracks the band's LIGHTNESS, and the new value
+   was derived to hold the old one's L* to a tenth of a unit. #origin's own
+   step reads dL* 5.80 -> 5.81 dark and -4.56 -> -4.59 light across the
+   change, so --seam-step's 94% did not need re-deriving. See tokens.css. */
 #origin {
   --tint-top: var(--band-hero);
   --tint-mid: var(--band-origin);

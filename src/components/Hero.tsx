@@ -315,8 +315,19 @@ export function Hero() {
           Everything in here is pinned by `Stage`. Back to front, which is DOM
           order inside one stacking context at z-index 0:
 
-            sky · moon · rear ridge · main ridge · shafts · dust · bloom ·
-            tall pine · grain · vignette
+            sky · moon · rear haze + rear ridge · ridge haze + main ridge ·
+            shafts · dust · bloom · tall pine · grain · vignette
+
+          Each range is a haze and a file inside ONE wrapper at ONE opacity.
+          A cutout has a hard alpha edge where its ink runs out, and both
+          ridge files run out along a nearly horizontal cut — the rear one in
+          light is flat to a single pixel across the whole file, which is the
+          "straight line" the site owner asked to be rid of. The haze is a
+          gradient in that file's own foot ink, so wherever the cut happens
+          there is nothing to see and the mass falls away downward instead of
+          stopping. Hero.css carries the geometry and the two different rates;
+          tokens.css carries the sampled colours and the band derived from
+          them.
 
           That is the art kit's own hero order (guardrail 3 of
           public/assets/parallax/README.md) with the fog veil taken OUT and the
@@ -348,10 +359,18 @@ export function Hero() {
           <Moon className="hero__moon" />
         </div>
 
+        {/* The haze is FIRST so the silhouette paints over it, and it is
+            inside the wrapper so it rides the same `translate` and cannot
+            drift away from the range it belongs to. --art-far now lives on
+            the wrapper rather than on the <img>: two 0.5 layers are not one
+            0.5 layer, and one group is what makes the step at the cut edge
+            exactly zero rather than nearly zero. Hero.css has the rest. */}
         <div ref={rear} className="hero__rear-drift">
+          <div className="hero__rear-haze" />
           <StillArt art="landscapes/mountain-ridge-rear" className="hero__rear" />
         </div>
         <div ref={ridge} className="hero__ridge-drift">
+          <div className="hero__ridge-haze" />
           <StillArt art="landscapes/mountain-ridge" className="hero__ridge" />
         </div>
 
