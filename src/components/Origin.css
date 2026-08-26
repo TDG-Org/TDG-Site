@@ -15,8 +15,8 @@
      "01" set in Georgia at the matching numeral size. */
   --origin-numeral-w: clamp(52px, 6.8vw, 82px);
   --origin-gap: clamp(14px, 2.4vw, 30px);
-  /* the reading column inside a row: the title, the prose and the chevron all
-     end on this same right edge */
+  /* the reading column inside a row: the tags, the title and the prose all end
+     on this same right edge */
   --origin-col: 620px;
   --origin-head-w: calc(var(--origin-numeral-w) + var(--origin-gap) + var(--origin-col));
   /* The row's four paddings, here rather than as literals in the rule that
@@ -256,12 +256,14 @@
    an inner gutter.
 
    So the boxes do not move at all and only the hit area grows — a transparent
-   overlay stretched out of the heading into the row's own padding, which is
-   the `.card__cover` trick from `base.css` (`position: absolute; inset: 0` on
-   a grandchild, covering the padding a control in normal flow cannot reach).
-   The offsets are the four `--origin-pad-*` variables, so the overlay lands on
-   the row's padding edge exactly rather than a hairline inside or outside it.
-   Nothing here paints, so the row's look is untouched.
+   overlay stretched out of the heading into the row's own padding. It is what
+   `.card__cover` does for every Apps card in `base.css`, said the other way
+   round: there the control is an `<a>` laid over the card and nothing else in
+   the card needs laying out by it, here the control has to stay in flow
+   because the row's height comes from it, so the cover is its `::after`
+   instead. The offsets are the four padding variables on `.origin`, so the
+   overlay lands on the row's padding edge exactly rather than a hairline
+   inside or outside it. Nothing here paints; the row's look is untouched.
 
    `bottom` is the one edge that moves. Shut, it reaches the row's bottom edge,
    because the panel below the heading has no height and the whole row is head.
@@ -539,9 +541,14 @@
   transform: translateX(4px);
 }
 
-/* 26px of right padding is generous on a row that is 206px wide inside, and
-   the eight it gives back is the difference between the phase sitting beside
-   the chapter tag and dropping under it on a small phone. */
+/* 26px of right padding is generous on a row this narrow, so a phone gets
+   eight of it back. It used to be load-bearing: with a chevron reserving 34px
+   of the meta line, the widest chapter tag and phase came to 181px inside
+   172px and stacked, and this was what unstacked them. The chevron is gone and
+   the tags have that width back, so measured at 320px all seven rows keep both
+   tags on one line either way — 181px inside 198px at 26px of padding, inside
+   206px at 18px. It stays because the row is still tight here, not because
+   anything now depends on it. */
 @media (max-width: 430px) {
   .origin {
     --origin-pad: 18px;
