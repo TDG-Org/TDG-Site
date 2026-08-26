@@ -155,9 +155,12 @@ export function Apps() {
             section into view.
 
             So the plate hangs on this box, which never reveals, and the words
-            wipe on over it. Apps.css has the mask; Tools.tsx and Origin.tsx
-            carry the same pair for the same reason. */}
-        <div className="apps__head-plate">
+            wipe on over it. `walk-plate` is the shared recipe — one plate for
+            the five blocks of copy read over the walk, declared in Walk.css
+            because that is the file that owns all three sections; Apps.css sets
+            only how far this one reaches. Tools.tsx and Origin.tsx carry the
+            same pair for the same reason. */}
+        <div className="apps__head-plate walk-plate">
           <div ref={head} className="apps__head">
             <div>
               <div className="kicker">

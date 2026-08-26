@@ -171,46 +171,286 @@
     var(--t-tint),
     --walk-tint-low 0.6s ease var(--wave-delay, 0ms);
 
-  /* ── the two numbers every scrim in the walk is built from ──────────────
-     Three blocks of copy in this half of the page have no plate of their own
-     and are read over a lit 3D room: `#apps`' head, `#tools`' head and the
-     link at the end of Origin's timeline. Each takes a soft-edged scrim in
-     --card-bg, and rule 6 says the measurements they share live once, on the
-     common parent, rather than three times in three stylesheets that agree
-     until somebody changes one.
+  /* ── the three numbers every plate in the walk is built from ────────────
+     Five blocks of copy in this half of the page are read over a lit 3D room:
+     Origin's intro, its seven chapter rows, the link that closes its timeline,
+     and the heads of `#apps` and `#tools`. Each takes a soft-edged plate in
+     --card-bg through `.walk-plate` below, and rule 6 says the measurements
+     they share live once, on the common parent, rather than five times in
+     three stylesheets that agree until somebody changes one.
 
      --scrim-pad RESTATES `.section`'s own horizontal padding from base.css,
-     and it has to, because it is what lets a scrim reach the section's border
-     box exactly. The obvious version is `calc(50% - 50vw)`, which reaches the
-     VIEWPORT — and `100vw` includes the scrollbar, so on a window with a
-     classic 15px one that box hangs 7.5px past each side. `#apps` and `#tools`
-     are `overflow: hidden` and would clip it; `#origin` is `overflow: clip`
-     with a 130svh MARGIN that opens every edge, so there it would put a
-     horizontal scrollbar on the document — the identical trap
+     and it has to, because it is what stops a plate reaching past the
+     section's border box. The obvious version is `calc(50% - 50vw)`, which
+     reaches the VIEWPORT — and `100vw` includes the scrollbar, so on a window
+     with a classic 15px one that box hangs 7.5px past each side. `#apps` and
+     `#tools` are `overflow: hidden` and would clip it; `#origin` is
+     `overflow: clip` with a 130svh MARGIN that opens every edge, so there it
+     would put a horizontal scrollbar on the document — the identical trap
      `.origin__ground` records having measured at 1470px against a 1430px
      client width. Written as the padding it never reaches past the frame at
      any width. **If base.css's `.section` padding moves, this moves with it.**
 
-     --scrim-x is where a scrim starts fading toward the RIGHT, as a stop in
-     its own mask. `calc(50% + 120px)` of the scrim's box, which at 1440 puts
-     the falloff at 803px against copy that ends at 630 — 170px of clear plate,
-     then a 520px ramp to nothing.
+     --scrim-bleed is how far past the frame's LEFT edge every plate runs, so
+     the frame crops it instead of the plate ending inside the picture. 40px
+     was written four times in three files before this pass and is named once
+     here. A plate cropped by the frame has no edge — that is what a frame is
+     for — and it is the same argument `.origin__lamp-pool` makes about light
+     arriving from off screen.
 
-     At 900px and below it becomes `100%`: the shell IS the viewport there, so
-     the copy runs the full width and there is no room on the right for a
-     falloff. A plate flush with BOTH frame edges has no edge to see — the
-     frame crops it, which is what a frame is for — where a plate that faded
-     out 40px short of the edge would have one. The breakpoint is 900 because
-     that is the width at which `.lede`'s 500px column stops leaving room for
-     the ramp: at 901 the copy ends at 536 against a falloff starting at 533,
-     which is the last width where the two do not collide. */
+     --scrim-fade is how long every plate's right-hand falloff is. 240px at
+     1440, and it is the number that decides whether a plate reads as a shape:
+     --card-bg is 0.74 alpha in dark, so 240px of ramp is 0.003 of alpha per
+     pixel, against the ~0.02 per pixel at which a ramp starts to read as an
+     edge in the alpha probe this pass was measured with.
+
+     `min(240px, 18vw)` and not a bare 240: the ramp is spent out of the room
+     between the copy's last glyph and the frame, and that room shrinks with
+     the viewport. At 901px it is 162px, which still leaves 43px of solid plate
+     past the longest line in this half of the page (Origin's lede, which fills
+     its 660px column).
+
+     At 900px and below it is 0. The shell IS the viewport there, the copy runs
+     the full width, and there is no room on the right for a falloff at all —
+     so every plate goes solid to its own right edge and is cropped by the
+     frame. The breakpoint is 900 because that is the width at which `.lede`'s
+     500px column stops leaving room for a ramp.
+
+     **That only works if the plate's right edge IS the frame, and --plate-col
+     is the thing that has to give.** Measured at 900x900 with only the fade
+     zeroed: `.origin__more-plate` is 545px of column, so its box stopped at
+     viewport 581 with no ramp left to end on — a 0.479 alpha step in one
+     pixel, 300px inside the picture, which is the exact defect this whole pass
+     is about, reintroduced at one breakpoint. So the media query below sets
+     --plate-col on the pseudo-element itself, where it beats every caller's
+     own value, and `100vw` is guaranteed to lose the `min()` against
+     `100% + --scrim-pad` — which is the section's border box, and is where
+     these plates ended before this pass at every width.
+
+     ── the defaults ─────────────────────────────────────────────────────────
+     `.walk-plate::before` reads four more custom properties, and a `var()`
+     with no value makes the whole declaration invalid at computed-value time —
+     which would silently unset `width` or `mask-image` rather than fail
+     loudly. So all four are declared here, on the ancestor every caller has,
+     and a caller sets only what it is changing. */
   --scrim-pad: clamp(18px, 4vw, 40px);
-  --scrim-x: calc(50% + 120px);
+  --scrim-bleed: 40px;
+  --scrim-fade: min(240px, 18vw);
+  --plate-ink: var(--card-bg);
+  --plate-col: 760px;
+  --plate-up: 84px;
+  --plate-down: 92px;
+
+  /* ── the two numbers the OUT beat is cut from ───────────────────────────
+     The last row of the spec's beat table is "push toward the window and let
+     the frame wash to the outside light, so the canvas can fade out into the
+     next band with nothing to cut". `CabinScene` does the push — `ST_WINDOW_IN`
+     overflows the window on all four sides so there is no edge left in the
+     picture — and until this pass NOTHING did the fade. These two are it, and
+     they are on `.walk` rather than in Tools.css because the stage's mask and
+     `#tools`' padding are both solved from them and rule 6 says one set of
+     variables on the common parent.
+
+     --tools-scene is Tools' landscape band: the stone footbridge, the water,
+     the boulders and the neon horizon the reader steps out onto. Its value is
+     unchanged (`clamp(220px, 23vw, 400px)`, 331px at 1440) and Tools.css still
+     owns what it is FOR and positions every prop from it. It moved here because
+     of what it also has to be: **the run of page the canvas may not paint in.**
+
+     The canvas is a 100svh pin sliding down this box, so its LAST position is
+     always the bottom 100svh of the walk — pages `walkBottom − 100svh` to
+     `walkBottom` — and Tools' landscape band is the bottom --tools-scene of the
+     same box. The overlap was therefore structural, not a tuning miss: measured
+     at 1440x900 before this pass, the pin released at scroll 5619 and then
+     scrolled away as a 900px rectangle with a hard bottom edge, and the bridge
+     (page 6339), the boulders (6404) and #building's own wayfinding post were
+     painted over the cabin's ceiling and wall planes for the whole of it. That
+     is the worst continuity error the page had: a river crossing inside an
+     interior shot.
+
+     A mask on the stage fixes it by construction rather than by a number,
+     because the mask is measured in THIS box's coordinates: whatever the pin's
+     travel, a pixel of canvas landing in the bottom --tools-scene of the walk
+     is a pixel at mask alpha 0. The landscape band can never have the room
+     behind it again, at any viewport, at any section height.
+
+     --walk-out is the ramp above that, and it is what makes the wash a wash
+     rather than a cut. 24svh, 216px at 1440x900, spent over the scroll where
+     the camera is already pushing into the glass: `KNOT[5]` puts that push at
+     p 0.969..1, which at these heights is scroll 5324..5457, and the ramp's top
+     edge crosses the middle of the frame at 5324. The two land together without
+     either being told about the other, because both are anchored to the same
+     bottom edge.
+
+     The two ends of this mask cannot cross. --origin-veil resolves to 702px at
+     1440x900 and the ramp's top stop to 4640, which is 3938px — 4.4 viewports —
+     of solid mask between them, and the walk is never shorter than about three
+     screens at any width. If they ever did, CSS clamps a stop to the one
+     before it, which costs the ramp and keeps the transparent band: the
+     continuity fix survives and only the softness goes. That is the right way
+     round for a degradation and is why there is no `max()` guard here where the
+     background gradient above needed one. */
+  --tools-scene: clamp(220px, 23vw, 400px);
+  --walk-out: clamp(140px, 24svh, 300px);
 }
 @media (max-width: 900px) {
   .walk {
-    --scrim-x: 100%;
+    --scrim-fade: 0px;
   }
+  /* On the pseudo-element and not on `.walk`, so it beats the value each
+     caller sets on its own wrapper. See --scrim-fade above for what it is for.
+     `.origin__row::before` carries the same override in Origin.css, because
+     its hover wash reads --plate-col to land its falloff on the same two
+     pixels this plate's does. */
+  .walk-plate::before {
+    --plate-col: 100vw;
+  }
+}
+@media (max-width: 640px) {
+  /* The landscape band existed for the art, and at this width most of the art
+     comes off — Tools.css drops the boulders, the bench and the reeds at 640
+     under guardrail 7 of the kit, leaving the bridge. The band shrinks with
+     them rather than sitting there as a hole. This is Tools' own number, moved
+     up with the declaration above so the stage's mask and the section's padding
+     cannot end up reading two different bands; Tools.css says what the band is
+     for and why the bridge stays. */
+  .walk {
+    --tools-scene: clamp(130px, 15vw, 190px);
+  }
+}
+
+/* ── the plate a block of copy over the walk is read off ───────────────────
+   One recipe, five callers, and the reason it is a class in THIS file rather
+   than the same twenty lines in three stylesheets is that the five plates are
+   over one continuous camera move. Two headings a viewport apart should be
+   plated by one idea; before this pass there were three ideas — two linear
+   ramps for the heads, a radial ellipse for the chapter rows, a second, weaker
+   ellipse for the intro — and the two ellipses were measurably rectangles.
+
+   ── what was wrong, measured ─────────────────────────────────────────────
+   The plate's own alpha is recoverable: hide the canvas, force `.walk`'s band
+   to a flat #808080, and read it back as `(128 - r) / 119`. Scanned that way
+   at 1440x900, worst single-pixel alpha step:
+
+     .origin__intro::before   0.37 across its left edge, 0.89 down its top edge
+     .origin__row::before     0.82 across its left edge, 0.82 at every gap
+                              between two rows and at the column's two ends
+     the three linear plates   0.008 horizontally, 0.017 vertically
+
+   An ellipse cannot do this job, and that is arithmetic rather than taste.
+   `radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent)` is opaque
+   wherever the distance from 26% is under 0.44 x 74% = 32.6% of the box — and
+   the box's own left edge is 26% away, so the mask is at FULL alpha there. The
+   ellipse that covers copy running from the frame's left edge is necessarily
+   still opaque AT that edge. Vertically the same mask is opaque out to +-57%
+   of the row, so it was opaque through both of the row's edges as well, and
+   `.origin__row` is `overflow: hidden`: seven rows 4px apart drew six ruled
+   lines across the shot and capped the column with two more.
+
+   ── what it is instead ───────────────────────────────────────────────────
+   Two linear ramps intersected, each side answered separately, which is the
+   construction the three head plates already used and the one that measured
+   edge-free:
+
+     left    runs --scrim-bleed past the frame's own left edge, so the frame
+             crops it and there is nothing to find.
+     right   solid to --scrim-fade short of the box's right edge, nothing at
+             the edge itself. The BOX is what carries the geometry here rather
+             than a stop, so the ramp cannot be clipped part-way down by a box
+             that turned out to be narrower than the stop: `width` is
+             --plate-col from the wrapper's left edge, and the mask's two stops
+             are 100% and 100% - --scrim-fade of whatever that came out as.
+     top and dissolve over (--plate-up - 20px) and (--plate-down - 20px),
+     bottom  written as LENGTHS rather than percentages so the ramp is the same
+             at every width. A percentage of a box whose height is the copy's
+             own would be a different ramp every time a heading wrapped. The
+             20px is the solid margin the plate keeps past the copy's box, so
+             the first and last lines of type are never on the ramp.
+
+   ── --plate-col, and why every plate now stops in the same place ─────────
+   It is the distance from the WRAPPER's left edge to where the plate has
+   reached nothing, so a caller sets it to (its own longest line) + 40px + a
+   --scrim-fade. Measured at 1440x900, every one of the five is now solid to
+   38-40px past its own last glyph and gone 240px after that:
+
+     block            longest line ends   solid to   nothing from   was
+     Origin intro          830              870          1110       850 (hard)
+     Origin chapters       691              730           970      1270
+     Origin's last link    435              475           715      1350
+     #apps head            610              650           890      1350
+     #tools head           702              740           980      1350
+
+   `min(var(--plate-col), 100% + var(--scrim-pad))` is the guard that keeps the
+   right edge on the section's border box when the copy is wider than the room
+   — at 375px every one of them resolves to the frame edge exactly, and the
+   frame crops what the ramp no longer has space to do.
+
+   `calc(50vw - 50%)` is the wrapper's own left edge expressed from inside it,
+   which is what lets `left` reach the frame and `width` be measured from the
+   copy's column rather than from the box. **It is only true for a wrapper
+   CENTRED in the frame** — every caller here is a `.shell` or a full-width
+   child of one. `.origin__intro` is 660px inside an 1100px shell and is NOT
+   centred, which is why Origin.tsx wraps it rather than plating it directly.
+
+   ── the wrapper, and why the plate is never on the revealing element ─────
+   `useReveal('wipe')` writes `clip-path: inset(N% 0 0 0)` to the element it
+   reveals, and a clip-path clips that element's PSEUDO-ELEMENTS to its border
+   box. On a revealing element this plate is drawn as a hard rectangle with
+   four cut edges for the six-tenths of a second the wipe runs — caught in a
+   render at 1440x900 as a 1180 x 122 box, arriving at exactly the moment the
+   reader scrolls the section into view. So `.walk-plate` is always an ordinary
+   block wrapped round the copy and the copy reveals inside it.
+
+   `position: relative` is what the ::before needs and it is the only thing the
+   wrapper changes: every caller is a block in normal flow inside a `.shell`,
+   which already carries the stacking context, so `z-index: -1` puts the plate
+   just above that shell's background and under everything else in it.
+
+   `mask-composite: intersect, add` and not a single `intersect`, which is the
+   trap. The list is per layer and the BOTTOM layer composites against a
+   transparent-black destination, so `intersect` there would intersect the ramp
+   with nothing and the whole mask would come out empty. `add` on the bottom
+   layer leaves it as itself; the top layer then intersects with it.
+   `.origin__grid` records the same pair. A browser with neither
+   `mask-composite` nor `-webkit-mask-composite` falls back to the default
+   `add`, which is the UNION of the two ramps — a plate that is softer than
+   intended rather than an empty or a black box.                             */
+.walk-plate {
+  position: relative;
+}
+.walk-plate::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--plate-up));
+  bottom: calc(-1 * var(--plate-down));
+  left: calc(50% - 50vw - var(--scrim-bleed));
+  width: calc(
+    50vw - 50% + var(--scrim-bleed) + min(var(--plate-col), 100% + var(--scrim-pad))
+  );
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--plate-ink);
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 0 calc(100% - var(--scrim-fade)), transparent 100%),
+    linear-gradient(
+      180deg,
+      transparent 0,
+      #000 calc(var(--plate-up) - 20px),
+      #000 calc(100% - var(--plate-down) + 20px),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    linear-gradient(90deg, #000 0 calc(100% - var(--scrim-fade)), transparent 100%),
+    linear-gradient(
+      180deg,
+      transparent 0,
+      #000 calc(var(--plate-up) - 20px),
+      #000 calc(100% - var(--plate-down) + 20px),
+      transparent 100%
+    );
+  mask-composite: intersect, add;
+  transition: var(--t-theme);
 }
 
 /* ── the stage takes the dissolve ──────────────────────────────────────────
@@ -256,10 +496,51 @@
 
    It also fades the near snow canvas, which is inside the stage, and that is
    correct rather than incidental: flakes that begin abruptly on a boundary row
-   are the same defect one layer nearer.                                     */
+   are the same defect one layer nearer.
+
+   ── and the OUT beat, which is the same idea at the other end ─────────────
+   Two more stops, and they are the whole of the wash-out. See --tools-scene
+   and --walk-out on `.walk` above for the arithmetic and for what the page
+   looked like without them; the short version is that the canvas's last
+   resting position is always the bottom 100svh of this box and Tools'
+   landscape band is the bottom --tools-scene of it, so the room was painted
+   behind the footbridge by construction.
+
+   The mask is in `.stage`'s coordinates, which are the walk's, so these two
+   stops are a PAGE band rather than a moment: no pixel of canvas is ever
+   drawn in the bottom --tools-scene of the walk, whatever the pin's travel,
+   whatever a section's height, at any viewport. Above it --walk-out of ramp
+   is what turns "gone" into "washed out".
+
+   **It is deliberately NOT a JS opacity on the canvas.** That was the obvious
+   version and it is worse three ways: it needs a second `onFrame` subscriber
+   and a second element to write to, it has to decide what a reduced-motion
+   reader gets (the identity there is the rest frame, which is exactly what
+   this geometry already leaves), and it fades the WHOLE frame — so the top of
+   the shot would leave at the same moment the bottom does and the reader
+   would watch the room evaporate rather than watch the outside arrive from
+   below. A band in the walk's own coordinates is the honest statement of what
+   is actually true: the canvas does not belong down there.
+
+   Reduced motion needs nothing extra for the same reason. The mask is
+   geometry, not motion: at motionIntensity 0 `CabinScene` parks at WALK_REST
+   and this leaves that composed frame visible and still, with its bottom edge
+   dissolved into the band instead of cut by a footbridge.                   */
 .walk__stage {
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--origin-veil));
-  mask-image: linear-gradient(180deg, transparent 0, #000 var(--origin-veil));
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--origin-veil),
+    #000 calc(100% - var(--tools-scene) - var(--walk-out)),
+    transparent calc(100% - var(--tools-scene))
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--origin-veil),
+    #000 calc(100% - var(--tools-scene) - var(--walk-out)),
+    transparent calc(100% - var(--tools-scene))
+  );
 }
 
 /* The cabin's canvas fills its stage's pin, which is one viewport tall and
@@ -402,5 +683,20 @@
      reason.                                                                 */
   .walk {
     background: none !important;
+  }
+
+  /* And the same trap one layer up, for all five plates at once. base.css's
+     print block does not neutralise --card-bg either — it rewrites --bg,
+     --surface, --text and the hero's set, and stops — so every plate would
+     print as rgba(9,10,16,0.74) in the dark theme: a near-black slab under
+     black type, across the whole of Origin's timeline and both section heads.
+
+     One rule here rather than one in each of the three stylesheets. Apps.css
+     and Tools.css used to carry their own and Origin.css carried two; all four
+     are gone, and each file says so where its plate is declared, because a
+     print rule that is repeated is a print rule that will eventually be
+     repeated wrongly.                                                       */
+  .walk-plate::before {
+    display: none !important;
   }
 }

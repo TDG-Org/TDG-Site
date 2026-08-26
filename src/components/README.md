@@ -80,9 +80,18 @@ touch anything in this half of the page:
   on the canvas. The backdrop for all three is one gradient on `.walk`,
   underneath it — transparent at the top for the hero dissolve, `--band-building`
   at the floor so `#building` still meets an identical band.
-- **The copy is plated.** `.card` already had `--card-bg`; the headings, the
-  kickers, the ledes and the Origin chapter rows take soft-edged scrims of the
-  same ink, because a heading over a lit table is a heading nobody can read.
+- **The copy is plated, and a plate is a LOCAL object.** `.card` already had
+  `--card-bg`; the five blocks of copy read against the room — Origin's intro,
+  its seven chapter rows, the link that closes its timeline, and the heads of
+  `#apps` and `#tools` — take one soft-edged plate each from **`.walk-plate`**,
+  which is declared in `Walk.css` because that is the file that owns all three
+  sections. Each is anchored to its own copy's column and has reached nothing
+  240px past its own last glyph; a caller sets only `--plate-col`,
+  `--plate-up`, `--plate-down` and `--plate-ink`. The version before it ran
+  1350–1390px wide for copy 265–660px wide and two of the five were measurably
+  rectangles — that is what "the cabin is being delivered as a grey gradient"
+  was. `Walk.css` carries the alpha probe that measures a plate's own edge and
+  the numbers each block is solved against.
 - **`.walk` must not become a stacking context and must not be `overflow:
   hidden`.** Either one breaks something silently — the first re-orders the
   lamppost against the hero's wordmark, the second stops the pin sticking at

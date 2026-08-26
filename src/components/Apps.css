@@ -159,80 +159,39 @@
    rgb(224,224,222) over rgb(200,180,140), which is 1.5:1. The tags were not
    low contrast, they were gone.
 
-   ── why it has NO edge, on any side ──────────────────────────────────────
-   A rectangle behind the heading is the one hard edge in a pass whose whole
-   subject is that there are none, and an ellipse cannot fix it: a mask that is
-   opaque over copy running from the shell's left edge out to 500px is
-   necessarily still opaque AT that left edge, which is a ruled vertical line
-   down the frame. Measured on the first attempt at 1440 — a
-   `radial-gradient(76% 128% at 28% 50%)` — the mask was at full alpha on the
-   box's left, top and bottom edges and drew exactly that.
+   ── it is `.walk-plate` now, and what changed is how far it reaches ──────
+   Walk.css carries the construction — two linear ramps intersected, no edge on
+   any side, cropped by the frame on the left — and the argument for it, and
+   the print rule that used to be duplicated in this file. It is the same
+   recipe Origin's three blocks and `#tools`' head now use, which is the point:
+   five plates over one continuous camera move should be one idea.
 
-   So the mask is two LINEAR ramps intersected, and each side is answered
-   separately:
+   **What was wrong here was not the edge, it was the reach.** The alpha probe
+   (canvas hidden, `.walk` forced to a flat #808080, alpha read back as
+   `(128 - r) / 119`) measures this plate's worst single-pixel step at 0.008
+   horizontally and 0.017 vertically — it was already edge-free. It was also
+   1390 x 429 at 1440x900, which is 96% of the frame's width and 48% of its
+   height, for copy that occupies 480 x 149. Nine tenths of the ink was over
+   picture with no words on it, and the site owner's report — the cabin
+   delivered as a grey gradient — is the sum of that across five plates.
 
-     top and bottom  dissolve over 110px and 130px, written as LENGTHS rather
-                     than percentages so the ramp is the same at every width.
-                     A percentage of a box whose height is the head's own would
-                     be a different ramp every time the heading wrapped.
-     right           fades from --scrim-x to nothing by the box's own right
-                     edge. Walk.css has the number and why it becomes `100%`
-                     below 900px.
-     left            runs 40px PAST the viewport's own left edge, so the plate
-                     is cropped by the frame instead of ending inside it. A
-                     plate cropped by the frame has no edge — that is what a
-                     frame is for — and it is the same argument
-                     `.origin__lamp-pool` makes about light arriving from off
-                     screen.
+   --plate-col 760: the head's copy runs x 130..610 (`.apps__heading` is 469px
+   of 48px display type and `.lede` is capped at 500), so 480 from the shell's
+   left edge, plus 40px of solid past the last glyph, plus a 240px
+   --scrim-fade. At 1440 the plate is solid to viewport 650 and gone by 890,
+   where `--scrim-x` used to hold it solid to 775 and carry it to 1350.
 
-   ── the two bleeds are written differently, and they have to be ──────────
-   Right is `--scrim-pad`, the section's own padding, so the box's right edge
-   lands exactly on the section's border box and can never push the document
-   wider than the window. Left is `calc(50% - 50vw - 40px)`, which reaches the
-   viewport at every width whatever the shell's centring gap happens to be.
+   96 / 110 above and below, so the ramps are 76px and 90px and the solid band
+   still starts 20px above the kicker and ends 20px below the lede at every
+   width — the stops are lengths measured from the bleed rather than
+   percentages of a box whose height changes every time the heading wraps. The
+   box is 355px tall against the 429 it was.
 
-   The obvious version uses `50vw` on BOTH sides and it is wrong on one of
-   them: `100vw` includes the scrollbar, so on a window with a classic 15px one
-   the right edge hangs 7.5px past the frame — harmless here, where the section
-   is `overflow: hidden`, and a horizontal scrollbar on the whole document in
-   `#origin`, which is `overflow: clip` with a 130svh margin that opens every
-   edge. Overflow past the LEFT edge produces no scrollbar at all, so `50vw` is
-   free there. `.origin__intro::before` and `.origin__ground` both record the
-   same asymmetry.
-
-   **A fixed pixel bleed cannot do the left, and this was measured rather than
-   reasoned.** The first version used `--scrim-pad + 60px`, which is 100px at
-   1440 — but the shell is 1180 inside a 1360 content box, so its left edge is
-   at 130 and the plate stopped at x=30 with 30px of frame beside it. Sampled
-   across that column with the scrim toggled and the stage frozen: a step of
-   69.6 luminance values in one pixel, in dark, which is a ruled line down the
-   page. With `50%  - 50vw` the same probe reads 0.
-
-   `mask-composite: intersect, add` and not a single `intersect`, which is the
-   trap. The list is per layer and the BOTTOM layer composites against a
-   transparent-black destination, so `intersect` there would intersect the ramp
-   with nothing and the whole mask would come out empty. `add` on the bottom
-   layer leaves it as itself; the top layer then intersects with it.
-   `.origin__grid` records the same pair. A browser with neither
-   `mask-composite` nor `-webkit-mask-composite` falls back to the default
-   `add`, which is the UNION of the two ramps — a plate that is softer than
-   intended rather than an empty or a black box.
-
-   ── what the geometry comes out at ───────────────────────────────────────
-   Measured at 1440x900 against a 1180px shell. The box runs x -40..1350 and
-   the head's copy x 130..630 (`.apps__heading` is 468px of 48px display type
-   and `.lede` is capped at 500). The horizontal ramp is solid from the box's
-   own left edge — 40px outside the frame — out to --scrim-x at box-x 815,
-   viewport 775, which is 145px past the longest line, and then fades over the
-   575px to the box's right edge. Vertically the solid band starts 20px above
-   the kicker and ends 20px below the lede at every width, because both stops
-   are lengths measured from the bleed rather than percentages of a box whose
-   height changes every time the heading wraps.
-
-   `.apps__nudge` sits at viewport 1197..1310, where this mask has fallen to
-   0.25 and then to nothing. That is deliberate rather than a gap: it carries
-   its own plate, and two plates on one element is double the ink on the one
-   thing in this block that already had some. Its rule below has the numbers.
+   `.apps__nudge` sits at viewport 1197..1310, where this mask is now at zero
+   rather than 0.25. That is deliberate rather than a gap and it always was: it
+   carries its own plate, and two plates on one element is double the ink on
+   the one thing in this block that already had some. Its rule below has the
+   numbers.
 
    ── the plate hangs on a WRAPPER, not on the head ────────────────────────
    `useReveal('wipe')` writes `clip-path: inset(N% 0 0 0)` to the element it
@@ -243,17 +202,15 @@
    reader scrolls this section into view, which is the worst possible timing
    for the one defect this pass exists to remove.
 
-   So `.apps__head-plate` is an ordinary block wrapped round the head and it
-   carries the scrim; the head reveals inside it and the words wipe on over a
-   plate that was already there. `.apps__head`'s `margin-bottom` collapses out
-   through the wrapper, so the plate's box is the head's box exactly and no
-   layout moved. Apps.tsx has the note where the wrapper is rendered.
-
-   `position: relative` is what the ::before needs and it is the only thing the
-   wrapper changes: it is a block in normal flow inside `.shell`, which already
-   carries the stacking context.                                             */
+   So `.apps__head-plate` is an ordinary block wrapped round the head; the head
+   reveals inside it and the words wipe on over a plate that was already there.
+   `.apps__head`'s `margin-bottom` collapses out through the wrapper, so the
+   plate's box is the head's box exactly and no layout moved. Apps.tsx has the
+   note where the wrapper is rendered.                                       */
 .apps__head-plate {
-  position: relative;
+  --plate-col: 760px;
+  --plate-up: 96px;
+  --plate-down: 110px;
 }
 .apps__head {
   display: flex;
@@ -262,23 +219,6 @@
   flex-wrap: wrap;
   gap: 20px;
   margin-bottom: 46px;
-}
-.apps__head-plate::before {
-  content: '';
-  position: absolute;
-  inset: -130px calc(-1 * var(--scrim-pad)) -150px calc(50% - 50vw - 40px);
-  z-index: -1;
-  pointer-events: none;
-  background-color: var(--card-bg);
-  -webkit-mask-image:
-    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 110px, #000 calc(100% - 130px), transparent 100%);
-  -webkit-mask-composite: source-in, source-over;
-  mask-image:
-    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 110px, #000 calc(100% - 130px), transparent 100%);
-  mask-composite: intersect, add;
-  transition: var(--t-theme);
 }
 .h2.apps__heading {
   margin-top: 18px;
@@ -298,10 +238,27 @@
    cabin's right-hand wall, the warmest and brightest part of the frame.
    --accent-2 on those was 2.74:1 and 4.53:1 against a 4.5 floor for 12.5px.
 
-   Two layers rather than one, exactly as `.card` does it: --card-bg is the
-   plate and --accent-soft is the lift, and neither has to know the other's
-   alpha. `background-color` plus `background-image` and not the `background`
-   shorthand, which would reset whichever was written second. */
+   Three layers rather than one, and the third is this pass's: --card-bg is the
+   plate, --card-bg again is a second coat of it, and --accent-soft is the lift
+   on top. None of them has to know another's alpha. `background-color` plus
+   `background-image` and not the `background` shorthand, which would reset
+   whichever was written second, and the image list paints FIRST-ON-TOP, so the
+   lift is written before the coat it sits on.
+
+   ── why a second coat, measured ──────────────────────────────────────────
+   The head's plate used to reach this far right at about 0.25 of alpha, and
+   that quarter was quietly holding this pill up: with the plate now stopping
+   240px past the head's own last glyph, the same pill measured 4.38:1 against
+   its 4.5 floor — a regression this pass caused and had to pay for locally
+   rather than by making the head's plate wide again.
+
+   One coat of --card-bg is 0.74 in dark, so over the table's paper it leaves
+   26% of rgb(112,113,117) showing and --accent-soft's 7% white puts it back
+   up. Two coats are 0.93, which lands the pill on rgb(33,34,40) and --accent-2
+   at 6.5:1 — and in light two coats of 0.88 are 0.986, a pill that is very
+   nearly the theme's own white, which is what a small control over a lit table
+   should be. It is a UI object rather than scenery; scenery is what the plates
+   are for, and they are the things that had to get smaller. */
 .apps__nudge {
   display: inline-flex;
   align-items: center;
@@ -309,7 +266,9 @@
   padding: 9px 15px;
   border-radius: 2px;
   background-color: var(--card-bg);
-  background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
+  background-image:
+    linear-gradient(var(--accent-soft), var(--accent-soft)),
+    linear-gradient(var(--card-bg), var(--card-bg));
   border: 1px solid var(--border-hover);
   font: 500 12.5px var(--font-body);
   color: var(--accent-2);
@@ -432,16 +391,28 @@
    `rgba(255,255,255,0.07)` in dark, so its own copy was being read straight
    off the backdrop.
 
-   Two layers, not one, which is exactly what `.card` does and for the same
-   reason: --card-bg is the plate and the gradient is the lift, and neither
-   layer has to know the other's alpha. `background-color` plus
+   Three layers, not one: --card-bg is the plate, --card-bg again is a second
+   coat, and the gradient is the lift on top. None of them has to know
+   another's alpha, and the image list paints first-on-top, so the lift is
+   written before the coat it sits on. `background-color` plus
    `background-image` rather than one `background` shorthand, because the
-   shorthand resets the other. */
+   shorthand resets the other.
+
+   The second coat is this pass's and it is the same repair `.apps__nudge`
+   below got, for the same reason: the head's plate used to reach across most
+   of this grid and is now gone 240px past the head's own last glyph, so both
+   of these boxes lost a quarter-alpha of ink they had been quietly leaning on.
+   Measured on the rendered page at 1440x900, this tile's copy came out at
+   4.49:1 against its 4.5 floor with one coat; two coats put it at 5.4. A UI
+   tile over a lit table is allowed to be nearly opaque — it is an object, not
+   scenery, and scenery is what had to get smaller. */
 .apps__more {
   border-radius: 3px;
   padding: 30px;
   background-color: var(--card-bg);
-  background-image: linear-gradient(150deg, var(--accent-soft), transparent);
+  background-image:
+    linear-gradient(150deg, var(--accent-soft), transparent),
+    linear-gradient(var(--card-bg), var(--card-bg));
   border: 1px dashed var(--border-hover);
   display: flex;
   flex-direction: column;
@@ -463,19 +434,19 @@
 }
 
 @media print {
-  /* base.css's print block does not neutralise --card-bg — it rewrites --bg,
-     --surface, --text and the hero's set, and stops — so this scrim would
-     print as rgba(9,10,16,0.74) in the dark theme: a near-black rectangle
-     under black type, across the section's whole heading. Origin.css and
-     Tools.css record the identical trap for the identical reason.
+  /* `.apps__head-plate::before` used to head this list, because base.css's
+     print block does not neutralise --card-bg — it rewrites --bg, --surface,
+     --text and the hero's set, and stops — so the plate would print as
+     rgba(9,10,16,0.74) in the dark theme: a near-black rectangle under black
+     type, across the section's whole heading. It is still true and it is
+     answered once now, for all five plates in the walk, by
+     `.walk-plate::before` in Walk.css's print block. Origin.css and Tools.css
+     each dropped a copy of the same rule in the same edit.
 
-     (`.apps__over` and `.apps__ground` used to be the two names here, for the
-     crossing band and the lit floor. Both are deleted; see the top of this
-     file.) */
-  .apps__head-plate::before {
-    display: none !important;
-  }
-  /* The same trap two elements down. `.apps__more` and `.apps__nudge` both took
+     (`.apps__over` and `.apps__ground` used to be here too, for the crossing
+     band and the lit floor. Both are deleted; see the top of this file.)
+
+     The same trap two elements down. `.apps__more` and `.apps__nudge` both took
      a --card-bg plate in this pass so their copy is not read straight off the
      cabin's table, and on paper each plate is the same near-black rectangle.
      Both boxes stay — they are content, not scenery — so the plate is cleared

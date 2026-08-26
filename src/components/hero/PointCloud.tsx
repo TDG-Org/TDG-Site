@@ -92,8 +92,8 @@ export function PointCloud() {
     const to = new Float32Array(shapes[0].pts)
     const scales = new Float32Array(COUNT)
     // per-point brightness is fixed; the theme's base opacity is applied at
-    // draw time (0.92 additive on dark, 0.72 over on light, matching the reference's
-    // uOpacity uniform)
+    // draw time, and the two numbers are NOT the same because the two themes
+    // are not the same blend — see below.
     const alphas = new Float32Array(COUNT)
     for (let i = 0; i < COUNT; i++) {
       const s = 0.6 + Math.random() * 0.8
@@ -101,7 +101,36 @@ export function PointCloud() {
       alphas[i] = Math.min(1, 0.45 + s * 0.5)
     }
     const DARK_OPACITY = 0.92
-    const LIGHT_OPACITY = 0.72
+    /**
+     * ── why light's is nearly 1 and dark's is not ─────────────────────────
+     * It was 0.72, matching the reference's uOpacity, and the report was that
+     * the cross "does not read as a cross in the light theme". It does read —
+     * at 1440x900 the form is unmistakable in a screenshot — but it reads
+     * measurably thinner than the same cloud in dark, and the reason is the
+     * BLEND rather than the point count.
+     *
+     * Dark composites additively (`acc[at] += v`), so two points landing on
+     * one pixel are worth twice one point and the crowded middle of a bar
+     * burns out to solid white. That bloom is most of what makes the dark
+     * cross read as a mass with a spine rather than as a fog of dots.
+     *
+     * Light composites source-over (`prev + v(1 - prev)`), which is what a
+     * dark speck on a pale sky has to do — additive would only ever make it
+     * brighter, i.e. more like the sky. Under source-over a pixel can never
+     * be worth more than the alpha of the darkest point that touched it, so
+     * the whole form sat at whatever one point was worth: alphas[] runs
+     * 0.75-1.0 and the profile tapers to zero at each point's rim, so 0.72
+     * put a typical inked pixel at about a third of an alpha — ink 20 over a
+     * sky near 200 landing at 140, a grey speckle.
+     *
+     * 0.95 gives a point's own core the density the additive blend gives dark
+     * for free, and overlaps then compound to opaque in two hits instead of
+     * four. Nothing else changes: the count is `pointBudget()` in BOTH themes
+     * and stays that way, because raising it in one theme would be paying a
+     * device's CPU to fix something the blend caused, and the profile still
+     * feathers every point's edge so the form keeps its soft rim.
+     */
+    const LIGHT_OPACITY = 0.95
 
     const WHITE = packRGB(255, 255, 255)
     const INK = packRGB(20, 20, 26)

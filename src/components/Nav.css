@@ -562,6 +562,30 @@
 
 /* ── progress ──────────────────────────────────────────────────────────── */
 
+/* ── the bar, and the two things that stopped it reading as a stray hairline ──
+   It is drawn at full `--accent` with a 12px glow and no track behind it, so on
+   a dark scene it was a near-white rule that simply STOPPED in mid-air: at 17%
+   of the page a 268px stub ending nowhere, and over the hero's lamppost it read
+   as a tan rectangle with straight sides — reported by the site owner as a
+   defect in the artwork, which it was not.
+
+   Two fixes, and each answers one half of that. A track means the rule is a
+   rule that is partly filled rather than a line that ends; a mask means the
+   filled part dissolves into the track instead of terminating on a hard edge.
+   Neither touches the width the script writes, so `Nav.tsx` is unchanged.
+
+   The mask is a length rather than a percentage on purpose: the element's own
+   width IS the progress, so a percentage fade would be short at 5% and 60px
+   long at the bottom of the page — the dissolve has to be the same size at
+   every reading, and 34px is about a fifth of the shortest stub anyone sees.  */
+.nav__progress-track {
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  pointer-events: none;
+}
+
 .nav__progress {
   position: absolute;
   left: 0;
@@ -571,6 +595,8 @@
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   box-shadow: 0 0 12px var(--glow);
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 34px), transparent);
 }
 
 /* The bar keeps its Account / Sign in control at EVERY width. Only the link

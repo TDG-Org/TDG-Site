@@ -237,8 +237,9 @@
      nearest fringe darkest; its light ones are pale mist with a graphite note
      at the front). But "lighter" is a step TOWARD --text in dark and AWAY
      from it in light, so one set of percentages cannot say it twice. The
-     light block below swaps the two ends. The crest sits in the middle and
-     needs no override.
+     light block below swaps the two ends, and it overrides the crest as well
+     — see the note above that block for why the "the crest needs no override"
+     this line used to end on stopped being true.
 
      13% / 9% / 5% of ink, not the 6% a seam takes. A seam is a boundary that
      must not become a stripe; this is scenery that has to read as three
@@ -257,13 +258,15 @@
      **--summit-shadow** is the wedge the cross cuts out of the moonlight
      falling over the crest, and it has to be DARKER than the hill it lies on
      and LIGHTER than the cross casting it. "Darker" is not one direction: the
-     crest ink is the band stepped 9% toward --text, and --text is near-white
-     in dark and near-black in light, so the shadow steps 38% back toward
+     crest ink is the band stepped toward --text, and --text is near-white in
+     dark and near-black in light, so the shadow steps 38% back toward
      --invert-fg in dark and 22% further toward --text in light. Same look,
      opposite arithmetic — the same flip the far and near ridges take three
      declarations up, and for the same reason. Against the crest ink it lies on
      and the cross it belongs to: #181920 between #212228 and #0c0f1a in dark,
-     #ccced6 between #dbdce3 and #2c3345 in light. The dark value was 60% of
+     #929399 between #b6b7bd and #4e4e5a in light — the light pair moved with
+     the light crest ink this pass and the mix that derives it did not. The
+     dark value was 60% of
      --invert-fg to begin with, which put the shadow at #0b0c13 — as dark as
      the cross itself, so the two read as one continuous object rather than as
      a thing and the mark it leaves.
@@ -271,35 +274,101 @@
      **--summit-wash** is the light itself, spilling over the crest line either
      side of the foot. It is --moon-disc, because the moon is literally what is
      lighting it, and --moon-disc is white in BOTH themes — so one ink, two
-     alphas: 20% over a near-black hill is a clear lift, and a pale hill needs
-     three times that to move at all.
+     alphas: 26% over a near-black hill is a clear lift, and a pale hill needs
+     twice that to move at all. Light was 62% and is 52%, because the light
+     crest is L* 74.5 this pass where it was 87.9: a wash that had to fight a
+     near-white hill has a mid-grey one to lift now, and at 62% it was blowing
+     the crest to white rather than lighting it.
 
      **--summit-sky** is the band deepened behind the disc, and the light theme
-     is what it exists for. --band-faith is L* 94.1 and the disc composites to
-     about 100, which is six points of separation for the brightest object in
+     is what it exists for. --band-faith is L* 94.87 and the disc composites to
+     about 99, which is four points of separation for the brightest object in
      the section; the hero had exactly this problem and tokens.css fixed it by
-     shading --hero-sky. The band cannot be shaded here — it is five sections'
-     worth of one token — so the sky is shaded locally, in a soft pool that has
-     no edge anywhere. 16% of --text takes the pool to L* 82.5, so the disc
-     clears its immediate surround by 17.5 rather than 5.9. It was 11% and 86.8
-     first, and rendered that was still a white disc on an almost-white page:
-     the shortfall is that `Moon.tsx`'s limb wash covers the disc's lower right
-     at --moon-mare's own alpha, which eats several points back out of exactly
-     the half of the disc the pool was bought to light. Dark gets a token step
-     toward --invert-fg for the same shape of reason at a tenth of the size: a
-     night sky has room to spare and only needs the bloom to have something to
-     be brighter than. */
+     shading --hero-sky. The band cannot be shaded here — it is one token the
+     lead owns — so the sky is shaded locally, in a soft pool that has no edge
+     anywhere.
+
+     **It has been at 11% and at 16% and both were measured failing.** The
+     reading that settled it was taken off a render rather than off the mix.
+     1440x900, light, the summit parked with the disc's centre at viewport
+     y 459; the DISC is every pixel inside 0.9 of its radius with the middle
+     0.6 excluded, because the cross stands there, and the SKY is the annulus
+     1.5 to 2.0 radii with the same column excluded and nothing below the
+     disc's centre, because that is hill:
+
+         disc L* 94.8   sky L* 92.2   ratio 1.07:1
+
+     — not the 17.5 L* the 16% mix was supposed to be buying. Two things ate
+     it. The pool's mask held only its inner 18% flat and gave the whole of the
+     rest over to fading, so at the disc's own rim it was down to about 0.19
+     alpha; and its ellipse was 2.2 cross-heights wide, which is 1.04 disc
+     radii — narrower than the disc it was drawn for.
+
+     So the mask's flat core runs to 54%, the ellipse is 9.2 cross-heights wide
+     (see `.faith__moon-sky`), and the ink is 31% of --text rather than 16%.
+     Composited with `.faith__dusk`, which is opaque at the disc's own height,
+     the same measurement now reads
+
+         disc L* 92.9   sky L* 74.4   ratio 1.675:1
+
+     against a floor of 1.6. Dark's INK is untouched — it is a different mix, off
+     --invert-fg rather than --text — but it shares the geometry, so the same
+     measurement moved from 78.3 / 9.1 / 9.76:1 to 78.3 / 6.4 / 10.28:1. A wider
+     pool of an ink that is 0.3 L* off its own band cannot do more than that,
+     which is the point: dark never needed it.
+
+     **The two shadings carry it together and neither could alone.** This pool
+     is pinned vertically by the section's floor — the sum under
+     `.faith__moon-sky` — so it cannot reach much past 2.3 disc radii above the
+     disc's centre, and the sky beyond that is `.faith__dusk`'s. Taking the pool
+     deep enough to do the whole job on its own put a visible grey ellipse
+     around the moon: rendered, a smudge with an edge, which is the one failure
+     mode this element is not allowed. At 31% it is L* 70.4 at its core against
+     a dusked band of 76.9 — a difference of six points, which reads as haze.
+
+     The mix is quoted against the disc's RING mean rather than its rim for a
+     reason worth keeping: `Moon.tsx`'s limb wash covers the disc's lower right
+     at --moon-mare's own alpha and eats several points out of exactly the half
+     of the disc the pool was bought to light. The rim reads L* 98.6 and clears
+     the same sky by 1.87:1.
+
+     Dark gets a token step toward --invert-fg for the same shape of reason at
+     a tenth of the size: a night sky has room to spare and only needs the
+     bloom to have something to be brighter than. */
   --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 62%, var(--invert-fg));
   --summit-wash: color-mix(in srgb, var(--moon-disc) 26%, transparent);
   --summit-sky: color-mix(in srgb, var(--band-faith) 86%, var(--invert-fg));
 }
 
+/* ── the light theme's three ridges, re-solved against a shaded sky ────────
+   The light block used to swap the two ends of the ladder and leave the crest
+   alone, because the crest sat in the middle of a band that was not moving.
+   The band moves now: `.faith__dusk` shades this section's sky and the pool
+   above shades it further behind the disc, so all three inks are re-derived
+   against what is actually behind them rather than against the bare token.
+
+   `.faith__dusk` is at full alpha from 72% of the section down to the crest
+   line, so the sky the ridges are drawn against in light is its L* 76.9 rather
+   than the band's 94.87, and the pool takes the patch behind the disc to 70.4.
+   The old light inks were 91.0 / 87.9 / 84.8 — every one of them LIGHTER than
+   that sky, which is a hillside floating in front of its own horizon. The
+   three below are 80.1 / 74.5 / 68.8: the order the dark theme has (far
+   lightest, near darkest, because distance is what reads as haze), every ridge
+   below the band, and the scene's own range opened from 6.2 L* to 11.3. Their
+   ratios against the band go 1.11 / 1.20 / 1.31 to 1.50 / 1.76 / 2.10, which is
+   the dark theme's 1.37 / 1.22 / 1.10 read from the other end.
+
+   The crest therefore has an override where the comment above says it needs
+   none. That claim was true of the value it was written for and is not true
+   any more; this line is the correction rather than an oversight, and
+   --summit-shadow follows it because it is mixed FROM it.                   */
 [data-theme='light'] .faith-summit-host {
-  --summit-ink-far: color-mix(in srgb, var(--band-faith) 95%, var(--text));
-  --summit-ink-near: color-mix(in srgb, var(--band-faith) 87%, var(--text));
+  --summit-ink-far: color-mix(in srgb, var(--band-faith) 81%, var(--text));
+  --summit-ink-crest: color-mix(in srgb, var(--band-faith) 74%, var(--text));
+  --summit-ink-near: color-mix(in srgb, var(--band-faith) 67%, var(--text));
   --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 78%, var(--text));
-  --summit-wash: color-mix(in srgb, var(--moon-disc) 62%, transparent);
-  --summit-sky: color-mix(in srgb, var(--band-faith) 84%, var(--text));
+  --summit-wash: color-mix(in srgb, var(--moon-disc) 52%, transparent);
+  --summit-sky: color-mix(in srgb, var(--band-faith) 69%, var(--text));
 }
 
 /* ── the scene's own box ──────────────────────────────────────────────────
@@ -407,9 +476,45 @@
 
    Faded to nothing well before its own edge, because the one way this fails is
    by having an edge: a pool with a visible boundary is a smudge on the page,
-   not evening. 4.4 by 3.3 cross-heights — 545 x 409 at 1440 — with the inner
-   18% of the radius held flat and the whole of the rest given over to
-   disappearing in.
+   not evening. **9.2 by 3.3 cross-heights — 1139 x 409 at 1440 — with the
+   inner 54% of the radius held flat and the outer 30% given over to
+   disappearing in.**
+
+   ## Why it is twice as wide as it was, and why the core is 54%
+
+   It was 4.4 by 3.3 with the flat core at 18%, and rendered that is a pool
+   that does not reach the disc it was drawn for. 4.4 cross-heights is a
+   half-width of 272.5px at 1440 against a disc radius of 121.4 — 2.2 radii —
+   and with the flat core at 18% the alpha at the disc's own rim was about
+   0.19. Sampled off the render along five rays out of the disc's centre, the
+   sky at 1.5 radii read L* 90.3–94.9 against a bare band of 94.87: the pool
+   was contributing between nothing and four points, and the disc measured
+   1.07:1 against it.
+
+   The two numbers are solved together. `a` is the half-width, `b` the
+   half-height (1.65 cross-heights, unchanged — see the floor sum below, which
+   it is pinned by), and the pool's centre is lifted 0.58 cross-heights above
+   the disc's, so a point beside the disc at the same height as its centre sits
+   at a normalised radius of
+
+       r = sqrt( (dx/a)^2 + (0.58h / b)^2 )   with 0.58h / b = 0.3514
+
+   a = 4.6h is 569.7px at 1440, so with a flat core at 54% and zero at 84% the
+   alpha beside the disc runs
+
+       1.5 radii  r 0.54  alpha 1.00      2.4 radii  r 0.62  alpha 0.73
+       2.0 radii  r 0.55  alpha 0.96      3.0 radii  r 0.71  alpha 0.43
+
+   — full over the whole of the disc's immediate surround and out past where
+   `Moon.tsx`'s bloom has died at 2 radii, then a fade that takes another two
+   radii to reach nothing. That last figure is the one the width buys: at
+   a = 3.6h the same fade was over by 3.0 radii and the render showed a ring.
+
+   The element is 1139px wide at 1440 inside a 1440px frame. At 375px it is
+   607px wide and runs off both, which costs nothing: the left edge lands where
+   the alpha is already zero, and on the right the wash simply continues to the
+   frame — a frame is not a boundary and there is nothing beyond it for a step
+   to be measured against.
 
    A child of .faith__moon rather than a sibling, so it takes the moon's
    translate without a second style write per frame — and so it cannot slide
@@ -422,8 +527,11 @@
    1440x900 with the section's floor parked at viewport y = 400 and the
    one-pixel luminance step taken at fifteen columns: zero at every column in
    the outer thirds and -10, -13, -4.6 in dark and +17, +21, +21, +19, +12 in
-   light across x = 720 to 1120 — which is exactly the width of this element,
-   centred on --summit-x. Nothing else on the page is that shape.
+   light across x = 720 to 1120 — which was exactly the width this element had
+   at the time (4.4 cross-heights, 545px), centred on --summit-x. Nothing else
+   on the page was that shape. It is 7.2 cross-heights now; what keeps the
+   floor clear is the sum below, which is written in the HEIGHT and the lift
+   and is untouched by the width.
 
    The cause is geometry, not the pool: the disc is low and the disc is big.
    Its centre sits crest + 0.52 cross-heights above the floor, 222.8px at 1440,
@@ -462,13 +570,13 @@
      than folded so the lift can be changed without re-deriving the centring. */
   top: 50%;
   left: 50%;
-  width: calc(var(--summit-cross-h) * 4.4);
+  width: calc(var(--summit-cross-h) * 9.2);
   height: calc(var(--summit-cross-h) * 3.3);
   margin-top: calc(var(--summit-cross-h) * -1.65 - var(--summit-cross-h) * 0.58);
-  margin-left: calc(var(--summit-cross-h) * -2.2);
+  margin-left: calc(var(--summit-cross-h) * -4.6);
   background-color: var(--summit-sky);
-  -webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 84%);
-  mask-image: radial-gradient(closest-side, #000 18%, transparent 84%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
+  mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
 }
 /* `position: relative` is load-bearing and it is the second half of the sky
    pool below. CSS paints POSITIONED descendants after in-flow block content,

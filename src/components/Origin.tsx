@@ -461,25 +461,56 @@ export function Origin() {
           and Apps.tsx says so from the other side. */}
 
       <div className="shell origin__shell">
-        <div ref={intro} className="origin__intro">
-          <div className="kicker">
-            <span className="kicker__num">01</span>
-            <span className="kicker__rule" />
-            <span className="kicker__label">Origin</span>
+        {/* ── the plate is OUTSIDE the reveal, and it has to be twice over ──
+            `.walk-plate` (Walk.css) is the one plate recipe the five blocks of
+            copy over the walk share, and it wants a wrapper for two separate
+            reasons — this block used to break both.
+
+            `useReveal('wipe')` writes `clip-path: inset(N% 0 0 0)` to the
+            element it reveals, and a clip-path clips that element's
+            PSEUDO-ELEMENTS to its border box. On `.origin__intro::before` that
+            drew a plate built to have no edge on any side as a hard rectangle
+            for the six-tenths of a second the wipe runs — the identical defect
+            Apps.tsx caught in a render one section down and fixed with a
+            wrapper. This file did not, and now does.
+
+            And the plate is anchored with `calc(50vw - 50%)`, which is the
+            wrapper's own left edge said from inside it — true only for a box
+            CENTRED in the frame. `.origin__intro` is 660px inside an 1100px
+            shell and sits at its left, so plating it directly would have put
+            the plate 260px off. The wrapper is the full shell width; the
+            intro's own `max-width` is unchanged inside it. */}
+        <div className="origin__intro-plate walk-plate">
+          <div ref={intro} className="origin__intro">
+            <div className="kicker">
+              <span className="kicker__num">01</span>
+              <span className="kicker__rule" />
+              <span className="kicker__label">Origin</span>
+            </div>
+            <h2 className="h2 h2--serif origin__heading">It started on a Minecraft server.</h2>
+            <p className="origin__lede">
+              TDG was the name of a Minecraft server the two of us built and ran, years before it
+              meant anything else. We reached back for it in 2016 when a Black Ops II clan needed a
+              tag, and the three letters stayed long after the lobbies emptied. In 2024 they were
+              given a new meaning, and we are still growing into it.
+            </p>
           </div>
-          <h2 className="h2 h2--serif origin__heading">It started on a Minecraft server.</h2>
-          <p className="origin__lede">
-            TDG was the name of a Minecraft server the two of us built and ran, years before it
-            meant anything else. We reached back for it in 2016 when a Black Ops II clan needed a
-            tag, and the three letters stayed long after the lobbies emptied. In 2024 they were
-            given a new meaning, and we are still growing into it.
-          </p>
         </div>
 
         <div className="origin__timeline">
           <div className="origin__spine" aria-hidden="true" />
           <div ref={rail} className="origin__spine-fill" aria-hidden="true" />
-          <div className="origin__rows">
+          {/* ── one plate for seven rows, and that is the whole of the fix ──
+              Every row used to carry its own, masked with an ellipse that was
+              at full alpha on the row's left edge and through both of its
+              horizontal edges — so seven of them drew a ruled left edge plus
+              eight ruled lines across the cabin, six of them in the 4px gaps
+              between rows. `.walk-plate` here is one soft-edged field over the
+              whole column, and Origin.css has the alpha measurements.
+
+              The rows reveal individually and this box never does, so it is
+              also outside the `clip-path` trap — see the intro's note above. */}
+          <div className="origin__rows walk-plate">
             {CHAPTERS.map((chapter, i) => (
               <OriginRow key={chapter.numeral} chapter={chapter} index={i} />
             ))}
@@ -495,7 +526,7 @@ export function Origin() {
             which would draw this link's soft-edged scrim as a hard rectangle
             for the length of the wipe. Apps.tsx carries the render that caught
             it on the same construction one section down. */}
-        <div className="origin__more-plate">
+        <div className="origin__more-plate walk-plate">
           <div ref={more} className="origin__more-wrap">
             <a className="origin__more" href={ABOUT_HASH} onClick={() => rememberOrigin('Origin')}>
               The longer version, and who is behind it

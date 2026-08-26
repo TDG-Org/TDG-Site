@@ -29,6 +29,65 @@
      shading under a bright sky. One declaration, correct twice, because both
      operands already carry the theme. */
   --building-pool-ink: color-mix(in srgb, var(--band-building) 84%, var(--text));
+
+  /* ── the light theme's sky, and the one ink here that IS stated twice ───
+     Every other colour in this file is one declaration because both operands
+     carry the theme. This one cannot be, because what it does in one theme is
+     nothing at all.
+
+     ## What was measured
+
+     1440x900, both themes, the section parked with its own top edge at
+     viewport y -281, sampling twenty values down the band beside the shell
+     (x = 1380, clear of the card and above the near stand):
+
+         light  94.8 93.9 93.9 94.6 95.7 96.4 96.7 95.1 96.7 96.7 95.6 ...
+         dark    2.8  4.9  4.4  3.8  3.8  3.8 ...  with the blob's spill
+                                                   lifting the top right to 10.0
+
+     The light column runs 93.9 to 96.7 — 2.8 L* of structure over 1072px, and
+     the 2.8 is the blob rather than the scene. The whole section is one value.
+
+     The card is NOT the argument, and it is worth saying so because it looks
+     like it should be: `.building__feature` measures L* 100.0 against a band of
+     96.7 in light, which is 1.03:1 — but in dark it measures 10.4 against 9.5,
+     which is 1.02:1. --card-bg is a dark plate on a dark band and a white plate
+     on a white band; that asymmetry does not exist. What does exist is in the
+     art. The near stand's crown bottoms at L* 84.7 against its band in light
+     (1.37:1) and peaks at 27.1 against 3.8 in dark (1.87:1) — the same drawing,
+     the same opacity token, and a third less separation in light, because a
+     fixed step off a near-white band buys a smaller RATIO than the same step
+     off a near-black one.
+
+     ## What this does about it
+
+     The same thing tokens.css did for the hero, where the moon had this problem
+     for this reason: it shaded --hero-sky's LIGHT value rather than trying to
+     paint something brighter than white, and its note carries the L* the two
+     halves were solved against. This is a pale hillside instead of a pale sky
+     and the arithmetic is identical. The band cannot be shaded at the token —
+     --band-building is two sections' worth of one value and the lead owns that
+     file — so the shading is local, sits BEHIND every other layer in the
+     section, and is masked to nothing at both of this section's edges so
+     neither join can move.
+
+     88% of the band and 12% of --text: L* 87.2, which is 1.28:1 against the
+     band and inside the range the hero's own light sky already runs (its four
+     stops are 96.0, 91.2, 83.5, 77.4). Measured after, the same column reads
+     84.8 to 92.2 through the section and 96.3 to 97.1 again at the floor —
+     11.6 L* where there were 2.8 — and the card reads 1.55:1 against the band
+     beside it.
+
+     Dark is `transparent`, which is a keyword rather than a colour literal —
+     rule 2 is about hexes and rgba(), and every gradient in this file already
+     uses it. `background-color` is on base.css's --t-theme list and Chrome
+     interpolates colour with premultiplied alpha, so the wave fades this in
+     from nothing rather than crossing through a grey.                       */
+  --building-dusk: transparent;
+}
+
+:root[data-theme='light'] {
+  --building-dusk: color-mix(in srgb, var(--band-building) 88%, var(--text));
 }
 
 /* ── the floor: the band of section under the pills ────────────────────────
@@ -175,6 +234,86 @@
   pointer-events: none;
 }
 
+/* ── the shaded sky ────────────────────────────────────────────────────────
+   See --building-dusk at the top of this file for the two readings that bought
+   it and why it is the only ink here stated per theme. This rule is the part
+   that has to be exact: it is a flat colour under a mask, and the mask is what
+   keeps both of this section's joins where they were.
+
+   ## A flat colour under a mask, not a gradient
+
+   The same choice `.faith__moon-sky` records one folder down. --t-theme names
+   `background-color` and base.css applies it to `div`; no browser transitions
+   a `background-image`, so a `linear-gradient` here would SNAP to the new
+   theme while the page around it crossed on the wave. A mask is an alpha
+   channel and not a colour — the #000 in it paints nothing.
+
+   ## The stops, and why the first two are both zero
+
+   Percentages of the SECTION's own height, 1072px at 1440x900:
+
+       transparent   0%     the #tools join, which therefore carries no ink
+       transparent  10%     107px — clear of the seam at the top of the section
+       #000         26%     279px, fully itself before the heading's second line
+       #000         52%     557px
+       transparent  80%     858px — 214px above the section's own bottom edge
+
+   **10% is not padding, it is the seam.** `.scene__seam` is
+   `clamp(44px, 5.5vw, 90px)` tall — 79px at 1440, 7.4% of this section — and
+   it is painted in --seam-fill, this band stepped 6% toward --text. In light
+   that is L* 92.5 against a band of 96.71, a step of 4.2. Shading the band
+   underneath it would eat most of that, so the ramp does not start until the
+   seam has ended. The same reasoning is written out at `.faith__dusk`, which
+   holds off for 12% and for two bands.
+
+   **80% is the near stand's crowns, and that number was measured twice.** The
+   fade ran to 100% first — a shaded sky dissolving all the way down through the
+   floor — and that is wrong in a way only a render shows. At 82% of the section,
+   which is where the near stand's crowns begin (`--building-floor` less
+   `--building-pine-clear`, 193px above the bottom edge at 1440), the alpha was
+   still 0.47, so the band the trees are read against had come DOWN to meet them.
+   The near stand's own minimum is L* 84.7 in light whatever is behind it:
+   against a bare band of 96.6 that is 1.37:1, and against a shaded 88.3 it is
+   1.11:1. The first pass bought the sky and sold the trees.
+
+   So the fade ends at 80%, above the crowns, and the floor keeps the bare band.
+   Re-measured after the change, the crowns' own rows read 85.8 / 84.7 / 85.0 —
+   the same three values they read before this layer existed — and everything
+   above them moved. A stand of trees needs the ground behind it to be LIGHTER
+   than the trees, and in light the trees are the dark thing, so the sky is
+   shaded and the floor is not, and the boundary between them is a 300px ramp
+   rather than a line. At the floor's own top edge, 69% of the section, the alpha
+   is 0.39, which is what the pills are read against.
+
+   `.building__haze` still covers the last 144px with --band-building rising to
+   alpha 1, and this layer is at zero well above it, so the section's final row
+   is that token twice over.
+
+   No parallax hook and no `will-change`: it is the sky, it does not move, and
+   under reduced motion it is already still.                                 */
+.building__dusk {
+  position: absolute;
+  inset: 0;
+  background-color: var(--building-dusk);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 10%,
+    #000 26%,
+    #000 52%,
+    transparent 80%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 10%,
+    #000 26%,
+    #000 52%,
+    transparent 80%
+  );
+  pointer-events: none;
+}
+
 /* Same wrapper trick as Tools.css: useParallax is typed to HTMLElement and
    Seam takes no ref, and the height stays in Seam.css so the clamp is written
    once. See Tools.css for the long version.
@@ -205,7 +344,35 @@
    animated value and `currentColor` resolves against it. */
 .building__seam-drift {
   position: absolute;
-  top: 0;
+  /* ── the drop, and why it is stated in viewport height ─────────────────
+     The mask below starts at `transparent 0`, so the band's own top edge
+     carries no ink — but only while that edge is ON the join. +0.022 slides it
+     UP as the join travels below the viewport's centre, which brings a row of
+     the mask's own RAMP to the join instead of its zero. Measured at 1440x900,
+     fifteen columns, one pixel either side of the join: +0.48 dark / +0.62
+     light with the join at viewport y 180, and +2.57 / -2.57 with it at y 756.
+     Hiding this one element took the y-756 reading to 0.90 and 1.05; hiding
+     every scene layer in the section took it to 0.26 and 0.35. So this is the
+     layer, and the drift is the mechanism.
+
+     `useParallax` writes `-(r.top + r.height/2 - vh/2) * factor * mi` and this
+     wrapper is `height: 0`, so its UPWARD excursion is at most `vh/2 * factor`
+     — it cannot sit lower than the viewport's own bottom edge while any of its
+     band is on screen. At 0.022 that is 1.1% of the viewport's height, so the
+     band starts that far below the join and can never climb past it. 1.4lvh
+     rather than 1.1 because `PARK_MARGIN` lets a layer tick a little past the
+     edge, and the extra costs nothing: the band's first stop is transparent,
+     so the strip this opens was never painted.
+
+     `lvh` and not `svh` or `vh`: the hook reads `window.innerHeight`, which on
+     a mobile browser is the DYNAMIC height and never larger than the large
+     viewport, so `lvh` is the conservative unit.
+
+     It is NOT the `--seam-lift` backfill this wrapper used to carry — see
+     below. That painted a strip of the band's ink ABOVE the wrapper so the
+     section's overflow would cut it, and left a solid edge sitting on the join
+     at every scroll position. This paints nothing and moves the shape. */
+  top: 1.4lvh;
   left: 0;
   right: 0;
   height: 0;

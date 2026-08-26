@@ -157,6 +157,24 @@ export type WalkProgress = {
  * </Walk>
  * ```
  *
+ * ## And one thing that will be got wrong on purpose
+ *
+ * **The copy over this backdrop is plated, and a plate is a LOCAL object.**
+ * Five blocks of copy are read against a lit 3D room — Origin's intro, its
+ * seven chapter rows, the link that closes its timeline, and the heads of
+ * `#apps` and `#tools` — and each takes a soft-edged plate in --card-bg from
+ * `.walk-plate`, declared in Walk.css because it is the file that owns all
+ * three sections. Every one of them is anchored to its own copy's column and
+ * has reached nothing 240px past its own last glyph.
+ *
+ * The version before this pass was not: the five plates ran 1350-1390px wide
+ * for copy 265-660px wide, two of them were measurably rectangles, and between
+ * them they lifted the average pixel of the frame by 24 levels in dark and 39
+ * in light. That is five viewports of camera work delivered as a wash, and it
+ * is the failure to watch for, because the fix for a heading that will not
+ * read is always reached for at frame scale first. Walk.css carries the alpha
+ * probe that measures it and the numbers each block is solved against.
+ *
  * ## The three things that would silently break it
  *
  * **1. An `overflow: hidden` anywhere above the pin.** An ancestor with
@@ -351,8 +369,15 @@ export function Walk({ children }: { children: ReactNode }) {
       {/* The backdrop for the whole walk: one camera, one pin, no seams
           between the three sections it paints behind. It is `inset: 0` of
           `.walk`, so the pin holds for (walk height − 100svh) — Origin, Apps
-          and Tools end to end — and releases on Tools' bottom edge, which is
-          where the shot is already washing out into `#building`.
+          and Tools end to end — and releases on Tools' bottom edge.
+
+          The pin's LAST position is therefore always the bottom 100svh of this
+          box, and Tools' landscape band is the bottom --tools-scene of the same
+          box: the two overlapped by construction, which is how the footbridge
+          came to be painted over the cabin's ceiling. `.walk__stage`'s mask
+          ends on a transparent band exactly --tools-scene deep, so no canvas is
+          ever drawn there — Walk.css carries the measurement and the reason it
+          is geometry rather than a JS opacity.
 
           Decorative four ways: `aria-hidden` on the stage, `pointer-events:
           none` from the stage's own rule, no flow space, and the floor of the

@@ -96,6 +96,16 @@ export function Building() {
           hang two whole trees over #faith. `.origin__clip` is the same idea
           three sections up. */}
       <div className="building__clip" aria-hidden="true">
+        {/* ── the light theme's sky, and why the dark theme draws it too ────
+            First in, so everything below is read against it rather than
+            through it. In LIGHT it is a shaded band across the section's sky
+            that comes back to --band-building before either edge; in DARK its
+            ink is `transparent` and it paints nothing at all. Building.css
+            carries the two measurements it was solved against — the band and
+            the feature card were 2.5 L* apart in light, against 90 in dark —
+            and the mask stops that keep both joins on the token. */}
+        <div className="building__dusk" />
+
         {/* ── the boundary: carried by atmosphere, not by an edge ───────────
             Fourth of the five joins on this page and the third distinct idea:
             #apps stands a treeline on both sides of its join, #tools draws one

@@ -49,6 +49,15 @@ export function Faith() {
           closest. The sky between them is the point.
 
           The summit at the bottom of this section is where the climb ends. */}
+      {/* ── the light theme's sky ────────────────────────────────────────
+          First in, so the two bands at the boundary, the field, the summit and
+          the copy are all read against it rather than through it. In LIGHT it
+          is a shaded band across this section's sky that comes back to its own
+          two tokens before either edge; in DARK its ink is `transparent` and it
+          paints nothing. Faith.css carries the measurements and the mask stops
+          — including why it holds off for the first 12%, which is exactly as
+          far as the two seams reach. */}
+      <div className="faith__dusk" aria-hidden="true" />
       <div ref={seam} className="faith__seam-drift" aria-hidden="true">
         <Seam shape="ridge" edge="top" className="faith__seam" />
       </div>

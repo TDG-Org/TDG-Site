@@ -42,7 +42,8 @@ import type { WalkProgress } from '../Walk'
  *
  * ```
  *   p 0        -> 0.62A   THE APPROACH   the existing orbit, then in to the door
- *   p 0.62A    -> 0.90A   THE THRESHOLD  through the doorway; the room opens
+ *   p 0.62A    -> 0.70A   THE MOUTH      in to the doorway, which swallows the frame
+ *   p 0.70A    -> 0.90A   THE THRESHOLD  on through it; the room opens
  *   p 0.90A    -> A       THE TURN       left to the south-west corner
  *   p A        -> A+0.8dT THE TABLE      held, high, looking down at the paper
  *   p ...      -> T       LOOKING UP     off the table, round to the west window
@@ -51,6 +52,8 @@ import type { WalkProgress } from '../Walk'
  *
  * `A = progress.apps`, `T = progress.tools`, `dT = T - A`. The stations are
  * `SHOT` below and the interpolation is `shotAt`; both carry their own numbers.
+ * The mouth is `B_MOUTH` of the threshold rather than a mark of its own, and
+ * the note there has the measurement it exists for.
  *
  * ## What is in the picture, and where it came from
  *
@@ -85,25 +88,86 @@ import type { WalkProgress } from '../Walk'
  * | --- | --- | --- |
  * | south wall | the front door the camera comes through | `buildWorld` |
  * | north wall, centre-left | the fireplace, set into the wall | `hearth` |
- * | west wall, middle | the window the camera ends on | `SW_*` |
+ * | west wall, middle | the window the camera ends on, and its casing | `SW_*` |
  * | east wall, middle | a second window, background only | `EW_*` |
- * | south-west corner | the big table and the paper | `TABLE_*` `PAPER_*` |
+ * | south-west corner | the big table, and three sheets on it | `TABLE_*` `PAPER_*` |
  * | south-east corner | a small desk, against the east wall | `DESK_*` |
  * | centre-south | a chair, pulled out, facing the desk | `chair` |
- * | north-west | the woodpile beside the hearth | `interior` |
+ * | north-west | the woodpile beside the hearth, two split logs on it | `interior` |
  * | north-east | a dresser under the east window | `interior` |
+ * | north wall, east of the fire | a shelf, and two things on it | `interior` |
+ * | in the firebox | three logs, burning | `hearth` |
+ * | on the hearth slab | a kettle | `interior` |
+ * | over the chair back | a blanket | `chair` |
+ * | under the west window | a sill and an apron, proud of the wall | `interior` |
+ * | round the front door | a casing: two jambs and a head | `buildWorld` |
+ * | overhead | the room's own ceiling, under the roof slab | `interior` |
+ *
+ * **A room the camera is inside has no outline, and that is a CONTRACT rather
+ * than a look.** Three critics rendered the walk independently and all three
+ * led with the same sentence: the camera is not inside the cabin, it is outside
+ * a room-shaped box. They were right and the cause was not a hole in the shell
+ * — the shell is closed — it was that the shot lingered on the porch with the
+ * doorway framing the room. `B_MOUTH` has that measurement and the fix.
+ *
+ * What has to stay true, and how to check it rather than look at it: at every
+ * station from the door mouth inward, every ray through the four edges of the
+ * frame must end on a surface of the room. Two probes settle it, and both were
+ * run against the live page rather than reasoned about.
+ *
+ * - **Geometry.** Cast 33 rays along each frame edge, intersect them against
+ *   the merged world buffer, and classify the nearest hit: inside the room's
+ *   own box, out through a window, out through the doorway, or a HOLE. Over
+ *   eleven positions from the mouth (2400px) to the settled window (5300px) at
+ *   1440x900 — 1452 samples — the tally is 1409 room, 43 window, 0 door, 0
+ *   hole, 0 miss. The 43 are the turn and the pan, where the frame's top edge
+ *   crosses the west window because the camera is turning toward it; a window
+ *   at the frame edge reads as a window, and at both SETTLED beats the wall
+ *   carries all four corners with nothing through it.
+ * - **Pixels.** Re-render into the live context and `readPixels` 48 samples
+ *   along each edge. Over the seven beats, every sample comes back at alpha
+ *   255 — the canvas draws opaque geometry on every edge everywhere — and no
+ *   edge is FLAT: the narrowest luminance range on any edge at any beat is 10.5
+ *   values. That second half is the one that matters, because the frame this
+ *   was all written for had left and right edges that were rgb (50,57,68) at
+ *   every one of 48 samples, which is a wall that a reader files under "page".
+ *
+ * Both probes also pass at 390x780, 320x800 and 1440x600.
  *
  * Two things on that table are a legibility requirement rather than
  * decoration, and the owner asked for both by name. **The paper** is a large
  * flat low-contrast field filling the frame behind where the project cards sit,
  * with no high-contrast edge crossing them — see `T_PAPER`, `PAPER_X0` and the
- * framing measurements on `ST_TABLE`. **The fire** is the room's light source
- * and the only
- * animated thing in it: layered emissive geometry, vertex-animated off the same
- * `onFrame` dt everything else here runs on, no texture and no new dependency.
- * It is warmer than everything else in frame because it is the one thing drawn
- * in `--warm` rather than on the tone ramp, and its light reaches the walls,
- * the table, the floor and the hearth through `hearthAt`, which BAKES it.
+ * framing measurements on `ST_TABLE`. It is three sheets now rather than one
+ * quad, with a curled rim, a shadow on the two edges the light is behind, and
+ * the table's own edge and the floor beyond it in the frame's right margin.
+ * Every one of those is placed against the card grid's box as MEASURED off the
+ * live DOM at this beat — 130..1310 by -53..1093 at 1440x900 — and `TABLE_Z1`'s
+ * note carries that box unprojected onto the table top, which is the
+ * coordinate system anything moved here has to be solved in.
+ *
+ * **The fire** is the room's light source and the only animated thing in it:
+ * layered emissive geometry, vertex-animated off the same `onFrame` dt
+ * everything else here runs on, no texture and no new dependency. Five tongues
+ * of four rows, each row split at its own spine so the middle can be hot and
+ * opaque inside a soft cool edge; a billboarded ember fan under them; seven
+ * one-triangle sparks; and a bed of three logs in the geometry beneath. It is
+ * warmer than everything else in frame because it is the one thing drawn in
+ * `--warm` rather than on the tone ramp, its hot core is that same pigment
+ * scaled past what the framebuffer can hold (`HEAT_CORE`), and its light
+ * reaches the walls, the table, the floor and the ceiling through `hearthAt`,
+ * which BAKES it per vertex.
+ *
+ * **And the room has a RANGE, which is the thing this pass was sent to fix.**
+ * The brief was "inside the cabin MUST be cozy" and the render it was written
+ * against was a low-contrast grey fog with a small pale fire in it. Three
+ * things were wrong and all three are in the tone ladder's own note: the
+ * interior tones sat within nine values of each other, the hearth's falloff was
+ * so flat it was a tint rather than a light, and the north wall had never been
+ * cut round the firebox — so the flames were burning in front of a lit WALL
+ * instead of a black cavity. In dark the same room now runs rgb green 15 in the
+ * firebox to 78 on the hearth stone to 234 in the fire's own core; in light it
+ * is a pale room at 129 to 190 against a page at 235.
  *
  * **Two things in the references are deliberately NOT here.** The aurora,
  * because it would be the loudest thing on a page whose whole palette is
@@ -134,56 +198,88 @@ import type { WalkProgress } from '../Walk'
  * - **It is editable by the next person.** Every dimension below is a named
  *   constant in a file git can diff. A binary mesh is not.
  *
- * The scene is **six draw calls for about 300px of scroll and three where the
- * reader spends most of their time**, and its triangle count is a range
- * rather than a number,
- * because the tier decides it. `low` is not an edge case — it is every viewport
- * under 760px and every machine with four cores or fewer, which is most phones
- * — so a single figure quoted from `high` describes the scene most visitors
- * never get. Counted per section as it is emitted:
+ * The scene is **six draw calls for about 250px of scroll and three for every
+ * frame the reader is indoors**, and its triangle count is a range rather than
+ * a number, because the tier decides it. `low` is not an edge case — it is
+ * every viewport under 760px and every machine with four cores or fewer, which
+ * is most phones — so a single figure quoted from `high` describes the scene
+ * most visitors never get. Counted per section as it is emitted, by building
+ * all three tiers at mount and reading the buffer lengths back:
  *
  * ```
  *                        low     mid    high
  *   ground + drifts      128     262     386
- *   THE ROOM             232     292     292
+ *   THE ROOM             504     600     600
  *   everything else
- *     outdoors           726    1108    1512
+ *     outdoors           786    1173    1582
  *   window + door glow    60      60      60
- *   THE FIRE              88      88      88
+ *   THE FIRE             146     146     146
  *   chimney smoke         15      20      25
  *                       ----    ----    ----
- *   total               1249    1830    2363
+ *   total               1639    2261    2799
  *   snow points          200     420     640
  * ```
  *
  * The draw calls are not a tier's business at all — every tier draws the same
  * objects — and they were counted on the live page rather than reasoned about,
  * by patching `drawArrays` and bucketing every submission by its vertex count
- * (the world is 6570 verts, the snow 640, the fire 264, the wall glow 156, the
- * smoke 75, the lit openings 24). Over two seconds at each place:
+ * (on `high` the world is 7704 verts, the snow 640, the fire 438, the wall glow
+ * 156, the smoke 75, the lit openings 24). Over two seconds at each place:
  *
  * ```
- *   approach          world snow glow smoke openings ......... 5, at 30Hz
- *   through the door  all six of them, for about 300px of scroll  6
- *   the table         world snow fire ...................... 3, at 15Hz
- *   the window        world snow fire ...................... 3, at 15Hz
- *   past the walk     nothing at all ....................... 0
+ *   far approach       world snow glow smoke openings ....... 5, at 30Hz
+ *   the last 6m in     all six of them, about 250px of scroll  6, at 30Hz
+ *   through the door   world snow fire ...................... 3, at 30Hz
+ *   the table          world snow fire ...................... 3, at 15Hz
+ *   the window         world snow fire ...................... 3, at 15Hz
+ *   past the walk      nothing at all ....................... 0
  * ```
  *
- * That measurement found a real one: the fire's buffer was being submitted
- * TWICE per frame, because a transparent `DoubleSide` material is two passes in
- * three.js unless it is told otherwise. See `forceSinglePass` where it is made.
+ * **The six-call window MOVED in this pass and it did not grow.** It used to be
+ * at the door, where the outdoor warm layer and the fire were both up at once;
+ * it is now on the approach, because `openAir` takes the outdoor layer out
+ * three metres before the door mouth and `hearthLit` brings the fire up six
+ * metres before that. The overlap is `camZ` 8.6 down to 2.46 — measured from
+ * the two ramps and their own 0.002 visibility gates — and everything from the
+ * threshold inward is now THREE calls rather than six, because the smoke, the
+ * window glow and the door pool are all off by the time the reader is through.
  *
- * It was 902 / 1371 / 1884 in five calls before this pass, so the room, the
- * fire and the coarser snow grid have cost **347 / 459 / 479 triangles, which
- * is 38% / 33% / 25%.** Three things pay for it.
+ * The same measurement once found a real bug: the fire's buffer was being
+ * submitted TWICE per frame, because a transparent `DoubleSide` material is two
+ * passes in three.js unless it is told otherwise. See `forceSinglePass`.
  *
- * **The reader is in the room for three fifths of the walk.** The old figure
- * bought a backdrop for one section; this one buys the backdrop for three, and
- * the two settled beats in it are the frames the project cards and the small
- * tools are read against. 292 triangles for the entire interior — walls,
- * fireplace, table, paper, desk, chair, beams, woodpile, dresser, rug — is less
- * than the near conifers alone cost outdoors.
+ * It was 1249 / 1830 / 2363 before the cozy pass, 1513 / 2118 / 2651 after it,
+ * and 902 / 1371 / 1884 before the room existed at all. So the cozy pass cost
+ * 264 / 288 / 288 triangles and **the PLACE pass — the one that answered "the
+ * room is a floating box" and "the table beat has no table and no paper" —
+ * costs 126 / 143 / 148, which is 8.3% / 6.8% / 5.6%.**
+ *
+ * Where those go, and none of them is detail for its own sake. The room's own
+ * 66 / 78 / 78 is the sheets (the single paper quad became a curled sheet at
+ * 18 triangles, plus two more sheets and two shadow bands) and the west
+ * window's casing (a head board with its own underside and two jambs, plus an
+ * apron above `low`). The outdoor 60 / 65 / 70 is the door casing and one more
+ * rank-3 trunk, which is the window beat's own subject and is therefore bought
+ * at every tier rather than out of `tier.trunks`. Every one of them was added
+ * to answer a measurement, and each of their notes carries the one it answers.
+ *
+ * The room and the fire together now cost 677 / 825 / 845 over the bare
+ * exterior. What that buys, and why the shape of the spend is what it is:
+ *
+ * **Two thirds of it is SUBDIVISION, not detail.** The floor is 5 by 6 where it
+ * was one quad, the ceiling is new, and the walls the fire actually reaches are
+ * cut into strips. Not one of those cells adds a facet the eye can find — the
+ * sky term gives every cell of a flat floor the identical value. They exist
+ * because `hearthAt` is evaluated per VERTEX now, and a point source two metres
+ * off a six-metre floor sampled at four corners is a flat wedge with the bright
+ * end in the wrong place. `field` has the argument in full.
+ *
+ * **The reader is in the room for three fifths of the walk.** The two settled
+ * beats in it are the frames the project cards and the small tools are read
+ * against. 600 triangles for the entire interior — walls, ceiling, fireplace,
+ * firebox, log bed, table, paper, desk, chair, blanket, beams, woodpile,
+ * dresser, shelf, sill, kettle, rug — is still a third of what the forest
+ * costs outdoors.
  *
  * **Nothing here is vertex-bound and nothing ever was.** The world is ONE
  * static non-indexed buffer with a per-vertex tone, built once at mount and
@@ -191,15 +287,15 @@ import type { WalkProgress } from '../Walk'
  * instancing buys one draw call for N copies of one geometry, and the merge
  * already has one draw call for every triangle in the scene. The per-frame work
  * is a damped scalar, one `lookAt`, `flakes` positions, five billboarded puffs
- * and twelve flame quads, and only the last of those is new.
+ * and the fire's 92 moving triangles, and only the last of those is new.
  *
  * **What actually costs per frame is FILL, and indoors this pass spends far
  * less of it.** Outside, the transparent warm layer covers a third of the frame
- * at the door and the snow fills the sky. Inside, `openAir` takes the window
- * glow, the door pool and the smoke to zero — they are all on the outside faces
- * of walls the reader is now behind — the snow drops to a third and parks every
- * flake that would fall indoors under the floor, and what is left is the world,
- * the flames and the fire's own wash. Three draw calls and a nearly empty
+ * across the approach and the snow fills the sky. Inside, `openAir` takes the
+ * window glow, the door pool and the smoke to zero — they are all on the
+ * outside faces of walls the reader is now behind — the snow drops to a third
+ * and parks every flake that would fall indoors under the floor, and what is
+ * left is the world, the flames and the fire's own wash. Three draw calls and a nearly empty
  * blend, at 15Hz rather than 30 once the camera settles. **The table beat is
  * cheaper to draw than the approach it came from.**
  *
@@ -696,7 +792,12 @@ export function CabinScene({
      */
     const fireStatic = buildFireStatic()
     const fireStaticTris = fireStatic.pos.length / 9
-    const fireTris = fireStaticTris + FLAMES * FLAME_ROWS * 2 + 2
+    // The moving half, and it is the whole of what the reader sees burning:
+    // a soft fan of embers on the log bed (SMOKE_TRIS wedges, edgeless, the
+    // same shape a smoke puff is), five tongues of four rows split into two
+    // quads each, and seven sparks of one triangle apiece.
+    const fireMoveTris = SMOKE_TRIS + FLAMES * FLAME_ROWS * 4 + EMBERS
+    const fireTris = fireStaticTris + fireMoveTris
     const firePos = new Float32Array(fireTris * 9)
     const fireRgba = new Float32Array(fireTris * 12)
     firePos.set(fireStatic.pos)
@@ -721,8 +822,9 @@ export function CabinScene({
       // passes — back faces, then front — so that a closed transparent solid
       // sorts correctly against itself. Counted on the live page by patching
       // `drawArrays` and bucketing by vertex count: at the settled table beat
-      // the 264-vertex fire buffer was submitted 58 times over 29 renders,
-      // exactly twice per frame, while the world and the snow went once each.
+      // the fire buffer — 264 vertices at the time, 438 since the flames were
+      // rebuilt — was submitted 58 times over 29 renders, exactly twice per
+      // frame, while the world and the snow went once each.
       // Nothing in this buffer is a closed solid — they are flat tongues and
       // flat washes — so the second pass is a duplicate of the first and the
       // only thing it buys is a fourth draw call in the one beat this file
@@ -762,53 +864,76 @@ export function CabinScene({
       0.08 * Math.sin(fireT * 0.93 + 0.4)
 
     /**
-     * Lay the flames and the ember bed out for the current clock and camera.
+     * Lay the ember bed, the flames and the sparks out for the current clock
+     * and camera.
      *
      * `rx` / `rz` is the camera's own screen-right projected onto the ground,
      * the same billboard `layoutSmoke` takes. A flame is a flat tongue and the
      * camera swings about 70 degrees across the room, so a fixed facing would
      * go edge-on somewhere in the middle of the shot.
      *
-     * Each tongue is `FLAME_ROWS` quads stacked, narrowing and fading to
-     * nothing at the tip, with the lateral offset scaled by `k * k` so the
-     * root stays planted and only the top licks about. A tongue drawn as one
-     * quad cannot do that, and a tongue whose base moved would read as a flag.
+     * Three layers, written in the order the eye finds them and therefore in
+     * the order they have to draw — the buffer is one non-indexed run and
+     * `depthWrite` is off, so back to front IS the write order:
+     *
+     * 1. **the ember bed**, a soft fan on the log bed, breathing on its own
+     *    slow term so the base of the fire is never as dark as the gap between
+     *    two tongues;
+     * 2. **the tongues**, `FLAME_ROWS` rows each, every row split at the spine
+     *    into two quads so the middle can be hot and opaque while the edges go
+     *    cool and transparent — see `HEAT_CORE` for why one scalar does that;
+     * 3. **the sparks**, one triangle each, rising and dying inside the flue.
+     *
+     * Each tongue narrows and fades to nothing at the tip, with the lateral
+     * offset scaled by `k * k` so the root stays planted and only the top licks
+     * about. A tongue whose base moved would read as a flag.
      */
     const layoutFire = (rx: number, rz: number) => {
       let at = fireBase
       let ct = fireBaseC
-      const push = (x: number, y: number, z: number, a: number) => {
+      const push = (x: number, y: number, z: number, a: number, h: number) => {
         firePos[at++] = x
         firePos[at++] = y
         firePos[at++] = z
-        fireRgba[ct++] = 1
-        fireRgba[ct++] = 1
-        fireRgba[ct++] = 1
+        fireRgba[ct++] = h
+        fireRgba[ct++] = h
+        fireRgba[ct++] = h
         fireRgba[ct++] = a
       }
-      // The ember bed: a flat patch on the firebox floor, breathing on its own
-      // slow term so the base of the fire is never as dark as the gap between
-      // two tongues. Written first, so the tongues draw over it.
-      const bed = 0.5 + 0.34 * (0.5 + 0.5 * Math.sin(fireT * 1.31 + 2.2))
-      const ex = EMBER_HW
-      const ez = EMBER_HZ
-      for (const [ox, oz] of [
-        [-ex, -ez],
-        [ex, -ez],
-        [ex, ez],
-        [-ex, -ez],
-        [ex, ez],
-        [-ex, ez],
-      ]) {
-        push(FIRE_X + ox, FIRE_Y + 0.015, FIRE_Z + oz, bed)
+      /*
+       * The ember bed. A FAN rather than the flat quad it used to be, and for
+       * the reason `layoutSmoke`'s own fan gives: a quad's four corners are all
+       * on its outline, so however its alpha is ramped there is a hard edge
+       * somewhere — and the old one sat on the firebox floor as a visible
+       * rectangle of pale, which is half of what made the hearth read as "a
+       * dark rectangle with a pale wedge in it". The fan puts the only bright
+       * vertex in the middle and takes every rim vertex to zero, so the glow
+       * under the logs has no boundary at all.
+       */
+      const bed = 0.46 + 0.4 * (0.5 + 0.5 * Math.sin(fireT * 1.31 + 2.2))
+      const spinB = fireT * 0.11
+      const bedY = FIRE_Y + 0.11
+      for (let t = 0; t < SMOKE_TRIS; t++) {
+        const a0 = spinB + (t / SMOKE_TRIS) * Math.PI * 2
+        const a1 = spinB + ((t + 1) / SMOKE_TRIS) * Math.PI * 2
+        push(FIRE_X, bedY, FIRE_Z, bed, HEAT_BED)
+        for (const a of [a0, a1]) {
+          const u = Math.cos(a) * EMBER_HW
+          push(FIRE_X + rx * u, bedY + Math.sin(a) * EMBER_HY, FIRE_Z + rz * u, 0, HEAT_TIP)
+        }
       }
+      const mid = (FLAMES - 1) / 2
       for (let i = 0; i < FLAMES; i++) {
         const ph = i * 2.13
-        const bx = (i - (FLAMES - 1) / 2) * FLAME_GAP
+        const bx = (i - mid) * FLAME_GAP
+        // The outer tongues are shorter, and it is the cheapest thing that
+        // stops five of them reading as a comb: a fire is tallest where the
+        // fuel is deepest, which is the middle of the bed.
+        const taper = 1 - FLAME_TAPER * (Math.abs(i - mid) / mid)
         // Per-tongue height pulse. Out of phase with its neighbours, so the
-        // three never rise and fall together — which is the single tell that
+        // five never rise and fall together — which is the single tell that
         // separates a fire from a flag.
-        const tall = 0.72 + 0.4 * (0.5 + 0.5 * Math.sin(fireT * 1.7 + ph))
+        const tall = (0.72 + 0.4 * (0.5 + 0.5 * Math.sin(fireT * 1.7 + ph))) * taper
         const row = (r: number): [number, number, number] => {
           const k = r / FLAME_ROWS
           const y = FIRE_Y + FLAME_H * tall * Math.pow(k, 0.85)
@@ -816,19 +941,56 @@ export function CabinScene({
           const u = bx + FLAME_SWAY * Math.sin(fireT * 2.2 + ph + k * 2.4) * k * k
           return [u, y, w]
         }
+        const px = (u: number) => FIRE_X + rx * u
+        const pz = (u: number) => FIRE_Z + rz * u
         for (let r = 0; r < FLAME_ROWS; r++) {
           const [u0, y0, w0] = row(r)
           const [u1, y1, w1] = row(r + 1)
-          const a0 = Math.pow(1 - r / FLAME_ROWS, 1.1)
-          const a1 = Math.pow(1 - (r + 1) / FLAME_ROWS, 1.1)
-          const px = (u: number, w: number) => FIRE_X + rx * (u + w)
-          const pz = (u: number, w: number) => FIRE_Z + rz * (u + w)
-          const A: [number, number, number, number] = [px(u0, -w0), y0, pz(u0, -w0), a0]
-          const B: [number, number, number, number] = [px(u0, w0), y0, pz(u0, w0), a0]
-          const C: [number, number, number, number] = [px(u1, w1), y1, pz(u1, w1), a1]
-          const D: [number, number, number, number] = [px(u1, -w1), y1, pz(u1, -w1), a1]
-          for (const q of [A, B, C, A, C, D]) push(q[0], q[1], q[2], q[3])
+          const k0 = r / FLAME_ROWS
+          const k1 = (r + 1) / FLAME_ROWS
+          const a0 = Math.pow(1 - Math.pow(k0, FLAME_ALPHA_K), FLAME_ALPHA_P)
+          const a1 = Math.pow(1 - Math.pow(k1, FLAME_ALPHA_K), FLAME_ALPHA_P)
+          const h0 = HEAT_CORE + (HEAT_TIP - HEAT_CORE) * k0
+          const h1 = HEAT_CORE + (HEAT_TIP - HEAT_CORE) * k1
+          // Spine first, then each flank out to its own transparent edge. The
+          // two quads share the spine's vertices exactly, so there is no seam
+          // down the middle of a tongue however wide it gets.
+          for (const sign of [-1, 1]) {
+            const A: [number, number, number, number, number] = [px(u0), y0, pz(u0), a0, h0]
+            const B: [number, number, number, number, number] = [px(u0 + sign * w0), y0, pz(u0 + sign * w0), a0 * FLAME_EDGE_A, h0 * HEAT_EDGE]
+            const C: [number, number, number, number, number] = [px(u1 + sign * w1), y1, pz(u1 + sign * w1), a1 * FLAME_EDGE_A, h1 * HEAT_EDGE]
+            const D: [number, number, number, number, number] = [px(u1), y1, pz(u1), a1, h1]
+            for (const q of [A, B, C, A, C, D]) push(q[0], q[1], q[2], q[3], q[4])
+          }
         }
+      }
+      /*
+       * The sparks. One triangle each, standing on its own base and pointing
+       * up, billboarded on the same `rx`/`rz` as everything else here.
+       *
+       * `EMBER_RISE` is 0.5 off a bed at 0.60, so the highest a spark reaches
+       * is 1.10 against the firebox lintel at 1.52. They die inside the box —
+       * a spark crossing the mantel would be a spark in the room, which is a
+       * house fire rather than a hearth.
+       *
+       * The lateral seed is `sin(i * 12.9898)` rather than an rng: this runs in
+       * the frame loop and the loop is not allowed to make garbage or to carry
+       * state that a resize could resample. It is the same trick every hash in
+       * a shader uses and it is deterministic across mounts.
+       */
+      for (let i = 0; i < EMBERS; i++) {
+        const q = (((fireT * EMBER_RATE + i / EMBERS) % 1) + 1) % 1
+        const seed = Math.sin(i * 12.9898) * 0.5
+        const u = seed * 0.44 + Math.sin(fireT * 1.1 + i * 2.7) * 0.1 * q
+        const y = FIRE_Y + 0.1 + q * EMBER_RISE
+        const sz = EMBER_SIZE * (1 - q * 0.45)
+        // in fast, out slow, exactly like a smoke puff: a spark that faded in
+        // as gently as it dies would be born hovering rather than thrown.
+        const a = Math.min(1, q * 6) * (1 - q) * (1 - q)
+        const h = HEAT_CORE + (HEAT_TIP - HEAT_CORE) * q
+        push(FIRE_X + rx * (u - sz), y, FIRE_Z + rz * (u - sz), a, h)
+        push(FIRE_X + rx * (u + sz), y, FIRE_Z + rz * (u + sz), a, h)
+        push(FIRE_X + rx * u, y + sz * 2.4, FIRE_Z + rz * u, 0, h)
       }
       firePosAttr.needsUpdate = true
       fireColAttr.needsUpdate = true
@@ -1246,7 +1408,7 @@ export function CabinScene({
        *
        * This used to set `dirty` unconditionally for every frame of the fade,
        * which both bypassed SCENE_HZ and re-ran applyPalette's whole colour
-       * buffer — 6570 vertices on `high` since the room went in — at display
+       * buffer — 7704 vertices on `high` since the room went in — at display
        * refresh — and on a fast display most of those frames
        * were painting a mix that had not started moving. `holding` keeps the
        * loop alive across the wait without drawing into it; `fading` is what
@@ -1346,8 +1508,15 @@ export function CabinScene({
       const rz = fwdX
 
       // How far in the room has closed round the camera. 0 at the door mouth,
-      // 1 by the end of the threshold — and it is what turns the whole outdoor
-      // half of the scene off, which is the biggest single saving in this file.
+      // 1 by the end of the threshold.
+      //
+      // It used to drive the fire's opacity as well and now drives only the
+      // snow's indoor park below. That split is this pass's: the two things
+      // that turn the outdoor half of the scene off and the indoor half on are
+      // `openAir` and `hearthLit`, both keyed on the camera's own z, because
+      // what a quad on the outside of a wall cares about is the WALL and not
+      // the beat. `inside` stays keyed on the knots because the frame-rate gate
+      // asks for it before the camera has been placed — see `insideness`.
       const inside = insideness(walk)
       /*
        * And how much OPEN AIR is still between the reader and the front wall,
@@ -1358,19 +1527,37 @@ export function CabinScene({
        * because the thing it fades is every quad on the OUTSIDE of the front
        * wall and what matters to those is the wall, not the beat.
        *
-       * The two were the same term for one pass and the render caught it. The
-       * doorway's own lit quad is 45cm wide and 2.1m tall standing at z = -0.06;
-       * from 12m out that is the narrow bright slot beside a dark leaf that the
-       * reference paintings are about, and from a metre out it is a warm
-       * rectangle across half the frame. At `1 - inside` it was still at 0.48
-       * with the camera in the doorway — the room, the fire and the whole
-       * threshold beat behind a sheet of orange.
+       * **This layer is a SUBSTITUTE for the room, and a substitute has to be
+       * gone before the thing it stands in for arrives.** Every quad in it is a
+       * flat warm rectangle on the outside face of the front wall standing
+       * where an opening is — and every one of those openings is a hole with
+       * the real, lit room behind it. At 12m the substitute is the whole
+       * picture: two glowing panes and a bright slot beside a dark leaf, which
+       * is what the reference paintings are about and what `in-D-1600.png`
+       * gets right. At 2m it is a flat orange sheet over the room it was
+       * standing in for.
        *
-       * 0.4 to 3.0 in z is where it goes. At `ST_DOOR` (z = 2.55) it is 0.92, so
-       * the arrival at the door keeps the light it was composed with; by z = 0.9
-       * it is 0.10 and by the wall it is nothing.
+       * The old ramp ran 0.4 to 3.0 in z, which put it at 0.92 at `ST_DOOR` and
+       * still at 0.47 with the camera IN the doorway. Rendered at walk 0.276
+       * that is the frame this pass was sent to fix: `r3-D-2400.png`, where the
+       * door's own lit quad and its halo cover the right third of the frame in
+       * flat tan with a hard vertical edge down each side, over a room that is
+       * fully visible behind them. The same measurement finds the two front
+       * windows as flat orange rectangles at the arrival, `in-D-2100.png`.
+       *
+       * 2.35 to 6.5. The whole layer is out by the time the reader is 2.35m off
+       * the wall — three metres before the door mouth — and from there in the
+       * doorway shows the ROOM, which is now lit well enough to carry it: the
+       * fire's own layer takes over on `hearthLit` below, on the same z, in the
+       * other direction. At `ST_DOOR` (z = 2.55) this is 0.006 and `hearthLit`
+       * is 1.0, so the arrival is lit by the hearth through the opening rather
+       * than by a rectangle painted on the wall.
+       *
+       * The approach is untouched where it matters: at walk 0.10, the frame the
+       * owner called the best on the page, the camera is 16.5m out and this is
+       * 1.0.
        */
-      const openAir = smooth((camZ - 0.4) / 2.6)
+      const openAir = smooth((camZ - 2.35) / 4.15)
 
       // The windows warm and brighten as the door gets closer, but the FLOOR
       // matters more than the ramp: at the far end of the walk the cabin is a
@@ -1398,11 +1585,35 @@ export function CabinScene({
       softMesh.visible = softMat.opacity > 0.002
       coreMesh.visible = coreMat.opacity > 0.002
 
-      // The fire, and the mirror image of the two above: it is every quad
-      // INSIDE the room, so it is off until the reader is in there. The
-      // flicker rides on top of the theme's own peak, so light theme turns the
-      // hearth DOWN rather than out — see ROLES.
-      fireMat.opacity = shown.fire * inside * flicker()
+      /*
+       * The fire, and the mirror image of `openAir`: it is every quad INSIDE
+       * the room, and it comes UP on the same approach the window light goes
+       * down on.
+       *
+       * **It is keyed on the camera's z now, not on `inside`.** `inside` is 0
+       * at the door mouth and 1 at the end of the threshold, which was right
+       * while the doorway had its own painted light: the substitute carried the
+       * arrival and the fire took over once the reader was through. With that
+       * substitute now gone by 2.35m (see `openAir`), a fire that only starts
+       * at the door mouth leaves the last three metres of the approach walking
+       * toward a black hole in a lit wall.
+       *
+       * So it ramps 9.0 to 2.6 in z — full before the reader reaches the porch,
+       * out at the far end of the final push-in. Nothing is wasted on it: the
+       * front wall is opaque, drawn first, and writes depth, so every fragment
+       * of this layer that is not framed by the doorway or a window opening is
+       * discarded. What the reader gets for the extra draw call is the fire
+       * itself, seen through the door they are walking at.
+       *
+       * It costs a SIXTH draw call over the last stretch of the approach rather
+       * than only across the threshold — about 300px of scroll either side of
+       * the door instead of 300 in total. The header's table carries it.
+       *
+       * The flicker rides on top of the theme's own peak, so light theme turns
+       * the hearth DOWN rather than out — see ROLES.
+       */
+      const hearthLit = 1 - smooth((camZ - 2.6) / 6.4)
+      fireMat.opacity = shown.fire * hearthLit * flicker()
       fireMesh.visible = fireMat.opacity > 0.002
 
       // The fog is the section's own band, and the section under this canvas
@@ -1827,14 +2038,22 @@ type Quality = {
   /** Nudges every tree rank's segment count together. See `RANKS`. */
   cone: number
   /**
-   * How much of the OPTIONAL interior gets built. 0 is the room, the
-   * fireplace, the table, the paper, the desk, the chair, the woodpile and the
-   * rug — everything the shot is composed on, and `low` gets all of it,
-   * because `low` is a phone and a phone spends the same five viewports in
-   * that room as a desktop does. 1 adds the floorboards, the window reveals,
-   * the second beam, the dresser, the loose sheets and the books, and is what
-   * both other tiers get: `mid` and `high` differ in FOREST, which is where
-   * the two of them differ in everything else too.
+   * How much of the OPTIONAL interior gets built. 0 is the room — floor,
+   * ceiling, all four walls cut round their openings, the fireplace and its
+   * firebox, the log bed, the table, the paper, the desk, the chair and its
+   * blanket, the woodpile, the window sill, the kettle and the rug — everything
+   * the shot is composed on and everything the fire lights, and `low` gets all
+   * of it, because `low` is a phone and a phone spends the same five viewports
+   * in that room as a desktop does. 1 adds the floorboards, the west window's
+   * reveals, the second beam, the dresser, the shelf and what is on it, and the
+   * books, and is what both other tiers get: `mid` and `high` differ in FOREST,
+   * which is where the two of them differ in everything else too.
+   *
+   * 438 triangles against 522, so the gate is worth 84 — an eighth of the room
+   * and 6% of `low`'s whole scene. It is deliberately the smallest gate in this
+   * table: the room is the subject for three fifths of the walk, and the two
+   * settled beats have a legibility requirement riding on them that does not
+   * get cheaper on a phone.
    *
    * Nothing in the interior is a COUNT of something cheap the way the forest
    * is, so there is nothing here to scale smoothly. It is a subject rather
@@ -1859,10 +2078,11 @@ type Quality = {
  * something cheap rather than detail on something expensive — a far tree is one
  * triangle, a weed is one, a rock is four — and the two things that do NOT
  * scale are the cabin and the room, because both are the subject and a subject
- * cannot be cheap. `low` spends 29% of itself on the interior and gets every
- * prop the shot is composed on; what it gives up is `room: 0`, which is the
- * floorboards, the window reveals, the second beam, the dresser, the books and
- * the loose sheets. See `Quality.room`.
+ * cannot be cheap. `low` spends 29% of itself on the interior — 438 of 1513,
+ * the same fraction it spent before the room was rebuilt — and gets every prop
+ * the shot is composed on and every surface the fire lights; what it gives up
+ * is `room: 0`, which is the floorboards, the west window's reveals, the second
+ * beam, the dresser, the shelf and the books. See `Quality.room`.
  *
  * `patchX` / `patchZ` grew by about 20% in each axis in this pass and that is
  * the largest single line of the growth outdoors: the renders said the snow was
@@ -2239,16 +2459,87 @@ const T_WEED = 0.14
  * thing in any room with a fire in it, and the flames have to be seen against
  * something — a firebox at wall tone is a warm rectangle rather than a fire.
  *
+ * **Everything below the paper dropped by roughly half in this pass, and the
+ * reason is that the fire had nowhere to fall to.** The old ladder put the
+ * floor at 0.26, the walls at 0.30 and the table at 0.22, which through the
+ * dark ramp is rgb green 39, 43 and 43 — a nine-value spread for the entire
+ * room, with the hearth's near-constant old boost sitting flat on top of it.
+ * Measured off `in-D-2700.png`, the floor in front of the fire was (28,34,46)
+ * and the brightest thing that was not the fire was (67,64,63): a room made of
+ * one value, which is what "the room is not cozy, it is grey" describes.
+ *
+ * The fix is a light source with a real falloff (see `HEARTH_FALL`) standing
+ * over a ladder low enough that its far end is genuinely dark. Through the
+ * dark ramp, where `g` is the green channel the buffer actually produces:
+ *
+ * ```
+ *                       base   facet    +fire      g dark    g light
+ *   ceiling             0.10    0.55   0 .. 0.30   26 .. 62  129 .. 169
+ *   floor               0.11    0.93   0 .. 0.39   31 .. 78  135 .. 187
+ *   wall, west          0.26    0.55   0 .. 0.33   36 .. 75  140 .. 184
+ *   wall, north / east  0.26    0.68   0 .. 0.30   40 .. 76  145 .. 185
+ *   table, rug          0.15    0.93   0 .. 0.20   36 .. 60  139 .. 166
+ *   joinery             0.19    0.68   0 .. 0.34   34 .. 75  138 .. 184
+ *   paper               0.70    0.93   0            97       208
+ *   second sheet        0.645   0.93   0            90       202
+ *   sheet's shadow      0.055   0.93   0            17       142
+ *   firebox             0.04    0.55   exempt        22      124
+ * ```
+ *
+ * The two new rows are the table beat's, and they are the only pair in this
+ * ladder solved against something OUTSIDE the room: the second sheet has to be
+ * far enough off the paper to read and near enough that its edge can cross a
+ * card, and the shadow has to be below the table so a sheet lying on one is not
+ * a sheet printed on one. `T_SHEET`'s own note has both arguments.
+ *
+ * Five separated fields where there was one, and the fire's own range across
+ * each of them is wider than the whole room used to be. `T_LOG` is the log bed
+ * IN the fire and it is the one solid allowed to sit between the firebox and
+ * the flames; `T_TIMBER` is indoor joinery — the mantel, the reveals, the
+ * shelf, the dresser, the woodpile — which used `T_TRIM` at 0.34 and came out
+ * as the second brightest field in the room after the paper.
+ *
  * None of these needs a second set for light. The ramp's two ends swap roles
  * between themes and everything indoors recedes correctly in both for the same
- * reason the forest does; see the note on `T_TREE`.
+ * reason the forest does; see the note on `T_TREE`. The right-hand column
+ * above is that claim checked rather than asserted: light is a PALE room with
+ * the same shadows, 129 to 187 against a page at 235.
  */
 const T_PAPER = 0.7
-const T_ROOM = 0.3
-const T_FLOOR = 0.26
-const T_RUG = 0.36
-const T_TABLE = 0.22
-const T_BEAM = 0.15
+/**
+ * The second sheet, and the shadow the sheets lie in.
+ *
+ * Both are here because the settled table beat rendered as one flat field and
+ * the brief's answer to that is "the paper should read as paper — a sheet with
+ * edges, a slight warp, a shadow under it, more than one sheet if that helps,
+ * at very low contrast". The last four words are the constraint that sets these
+ * two numbers, and they are set from the RENDER rather than from taste.
+ *
+ * `T_SHEET` is 0.055 under `T_PAPER`, which through the two ramps is 7 values
+ * of green in dark (97 -> 90) and 6 in light (208 -> 202). That is a sheet edge
+ * a reader sees and a card's text does not have to fight: the site's own
+ * contrast floor is 4.5:1 against `--text`, and 7 values at this end of the
+ * ramp move that ratio by 0.15. It is the one edge in this arrangement allowed
+ * to cross the card area at all — see `sheet` for where every other one is put.
+ *
+ * `T_SHADOW` is BELOW the table it lies on, which nothing else in the room is.
+ * A sheet whose edge meets the table at the table's own value is a sheet
+ * printed on the table; the band is what puts it on top of one. 0.055 against
+ * `T_TABLE`'s 0.15 is 19 values under the table in dark and 10 in light, and
+ * every millimetre of it is outside the card box — it runs along the sheet's
+ * north and east edges only, which is where `LIGHT` puts a shadow and which is
+ * the frame's right margin and its bottom respectively.
+ */
+const T_SHEET = 0.645
+const T_SHADOW = 0.055
+const T_ROOM = 0.26
+const T_FLOOR = 0.11
+const T_CEIL = 0.1
+const T_RUG = 0.3
+const T_TABLE = 0.15
+const T_TIMBER = 0.19
+const T_BEAM = 0.09
+const T_LOG = 0.055
 const T_HEARTH = 0.04
 /**
  * Near / mid / far / farthest / horizon, palest last, and the numbers are
@@ -2437,15 +2728,105 @@ const MANTEL_T = 0.17
  */
 const FIRE_Y = FP_OPEN_Y0
 const FIRE_Z = FP_BZ + 0.34
-const EMBER_HW = 0.46
-const EMBER_HZ = 0.24
-/** Three tongues, four rows each: twelve quads, and the room's only motion. */
-const FLAMES = 3
+/**
+ * The ember bed's glow, as a BILLBOARDED ellipse rather than a patch lying on
+ * the firebox floor.
+ *
+ * It was flat, at y = FIRE_Y + 0.015, and the geometry says why that could not
+ * work: the camera is never more than 20 degrees above the floor of the firebox
+ * from anywhere on the walk, so a horizontal 0.92 by 0.48 disc presented about
+ * 13cm of apparent height — a bright sliver under the logs, which is not what
+ * "the base of the fire is never as dark as the gap between two tongues" needs.
+ * Stood up and turned to face the lens with everything else in this buffer, the
+ * same six triangles are a soft core the tongues rise out of, from every
+ * station in the room.
+ */
+const EMBER_HW = 0.36
+const EMBER_HY = 0.16
+/**
+ * ── the flames ────────────────────────────────────────────────────────────
+ *
+ * Five tongues, four rows each, and every row is TWO quads split down the
+ * tongue's own centre line — 80 triangles where the old fire had 24.
+ *
+ * **The split is the whole difference between this and the shape the render
+ * called "a flat shape: a dark rectangle with a pale wedge in it".** A quad has
+ * four corners and a vertex colour can only be given at a corner, so a tongue
+ * drawn as one quad per row has the same alpha and the same heat right across
+ * its width. Whatever is done to it after that, it is a card. Split at the
+ * spine, the two inner corners can be hot and opaque and the two outer ones
+ * cool and transparent, and Gouraud does the rest: a bright core inside a soft
+ * edge, which is what a flame is and what no amount of alpha on a single quad
+ * can produce.
+ *
+ * `FLAME_GAP` is 0.155, so five tongues span 0.62 against a firebox opening
+ * 1.24 wide — the fire fills the middle half of the hearth and the log bed
+ * carries the rest. `FLAME_TAPER` makes the outer tongues shorter, which is the
+ * cheapest thing that stops five tongues reading as a comb.
+ */
+const FLAMES = 5
 const FLAME_ROWS = 4
-const FLAME_H = 0.62
-const FLAME_W = 0.19
-const FLAME_GAP = 0.2
-const FLAME_SWAY = 0.11
+const FLAME_H = 0.66
+const FLAME_W = 0.155
+const FLAME_GAP = 0.132
+const FLAME_SWAY = 0.115
+const FLAME_TAPER = 0.34
+/**
+ * The heat scale, written into the fire buffer's RGB and multiplied against
+ * `--warm` on the material.
+ *
+ * **It is one scalar and it still gives a hot core and a cooler tip, and the
+ * reason is the clamp rather than a second colour.** `--warm` is #f5c98a, which
+ * in the linear space three.js blends in is (0.913, 0.590, 0.254). At
+ * `HEAT_CORE` that is (1.55, 1.00, 0.43): red and green are both past 1 and
+ * clip, blue does not, so what lands on the screen is rgb (255, 255, 180) — a
+ * pale gold. At `HEAT_TIP` the same pigment is (0.50, 0.32, 0.14), which is
+ * (188, 155, 105), a dull ember. One number, one token, no second pigment, and
+ * rule 2 is untouched: this is a brightness on `--warm`, not a colour.
+ *
+ * That is also what a camera does to a real fire, which is where the reference
+ * for "a hot core and a cooler tip" comes from in the first place: the middle
+ * of a flame is not a different hue, it is the same hue past what the medium
+ * can hold.
+ */
+const HEAT_CORE = 1.7
+const HEAT_TIP = 0.55
+const HEAT_EDGE = 0.72
+const HEAT_BED = 1.3
+/**
+ * How a tongue's opacity falls from its root to its tip, and how much of it is
+ * left at the flank.
+ *
+ * `(1 - k^FLAME_ALPHA_K) ^ FLAME_ALPHA_P` rather than the `(1 - k)^1.1` this
+ * had, and the render is the argument. That curve is 1.00 / 0.75 / 0.49 / 0.24
+ * / 0 down the four rows, so everything above the first row was already half
+ * gone — and the first row is the one behind the log bed. Measured on the
+ * frame, the brightest pixel anywhere in the firebox was rgb (94, 87, 78) in a
+ * room whose walls sit at 40: a fire dimmer than a lit window, in the one place
+ * on this page that is supposed to be the brightest thing on the screen.
+ *
+ * At 1.8 / 0.8 the same four rows are 1.00 / 0.93 / 0.76 / 0.47, which is a
+ * tongue that is solid for most of its height and gives out near the top —
+ * what a flame does. The tip still reaches exactly zero, so nothing in this
+ * layer has an edge.
+ */
+const FLAME_ALPHA_K = 1.8
+const FLAME_ALPHA_P = 0.8
+const FLAME_EDGE_A = 0.42
+/**
+ * The sparks. Seven triangles, one each, rising off the tongues and dying
+ * before the lintel at 1.52 — they go up the flue, not into the room.
+ *
+ * "embers if they are cheap": one triangle apiece is as cheap as anything in
+ * this file gets, and they are the only thing in the room that moves at a rate
+ * the eye reads as a rate rather than as a breath. Their phases are spaced by
+ * index like the smoke's, so the rest pose a reduced-motion visitor gets has
+ * them already spread up the column instead of all seven sitting on the logs.
+ */
+const EMBERS = 7
+const EMBER_RATE = 0.42
+const EMBER_RISE = 0.5
+const EMBER_SIZE = 0.016
 
 /**
  * The big table, south-west corner, against the west wall, running back from
@@ -2471,7 +2852,34 @@ const FLAME_SWAY = 0.11
 const TABLE_X0 = -IN_X + 0.12
 const TABLE_X1 = -0.97
 const TABLE_Z0 = -0.1
-const TABLE_Z1 = -2.8
+/**
+ * The north edge, and it moved 8cm north in this pass so that the TABLE ITSELF
+ * is in the frame the cards are read against.
+ *
+ * The critics' reading of the settled beat was "a flat grey field with two
+ * diagonal wedges at the right", and the wedges were this edge. It was not
+ * that the edge was missing; it was that the sheet ran all the way to it, so
+ * the only thing between the brightest field in the room and the floor was a
+ * 12cm strip of table with no shadow and no lip on it.
+ *
+ * Where the numbers come from: the card grid was measured on the live DOM at
+ * this beat (1440x900, `#apps .card` union) as 130..1310 x -53..1093 — the
+ * middle 82% of the width and past the frame at both ends vertically, so the
+ * ONLY card-free picture at this beat is the outer 130px at each side. Those
+ * two margins were unprojected onto the table top: the left one is z -0.11 to
+ * -0.37 and the right one is z -2.25 to -2.99, both running the table's whole
+ * width. Everything this arrangement adds lives in one of them.
+ *
+ * So the right margin now carries four bands rather than two: the sheet to
+ * -2.80, its shadow to -2.845, bare table to -2.88, and the rug and the floor
+ * falling away past it. At 1440x900 the table's own edge is inside the frame
+ * for x <= -2.365 — the far 66cm of its width, which is the top third of that
+ * margin — and the sheet's edge for x <= -2.176. Push it further north and
+ * LESS of it is in frame, not more: the frame's right edge on the table runs
+ * from z = -2.991 at the top to -2.428 at the bottom, so every centimetre north
+ * costs 3.1cm of the edge's visible length.
+ */
+const TABLE_Z1 = -2.88
 const TABLE_Y = IN_Y + 0.76
 const TABLE_T = 0.07
 
@@ -2489,10 +2897,35 @@ const TABLE_T = 0.07
  * room by a clear margin in both themes, and it is FLAT: no facet steps, no
  * gradient, one quad, one tone. See the tone ladder.
  */
-const PAPER_X0 = -2.9
-const PAPER_X1 = -1.1
-const PAPER_Z0 = -0.24
-const PAPER_Z1 = -2.68
+const PAPER_X0 = -2.96
+const PAPER_X1 = -1.0
+const PAPER_Z0 = -0.26
+const PAPER_Z1 = -2.8
+/**
+ * The curled rim, and it is the only part of the sheet whose tone the reader
+ * can actually see change.
+ *
+ * `tri` shades a facet from `LIGHT`, and `LIGHT` is 0.857 of the way up — so an
+ * up-facing surface is already at 0.936 of full and tilting it a few degrees
+ * moves the tone by under a value. Measured through the dark ramp: a 10-degree
+ * tilt on a `T_PAPER` facet is 1.5 values of green, which is nothing. A slight
+ * warp across the middle of the sheet is therefore not something this shading
+ * model can draw, and pretending otherwise would be geometry that costs
+ * triangles and shows nothing.
+ *
+ * A rim tilted 25 degrees over 7cm does show. The same arithmetic: a facet
+ * leaning NORTH comes out at 0.590 against the flat 0.655, which is 8 values
+ * darker in dark and 7 in light; leaning EAST, 10 and 9; leaning south or west
+ * it goes 2 to 4 lighter. So a sheet curled up at its edges gets a soft dark
+ * band along the two edges `LIGHT` is behind — north and east — and a faint
+ * bright one along the other two, which is what a sheet of paper on a table
+ * looks like and is under 4% of the range either way.
+ *
+ * 3.3cm of lift over 7cm is 25 degrees. It is a sheet that has been lying there
+ * a while, not one that has just been dropped.
+ */
+const PAPER_RIM = 0.07
+const PAPER_LIFT = 0.033
 
 /** The small desk, south-east corner, against the east wall. Mirrored against
  *  the big table and smaller, which is the floor plan. */
@@ -2533,24 +2966,41 @@ function tri(s: Solid, a: V, b: V, c: V, base: number, out?: V) {
     nz = -nz
   }
   const d = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]
-  let t = base * (SHADE_FLOOR + (1 - SHADE_FLOOR) * Math.max(0, d))
-  // The room's second light, baked at the facet's centroid. `LIGHT` above is
-  // the sky, and inside a cabin the sky reaches almost nothing; without this
-  // the whole interior comes out at one flat value because every surface in it
-  // is turned away from the one direction the scene knows about.
-  if (s.hearth) {
-    t += hearthAt(
-      (a[0] + b[0] + c[0]) / 3,
-      (a[1] + b[1] + c[1]) / 3,
-      (a[2] + b[2] + c[2]) / 3,
-      nx,
-      ny,
-      nz,
-    )
-  }
-  t = clamp01(t)
+  const lit = base * (SHADE_FLOOR + (1 - SHADE_FLOOR) * Math.max(0, d))
   for (const q of p) s.pos.push(q[0], q[1], q[2])
-  s.tone.push(t, t, t)
+  /*
+   * The room's second light — and it is the ONE term in this file that is
+   * per-VERTEX rather than per-facet. That split is the whole look of the room
+   * and it is deliberate on both sides.
+   *
+   * `LIGHT` above is the sky, and it stays flat per triangle, because a hard
+   * step from one facet to the next is what makes this scene read as the
+   * parallax kit's chunky low-poly art rather than as a smooth render. Every
+   * facet in the forest, the snow and the cabin's shell keeps it.
+   *
+   * The fire cannot. It is a POINT source standing in the middle of the thing
+   * it lights, two metres from the wall beside it and six from the far corner,
+   * so what it lays down is a radial falloff — and a radial falloff quantised
+   * to one value per triangle is a staircase across the floor, which reads as
+   * a modelling error rather than as light. Evaluated at the three corners and
+   * left to interpolate, the same geometry gets a smooth pool for nothing: the
+   * interpolation is free hardware and the extra cost is two more `hearthAt`
+   * calls per triangle, at BUILD time, once.
+   *
+   * It is also why the floor, the walls and the ceiling are subdivided in
+   * `interior` instead of being one quad each. Gouraud interpolation is
+   * LINEAR, and an inverse-square falloff sampled at two points six metres
+   * apart is a straight line through a curve — far too bright in the middle.
+   * Four strips is where that error drops under a value on the dark ramp.
+   */
+  if (s.hearth) {
+    for (const q of p) {
+      s.tone.push(clamp01(lit + hearthAt(q[0], q[1], q[2], nx, ny, nz)))
+    }
+  } else {
+    const t = clamp01(lit)
+    s.tone.push(t, t, t)
+  }
 }
 
 function quad(s: Solid, a: V, b: V, c: V, d: V, base: number, out?: V) {
@@ -3724,6 +4174,33 @@ function buildWorld(tier: Quality): Solid {
     T_DOOR,
     [Math.sin(A), 0, Math.cos(A)],
   )
+  /*
+   * ── the door casing ──────────────────────────────────────────────────────
+   *
+   * Two jamb boards and a head, 14cm wide and standing 5cm proud of the wall.
+   * They are here for one frame band and they earn their thirty triangles in
+   * it: the threshold, where the reader is 0.5 to 2m off this wall and it fills
+   * everything the doorway does not.
+   *
+   * Sampled on the canvas at the frame the critics called a floating box, the
+   * left and right edges were rgb (50,57,68) at every one of 48 samples — one
+   * value, 600px wide, which is a wall that reads as page. This wall is ONE
+   * QUAD per side of the doorway and there is nothing else on it: the log
+   * courses deliberately stop at the corners (see `log courses` above, which
+   * states why they are not banded across the front), and at 12m that is right.
+   * At 1.5m it is a void with a lit rectangle in it.
+   *
+   * Through the dark ramp the boards land at green 46 against the wall's 55,
+   * their inner returns at 40 and their outer flanks at 48. Four values of
+   * modelled edge where there was one flat step is what turns the doorway from
+   * the outline of a box into the frame of a door — and the same thirty
+   * triangles are in the approach's last frames, where a cabin door with a
+   * casing round it is simply a better door.
+   */
+  for (const sign of [-1, 1]) {
+    box(s, sign * (DOOR_HW + 0.07), DECK_Y, 0.025, 0.14, DOOR_H + 0.14, 0.05, T_TRIM)
+  }
+  box(s, 0, DECK_Y + DOOR_H, 0.025, DOOR_HW * 2 + 0.28, 0.14, 0.05, T_TRIM)
 
   // ── trees ────────────────────────────────────────────────────────────────
   const treeSeed = rng(0xc4b1)
@@ -3759,6 +4236,48 @@ function buildWorld(tier: Quality): Solid {
     const [tx, tz, ts] = TRUNKS[i]
     plant(tx, tz, ts, 3)
   }
+  /*
+   * And one more trunk, which is not in `TRUNKS` and is not a tier's business:
+   * it belongs to the WINDOW BEAT, and that beat happens on every machine.
+   *
+   * The brief's last requirement for the window is "something legible outside
+   * it", and what was outside it was the far treeline and the edge of one
+   * existing trunk. The window's own view cone was solved rather than guessed:
+   * from `ST_WINDOW`'s eye at (-0.85, 1.9, -2.6) the opening's two jambs put
+   * the cone at 9.9 degrees south of due west and 28.8 north of it, so at
+   * 8.35m out — where this stands — the window shows z from -1.14 to -7.19.
+   * `TRUNKS[0]` at (-6.6, -6) misses that by 24cm, which is why the last render
+   * of this beat had a field of distant shards in it and no near subject.
+   *
+   * (-9.2, -3.2) is in the middle of the cone at 9.7m, which for a rank-3 trunk
+   * at 2.6 scale is a bare vertical that fills the opening's height and is cut
+   * off by the head — the same "a forest is a few enormous verticals" the
+   * `TRUNKS` note is about, seen through a window instead of walked between.
+   *
+   * **It cannot touch the approach, and that was checked rather than hoped.**
+   * The test the `TRUNKS` note sets is "is it nearer than the cabin AND inside
+   * the cabin's own screen span". Against the orbit at its two ends and its
+   * middle — camera (-3.12, 11.03), (-13.05, 25.02) and (-31.8, 39.0) — this
+   * trunk sits at 23.1, 7.8 and 28.2 degrees while the cabin's nearest edge is
+   * at 2.5, 16.2 and 31.5. It is outside the cabin's span at every one of them,
+   * on the same side each time, so there is no sample between them where it
+   * could cross. It is one more distant pine to the left of the shot.
+   *
+   * **And the tools cards sit over it, so the step it puts behind them was
+   * measured too.** There is no card-free column at this beat — the opening
+   * spans screen 150 to 1135 against a card box of 130 to 1310, so everything
+   * outside this window is behind a card by construction and the only card-free
+   * bands are horizontal. The test is therefore not "keep the edge out of the
+   * box", it is "how much of the edge reaches the text": screenshot the beat
+   * with this canvas visible and again with it hidden, and difference the two
+   * inside each card inset past its border. The largest per-pixel luminance the
+   * backdrop contributes is 37 in dark and 1.0 in light, against card
+   * backgrounds of rgba(9,10,16,0.74) and rgba(255,255,255,0.88). That leaves
+   * `--text` at 13.4:1 over the brightest pixel of the darkest card, against a
+   * floor of 4.5. The card scrim was built for exactly this and it holds; the
+   * same measurement at the table beat is 28 and 3.5.
+   */
+  plant(-9.2, -3.2, 2.6, 3)
 
   // ── the ranks behind them, out to the horizon ────────────────────────────
   // Three arcs now, the outermost of which stands where the hill band used to.
@@ -3810,28 +4329,48 @@ function buildWorld(tier: Quality): Solid {
  * The falloff is inverse-square-ish rather than inverse-square: at true
  * inverse-square the far corner of a 6m room is at 3% of the near wall and
  * comes out black, which is true of a real single candle and wrong for a room
- * with plastered log walls bouncing everything. `HEARTH_FALL` at 0.055 puts the
- * table at 0.82 of the peak, the west window's reveal at 0.52 and the
- * south-east corner at 0.35.
+ * with log walls bouncing everything.
+ *
+ * **`HEARTH_FALL` is 0.20 and was 0.055, and that is the single number this
+ * pass changed most.** At 0.055 the term was nearly CONSTANT across the room:
+ * measured on the tone the buffer actually carries, the floor a metre from the
+ * hearth took 0.10 and the floor five metres away took 0.019, which after the
+ * dark theme's ramp is rgb green 60 against 50. Ten values across a six-metre
+ * room is not a light source, it is a tint — and it is exactly what made the
+ * render read as "a low-contrast desaturated fog with a small pale fire in
+ * it". A cabin lit by a hearth is warm near the fire and genuinely dark away
+ * from it, and the falloff is the only thing in this file that can say so.
+ *
+ * At 0.20, with `HEARTH_K` raised to 0.90 so the near end still reaches, the
+ * same two points are 0.39 and 0.014 — green 79 against 33. The west wall runs
+ * 0.33 beside the hearth to 0.05 at its south end. That is a range, and the
+ * rest of the room's ladder was dropped underneath it (see `T_FLOOR`) so there
+ * is somewhere for it to fall INTO.
  *
  * Nothing up-facing above the flame gets any of it, which includes the table
  * top and therefore the paper: the fire is at y = 0.88 and the table is at
  * 1.18, so `ndl` is negative there and the term is zero. That is correct — a
  * fire in a hearth does not light the top of a table across the room — and it
- * is also why the paper's own tone has to carry it.
+ * is also why the paper's own tone has to carry it, and why the warmth on the
+ * table's north edge is a `wash` in `buildFireStatic` rather than a tone.
  */
 const HEARTH_P: V = [FIRE_X, FIRE_Y + 0.28, FIRE_Z + 0.12]
-const HEARTH_K = 0.46
-const HEARTH_FALL = 0.055
+const HEARTH_K = 0.9
+const HEARTH_FALL = 0.2
 /**
  * And a ceiling on it, because the falloff has none of its own. Anything within
  * half a metre of the flame and facing it takes essentially the whole of
- * HEARTH_K, and 0.46 of tone on top of a light theme that already starts its
- * ramp at 0.26 is a white-hot surface. Nothing in the room is that close except
- * the hearth slab and the firebox — the firebox is exempted outright, see
- * `hearth` — so this is the guard for whatever gets put there next.
+ * `HEARTH_K`, and now that the term is evaluated per VERTEX rather than per
+ * facet that includes the corner of any surface that happens to touch the
+ * hearth — the slab's own edge, the woodpile's near face, the log bed.
+ *
+ * 0.50, up from 0.34 with `HEARTH_K`. Through light's ramp, which starts at
+ * 0.26 and is where this is dangerous, the brightest a room surface can now
+ * reach is 0.26 + 0.60 * 0.74 = 0.70, which is rgb (208, 208, 212) against a
+ * paper at (208) and a page at (235, 240, 251). Hot, and still short of the
+ * white the light theme's whole problem was.
  */
-const HEARTH_MAX = 0.34
+const HEARTH_MAX = 0.5
 function hearthAt(px: number, py: number, pz: number, nx: number, ny: number, nz: number) {
   const dx = HEARTH_P[0] - px
   const dy = HEARTH_P[1] - py
@@ -3848,14 +4387,168 @@ function lie(s: Solid, x0: number, x1: number, z0: number, z1: number, y: number
   quad(s, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], base, [0, 1, 0])
 }
 
-/** A flat rectangle standing on the z = `z` plane, facing `dir` (+1 or -1). */
-function wallZ(s: Solid, x0: number, x1: number, y0: number, y1: number, z: number, dir: number) {
-  quad(s, [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], T_ROOM, [0, 0, dir])
+/**
+ * A sheet of paper lying on a table: one flat field with a CURLED RIM round it,
+ * and optionally one corner turned up further than the rest.
+ *
+ * **The middle is one quad and that is deliberate.** `field`'s subdivision buys
+ * the hearth's falloff, and the hearth cannot reach a table top at all — the
+ * fire is at y 0.88 and this is at 1.18, so `hearthAt`'s `ndl` is negative
+ * everywhere on it and the term is zero. The sky term gives every cell of a
+ * flat sheet the identical value. So cutting the middle up would be triangles
+ * that cannot change a pixel, which is the trade `field`'s own note makes in
+ * the other direction.
+ *
+ * The rim is where the picture is. `PAPER_RIM` and `PAPER_LIFT` carry the
+ * arithmetic; what they buy is a soft dark band along the sheet's north and
+ * east edges and a faint bright one along its south and west, so the sheet has
+ * a thickness and a side the light is behind. Sixteen triangles.
+ *
+ * `dog` turns the corner at (`x0`, `z1`) up by a further 90%, which is a
+ * dog-ear. That corner is not chosen for looks: at the settled table beat it is
+ * the frame's TOP RIGHT, which is inside the 130px card-free margin — the one
+ * place in this frame a fold can put a real tonal step without landing under a
+ * card.
+ */
+function sheet(
+  s: Solid,
+  x0: number,
+  x1: number,
+  z0: number,
+  z1: number,
+  y: number,
+  base: number,
+  rim: number,
+  lift: number,
+  dog: boolean,
+) {
+  const ax0 = x0 + rim
+  const ax1 = x1 - rim
+  // z0 is the SOUTH edge and z1 the north one, so z0 > z1 and the inner edges
+  // move the other way round from x's.
+  const az0 = z0 - rim
+  const az1 = z1 + rim
+  lie(s, ax0, ax1, az1, az0, y, base)
+  // The four rim strips: inner edge on the flat field, outer edge lifted.
+  const hi = y + lift
+  quad(s, [ax0, y, az0], [ax1, y, az0], [ax1, hi, z0], [ax0, hi, z0], base, [0, 1, 0])
+  quad(s, [ax0, y, az1], [ax1, y, az1], [ax1, hi, z1], [ax0, hi, z1], base, [0, 1, 0])
+  quad(s, [ax0, y, az1], [ax0, y, az0], [x0, hi, az0], [x0, hi, az1], base, [0, 1, 0])
+  quad(s, [ax1, y, az1], [ax1, y, az0], [x1, hi, az0], [x1, hi, az1], base, [0, 1, 0])
+  // and the four corners, each a quad from the flat field's corner out to the
+  // sheet's own, which stands higher than either edge beside it.
+  const corner = (ix: number, iz: number, ox: number, oz: number, k: number) =>
+    quad(s, [ix, y, iz], [ox, hi, iz], [ox, y + lift * k, oz], [ix, hi, oz], base, [0, 1, 0])
+  corner(ax0, az0, x0, z0, 1.4)
+  corner(ax1, az0, x1, z0, 1.4)
+  corner(ax1, az1, x1, z1, 1.4)
+  corner(ax0, az1, x0, z1, dog ? 2.7 : 1.4)
+}
+
+/**
+ * A second sheet, laid at an angle. One quad, and the angle is the whole point:
+ * two sheets squared up with each other read as one sheet with a line on it.
+ */
+function slip(s: Solid, cx: number, cz: number, hu: number, hv: number, rot: number, y: number, base: number) {
+  const c = Math.cos(rot)
+  const sn = Math.sin(rot)
+  const at = (u: number, v: number): V => [cx + u * c - v * sn, y, cz + u * sn + v * c]
+  quad(s, at(-hu, -hv), at(hu, -hv), at(hu, hv), at(-hu, hv), base, [0, 1, 0])
+}
+
+/**
+ * The same, cut into an `nu` by `nv` grid.
+ *
+ * **The subdivision is the fire's, not the geometry's.** A cabin floor has no
+ * facets to describe — it is flat, and `tri`'s sky term gives every cell of it
+ * the identical value, so as far as the low-poly look goes this is exactly one
+ * quad's worth of picture. What it buys is the hearth's falloff: that term is
+ * per-vertex now (see `tri`), Gouraud interpolation between two vertices is a
+ * straight line, and the floor runs six metres from a light source two metres
+ * off its near edge. Sampled at the four corners of ONE quad the pool comes out
+ * as a flat wedge with the bright end in the wrong place; at 5 by 6 the error
+ * against the analytic falloff is under a value on the dark ramp everywhere.
+ *
+ * 30 quads where there was 1. It is 58 triangles in a buffer that is uploaded
+ * once and drawn in the same single call as everything else in the world, and
+ * it is the largest field in the room the fire actually lights.
+ */
+function field(s: Solid, x0: number, x1: number, z0: number, z1: number, y: number, base: number, nu: number, nv: number) {
+  for (let i = 0; i < nu; i++) {
+    const a = x0 + ((x1 - x0) * i) / nu
+    const b = x0 + ((x1 - x0) * (i + 1)) / nu
+    for (let j = 0; j < nv; j++) {
+      const c = z0 + ((z1 - z0) * j) / nv
+      const d = z0 + ((z1 - z0) * (j + 1)) / nv
+      lie(s, a, b, c, d, y, base)
+    }
+  }
+}
+
+/**
+ * A rectangle standing on the z = `z` plane, facing `dir` (+1 or -1), cut into
+ * `nu` by `nv`. Same argument as `field`: the strips exist so the fire's
+ * falloff can bend along the wall instead of being sampled twice across it.
+ *
+ * `nu` and `nv` default to 1 — a wall the camera never gets near, or one the
+ * fire reaches at a constant angle, does not need them and does not pay.
+ */
+function wallZ(s: Solid, x0: number, x1: number, y0: number, y1: number, z: number, dir: number, nu = 1, nv = 1, base = T_ROOM) {
+  for (let i = 0; i < nu; i++) {
+    const a = x0 + ((x1 - x0) * i) / nu
+    const b = x0 + ((x1 - x0) * (i + 1)) / nu
+    for (let j = 0; j < nv; j++) {
+      const c = y0 + ((y1 - y0) * j) / nv
+      const d = y0 + ((y1 - y0) * (j + 1)) / nv
+      quad(s, [a, c, z], [b, c, z], [b, d, z], [a, d, z], base, [0, 0, dir])
+    }
+  }
 }
 
 /** The same on the x = `x` plane. */
-function wallX(s: Solid, z0: number, z1: number, y0: number, y1: number, x: number, dir: number) {
-  quad(s, [x, y0, z0], [x, y0, z1], [x, y1, z1], [x, y1, z0], T_ROOM, [dir, 0, 0])
+function wallX(s: Solid, z0: number, z1: number, y0: number, y1: number, x: number, dir: number, nu = 1, nv = 1, base = T_ROOM) {
+  for (let i = 0; i < nu; i++) {
+    const a = z0 + ((z1 - z0) * i) / nu
+    const b = z0 + ((z1 - z0) * (i + 1)) / nu
+    for (let j = 0; j < nv; j++) {
+      const c = y0 + ((y1 - y0) * j) / nv
+      const d = y0 + ((y1 - y0) * (j + 1)) / nv
+      quad(s, [x, c, a], [x, c, b], [x, d, b], [x, d, a], base, [dir, 0, 0])
+    }
+  }
+}
+
+/**
+ * A log lying on its side: a three-sided prism along x, with ends.
+ *
+ * `post` is the same shape standing up and it is used for every trunk and leg
+ * in this file; a fire wants them lying down, and it wants their ENDS, because
+ * a log seen end-on from the room is a circle of char with the fire behind it
+ * and that is most of what says "log" at this size. Eight triangles.
+ */
+function logAt(s: Solid, cx: number, y: number, z: number, half: number, r: number, base: number, rot: number) {
+  const p: [number, number][] = []
+  for (let i = 0; i < 3; i++) {
+    const a = rot + (i / 3) * Math.PI * 2
+    p.push([y + Math.sin(a) * r, z + Math.cos(a) * r])
+  }
+  for (let i = 0; i < 3; i++) {
+    const [ay, az] = p[i]
+    const [by, bz] = p[(i + 1) % 3]
+    const my = (ay + by) / 2 - y
+    const mz = (az + bz) / 2 - z
+    quad(s, [cx - half, ay, az], [cx + half, ay, az], [cx + half, by, bz], [cx - half, by, bz], base, [0, my, mz])
+  }
+  for (const sign of [-1, 1]) {
+    tri(
+      s,
+      [cx + sign * half, p[0][0], p[0][1]],
+      [cx + sign * half, p[1][0], p[1][1]],
+      [cx + sign * half, p[2][0], p[2][1]],
+      base,
+      [sign, 0, 0],
+    )
+  }
 }
 
 /**
@@ -3879,31 +4572,89 @@ function wallX(s: Solid, z0: number, z1: number, y0: number, y1: number, x: numb
  * **What IS culled is what the camera cannot reach.** The spline is one path
  * and it is known at build time, so:
  *
- * - there is no ceiling of its own; the roof's underside already is one
- * - the north wall's gable is one triangle rather than a wall
- * - nothing is drawn on the north-east quarter above desk height, because the
- *   camera is looking west or down for every frame it is in the room
+ * - the north and south gables are one triangle each rather than a wall
+ * - the east wall and the south wall take no subdivision, because the fire
+ *   reaches both at a nearly constant distance and the camera never settles
+ *   on either
  * - every surface here is single-sided and wound inward, so the half of each
  *   the reader stands behind costs nothing
  *
- * `s.hearth` is on for the whole of it, which is what gives every facet the
- * fire's own baked light on top of the sky's. See `hearthAt`.
+ * **The room DOES have a ceiling of its own now, and it did not.** This note
+ * used to say "the roof's underside already is one", which was true of the
+ * geometry and wrong about the light: those two slabs are built in
+ * `buildWorld`, they overhang the walls by 70cm, and their undersides are the
+ * porch's and the eaves' ceilings seen from the snow — so they can never carry
+ * `s.hearth` without putting firelight on the outside of the building. The
+ * room's own ceiling is 2cm under them, over the room's footprint only, and it
+ * is what the tilt-up off the table looks at.
+ *
+ * The north-east quarter above desk height used to be empty on the same
+ * "camera is looking west or down" reasoning. That is true from the TURN
+ * onward and false at the THRESHOLD, which aims north at the fire from five
+ * metres out with a 54-degree frame — so the wall east of the fireplace was a
+ * bare dark rectangle in the first frame of the room, and it has a shelf on it
+ * now.
+ *
+ * `s.hearth` is on for the whole of it, which is what gives every VERTEX the
+ * fire's own baked light on top of the sky's per-facet one. See `hearthAt` for
+ * the light and `tri` for why the two are evaluated differently.
  */
 function interior(s: Solid, tier: Quality) {
   s.hearth = true
   const props = tier.room
 
   // ── the shell ────────────────────────────────────────────────────────────
-  lie(s, -IN_X, IN_X, IN_Z1, IN_Z0, IN_Y, T_FLOOR)
-  // Floorboards: five lines cut across the floor, a shade under it. The floor
-  // is the largest single field in the room after the paper, and `tri` shades
-  // from the facet's own normal — so a flat floor is one value however big it
-  // is, exactly the way the snowfield outside was. Ten triangles is what stops
-  // it being a sheet. Same fix, indoors; see `snowTone` for the outdoor one.
+  /*
+   * The floor, cut 5 by 6 — see `field` for why, and `HEARTH_FALL` for what it
+   * is carrying. It is the largest field in the room the fire actually lights
+   * (the paper is bigger and the fire cannot reach it, being under the table's
+   * own horizon) and every value between rgb green 31 in the south-east corner
+   * and 78 on the hearth stone lives on these thirty cells.
+   */
+  field(s, -IN_X, IN_X, IN_Z1, IN_Z0, IN_Y, T_FLOOR, 5, 6)
+  // Floorboards: five lines cut across the floor, a shade under it. `tri`
+  // shades from the facet's own NORMAL, and every cell of the floor has the
+  // same one — so the grid above buys the fire's falloff and nothing else, and
+  // without these the floor is still one unbroken plane. Ten triangles is what
+  // says "boards". Same fix as `snowTone` outdoors, indoors.
   if (props >= 1) {
     for (let i = 1; i < 6; i++) {
       const bx = -IN_X + (i / 6) * IN_X * 2
       lie(s, bx - 0.018, bx + 0.018, IN_Z1 + 0.1, IN_Z0 - 0.1, IN_Y + 0.004, T_BEAM)
+    }
+  }
+  /*
+   * The ceiling, and it is NEW — this file used to say "there is no ceiling of
+   * its own; the roof's underside already is one", which was true and is no
+   * longer enough.
+   *
+   * The roof's underside is built in `buildWorld`, OUTSIDE this function, so it
+   * never sees `s.hearth` — and it cannot be allowed to, because the same two
+   * slabs overhang the walls by 70cm and their undersides are the porch's and
+   * the eaves' ceilings, seen from the snow. Firelight on the outside of a
+   * building is a bug. So the room gets its own, 2cm under the slab, over the
+   * room's footprint only, at `T_CEIL` — the darkest large surface in the room,
+   * which is what the underside of a roof in a room lit from below actually is.
+   *
+   * 16 quads. Two columns each side of the ridge and four rows down the room,
+   * for the same reason the floor is subdivided: the fire is 5.7m from the
+   * south end and 2.4m from the ridge above it, so the falloff along this
+   * surface is the steepest anywhere in the room, and it is what puts a warm
+   * patch on the roof over the hearth and leaves the rest of it black.
+   */
+  const CEIL_NX = 2
+  const CEIL_NZ = 4
+  for (const sign of [-1, 1]) {
+    for (let i = 0; i < CEIL_NX; i++) {
+      const xa = (sign * IN_X * i) / CEIL_NX
+      const xb = (sign * IN_X * (i + 1)) / CEIL_NX
+      const ya = ceilAt(xa) - 0.02
+      const yb = ceilAt(xb) - 0.02
+      for (let j = 0; j < CEIL_NZ; j++) {
+        const za = IN_Z1 + ((IN_Z0 - IN_Z1) * j) / CEIL_NZ
+        const zb = IN_Z1 + ((IN_Z0 - IN_Z1) * (j + 1)) / CEIL_NZ
+        quad(s, [xa, ya, za], [xb, yb, za], [xb, yb, zb], [xa, ya, zb], T_CEIL, [0, -1, 0])
+      }
     }
   }
   // north wall and its gable. The apex is the roof's own underside rather than
@@ -3912,23 +4663,63 @@ function interior(s: Solid, tier: Quality) {
   // `ceilAt(0)` the two meet exactly — solved, not nudged: the gable's edges
   // and the ceiling's slopes differ by 0.024 per unit x, so the triangle sits
   // 0 to 5cm INSIDE the slab all the way out and cannot show a seam.
-  wallZ(s, -IN_X, IN_X, IN_Y, WALL_H, IN_Z1, 1)
+  //
+  /*
+   * **AND IT IS CUT ROUND THE FIREBOX OPENING, which it was not, and that one
+   * missing hole is most of why the fire read as "a flat shape".**
+   *
+   * The firebox is built at z = -6.20, behind this wall at -5.94, on the
+   * reasoning in `FIRE_X`'s note that it is cut "THROUGH the wall's own
+   * thickness and 26cm beyond". Nothing ever cut it. So the five dark inward
+   * faces of the firebox — the thing the whole tone ladder puts at `T_HEARTH`
+   * precisely so the flames have something to be seen against — were behind an
+   * uncut wall and had never once been drawn, and what the tongues were burning
+   * in front of was the north wall at `T_ROOM` with the fire's own light full
+   * on it.
+   *
+   * Measured on `b3-D2400.png` before the cut, at the middle of the opening:
+   * rgb (54, 60, 71) where `T_HEARTH` through the same ramp is (15, 22, 35),
+   * and (167, 167, 172) against (125, 125, 133) in light. The fire was standing
+   * against a surface BRIGHTER than the walls beside it. Rendering with the
+   * fire layer hidden gave the identical pixel, which is what proved it was the
+   * geometry and not the glow.
+   *
+   * Four strips round a 1.24 by 0.92 hole. Nothing else in this wall needs
+   * cutting: from inside the room the surround's face, its two returns, the
+   * mantel and the breast already cover every other part of the fireplace's
+   * footprint, and outside the opening the wall is what the reader should see.
+   */
+  const fbL = FIRE_X - FP_OPEN_HW
+  const fbR = FIRE_X + FP_OPEN_HW
+  wallZ(s, -IN_X, fbL, IN_Y, WALL_H, IN_Z1, 1, 2, 2)
+  wallZ(s, fbR, IN_X, IN_Y, WALL_H, IN_Z1, 1, 3, 2)
+  wallZ(s, fbL, fbR, IN_Y, FP_OPEN_Y0, IN_Z1, 1)
+  wallZ(s, fbL, fbR, FP_OPEN_Y1, WALL_H, IN_Z1, 1, 1, 2)
   tri(s, [-IN_X, WALL_H, IN_Z1], [IN_X, WALL_H, IN_Z1], [0, ceilAt(0), IN_Z1], T_ROOM, [0, 0, 1])
-  // south wall, round the door, and its own gable
+  // south wall, round the door, and its own gable. Single quads: it is the wall
+  // BEHIND the camera for every beat from the turn onward, and the fire reaches
+  // it at a nearly constant 5.5m, so there is nothing across it to bend.
   wallZ(s, -IN_X, -DOOR_HW, IN_Y, WALL_H, IN_Z0, -1)
   wallZ(s, DOOR_HW, IN_X, IN_Y, WALL_H, IN_Z0, -1)
   wallZ(s, -DOOR_HW, DOOR_HW, DECK_Y + DOOR_H, WALL_H, IN_Z0, -1)
   tri(s, [IN_X, WALL_H, IN_Z0], [-IN_X, WALL_H, IN_Z0], [0, ceilAt(0), IN_Z0], T_ROOM, [0, 0, -1])
-  // west wall, round the window the camera ends on
-  wallX(s, IN_Z1, SW_Z0, IN_Y, WALL_H, -IN_X, 1)
-  wallX(s, SW_Z0, SW_Z1, IN_Y, SW_Y0, -IN_X, 1)
-  wallX(s, SW_Z0, SW_Z1, SW_Y1, WALL_H, -IN_X, 1)
-  wallX(s, SW_Z1, IN_Z0, IN_Y, WALL_H, -IN_X, 1)
-  // east wall, round its own
-  wallX(s, IN_Z1, EW_Z0, IN_Y, WALL_H, IN_X, -1)
+  // West wall, round the window the camera ends on — and the wall this shot is
+  // composed against, so it takes the finest cut in the room. Its north
+  // segment runs from the fireplace's own corner to the window's jamb and
+  // carries the light's whole falloff along it: 0.33 of tone at the north end
+  // and 0.05 at the south, which is rgb green 75 to 42 in dark. In one quad
+  // that was a flat 58 and it is why the window beat had a grey wall round it.
+  wallX(s, IN_Z1, SW_Z0, IN_Y, WALL_H, -IN_X, 1, 3, 2)
+  wallX(s, SW_Z0, SW_Z1, IN_Y, SW_Y0, -IN_X, 1, 2, 1)
+  wallX(s, SW_Z0, SW_Z1, SW_Y1, WALL_H, -IN_X, 1, 2, 1)
+  wallX(s, SW_Z1, IN_Z0, IN_Y, WALL_H, -IN_X, 1, 3, 2)
+  // east wall, round its own. Two strips on the long runs and no vertical cut:
+  // it is 6.3m from the fire across the room, where the falloff has already
+  // flattened out, and the turn is the only beat that passes it.
+  wallX(s, IN_Z1, EW_Z0, IN_Y, WALL_H, IN_X, -1, 2, 1)
   wallX(s, EW_Z0, EW_Z1, IN_Y, EW_Y0, IN_X, -1)
   wallX(s, EW_Z0, EW_Z1, EW_Y1, WALL_H, IN_X, -1)
-  wallX(s, EW_Z1, IN_Z0, IN_Y, WALL_H, IN_X, -1)
+  wallX(s, EW_Z1, IN_Z0, IN_Y, WALL_H, IN_X, -1, 2, 1)
   /*
    * The reveals: the 6cm of wall thickness round the window the camera settles
    * on. Without them the opening is a cut with nothing in it, and from any
@@ -3947,13 +4738,71 @@ function interior(s: Solid, tier: Quality) {
         [-IN_X, SW_Y0, z],
         [-IN_X, SW_Y1, z],
         [-CAB_HW, SW_Y1, z],
-        T_TRIM,
+        T_TIMBER,
         [0, 0, dir],
       )
     rz(SW_Z0, -1)
     rz(SW_Z1, 1)
-    quad(s, [-CAB_HW, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z1], [-CAB_HW, SW_Y1, SW_Z1], T_TRIM, [0, -1, 0])
+    quad(s, [-CAB_HW, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z1], [-CAB_HW, SW_Y1, SW_Z1], T_TIMBER, [0, -1, 0])
     quad(s, [-CAB_HW, SW_Y0, SW_Z0], [-IN_X, SW_Y0, SW_Z0], [-IN_X, SW_Y0, SW_Z1], [-CAB_HW, SW_Y0, SW_Z1], T_SNOW, [0, 1, 0])
+  }
+  /*
+   * The SILL, and it is not a reveal: a board standing 13cm proud of the wall,
+   * on every tier, running 8cm past the opening at each end the way a real one
+   * does.
+   *
+   * The brief for the window beat is "the frame, sill and the forest beyond it
+   * are what makes it a window rather than a rectangle", and the reveals above
+   * only give the first and the third. A reveal is the thickness of the wall
+   * seen edge-on and it disappears the moment the camera is square to the
+   * opening — which `ST_WINDOW` deliberately nearly is, at 9 degrees off. The
+   * sill is the one part of a window that is still THERE from square on, and
+   * it is the horizontal that puts the opening in a wall rather than in space.
+   *
+   * Its top is at `SW_Y0` exactly, edge to edge with the reveal's own bottom
+   * face at the wall line, so the two read as one surface running out through
+   * the wall to the snow on the outside sill. Eight triangles.
+   *
+   * Nothing stands on it. The window IS the field the small tools cards are
+   * read against, and the sill crosses the bottom of that field — a lamp or a
+   * pot here would be a dark object in the lower third of the one frame that
+   * beat is composed on. `interior`'s note on the big table is the same
+   * argument at the other beat.
+   */
+  box(s, -IN_X + 0.065, SW_Y0 - 0.05, (SW_Z0 + SW_Z1) / 2, 0.13, 0.05, SW_Z1 - SW_Z0 + 0.16, T_TIMBER)
+  /*
+   * ── the window's casing ──────────────────────────────────────────────────
+   *
+   * A head board and two jambs, 10cm wide and standing 5.5cm into the room, and
+   * an apron under the sill. The brief for this beat is that "a window is a
+   * frame, a sill, a depth of reveal, and something legible outside it" and the
+   * render it was written against had two of those four: the reveals above are
+   * 6cm of wall thickness that vanish the moment the camera is square to the
+   * opening, which `ST_WINDOW` deliberately nearly is, and the sill.
+   *
+   * The casing is the frame and it is also most of the depth: 5.5cm of
+   * projection plus the 6cm reveal behind it is 11.5cm of thickness seen from
+   * inside, against 6cm before. The head board carries its own underside
+   * (`floor`), because from a 1.9m eye the reader is looking UP into it —
+   * that face is the one surface in the whole opening that says how thick this
+   * wall is from square on.
+   *
+   * **Where each piece is put is a legibility decision, measured.** The tools
+   * cards were read off the live DOM at this beat: 130..1310 by 476..730 —
+   * three cards in a single band across the middle. Unprojected onto the wall
+   * plane, that band is y 1.28 to 1.79. So the head board at y 2.42 to 2.52 and
+   * the apron at 0.99 to 1.11 are both entirely outside it, and the two jamb
+   * boards are the only pieces that cross it. They cross it where the opening's
+   * own cut edge already was, and what they do there is split one hard step
+   * (wall to daylight) into three softer ones (wall, board, return, daylight) —
+   * which is a legibility improvement rather than a new edge.
+   */
+  box(s, -IN_X + 0.028, SW_Y1, (SW_Z0 + SW_Z1) / 2, 0.055, 0.1, SW_Z1 - SW_Z0 + 0.2, T_TIMBER, true)
+  for (const jz of [SW_Z0 - 0.05, SW_Z1 + 0.05]) {
+    box(s, -IN_X + 0.028, SW_Y0, jz, 0.055, SW_Y1 - SW_Y0, 0.1, T_TIMBER)
+  }
+  if (props >= 1) {
+    box(s, -IN_X + 0.015, SW_Y0 - 0.17, (SW_Z0 + SW_Z1) / 2, 0.03, 0.12, SW_Z1 - SW_Z0 - 0.1, T_TIMBER)
   }
   // Two ceiling beams. They are bought for one beat — the tilt up off the table
   // — and they are what that beat is FOR: the room's height comes into frame,
@@ -3981,9 +4830,89 @@ function interior(s: Solid, tier: Quality) {
       post(s, lx, IN_Y, lz, 0.075, TABLE_Y - TABLE_T - IN_Y, T_TABLE, 0.5)
     }
   }
-  // THE PAPER. One quad. See TABLE_PAPER and T_PAPER for why it is one quad and
-  // why nothing is ever drawn on the part of it the cards stand on.
-  lie(s, PAPER_X0, PAPER_X1, PAPER_Z1, PAPER_Z0, TABLE_Y + 0.002, T_PAPER)
+  /*
+   * ── THE PAPER ────────────────────────────────────────────────────────────
+   *
+   * It was one flat quad, and three critics who rendered this beat
+   * independently all led with the same sentence about it: a flat grey field
+   * with two diagonal wedges at the right. The field being flat is correct and
+   * has to stay — the cards are read against it — so what this pass adds is
+   * everything that makes a flat field a PLACE, and every piece of it is put
+   * where the cards are not.
+   *
+   * **The card box is measured, not guessed.** At 1440x900 the union of
+   * `#apps .card` is 130..1310 by -53..1093: the middle 82% of the width, and
+   * past the frame at both ends vertically. Unprojected onto the table top
+   * (y = 1.182) its four corners are (-2.910, -0.367), (-2.781, -2.731),
+   * (-1.123, -0.653) and (-1.035, -2.252) — so on this table, screen LEFT is
+   * the south end, screen RIGHT is the north end, screen UP is west and screen
+   * DOWN is east. The two card-free margins are therefore z > -0.37 (the left
+   * 130px) and z < -2.25 (the right 130px), each running the table's full
+   * width. There is no top or bottom margin at all.
+   *
+   * The sheet is sized from those corners with a margin on all four sides: it
+   * runs x -2.96 to -1.00 against a card box of -2.910 to -1.035, and z -0.26
+   * to -2.80 against -0.367 to -2.731. The nearest a card comes to leaving it
+   * is 1.5cm, at the south-west corner.
+   *
+   * `PAPER_Z0` is -0.26 and not -0.20 because of how much of the sheet's own
+   * SOUTH edge that puts in the picture. The frame's left edge on the table
+   * runs from z = -0.107 at the top to -0.477 at the bottom, so an edge at
+   * -0.20 is inside the frame only for x < -2.474 — the top quarter of the left
+   * margin — and one at -0.26 for x < -2.183, which is the top 43% of it. That
+   * edge is the strongest step in this frame that a card cannot reach: sheet at
+   * green 88 against bare table at 36. It is the table beat's answer to "the
+   * table's edges should be visible somewhere in the frame", and it is worth
+   * six centimetres of sheet to double its length.
+   */
+  sheet(s, PAPER_X0, PAPER_X1, PAPER_Z0, PAPER_Z1, TABLE_Y + 0.002, T_PAPER, PAPER_RIM, PAPER_LIFT, true)
+  /*
+   * The shadow, on the two edges `LIGHT` is behind — north and east.
+   *
+   * A sheet whose edge meets the table at the table's own value is a sheet
+   * printed on the table. This is the band that puts it on top of one, and it
+   * is `T_SHADOW`, which is the only tone in the room BELOW the surface it
+   * lies on. It is 6cm wide, which at this station is 29px at the top of the
+   * frame's right margin — wide enough to be a shadow and not a seam.
+   *
+   * North lands in the right margin, 3.5cm clear of the card box's own corner.
+   * East lands off the bottom of the frame entirely (the frame's bottom edge
+   * is at x -1.03 to -1.13 and this is at -0.955). Neither is anywhere a card
+   * can reach, which is what lets them be a real step rather than a hint.
+   */
+  lie(s, PAPER_X0, TABLE_X1, PAPER_Z1 - 0.06, PAPER_Z1, TABLE_Y + 0.0015, T_SHADOW)
+  lie(s, PAPER_X1, TABLE_X1, PAPER_Z1, PAPER_Z0, TABLE_Y + 0.0015, T_SHADOW)
+  /*
+   * A second sheet, slid half under the first at the table's south end and
+   * turned 7.5 degrees off it.
+   *
+   * "more than one sheet if that helps, at very low contrast" — it helps for
+   * one reason: two sheets squared up with each other read as one sheet with a
+   * line drawn on it, and the angle is what makes the pair read as paper. Its
+   * south edge is 1.6cm inside the main sheet's, in the LEFT margin; its north
+   * edge is the one thing in this arrangement that does cross the card area,
+   * at `T_SHEET` — seven values of green in dark and six in light, which moves
+   * the contrast ratio under `--text` by 0.15 of a stop.
+   */
+  slip(s, -2.35, -0.72, 0.52, 0.44, 0.13, TABLE_Y + 0.006, T_SHEET)
+  /*
+   * And two more, because two sheets are an accident and three are a table
+   * somebody works at. They are the only thing in this frame that stops the
+   * middle 80% of it being one value, and they can be — the measured card box
+   * is a rectangle, so the whole of it is fair game for an edge as long as the
+   * edge is small enough. Theirs are 6 and 7 values of green.
+   *
+   * One is a shade brighter than `T_PAPER` and one a shade darker, which is
+   * what a stack of paper that has been handled looks like and what a set of
+   * identically toned rectangles does not. All three are laid at different
+   * angles and none of them is square to the sheet under it: two sheets squared
+   * up read as one sheet with a line on it, which is the failure this is for.
+   *
+   * They are disjoint in plan — checked, not assumed — so the 6mm they float
+   * above the sheet can be the same 6mm for all three and nothing z-fights.
+   */
+  slip(s, -1.55, -2.05, 0.4, 0.6, -0.19, TABLE_Y + 0.006, T_PAPER + 0.045)
+  if (props >= 1) slip(s, -2.62, -1.85, 0.26, 0.22, 0.35, TABLE_Y + 0.006, T_SHEET)
   /*
    * **Nothing else stands on this table, and that is the second attempt.**
    *
@@ -4013,12 +4942,28 @@ function interior(s: Solid, tier: Quality) {
   // it. The desk is where they belong: it is in frame for the whole turn and
   // for none of the settled table beat, so they are read as the room being
   // lived in rather than as things standing on the backdrop.
-  box(s, dcx - 0.42, DESK_Y, dcz + 0.34, 0.17, 0.28, 0.17, T_TRIM)
-  if (props >= 1) box(s, dcx + 0.34, DESK_Y, dcz - 0.24, 0.3, 0.12, 0.22, T_TRIM)
+  box(s, dcx - 0.42, DESK_Y, dcz + 0.34, 0.17, 0.28, 0.17, T_TIMBER)
+  if (props >= 1) box(s, dcx + 0.34, DESK_Y, dcz - 0.24, 0.3, 0.12, 0.22, T_TIMBER)
   // A candle on the mantel, which is the other warm anchor and the one thing in
   // the room above waist height that is not structure. It is in frame at the
   // threshold and again through the tilt-up.
-  box(s, FIRE_X + 0.66, MANTEL_Y + MANTEL_T, FP_FZ - 0.26, 0.08, 0.22, 0.08, T_TRIM)
+  box(s, FIRE_X + 0.66, MANTEL_Y + MANTEL_T, FP_FZ - 0.26, 0.08, 0.22, 0.08, T_TIMBER)
+  /*
+   * The kettle, standing on the hearth slab at the east end of it.
+   *
+   * The owner's list is "a rug, a stack of firewood beside the hearth, a
+   * kettle or a pot, shelves, a lamp on the desk, a blanket over a chair back",
+   * and this is the one on it that had no answer anywhere in the room. It is at
+   * x = -0.53, which is 10cm clear of the firebox opening's east jamb at -0.63,
+   * so it stands BESIDE the fire rather than in front of it and no tongue is
+   * ever drawn behind it. 12cm across and 15 tall, which is a kettle.
+   *
+   * It costs eight triangles and it is the brightest small solid in the room:
+   * 55cm from the flame and facing it, so `hearthAt` gives it the whole of
+   * `HEARTH_MAX` on its west face and almost nothing on its east one, which is
+   * a lit object against a dark room rather than a box.
+   */
+  box(s, FIRE_X + 0.72, IN_Y + 0.07, FP_FZ + 0.3, 0.12, 0.15, 0.12, T_TABLE)
   chair(s, 0.62, -1.42, -0.5)
   // North-west: the woodpile beside the hearth, which is the one prop in the
   // room that explains the fire. North-east: a dresser under the east window,
@@ -4026,21 +4971,49 @@ function interior(s: Solid, tier: Quality) {
   // desk. Both are chest height or lower, so neither is ever in the frame the
   // reader reads over — they are what the TURN passes.
   box(s, -2.7, IN_Y, -5.06, 0.78, 0.62, 0.74, T_TABLE)
+  // Two split logs lying across the top of the stack, ends toward the room.
+  // The box under them is a stack of firewood only because it is next to a
+  // fire; these are what actually say so, and they are 16 triangles at the one
+  // place in the room where the light is strongest and the geometry is
+  // otherwise a cube.
+  logAt(s, -2.7, IN_Y + 0.69, -5.2, 0.36, 0.075, T_TIMBER, 0.4)
+  logAt(s, -2.72, IN_Y + 0.69, -4.98, 0.36, 0.075, T_TIMBER, 1.7)
   if (props >= 1) {
     for (let i = 0; i < 3; i++) {
       const ly = IN_Y + 0.12 + i * 0.2
-      panel(s, -2.98 + (i % 2) * 0.3, -2.78 + (i % 2) * 0.3, ly, ly + 0.16, -4.68, T_TRIM)
+      panel(s, -2.98 + (i % 2) * 0.3, -2.78 + (i % 2) * 0.3, ly, ly + 0.16, -4.68, T_TIMBER)
     }
+    /*
+     * A shelf on the north wall, east of the fireplace, with two small things
+     * on it. "Shelves" is on the owner's list and this is the wall that had
+     * nothing at all: the fireplace stops at x = -0.2 and the north-east
+     * quarter above desk height was deliberately left empty because "the camera
+     * is looking west or down for every frame it is in the room".
+     *
+     * That is true from the TURN onward and it is not true at the threshold,
+     * which is the beat this pass had to fix. `ST_THRESH` aims at (-1.05, 1.5,
+     * -5.5) with a 54-degree frame from 5m out, so the north wall is in shot
+     * from x = -3.9 to +1.4 — and everything east of the fireplace was a bare
+     * dark rectangle filling the right third of the first frame of the room.
+     * Six triangles of shelf and sixteen of what is on it.
+     */
+    lie(s, -0.05, 1.15, -5.92, -5.66, 1.5, T_TIMBER)
+    quad(s, [-0.05, 1.46, -5.66], [1.15, 1.46, -5.66], [1.15, 1.5, -5.66], [-0.05, 1.5, -5.66], T_TIMBER, [0, 0, 1])
+    box(s, 0.18, 1.5, -5.79, 0.16, 0.19, 0.16, T_TABLE)
+    box(s, 0.74, 1.5, -5.79, 0.34, 0.1, 0.2, T_TIMBER)
     box(s, 2.42, IN_Y, -4.72, 1.2, 0.86, 0.5, T_TABLE)
     for (let i = 0; i < 2; i++) {
-      panel(s, 1.94, 2.9, IN_Y + 0.26 + i * 0.3, IN_Y + 0.3 + i * 0.3, -4.46, T_TRIM)
+      panel(s, 1.94, 2.9, IN_Y + 0.26 + i * 0.3, IN_Y + 0.3 + i * 0.3, -4.46, T_TIMBER)
     }
   }
-  // The rug. Two triangles, and it does more per triangle than anything else in
-  // the room: it is the one thing between the hearth and the table that is
-  // neither floor nor furniture, and it lands exactly where the camera's own
-  // pan crosses the floor on the way from one to the other.
-  lie(s, -2.9, -0.2, -4.5, -2.7, IN_Y + 0.008, T_RUG)
+  // The rug, cut 3 by 2 for the same reason the floor is: it lies between the
+  // hearth and the table, which is exactly the stretch the fire's falloff is
+  // steepest over, and a rug that took ONE value across 2.7m would be a flat
+  // patch sitting on a graded floor — the one place the subdivision would be
+  // visible by its absence. It does more per triangle than anything else in the
+  // room: the one thing between hearth and table that is neither floor nor
+  // furniture, landing exactly where the camera's pan crosses the floor.
+  field(s, -2.9, -0.2, -4.5, -2.7, IN_Y + 0.008, T_RUG, 3, 2)
 
   s.hearth = false
 }
@@ -4048,9 +5021,15 @@ function interior(s: Solid, tier: Quality) {
 /**
  * The fireplace, set into the north wall.
  *
- * Six pieces: a surround standing proud of the wall with the firebox cut
- * through it, the firebox's own five inward-facing surfaces, a mantel beam, the
- * breast rising off it to the ceiling, and a hearth slab on the floor in front.
+ * Seven pieces: a surround standing proud of the wall with the firebox cut
+ * through it, the firebox's own five inward-facing surfaces, THREE LOGS burning
+ * in it, a mantel beam, the breast rising off it to the ceiling, and a hearth
+ * slab on the floor in front.
+ *
+ * The firebox is only reachable at all because `interior` cuts the north wall
+ * round its opening. It did not, for as long as this fireplace has existed, and
+ * the note there has the measurement — it is the single largest reason the fire
+ * read as a flat shape.
  *
  * The breast is capped along the ROOF's own slope rather than square, and that
  * is not decoration: `ceilAt` is a straight line in x and the breast is 1.6
@@ -4102,8 +5081,42 @@ function hearth(s: Solid) {
   quad(s, [ol, FP_OPEN_Y1, FP_BZ], [or_, FP_OPEN_Y1, FP_BZ], [or_, FP_OPEN_Y1, FP_FZ], [ol, FP_OPEN_Y1, FP_FZ], T_HEARTH, [0, -1, 0])
   lie(s, ol, or_, FP_BZ, FP_FZ, FP_OPEN_Y0, T_HEARTH)
   s.hearth = true
+  /*
+   * ── THE LOG BED ──────────────────────────────────────────────────────────
+   *
+   * Three split logs in the firebox, and the exemption above stops at them.
+   *
+   * "a hot core and a cooler tip, embers if they are cheap, and a LOG BED under
+   * it" — this is the log bed, and it is the one thing in this file that has to
+   * be both solid and lit. The firebox's five faces are exempted from
+   * `hearthAt` because soot reflects nothing; a burning log is not soot, it is
+   * the fuel, and it is the brightest solid object in the room. At 30cm from
+   * `HEARTH_P` and facing it these take the whole of `HEARTH_MAX`, which is the
+   * one place in the room that cap is actually reached and the reason it
+   * exists.
+   *
+   * `T_LOG` at 0.055 is a hair off the firebox's own 0.04 — charred wood, not
+   * pale timber — so what makes them read is the fire's light on them and
+   * nothing else. Two lying across the back and one rolled forward, which is
+   * how a fire that has been burning a while ends up. 24 triangles, and they
+   * are the difference between flames standing on a black floor and flames
+   * standing on something burning.
+   *
+   * **Two behind the flame plane and one low in front of it, and that split is
+   * the whole placement.** The tongues are billboarded through `FIRE_Z`, so a
+   * log at FIRE_Z is a log THROUGH the fire: written with all three near the
+   * plane, the render came back with a dark slab lying across the middle of
+   * every tongue and the fire's brightest row — its root — hidden behind it
+   * entirely. The two at FIRE_Z − 0.15 are the mass the flames are seen
+   * against, and the one at + 0.15 tops out at FIRE_Y + 0.13, which is the
+   * bottom fifth of a 66cm tongue: enough that the fire is standing ON
+   * something, not enough to cover what makes it bright.
+   */
+  logAt(s, FIRE_X - 0.06, FIRE_Y + 0.06, FIRE_Z - 0.15, 0.34, 0.075, T_LOG, 0.35)
+  logAt(s, FIRE_X - 0.02, FIRE_Y + 0.17, FIRE_Z - 0.19, 0.26, 0.062, T_LOG, 0.9)
+  logAt(s, FIRE_X + 0.04, FIRE_Y + 0.06, FIRE_Z + 0.15, 0.31, 0.07, T_LOG, 1.9)
   // the mantel, projecting 10cm past the surround, and read from underneath
-  box(s, FIRE_X, MANTEL_Y, (IN_Z1 + FP_FZ - 0.1) / 2, FP_HW * 2 + 0.26, MANTEL_T, FP_FZ - 0.1 - IN_Z1, T_TRIM, true)
+  box(s, FIRE_X, MANTEL_Y, (IN_Z1 + FP_FZ - 0.1) / 2, FP_HW * 2 + 0.26, MANTEL_T, FP_FZ - 0.1 - IN_Z1, T_TIMBER, true)
   // the breast, capped on the roof's slope
   const by = MANTEL_Y + MANTEL_T
   const bl = FIRE_X - 0.8
@@ -4153,6 +5166,32 @@ function chair(s: Solid, cx: number, cz: number, face: number) {
   // radius back along the chair's own facing, so turning the chair turns it.
   const [bx, bz] = at(0, -0.22)
   box(s, bx, seat + 0.05, bz, 0.44, 0.42, 0.05, T_TABLE, true)
+  /*
+   * A blanket over that back — the last item on the owner's list, and four
+   * triangles.
+   *
+   * It is drawn as two quads hanging off the top rail rather than as a box,
+   * because a blanket has no thickness worth two more faces and because the
+   * two sides want different tones: the room-facing one takes `T_RUG` at the
+   * chair's own angle and the far one is turned away from both lights. It hangs
+   * 26cm on the seat side and 18 on the other, which is a cloth thrown over a
+   * chair rather than folded on one.
+   *
+   * `T_RUG` and not a tone of its own: it and the rug are the two soft things
+   * in the room and there is nothing to be gained by making them disagree.
+   */
+  const top = seat + 0.05 + 0.42
+  const drape = (v: number, h: number, out: V) => {
+    const [ax, az] = at(-0.19, v)
+    const [cx2, cz2] = at(0.19, v)
+    quad(s, [ax, top - h, az], [cx2, top - h, cz2], [cx2, top + 0.02, cz2], [ax, top + 0.02, az], T_RUG, out)
+  }
+  // The chair's own +v direction in world is (-sin, 0, cos) — see `at`. The
+  // seat-side drape faces that way and the one behind the back faces the other,
+  // and stating it rather than trusting vertex order is `tri`'s whole rule: a
+  // single quad wound the wrong way is not a dark quad, it is no quad at all.
+  drape(-0.16, 0.26, [-sn, 0, c])
+  drape(-0.28, 0.18, [sn, 0, -c])
 }
 
 /**
@@ -4649,14 +5688,16 @@ const yPlane = (y: number): Plane => (u, v) => [u, y, v]
  * and the lamps down, not off" is one number, `ROLES.*.fire`, and it can only
  * stay one number if they share a material.
  *
- * **The table's wash is the one number in here that is a legibility decision.**
- * At 0.30, which is where the floor's sits, the paper picks up a visible
- * gradient across exactly the area the project cards stand on — light, but a
- * gradient, and a gradient under card text is the thing the paper exists to
- * prevent. At 0.13, measured across the settled frame, the paper runs rgb
- * (99, 101, 107) at its far corner to (108, 108, 109) at its warm one: a nine
- * value lift over the whole width of the shot, which is a light source and not
- * an edge.
+ * **The table's light is the one thing in here that is a legibility decision,
+ * and it is a bare four-alpha `pushFade` rather than a `wash`.** A wash is a
+ * flat core with a fade round it, so what it put on the paper was a uniform
+ * tint: measured across the settled frame, rgb (109,109,111) at the left edge,
+ * (109,109,111) in the middle and (113,113,117) at the right — four values
+ * across 1440px, which is why that beat read as a featureless grey field. The
+ * fade runs (92,97,106) at the corner furthest from the hearth to (107,107,110)
+ * at the one nearest it, and its peak is a value UNDER where the flat wash sat.
+ * Its own call site carries the four numbers and the contrast arithmetic that
+ * caps them at 0.15.
  */
 function buildFireStatic(): Glow {
   const g: Glow = { pos: [], rgba: [] }
@@ -4706,10 +5747,74 @@ function buildFireStatic(): Glow {
    * the wall that is left.
    */
   wash(g, xPlane(-IN_X + 0.014), [1, 0, 0], -5.0, 1.45, 0.9, 0.9, 0.24, 0.2)
-  // The table, at a fifth of the floor's alpha, and sized so `halo`'s outer
-  // edge lands on the table's own edges — see the note above for the alpha and
-  // the west wall for why an outer edge that overshoots is not a small thing.
-  wash(g, yPlane(TABLE_Y + 0.014), [0, 1, 0], -2.0, -1.5, 0.8, 0.9, 0.6, 0.13)
+  /*
+   * ── THE TABLE ────────────────────────────────────────────────────────────
+   *
+   * One quad over the whole table top, brightest at the corner nearest the
+   * hearth and falling away diagonally. It replaces a symmetric `wash` at 0.13
+   * and it is the single change to the LIGHT that turns the settled table beat
+   * from a field into a place; the sheet's own rim and shadow in `interior` are
+   * the change to the geometry.
+   *
+   * **The frame's horizontal axis is z, and north is screen RIGHT.** The camera
+   * at `ST_TABLE` looks due west, so its screen-right projected on the ground is
+   * (0, 0, -1). That means this reads as light entering from the right of
+   * the frame and falling away to the left, which is where the fire actually is
+   * — it is 3.0m off the table's north-east corner and 6.0m off its south-west
+   * one.
+   *
+   * **0.15 and not more, and the ceiling is contrast rather than taste.**
+   * `--text` at #f2f2f5 has a relative luminance of 0.879, so a 4.5:1 floor puts
+   * the brightest pixel of this field at L = 0.156, which is about rgb 109. The
+   * paper alone measures (92, 97, 106) and the old flat wash took the whole
+   * field to (109, 109, 111) — at the limit everywhere, with nothing left to
+   * spend on a gradient. At 0.15 the same field runs (92, 97, 106) at the south
+   * end to (107, 107, 110) at the north: a seventeen-value fall across the
+   * frame, the peak a value UNDER where the flat wash sat, and the whole of it
+   * in the direction the room's one light source is.
+   *
+   * Its four edges: north on the table's own north edge, south at zero alpha,
+   * and east and west exactly on `TABLE_X0` / `TABLE_X1`, where the table top
+   * ends and the eye already has a step to look at.
+   */
+  /*
+   * **It is a raw `pushFade` and not a `wash`, and the table beat is why.**
+   * `wash` is a flat core with `halo`'s frame round it, so its middle is ONE
+   * alpha — which is exactly what put a uniform tint over the whole paper and
+   * left `r3-D-3200.png` reading as "a featureless grey wash": measured across
+   * that frame, rgb (109,109,111) at the left edge, (109,109,111) in the middle
+   * and (113,113,117) at the right. Four values across 1440px is not a light
+   * source in a room, it is a fill.
+   *
+   * This used to be a `ramp` — one alpha along the north edge falling to zero
+   * at the south — and `ramp` has gone with it, because the table was its only
+   * caller. A ramp falls along one axis, so the table was
+   * lit as though the fire were a wall of light at the north end of it; the
+   * hearth is a point 3.0m off the table's north-EAST corner and 6.0m off its
+   * south-west one, and a quad whose corners carry their own alphas says so for
+   * the same two triangles.
+   *
+   * The four numbers are `1 / (1 + d^2 * HEARTH_FALL)` at the four corners,
+   * scaled so the brightest is the 0.15 the contrast ceiling below allows:
+   * NE 0.150, NW 0.122, SE 0.055, SW 0.051. The peak has not moved, so neither
+   * has the arithmetic that caps it — what has changed is that the fall is now
+   * diagonal, across the frame rather than along it.
+   *
+   * The south end is no longer at zero, and that is deliberate rather than
+   * sloppy: at 0.05 its edge lands exactly on the table's own south edge, where
+   * the table meets the south wall and the geometry already has a step. See
+   * `ramp` for why an unfaded edge is only allowed in that one situation.
+   */
+  pushFade(
+    g,
+    [
+      [[TABLE_X0, TABLE_Y + 0.014, TABLE_Z1], 0.122],
+      [[TABLE_X1, TABLE_Y + 0.014, TABLE_Z1], 0.15],
+      [[TABLE_X1, TABLE_Y + 0.014, TABLE_Z0], 0.055],
+      [[TABLE_X0, TABLE_Y + 0.014, TABLE_Z0], 0.051],
+    ],
+    [0, 1, 0],
+  )
   // The lantern on the desk: a small bright core facing the room, and a pool of
   // its own on the desk under it. It is the only warm in the south-east corner
   // and it is what the turn sweeps past on its way to the table.
@@ -4766,6 +5871,43 @@ const B_DOOR = 0.62
 const B_THRESH = 0.9
 const TABLE_HOLD = 0.8
 const WINDOW_HOLD = 0.8
+/**
+ * How much of the THRESHOLD beat is spent getting from the door station to the
+ * door mouth, and it is the number this pass added to kill "the camera is not
+ * inside the cabin, it is outside a room-shaped box".
+ *
+ * Three critics rendered the walk and all three led with that sentence about
+ * `v4-D-2400.png`. Measured on the live page at 1440x900, that frame is walk
+ * 0.2765 — 35% of the way through the threshold — and the camera is at z =
+ * +1.62, which is 1.56m OUTSIDE the south wall. It is not a box; it is a
+ * doorway, seen from the porch, and the reason it reads as a box is arithmetic:
+ * at 1.56m off a 1.2m opening the doorway spans 73% of the frame's width, so
+ * the picture is a thin band of unlit wall, a bright room, and a thin band of
+ * unlit wall. Sampled on the canvas itself at that frame, the left and right
+ * frame edges are rgb (50,57,68) at EVERY sample, top to bottom — a dead flat
+ * field 600px wide with no facet in it — against an interior at 100 to 141.
+ *
+ * **The box window is a function of distance and it is narrow.** The test used
+ * is the canvas itself: sample the right-hand frame edge at 48 points and ask
+ * whether every one of them is the same value, which is what "a wall that reads
+ * as page" means. Swept in 15px steps at 1440x900, that is true for camera z
+ * between 2.25 and 0.86 and false either side of it — beyond 2.25 the picture
+ * is a lit door in a wall, which is the loved approach, and inside 0.86 the
+ * doorway has overflowed the frame and the picture is the room.
+ *
+ * The old spline spent as long as it possibly could in that band. Both sides of
+ * `KNOT[0]` are smoothstepped, so the camera decelerated to a dead stop AT the
+ * door station and accelerated away from it — its slowest scroll fell exactly
+ * where the box lives. Converting the z band to the threshold's own parameter:
+ * old, r 0.184 to 0.512, which is 157px of scroll; new, r 0.072 to 0.232, which
+ * is 77px. Half, and the half that is left is the doorway growing to swallow
+ * the frame rather than a rectangle sitting still in the middle of it.
+ *
+ * The stop at the door station is kept, because that frame is the one the
+ * approach was composed to arrive at, and `ST_MOUTH` is a station rather than a
+ * bent ease so the camera still arrives at rest at both ends of both legs.
+ */
+const B_MOUTH = 0.3
 
 /**
  * How much of the APPROACH is the existing orbit, before the final push to the
@@ -4939,6 +6081,33 @@ function restFor(marks: WalkProgress) {
 const ST_DOOR: Station = { p: [0.34, 1.98, 2.55], l: [-0.15, 1.78, -3.2] }
 
 /**
+ * THE DOOR MOUTH. Half a metre off the opening, on the same line, and the whole
+ * of it is SOLVED rather than composed: it is the nearest station on the way in
+ * at which the doorway no longer has a visible edge anywhere in the frame.
+ *
+ * The condition is that all four sides of the opening fall outside the frustum,
+ * at every frame this site supports. The binding one is the near jamb — the
+ * doorway is x -0.6 to 0.6 and the entry line is x = 0.34, so the +x jamb is
+ * only 26cm off the axis while the -x jamb is 94cm — and the aperture that
+ * counts is the INNER skin at `IN_Z0`, because it is the further of the two and
+ * therefore subtends the less.
+ *
+ * With `d` the distance to that skin and `t` the aim's own azimuth off -z,
+ * the jamb is outside the frame when `atan(0.26 / d) >= hHalf - t`. `fovFor`
+ * clamps the vertical angle at `FOV_MAX`, so the widest horizontal half-angle
+ * this site can produce is on the SHORTEST viewport rather than the narrowest:
+ * `atan(tan(13 deg) * aspect)`, which is 34.7 degrees at 3:1 and 36.5 at 3.2:1.
+ * This station's aim gives t = 10.6 degrees, so at 3.2:1 the jamb clears the
+ * frame for d <= 0.535 and this is at d = 0.50. The other three are slack by a
+ * wide margin at the same d: the far jamb needs 0.92m, the head 1.17m at a
+ * portrait 30-degree half-frame, the sill 2.31m.
+ *
+ * `y = 1.94` keeps the standing eye on the top step. The camera passes the door
+ * leaf's own plane 35cm clear of it, against a near plane of 0.14.
+ */
+const ST_MOUTH: Station = { p: [0.34, 1.94, 0.56], l: [-0.58, 1.66, -4.35] }
+
+/**
  * THE THRESHOLD. Inside, a step past the wall, and the first thing lit is the
  * fire — which is what the aim is on: the firebox's own opening, at
  * (FIRE_X, 1.06, -5.7).
@@ -4967,16 +6136,61 @@ const ST_THRESH: Station = { p: [0.28, 2.05, -0.72], l: [-1.05, 1.5, -5.5] }
  * leaving its top, the beams moving north to -2.45 — came out of that one
  * render. The measurement is the thing to re-run if any of them move again;
  * `internal/checklists/` has the shot's own spec and this file has the numbers.
+ *
+ * ── and it has moved 12% back along its own sightline ────────────────────
+ *
+ * The eye was at 2.94 and is at 3.15, scaled about the aim by `TABLE_BACK`, and
+ * that is a legibility number spent on the OTHER half of the same requirement.
+ * At 1440x900 the old station framed 0.3% non-paper corner to corner, which is
+ * a picture of a sheet of paper and nothing else: `r3-D-3200.png` is a flat
+ * field with no table, no room and no scale, and the brief's answer to it is
+ * that the field "must be legible AND it must read as a place".
+ *
+ * 1.12 is the largest back-off the `.shell` box survives, and it is derived
+ * rather than tried. The cards occupy the middle 78% by 88% of the frame, and a
+ * station scaled by k covers k times the footprint, so the card area covers
+ * 0.88k of what the old frame covered vertically — the binding axis. At k =
+ * 1.12 that is 0.986, which keeps the whole card area inside the paper with 1.4%
+ * to spare, and it puts the table's own edges into the outer margin where the
+ * frame has room for them. Re-measured on the bare backdrop at 1440x900: 0.0%
+ * non-paper across the card area, 14.6% across the whole frame, all of it in
+ * the outer 11% at the sides and the outer 6% top and bottom.
+ *
+ * The phone case survives it because the two pulls MULTIPLY: `inPullFor`
+ * returns 0.55 on a 390x780 slice and 0.55 x 1.12 is 0.616, and the table in
+ * `IN_PULL_MIN`'s own note reads 0% of the card area from 0.60 in.
  */
-const ST_TABLE: Station = { p: [-0.72, 2.94, -1.46], l: [-1.78, 1.18, -1.46] }
+const TABLE_BACK = 1.12
+/**
+ * Scale a station about the point it is aimed at. Both table stations are
+ * written at the numbers the 44,000-station solve produced and then pulled by
+ * `TABLE_BACK` here, rather than being rewritten at the pulled values: the
+ * solved pair is the thing anybody re-running that measurement needs to see,
+ * and a station typed at its post-pull value is a number with no derivation.
+ */
+const backOff = (p: V, l: V, k: number): V => [
+  l[0] + (p[0] - l[0]) * k,
+  l[1] + (p[1] - l[1]) * k,
+  l[2] + (p[2] - l[2]) * k,
+]
+const TABLE_AIM: V = [-1.78, 1.18, -1.46]
+const ST_TABLE: Station = { p: backOff([-0.72, 2.94, -1.46], TABLE_AIM, TABLE_BACK), l: TABLE_AIM }
 
 /**
  * The same beat, at the end of its hold. It drifts 12cm and turns 4 degrees
  * across a fifth of the page, which is under a pixel a second at reading speed
  * — enough that the frame is not frozen, far too little to be a move. "Nearly
  * still" is the brief: this is a backdrop and the cards are the subject.
+ *
+ * Scaled about its own aim by the same `TABLE_BACK`, so the hold is still a
+ * hold: a pull applied to one end of it and not the other would turn a 12cm
+ * drift into a 37cm dolly.
  */
-const ST_TABLE_END: Station = { p: [-0.78, 2.9, -1.36], l: [-1.83, 1.18, -1.58] }
+const TABLE_END_AIM: V = [-1.83, 1.18, -1.58]
+const ST_TABLE_END: Station = {
+  p: backOff([-0.78, 2.9, -1.36], TABLE_END_AIM, TABLE_BACK),
+  l: TABLE_END_AIM,
+}
 
 /**
  * THE WINDOW. Settled on the west window, which is 1.66 wide and 1.26 tall
@@ -5131,8 +6345,18 @@ function shotAt(t: number, framePull: number, inPull: number, e: V, l: V) {
     return
   }
   if (t < KNOT[1]) {
-    // THE THRESHOLD. Through the doorway; the room opens.
-    lerpStation(ST_DOOR, ST_THRESH, smooth((t - KNOT[0]) / (KNOT[1] - KNOT[0])), e, l)
+    // THE THRESHOLD, in two legs. The first is the run from the door station
+    // into the mouth of the doorway and it takes `B_MOUTH` of the beat; the
+    // second is the walk on into the room. Both smoothstepped, so the camera
+    // still arrives at each station and leaves it with no velocity — the mouth
+    // is a station the shot passes through rather than an ease that has been
+    // bent. `B_MOUTH` has the measurement and what it is worth.
+    const r = (t - KNOT[0]) / (KNOT[1] - KNOT[0])
+    if (r < B_MOUTH) {
+      lerpStation(ST_DOOR, ST_MOUTH, smooth(r / B_MOUTH), e, l)
+    } else {
+      lerpStation(ST_MOUTH, ST_THRESH, smooth((r - B_MOUTH) / (1 - B_MOUTH)), e, l)
+    }
   } else if (t < KNOT[2]) {
     // THE TURN. Left off the door axis, arriving settled exactly at #apps.
     lerpStation(ST_THRESH, ST_TABLE, smooth((t - KNOT[1]) / (KNOT[2] - KNOT[1])), e, l)
@@ -5244,7 +6468,14 @@ const SMOKE_WIND_X = 6.6
 const SMOKE_WIND_Z = 2.6
 const SMOKE_R0 = 0.34
 const SMOKE_R1 = 3.1
-/** Rim points on a puff, which is also its triangle count. See `layoutSmoke`. */
+/**
+ * Rim points on a puff, which is also its triangle count. See `layoutSmoke`.
+ *
+ * The FIRE's ember bed reads it too — it is the same fan built the same way,
+ * for the same reason (a shape with no edge anywhere), and giving it a second
+ * constant of its own would be one number kept in two places that must agree
+ * about nothing.
+ */
 const SMOKE_TRIS = 5
 
 const SNOW_HX = 13

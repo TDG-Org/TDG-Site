@@ -74,9 +74,45 @@ export function useReveal<T extends HTMLElement>(kind: RevealKind, index = 0) {
     const el = ref.current
     if (!el) return
 
+    /*
+     * The stagger is spent INSIDE the runway, not added to the end of it.
+     *
+     * This used to be `clamp01(raw - index * STAGGER)`, which subtracts a flat
+     * amount and therefore pushes each later element's finish line further DOWN
+     * the page: at index 3 the raw term has to reach 1.42 before the element is
+     * done, which needs the element's top 0.42 of a runway ABOVE the runway's
+     * own end. That is free while the reader is scrolling — there is always more
+     * page below — and it is not free when the page ARRIVES somewhere.
+     *
+     * Clicking Apps in the nav lands `#apps` at the top of the viewport with the
+     * card row already on screen and nothing left below it to scroll. `progress`
+     * is monotonic (the tick returns early on `p <= progress`), so whatever the
+     * stagger subtracted on that first frame is where the element stays. Measured
+     * nine seconds after a real nav click at 1440x900: the four Apps cards sat at
+     * opacity 0.998 / 0.982 / 0.928 / 0.797 with their tops at 465 / 467 / 472 /
+     * 486 — a row of four cards at four different opacities and four different
+     * heights, which is rule 6 broken in the most visible place on the site. The
+     * same click on Tools left three cards at 0.944 / 0.858 / 0.710. Worse, every
+     * one of them kept `data-revealing`, so `paint()` never handed `transform`
+     * back and `useTilt` was locked out for the rest of the session.
+     *
+     * Dividing by `1 - index * STAGGER` renormalises the remainder over what is
+     * left of the runway instead. Every index still STARTS later — index 3 waits
+     * until the raw term passes 0.42 — and every index now FINISHES at the same
+     * place, the moment the element's top reaches `vh * END`. A later card ramps
+     * faster over a shorter distance, which reads as the row catching up with
+     * itself rather than as four elements on four different schedules.
+     *
+     * Ceiling on the divisor because a large enough index would otherwise divide
+     * by zero or by a negative: at STAGGER 0.14 that is index 7, and Origin draws
+     * seven chapter rows. 0.2 leaves the last of them a fifth of the runway to
+     * cross, which is short but is motion; below that it would be a snap.
+     */
     const progressFor = (top: number, vh: number) => {
       const start = vh * START
-      return clamp01((start - top) / (start - vh * END) - index * STAGGER)
+      const raw = (start - top) / (start - vh * END)
+      const lead = Math.min(index * STAGGER, 0.8)
+      return clamp01((raw - lead) / (1 - lead))
     }
 
     el.style.transition = 'none'

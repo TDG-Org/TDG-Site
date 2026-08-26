@@ -172,7 +172,7 @@ const WEATHER_LIFT = 0.135
  * bigger and hangs far further below the frame (Hero.css), and — the part that
  * settles it — a layer that moves DOWN while the page moves up can never bring
  * its own cut base up at all. The binding position for the base is scroll
- * zero, and at scroll zero the base is 342px below the floor at 1440x900.
+ * zero, and at scroll zero the base is 322px below the floor at 1440x900.
  *
  * What that buys: relative to the main ridge the pine now travels
  * 0.22 + 0.09 = 0.31vh, because a layer moving against the page adds to its
@@ -191,10 +191,11 @@ const PINE_LIFT = -0.09
  * 0.46 was the previous pass's answer and it left the moon on screen for the
  * whole pin. That is the defect in `r2-D-0700`, and the diagnosis in the brief
  * — "the ridge art is drawn at --art-far, so it is translucent, and the moon
- * behind it shows through" — is not what is happening. Measured at 1440x900,
- * scroll 700: the disc spans y 307-494 and the near range's highest ink is at
- * y 504, so this section's own mountains clear the disc by 10px. Hiding
- * `#origin` alone leaves a clean opaque moon.
+ * behind it shows through" — is not what is happening. This section's own
+ * mountains clear the disc completely at scroll 700: the near range's highest
+ * ink is at y 743 at rest and the whole range travels UP at 0.22vh against the
+ * moon's 0.90, so the two only ever separate. Hiding `#origin` alone leaves a
+ * clean opaque moon.
  *
  * What crosses the disc is #ORIGIN, arriving. Origin opens transparent and
  * ramps to its band over `--origin-dissolve` (Contract D), and its snow drift
@@ -206,17 +207,29 @@ const PINE_LIFT = -0.09
  * It cannot be outrun either — Origin travels at page rate and this is a
  * fraction of a pin — but it CAN be got out of the way of. At 0.90 the disc's
  * bottom limb is above Origin's crest at every scroll position from the top of
- * the page onward: crest y = 1170 - s - 70 against disc bottom y = 762 - 810 x
- * smooth(s/1170), which reads 400 vs 240 at s=700, 300 vs 144 at s=800 and 200
- * vs 62 at s=900, and the disc is off the top of the frame by s=1000. The two
- * never meet. Fading the disc instead would have made it worse rather than
- * better: a translucent crest over a half-opacity moon is MORE glass, not less.
+ * the page onward: crest y = 1170 - s - 70 against disc bottom y = 761 - 810 x
+ * smooth(s/1170), which reads 400 vs 239 at s=700, 300 vs 143 at s=800 and 200
+ * vs 60 at s=900, and the disc is off the top of the frame by s=1000. The two
+ * never meet. (761 rather than 762 is the disc's new resting bottom — the moon
+ * moved up 16px and grew 29px in diameter in the same edit, and the two nearly
+ * cancel at its lower limb. Hero.css's --moon-drop block has both.) Fading the
+ * disc instead would have made it worse rather than better: a translucent crest
+ * over a half-opacity moon is MORE glass, not less.
  *
  * The drift went to 0.44 with it so the exit keeps its diagonal rather than
- * becoming a vertical launch. The binding check on the drift is the tagline,
- * whose longest wrap ends at x 608: the disc's left limb rests at 654 and is
- * still at 627 where the copy is at half opacity (s=185), so the two never
- * overlap while anybody can read them.
+ * becoming a vertical launch. The binding check on the drift is the TAGLINE,
+ * whose box is 452px wide from x 156 and can therefore reach x 608 at 1440x900.
+ * The disc's left limb rests at 626 — 18px clear — and the drift walks it left
+ * from there, so the check is not "do they overlap" but "has the copy gone by
+ * the time they do":
+ *
+ *   s   0   limb 626   tagline opacity 1.00
+ *   s 160   limb 606   tagline opacity 0.43   ← the limb crosses x 608 here
+ *   s 217   limb 591   tagline opacity 0      ← gone (1 - out x 1.5 reaches 0)
+ *
+ * So the disc enters the tagline's box only after the words are under half
+ * opacity and is 15px into it when they leave. The wordmark and the CTA row are
+ * both further left than the tagline and are never a constraint.
  */
 const MOON_LIFT = 0.9
 const MOON_DRIFT = 0.44
@@ -263,10 +276,11 @@ const COPY_BLUR = 6.5
  * the frame, where the old pair managed 26 - 7 = 19px. The spread was right
  * before and the magnitudes were timid.
  *
- * 58px is a tenth of the pine's own width, which is the ceiling: past that the
- * tree starts to read as sliding across the frame rather than as being nearer
- * than it. The crop is 223px at 1440x900, so even the full amplitude cannot
- * pull the tree's right edge into the frame. */
+ * 58px is a twelfth of the pine's own width, which is the ceiling: past that
+ * the tree starts to read as sliding across the frame rather than as being
+ * nearer than it. The crop is 202px at 1440x900 — it shrank when the tree was
+ * widened and un-cropped this pass — so even the full amplitude cannot pull the
+ * tree's right edge into the frame. */
 const PINE_POINT_X = 58
 const PINE_POINT_Y = 27
 const MOON_POINT_X = -13
@@ -562,20 +576,27 @@ export function Hero() {
 
           The moon is BEHIND the ridges and in front of the sky, which is what
           "resting on the horizon" has to mean. `--moon-bite` in Hero.css says
-          how much of the disc the ridge takes and it is 0.18 — a crescent at
-          the bottom, where the ridge's ink is thickest and darkest — because
-          the ranges are drawn at `--art-far` (0.5 dark, 0.36 light) and
-          anything behind them shows through. With the disc's centre on the
-          skyline, which is where it used to be, the mountains' facets were
-          visible across the whole lower half of the disc.
+          how much of the disc the ridge takes and it is 0.08 — a sliver at the
+          bottom, where the ridge's ink is thickest and darkest — because the
+          ranges are drawn at `--art-far` (0.5 dark, 0.36 light) and anything
+          behind them shows through. With the disc's centre on the skyline,
+          which is where it used to be, the mountains' facets were visible
+          across the whole lower half of the disc.
+
+          The number went DOWN and the cut got DEEPER, which is the whole of
+          this pass's answer to "re-check that the ridge still cuts its lower
+          limb". The old 0.18 was a fraction of a skyline computed the wrong
+          way; measured on the rendered frame it was worth 4px in dark and a
+          moon floating 35px clear of the range in light. Hero.css's
+          --moon-drop block carries the diff-the-render method and the table.
 
           **A second frosted ball was reported this pass and it is NOT this
           one, and the difference is worth writing down because the obvious
           reading is wrong.** `r2-D-0700` shows a translucent crest across the
-          disc, and it is not this section's ridge: measured at 1440x900 at
-          that scroll, the disc spans y 307-494 and the near range's highest
-          ink is at y 504, so it clears by 10px, and hiding `#origin` alone
-          leaves a clean opaque moon. What crosses the disc there is ORIGIN,
+          disc, and it is not this section's ridge: at scroll 700 the disc
+          spans y 22-238 at 1440x900 and this range's highest ink is at y 743
+          before it has lifted at all, so the two are most of a screen apart,
+          and hiding `#origin` alone leaves a clean opaque moon. What crosses the disc there is ORIGIN,
           arriving — its snow drift escaping its own clip box while the section
           is still ramping up from transparent. Nothing in this file can
           occlude it (stage z 0, #origin z 4, and that order is what lets the

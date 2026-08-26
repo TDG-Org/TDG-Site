@@ -8,7 +8,7 @@ import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
-import { ThemedArt } from './scene/ThemedArt'
+import { StillArt, ThemedArt } from './scene/ThemedArt'
 import './Tools.css'
 
 /*
@@ -197,14 +197,25 @@ export function Tools() {
           The camera has settled on the west window and the small tools are
           read against its light; then it pushes toward the glass and the frame
           washes out into the outside. THIS is what is outside: a stone
-          footbridge over water, a near shore of boulders, and the retro-neon
-          band beyond them, handing the page to `#building`.
+          footbridge over water, a bench on the far bank, a near shore of
+          boulders with reeds at its waterline, and the retro-neon band beyond
+          them, handing the page to `#building`.
 
           That is the whole reason this floor survived the pass that deleted
           `#apps`' floor and both of this section's own boundary layers. It is
           not a landscape drawn across an interior shot — it is the interior
           shot ending, and the last thing the reader sees the camera looking at
           is the thing they then scroll into.
+
+          **Until this pass that sentence was a claim rather than a fact.** The
+          canvas never faded: the pin's last position is the bottom 100svh of
+          the walk and this band is the bottom --tools-scene of it, so the
+          bridge, the boulders and `#building`'s own wayfinding post were being
+          painted over the cabin's ceiling and wall planes for the whole of the
+          join. `.walk__stage`'s mask now ends on a transparent band exactly
+          this deep — Walk.css carries the arithmetic — so the room is gone
+          before any of this is drawn, and it is gone by geometry rather than by
+          a number that has to be kept in step with a section's height.
 
           The bridge is drawn from a distance and in three-quarter view: you
           can see the whole arch and the water under it, so it is the structure
@@ -228,9 +239,13 @@ export function Tools() {
           `.section`'s own `overflow: hidden` and this is a plain wrapper now.
           `.origin__clip` and `.apps__clip` are the same box either side. */}
       <div className="tools__clip" aria-hidden="true">
-        {/* retro-neon band, clipped to the bottom so it can never touch a card */}
-        <div className="tools__sun" />
-        <div className="tools__sun-ring" />
+        {/* The retro-neon band, clipped to the bottom so it can never touch a
+            card. The `tools__sun` disc and its breathing ring used to open this
+            list and are deleted: two hard-edged masks made them, and in the
+            renders of this pass they read as a small striped semicircle
+            floating in the mist rather than as a sun on a horizon. Tools.css
+            has the frame it was caught in and why the grid and the horizon
+            stay. */}
         <div className="tools__road">
           <div className="tools__road-grid">
             <div className="tools__road-run" />
@@ -241,12 +256,36 @@ export function Tools() {
         <div ref={blob} className="blob tools__blob" />
 
         <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={-0.05} />
+        {/* The bench, on the far bank beside the bridge. It is the piece the
+            site owner asked for by name — "maybe instead of a tree in that
+            section and in that corner, have the fence! or the park seat!" — and
+            it was placed on `#apps`' floor once and deleted with that floor
+            when the shot moved indoors. Right deletion, wrong prop: a bench on
+            the floorboards of a room is a mistake and a bench on the bank you
+            step out onto is what was asked for.
+
+            `StillArt`, so it does not drift. A bench is a thing standing on the
+            ground and ground does not drift — the identical argument Origin
+            makes about the lamppost's y axis — and at the bridge's -0.05 it
+            would swing 25px against 77px of visible bench, which is a bench
+            floating off its own bank. Tools.css has the ink arithmetic that
+            plants its feet in `.tools__shore`'s first rows at every width.
+
+            Drawn BEFORE the spray, which is what puts it on the far side of the
+            haze. */}
+        <StillArt art="props/park-bench" className="tools__bench" />
         {/* The haze BETWEEN the bridge and the boulders, and it is drawn
             between them in the DOM for exactly that reason: it washes the
             bridge's footings and the boulders are drawn over it crisp, which
             is the whole of what makes one read as further away than the
             other. Cheaper than another prop and worth more. */}
         <div className="tools__spray" />
+        {/* The reeds at the near waterline, over the bridge's near end. Low
+            foreground cover, which is exactly what the kit drew this piece for
+            and what guardrail 8's "plus optional low foliage" clause permits
+            beside an anchor. `StillArt` for the same reason as the bench, and
+            after the spray so it is crisp where the bench is hazed. */}
+        <StillArt art="props/bushes-reeds" className="tools__reeds" />
         {/* The sway box is the boulders' own box, not the section: see useSway.
             One writer per element — pointer here, scroll on the <img> inside. */}
         <div ref={sway} className="tools__rocks-sway">
@@ -263,8 +302,13 @@ export function Tools() {
             writes a `clip-path` to whatever it reveals and a clip-path clips
             that element's pseudo-elements to its border box — which drew the
             head's soft-edged scrim as a hard rectangle for the length of the
-            wipe. Apps.tsx carries the render that caught it. */}
-        <div className="tools__head-plate">
+            wipe. Apps.tsx carries the render that caught it.
+
+            `walk-plate` is the shared recipe in Walk.css — one plate for the
+            five blocks of copy read over the walk, so two headings a viewport
+            apart over one continuous shot are plated by one idea. Tools.css
+            sets only how far this one reaches and how much ink it spends. */}
+        <div className="tools__head-plate walk-plate">
           <div ref={head} className="tools__head">
             <div className="kicker">
               <span className="kicker__num">03</span>

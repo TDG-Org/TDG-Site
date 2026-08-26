@@ -536,6 +536,10 @@ export function Nav({
           </div>
         </div>
 
+        {/* The track is a sibling and not a ::before on the bar, because the bar
+            is the element whose width the frame loop writes — a pseudo-element
+            on it would be as short as the progress is. Nav.css has the rest. */}
+        <div className="nav__progress-track" aria-hidden="true" />
         <div ref={progress} className="nav__progress" aria-hidden="true" />
       </nav>
     </>

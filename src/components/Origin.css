@@ -1,3 +1,70 @@
+/* ── the one colour this file declares, and why it is per theme ───────────
+   The plate under this section's intro, as a share of --card-bg. It is private
+   to this stylesheet — nothing else reads it, and it is a mix of an existing
+   token rather than a new ink — so rule 2 puts it here rather than in
+   tokens.css, on `:root` and on `:root[data-theme='light']` in one edit.
+
+   **It is the only plate in the walk whose two themes need different amounts,
+   and that is measured rather than assumed.** Sampled off the rendered page at
+   1440x900 at the scroll position where the intro is read, with every plate in
+   the walk removed, the copy over the bare snow approach is at 6.19:1
+   (kicker), 16.19:1 (heading) and 6.32:1 (lede) in DARK — the plate is not
+   needed at all there, and this is the one place on the page where a plate
+   costs something real, because it lies across CONTRACT D's dissolve where the
+   hero is deliberately still showing through. In LIGHT the same three read
+   4.95, 10.99 and 4.39, and 4.39 is under the 4.5 floor for 18px body copy.
+
+   Solved against the measured 2nd-percentile backdrop under the lede, which is
+   rgb(175) bare in light:
+
+     34% of --card-bg -> bg rgb(199)  4.43:1   (under the floor)
+     48%              -> bg rgb(209)  4.64:1
+     58%              -> bg rgb(213)  4.79:1   <- chosen
+     74%              -> bg rgb(227)  5.00:1   (what it used to be)
+
+   58 rather than 74 because the last quarter of the token buys 0.21 of a ratio
+   and pays for it with a quarter more ink over the dissolve, and 58 rather
+   than 48 because the floor is a floor and not a target. Dark takes 30, which
+   is a hint of a plate over a backdrop that does not need one, kept so the
+   lede does not lose its ground the day the interior builder changes the
+   snow's tone.
+
+   Both are `color-mix` on --card-bg rather than literal rgba, so the plate
+   still rides the theme wave: `.walk-plate::before` carries --t-theme, which
+   transitions `background-color`.
+
+   ── and the other one, which is the same in both themes ──────────────────
+   --origin-plate is what the seven chapter rows and the link that closes the
+   timeline are read off. It is ONE value for both themes and it has no
+   `[data-theme='light']` twin, for the same reason `--tools-spray-ink` has
+   none: it is a mix of --card-bg, which already carries the theme, so a second
+   declaration would be the identical string written twice.
+
+   84% rather than the whole token, and the line that decides it is the phase
+   tag on row 5 — `--faint` at 10px over the fire's own light on the cabin's
+   back wall, which is the brightest thing behind any copy in this section.
+   Solved against the measured backdrop (bare rgb(120) in dark, rgb(47) in
+   light — the fire reads as the extreme in opposite directions):
+
+     100% of --card-bg  5.53:1 dark   5.75:1 light   (what it was)
+      90%               5.17         5.29
+      84%               4.95         5.00           <- chosen
+      80%               4.80         4.81
+      70%               4.42         4.31            (under the floor)
+
+   84 is where both themes still stand half a ratio clear of the 4.5 floor,
+   and the 16% given back is 16% of the ink over a column that is a viewport
+   and a half tall — the largest single piece of the wash this pass was sent to
+   remove. It is not lower because the room's tone is being reworked underneath
+   it: 4.95 has somewhere to fall to, 4.60 does not.                          */
+:root {
+  --origin-intro-plate: color-mix(in srgb, var(--card-bg) 30%, transparent);
+  --origin-plate: color-mix(in srgb, var(--card-bg) 84%, transparent);
+}
+:root[data-theme='light'] {
+  --origin-intro-plate: color-mix(in srgb, var(--card-bg) 58%, transparent);
+}
+
 /* ── the section ───────────────────────────────────────────────────
    Read Hero.tsx's header before this file: the hero is pinned, and the two
    sections still overlap by a viewport on purpose.
@@ -955,50 +1022,53 @@
   max-width: 1100px;
 }
 
-/* ── the intro's scrim ─────────────────────────────────────────────────────
-   The same plate the chapter rows below take, at half the reach, and for the
-   same reason: the lede's last two lines cross the cabin's roof and its lit
-   snow, and white body copy on lit snow is the defect the site owner asked to
-   have fixed by name.
+/* ── the intro's plate ─────────────────────────────────────────────────────
+   `.walk-plate` from Walk.css, which is the one recipe all five blocks of copy
+   over the walk now share. Two things about this block were wrong and both are
+   fixed by moving to it rather than by tuning.
 
-   Weaker than the rows' plate rather than equal to it. The heading is 40px
-   display type with a lot of counter, so it survives on far less help than
-   15.5px body copy does, and this is the top of the section — where the
-   dissolve is deliberately letting the hero through and a strong plate would
-   be the one opaque rectangle in a boundary built out of nothing but ramps.
+   **It was a rectangle.** The mask was
+   `radial-gradient(78% 104% at 32% 52%, #000 0 38%, transparent)`, and an
+   ellipse whose opaque core has to cover copy running from the shell's left
+   edge is necessarily still opaque AT that edge. Measured with the alpha probe
+   (canvas hidden, `.walk` forced to a flat #808080, alpha read back as
+   `(128 - r) / 119`): 0.37 of alpha in one pixel across its left edge at
+   x=148, and 0.89 in one pixel across its top edge. A 702 x 361 box with two
+   ruled sides, laid over the hero dissolve.
 
-   `position: relative` is what the ::before needs and it is the only thing it
-   changes: `.origin__intro` is a block in normal flow inside `.shell`, which
-   already carries the stacking context, and `useReveal('wipe')` writes
-   `clip-path` and `opacity` to this element — neither of which a positioned
-   child can fight, and both of which the scrim should ride anyway. */
-.origin__intro {
-  position: relative;
-  max-width: 660px;
+   **And it was on the revealing element.** `useReveal('wipe')` writes a
+   `clip-path` to `.origin__intro`, and a clip-path clips that element's
+   pseudo-elements to its border box — so for the length of the wipe the scrim
+   was ALSO cut into a hard rectangle at the intro's own bounds. Apps.css
+   caught that on the identical construction one section down and answered it
+   with a wrapper; this file did not, and now does.
+
+   ── what it is worth, measured ───────────────────────────────────────────
+   --origin-intro-plate is the ink and it is the one plate in the walk whose
+   two themes take different amounts: 30% of --card-bg in dark, 58% in light,
+   against the 74% both used to take. The `:root` block at the top of this file
+   carries the measurement and the ladder it was chosen off. The rows below
+   keep the full token in both themes because they have the fire behind them;
+   see their own note.
+
+   --plate-col 940: the lede fills the intro's 660px column, so 660 + 40px of
+   solid past the last glyph + a 240px --scrim-fade. At 1440 that is solid to
+   viewport 870 and nothing from 1110, against a plate that used to stop dead
+   at 850.
+
+   84 / 92 top and bottom: the ramps are 64px and 72px, which is 0.004 of alpha
+   per pixel at this ink — an order of magnitude under the ~0.02 at which a
+   ramp starts to read as an edge. The bottom ramp overlaps the top of the
+   rows' plate by about 100px; that is two tails adding, which is a denser
+   region and not a step, and there is no copy in it. */
+.origin__intro-plate {
+  --plate-ink: var(--origin-intro-plate);
+  --plate-col: 940px;
+  --plate-up: 84px;
+  --plate-down: 92px;
 }
-.origin__intro::before {
-  content: '';
-  position: absolute;
-  /* Out into the air around the words, so the scrim's own edge is never on a
-     line of type: -22px top and left because the kicker starts hard against
-     both, -34px bottom because the lede is the part that needs it most.
-
-     The right bleed is a PERCENTAGE and the other three are pixels, which is
-     rule 16 rather than an inconsistency. Right is the only one of the four
-     that can push past the viewport: at 320px the shell is 284px wide and ends
-     18px from the edge, so a -60px bleed would have put this box at 362 in a
-     320px document — exactly the overflow `.origin__ground` records having
-     measured at 1470 against a 1430 client width, and exactly the kind the
-     section's 130svh clip margin does NOT catch. -3% is 8.5px there and 19.8px
-     at 1440, and it clears the viewport at every width between. The left bleed
-     needs no such care: overflow past the left edge produces no scrollbar. */
-  inset: -22px -3% -34px -22px;
-  z-index: -1;
-  pointer-events: none;
-  background-color: color-mix(in srgb, var(--card-bg) 74%, transparent);
-  -webkit-mask-image: radial-gradient(78% 104% at 32% 52%, #000 0 38%, transparent 100%);
-  mask-image: radial-gradient(78% 104% at 32% 52%, #000 0 38%, transparent 100%);
-  transition: var(--t-theme);
+.origin__intro {
+  max-width: 660px;
 }
 .h2.origin__heading {
   margin: 22px 0 24px;
@@ -1034,10 +1104,118 @@
   box-shadow: 0 0 12px var(--glow);
 }
 
+/* ── the plate the whole timeline is read off ──────────────────────────────
+   "and also make the cards darker and or lighter to be easily seen depending
+   on the theme" — the site owner, and these rows are the cards they meant.
+
+   The rows have always been transparent, which was right while the page behind
+   them was a flat band and stopped being right the day a lit cabin arrived
+   back there. Measured on the rendered page with every plate removed, at the
+   scroll position where each line is read: over the fire's light on the
+   cabin's back wall a chapter tag lands at 2.46:1 and a chapter title at
+   1.42:1. Those are not low contrast, they are gone.
+
+   ── it used to be seven plates and that is what drew the lines ───────────
+   Every row carried its own `::before` with
+   `radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent)`, and the
+   ellipse was a rectangle in three directions at once. Opaque wherever the
+   distance from 26% is under 0.44 x 74% = 32.6% of the row, so at the row's
+   own left edge — 26% away — it was at FULL alpha. Vertically the radius is
+   130% of the row, so it was opaque out to +-57% and therefore through both of
+   the row's edges as well, and `.origin__row` is `overflow: hidden`. Measured
+   with the alpha probe at 1440x900: **0.82 of alpha in a single pixel** across
+   x=171, and the same 0.82 at every one of the six 4px gaps between rows and
+   at the two ends of the column. Eight ruled lines and a ruled left edge,
+   drawn over a cabin at the moment the camera goes through its door.
+
+   So there is ONE plate now and it hangs on the container, which is the box
+   the seven rows already share. The six gaps close because there is nothing to
+   close them across; the left edge runs past the frame and is cropped by it;
+   the two ends are 64px and 72px of ramp. `.walk-plate` in Walk.css carries
+   the construction and the argument for it.
+
+   ── the numbers ─────────────────────────────────────────────────────────
+   --plate-col 800: the longest title, "Making what we needed" at
+   clamp(21px, 2.4vw, 27px), ends 521px from the shell's left edge at 1440.
+   521 + 40px of solid past the last glyph + a 240px --scrim-fade. That puts
+   the plate solid to viewport 730 and gone by 970, where the seven ellipses
+   used to run to 1270 — 300px of the frame handed back, on the side of the
+   picture where the cabin's own door is.
+
+   The ink is --origin-plate, 84% of --card-bg, and the `:root` block at the
+   top of this file carries the ladder it was solved off. It is the thickest
+   plate in the walk and the only one whose two themes need the same amount,
+   because the thing behind it is the fire and the fire is the extreme in both
+   directions at once — the brightest thing in the dark frame and, at the same
+   spot, the one warm patch in the light one.
+
+   ── what it buys, computed ────────────────────────────────────────────────
+   Over the brightest thing behind it (the fire's light on the wall,
+   rgb(123,112,96)), --origin-plate composites to rgb(50,51,54) in dark. On
+   that:
+     --text   rgb(242,242,245)   11.4:1
+     --faint  rgb(165,165,167)    4.95:1   (was 1.5:1 unplated)
+   In light it composites to about rgb(201) at the same spot, where --faint
+   lands at 5.00:1 and --text at 12.6:1.
+
+   84 / 92 above and below the rows box, which is 1037px tall at 1440 — a
+   column that is deliberately taller than the viewport, because the copy it is
+   under is. What it is not any more is WIDER than the copy.
+
+   ── and an OPEN chapter is a different reading, so it gets a different plate
+   That is the trap in "anchor the plate to the text's own column": the column
+   is not one width, and the type on it is not one size.
+
+   **Wider.** Shut, the widest thing on a row is its title, 521px from the
+   shell's left edge. Open, the chapter's prose runs to 817 — the panel is
+   indented by the numeral's width plus the gap (112px at 1440) and
+   `.origin__copy` is capped at --origin-col, 620px. Measured with all seven
+   open at 1440x900, the widest paragraph ends at viewport 987. So --plate-col
+   goes to 1100, which puts the plate's right edge exactly on the shell's own,
+   143px past that line and a --scrim-fade after it.
+
+   **And thicker.** A title is 27px at --text; the prose is 15.5px at --muted,
+   which needs about twice the plate for the same reading. Measured with every
+   chapter open at 1440x900, over the fire's own light: at --origin-plate's 84%
+   the three chapters that sit in front of the hearth read 3.70, 3.71 and
+   3.89:1 in dark — under the 4.5 floor. At the full --card-bg the same
+   paragraphs clear it. (The version before this pass was worse than either:
+   its ellipse had fallen to 0.46 of alpha by the prose's right edge, which put
+   the same three at about 2.8.)
+
+   So an open chapter takes the whole token back and the shut column — the
+   state every reader scrolls through and every render is judged in — keeps the
+   16% that --origin-plate gives away. Both switch together, and both are plain
+   animatable properties: `width` takes the same 0.58s and the same easing
+   curve the panel's own `grid-template-rows` takes, and `background-color` is
+   already transitioned by --t-theme at 0.6s, so the field opens WITH the
+   chapter instead of stepping under a reader's hand. A custom property could
+   not do either: --plate-col and --plate-ink are unregistered, so they jump,
+   and it is the properties they feed that are being transitioned.
+
+   `:has()` is the switch, and its failure mode is the mild one — a browser
+   without it keeps the shut plate, so an opened chapter is read at the
+   contrast the shut column has. The three `:has()` rules further down this
+   file are split from their `:hover` twins for the same reason: one
+   unsupported `:has()` invalidates the whole selector list it appears in, so
+   it is alone in its own rule here too.                                     */
 .origin__rows {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  --plate-ink: var(--origin-plate);
+  --plate-col: 800px;
+  --plate-up: 84px;
+  --plate-down: 92px;
+}
+.origin__rows:has(.origin__row[data-open]) {
+  --plate-ink: var(--card-bg);
+  --plate-col: 1100px;
+}
+.origin__rows::before {
+  transition:
+    var(--t-theme),
+    width 0.58s cubic-bezier(0.2, 0.75, 0.22, 1);
 }
 
 .origin__row {
@@ -1053,74 +1231,147 @@
     var(--t-theme);
 }
 
-/* ── the plate a chapter is read off ───────────────────────────────────────
-   "and also make the cards darker and or lighter to be easily seen depending
-   on the theme" — the site owner, and these rows are the cards they meant.
+/* ── the hover wash, and it is all this pseudo-element does now ────────────
+   It used to be the row's own plate as well. The plate is one box on
+   `.origin__rows` above, because seven of these drew eight ruled lines across
+   the shot; what is left here is the lift, which genuinely does belong to one
+   row at a time.
 
-   The rows have always been transparent, which was right while the page behind
-   them was a flat band and stopped being right the day a lit cabin arrived
-   back there. Measured on the shipped page: --faint on the cabin's lit wall
-   composites to rgb(224,224,222) over rgb(200,180,140), which is 1.5:1 — the
-   chapter tags are not low contrast, they are gone. "Making what we needed" is
-   white display type on a lit window.
+   `.origin__row:hover` used to raise the row's `background-color` to
+   --surface, which paints UNDER a plate — and --surface is a 4.5% white wash
+   in dark, of which 1.2% survives 0.74 of --card-bg, which is nothing. So the
+   lift is its own layer, painted OVER the container's plate: this pseudo is
+   positioned and the plate is at `z-index: -1`, so the order is structural
+   rather than a pair of alphas agreeing.
 
-   `.card` in base.css already answers this with --card-bg, a ~0.75-alpha plate
-   at each theme's own ground. A row is not a `.card` and should not become one
-   — it has no border, no shadow, no tilt-lit edge, and seven of them are an
-   index rather than a shelf — so it takes the same INK through the same token
-   and nothing else.
+   ── it takes the plate's own falloff, from the plate's own variable ───────
+   A hover wash that stopped square where the plate does not would be a hard
+   edge that only appears under the cursor, which is the worst place to put
+   one — and --surface is opaque `#ffffff` in light, so it is not a subtle one
+   either: a square-cut wash there is a white bar with four ruled sides over a
+   photograph. `.origin__row`'s left edge and `.origin__rows`' left edge are
+   the same line, so --plate-col measures from the same place in both and the
+   right-hand ramps land on the same two pixels by construction.
 
-   ── why a scrim and not a rectangle ───────────────────────────────────────
-   Seven opaque boxes down the left of the section is a table of contents, not
-   a timeline, and it would also hide the cabin the section is about. So the
-   plate is masked the way a film title card sits over a shot: solid under the
-   words, gone by the row's own right edge, with nothing to find at either end.
-
-   The ellipse is `74% 130% at 26% 50%`. Horizontally it is opaque out to
-   0.44 x 74% = 32.6% either side of 26%, so from -6.6% to 58.6% of the row,
-   and it reaches zero exactly at 100% — no edge to see, because there is no
-   alpha left when the box runs out. The longest chapter title, "Making what we
-   needed" at clamp(21px, 2.4vw, 27px), ends at 47% of a 1100px row and the
-   longest meta line at 25%, so every word on the row sits on solid plate.
-   Vertically the radius is 130% of the row, so the mask is opaque through the
-   whole height and the 4px gaps between rows close up: seven scrims read as
-   one soft column down the left of the timeline, which is the reading this
-   wants — a place the words live, not seven boxes.
-
-   ── what it buys, computed ────────────────────────────────────────────────
-   Over the brightest thing behind it (the cabin's lit wall, rgb(200,180,140)),
-   --card-bg at 0.74 composites to rgb(59,54,48) in dark. On that:
-     --text   rgb(242,242,245)   10.65:1
-     --faint  rgb(165,165,167)    4.85:1   (was 1.5:1)
-   In light, --card-bg at 0.88 over the darkest thing behind it composites to
-   about rgb(239,239,240), and --text lands at 15.7:1.
-
-   ── and the hover wash moved onto it ──────────────────────────────────────
-   `.origin__row:hover` used to raise the row's own `background-color` to
-   --surface. That paints UNDER this plate, and --surface is a 4.5% white wash
-   in dark — 1.2% of it survives 0.74 of --card-bg, which is nothing. So the
-   lift is a `background-image` on the plate instead, over the plate's own
-   `background-color`, which is exactly the two-layer arrangement `.card` uses
-   and for exactly the same reason: neither layer has to know the other's
-   alpha.                                                                     */
+   The other three sides are the row's own box and cannot bleed past it — the
+   row is `overflow: hidden` for `.origin__sweep` — so they are ramps inside
+   it: 10px top and bottom, and 56px on the LEFT, which is spent entirely in
+   the row's own gutter. --origin-inset is 92px at 1440 and never below 58, so
+   the ramp has finished before the first glyph of the meta line at every
+   width; what is under it is the spine, the dot and empty snow. */
 .origin__row::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-color: var(--card-bg);
-  -webkit-mask-image: radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent 100%);
-  mask-image: radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent 100%);
+  -webkit-mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      #000 56px,
+      #000 calc(var(--plate-col) - var(--scrim-fade)),
+      transparent var(--plate-col)
+    ),
+    linear-gradient(180deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      #000 56px,
+      #000 calc(var(--plate-col) - var(--scrim-fade)),
+      transparent var(--plate-col)
+    ),
+    linear-gradient(180deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-composite: intersect, add;
   transition: var(--t-theme);
+}
+/* ── the same breakpoint as `.walk-plate::before`, and the opposite answer ─
+   Below 900px --scrim-fade is 0, because a plate there has no room on the
+   right for a falloff and is cropped by the frame instead. **This wash cannot
+   be cropped by the frame.** Its box is the row, the row is `overflow: hidden`
+   for `.origin__sweep`, and the row's right edge is a --scrim-pad inside the
+   picture — 36px at 900px, 18px at 375. Solid to there is a hard edge on a
+   hovered row, and --surface is opaque `#ffffff` in light.
+
+   So the wash keeps a falloff where the plate gives one up: 40px, ending on
+   the row's own right edge. Both variables are overridden on the
+   pseudo-element rather than one of them, because the two stops are written
+   against each other and half an override would put the ramp outside the box.
+   Walk.css carries the plate's half of this and the measurement that found it
+   (0.479 of alpha in one pixel at 900x900, 300px inside the frame).         */
+@media (max-width: 900px) {
+  .origin__row::before {
+    --plate-col: 100%;
+    --scrim-fade: 40px;
+  }
 }
 .origin__row:hover::before {
   background-image: linear-gradient(var(--surface), var(--surface));
 }
-.origin__row:hover {
-  border-color: var(--border);
-}
+/* ── the hover BORDER is gone, and it is the last ruled rectangle in here ──
+   `.origin__row:hover { border-color: var(--border) }` drew a 1100 x 145px
+   hairline rectangle round the row the cursor was on — over a cabin, in a pass
+   whose whole subject is that no boundary on this page may be a ruled line. It
+   was invisible while the page behind it was a flat band and it is the most
+   visible thing in the frame now that the plate under it has no edges of its
+   own: a UI box laid on a photograph, exactly the report this pass answers,
+   arriving under the reader's own cursor.
+
+   Removed rather than softened, because a border cannot be masked — masking
+   the element masks its text with it — and because the row still says it is a
+   control four other ways: the --surface wash above, `.origin__sweep`'s light
+   crossing it, the dot going to 1.55x with a glow, and the cursor's own ring.
+   A keyboard visitor is not relying on it either; `.origin__toggle` draws the
+   site's real `2px solid var(--accent)` focus ring six pixels outside itself.
+
+   `border: 1px solid transparent` STAYS on the row. It is what reserves the
+   border box so nothing shifts, and it is the reason removing this rule costs
+   no layout at all. The `:has(:focus-visible)` twin further down went in the
+   same edit and for the same reason.                                        */
+/* ── the turn's row, and it is not a shadow any more ───────────────────────
+   It was `box-shadow: 0 0 40px -16px var(--glow)`. An OUTER box-shadow is
+   clipped to outside the border box, so however far it is blurred it starts at
+   full strength on the border box's own edge and there is no ramp to put on
+   it — the identical argument this file already makes about the arrival shadow
+   it deleted, and a shadow with a NEGATIVE spread makes it worse rather than
+   better, because the spread pulls the shadow's rect inside the box and the
+   only part left to see is the part right against the edge.
+
+   Measured with the alpha probe once the seven row plates had been replaced by
+   one soft field: this was the last ruled line in the timeline, **0.067 of
+   alpha in one pixel** along all four of row 5's edges, and it is visible in a
+   render at 1440x900 as two faint horizontal lines across the cabin at the
+   moment the camera is at the door.
+
+   So the turn is a bloom INSIDE the row instead — light on the chapter's own
+   numeral and the start of its title, rather than a rim around a rectangle.
+
+   Centring it on the dot at x 29px was the first attempt and the probe caught
+   it too: an ellipse centred 29px in has most of its ink still on the row's
+   own left edge, which is the same 0.067 step moved one axis over. So the
+   centre is 30% of the row and the horizontal radius is `min(190px, 26%)`,
+   which reaches nothing 140px inside the left edge at 1440 and 11px inside it
+   at 320px — the `min()` is what keeps the second true, because a fixed 190px
+   inside a 284px row would be clipped at 0.56 of alpha by the right edge.
+
+   62px vertically from the row's own middle, so it dies 10px inside a shut
+   145px row and further inside an open one. Nothing of it touches an edge, so
+   there is nothing to rule.
+
+   It is a `background-image` on the ROW rather than on `.origin__row::before`,
+   because that pseudo-element is the hover wash and `background-image` is the
+   one property the wash writes; two writers on one layer is exactly the bug
+   the wash was split out of the plate to avoid. The row's own background layer
+   paints under the wash and over `.origin__rows`' plate — which is the order
+   this wants, and it is structural: the plate is at `z-index: -1` and both of
+   these are on positioned descendants of it.                                */
 .origin__row[data-turn] {
-  box-shadow: 0 0 40px -16px var(--glow);
+  background-image: radial-gradient(
+    min(190px, 26%) 62px at 30% 50%,
+    var(--glow),
+    transparent 100%
+  );
 }
 
 /* ── the disclosure ───────────────────────────────────────────────────────
@@ -1233,9 +1484,11 @@
    selector LIST it appears in, which would take the hover behaviour down with
    it on a browser that has no :has(). Split, the worst case is that a
    keyboard visitor there gets the focus ring and no sweep. */
-.origin__row:has(.origin__toggle:focus-visible) {
-  border-color: var(--border);
-}
+/* (The `border-color` rule that used to head this group is gone with its
+   `:hover` twin — see the note beside that one for why a hairline rectangle
+   round a row is the one thing this pass could not leave on the page. The
+   focus ring itself is untouched: `.origin__toggle:focus-visible` draws
+   `2px solid var(--accent)` at a 6px offset and always did.)                */
 .origin__row:has(.origin__toggle:focus-visible)::before {
   background-image: linear-gradient(var(--surface), var(--surface));
 }
@@ -1416,8 +1669,10 @@
    light — the cabin's doorway, which is the brightest thing in the frame at
    the moment the camera crosses the threshold. --accent-2 on those is 4.03:1
    and 3.24:1, and 13px body copy needs 4.5. It was the last unplated string in
-   this section: the intro has a scrim, the seven chapter rows have one each,
-   and this sat under all of them with nothing.
+   this section — the intro had one and every chapter row had one — and it is
+   the third of the three plates this section now takes from `.walk-plate`.
+   Re-measured bare in this pass at the position it is actually read: 2.79:1 at
+   the 2nd percentile in dark and 2.72 in light, with a worst pixel of 1.04.
 
    It hangs on `.origin__more-plate`, a wrapper round the link's box, and not
    on `.origin__more-wrap` itself: `useReveal('wipe')` writes a `clip-path` to
@@ -1426,54 +1681,34 @@
    the length of the wipe. Apps.css carries the render that caught it and the
    same wrapper two sections down.
 
-   Same ink and the same construction as the two head plates — two linear
-   ramps intersected, so the plate
-   dissolves at the top, the bottom and the right and is flush with the frame
-   on the left, with no edge on any side. Apps.css argues the shape; `.walk`
-   declares the two numbers all three share.
+   `.walk-plate` is the shared construction and Walk.css argues it.
+   --origin-plate is the ink, the same value the chapter rows above take and
+   from the same declaration, because this line sits over the doorway at the
+   moment the camera crosses the threshold — and bare, the worst pixel under it
+   reads 1.04:1. The two plates overlap by about 100px of their two tails, so
+   two different inks there would have shown as a density change in the joint
+   rather than as two plates; one variable makes that structural.
 
-   What differs here is only the vertical bleed, because what it is plating is
-   one 13px line rather than a three-line head: 56px above and 64px below, with
-   the ramps at 46px and 52px, so the solid band starts 10px above the link and
-   ends 12px below it. Small numbers for a small object; the plate is 132px
-   tall against a link that is 22.
+   What differs here is only how far the plate runs, and it is the smallest of
+   the five. --plate-col 545: the link's own text ends 265px from the shell's
+   left edge, plus 40px of solid past its last glyph, plus a 240px
+   --scrim-fade. At 1440 that is solid to viewport 475 and gone by 715, where
+   the shared `--scrim-x` used to carry it out to 1350 — 635px of frame handed
+   back for a link that is 265px wide.
 
-   --scrim-x is the shared stop and it is generous for this one — the falloff
-   starts at viewport 810 and the link ends at 510 — which is the right way to
-   be wrong for the last line before a section boundary.
-
-   ── and this is the section the asymmetric bleed was decided for ─────────
-   The right bleed is `--scrim-pad`, the section's own padding, and the left is
-   `calc(50% - 50vw - 40px)`. Apps.css argues the pair; `#origin` is why. This
-   section is `overflow: clip` with a 130svh margin that opens EVERY edge, so a
-   right bleed measured in `vw` — and `100vw` includes the scrollbar — would
-   hang past the frame with nothing to clip it and put a horizontal scrollbar
-   on the whole document. That is the trap `.origin__ground` above records
-   having measured at 1470px against a 1430px client width. Overflow past the
-   LEFT edge produces no scrollbar, so `50vw` is free there and is what lets
-   the plate reach the frame at every width.                                                                      */
+   56 / 64 above and below, so the ramps are 36px and 44px and the solid band
+   starts 20px above the link and ends 20px below it. Small numbers for a small
+   object; the plate is 145px tall against a link that is 25. It overlaps the
+   tail of the rows' plate above, which is two ramps adding rather than a step,
+   and the extra density is under the one line here that needed the most.    */
 .origin__more-plate {
-  position: relative;
+  --plate-ink: var(--origin-plate);
+  --plate-col: 545px;
+  --plate-up: 56px;
+  --plate-down: 64px;
 }
 .origin__more-wrap {
   margin-top: 34px;
-}
-.origin__more-plate::before {
-  content: '';
-  position: absolute;
-  inset: -56px calc(-1 * var(--scrim-pad)) -64px calc(50% - 50vw - 40px);
-  z-index: -1;
-  pointer-events: none;
-  background-color: var(--card-bg);
-  -webkit-mask-image:
-    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 46px, #000 calc(100% - 52px), transparent 100%);
-  -webkit-mask-composite: source-in, source-over;
-  mask-image:
-    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 46px, #000 calc(100% - 52px), transparent 100%);
-  mask-composite: intersect, add;
-  transition: var(--t-theme);
 }
 .origin__more {
   display: inline-flex;
@@ -1532,14 +1767,18 @@
    `<div>` painted in a band.
 
    And they have to be named, because **base.css's print block does not
-   neutralise the --band-* tokens or --card-bg.** It rewrites --bg, --surface,
-   --text and the hero's set, and stops. So the mist would print a grey wash
-   over the boundary, and every chapter row would print its plate: in the dark
-   theme that is rgba(9,10,16,0.74), a near-black rectangle under black type.
-   `Tools.css` records the identical trap for the identical reason and this is
-   the same fix beside it. (`.origin__dusk` used to head this list and printed
-   a solid --band-apps slab across the foot of the page. It is deleted; the
-   backdrop it belonged to is `.walk`'s now, and Walk.css drops that.)
+   neutralise the --band-* tokens.** It rewrites --bg, --surface, --text and
+   the hero's set, and stops. So the mist would print a grey wash over the
+   boundary. (`.origin__dusk` used to head this list and printed a solid
+   --band-apps slab across the foot of the page. It is deleted; the backdrop it
+   belonged to is `.walk`'s now, and Walk.css drops that.)
+
+   **The three plates this section used to name here are gone from this list
+   and not from print.** --card-bg is the identical trap and it is now answered
+   once, for all five plates in the walk, by `.walk-plate::before` in Walk.css's
+   own print block — because a rule repeated in three stylesheets is a rule
+   that will eventually be repeated wrongly, and Apps.css and Tools.css each
+   carried a copy of it too.
 
    This section's own background is a single radial in --origin-glow-warm, and
    it is NOT named here: base.css's print block already forces `.section` to
@@ -1552,10 +1791,7 @@
   .origin__lamp-pool,
   .origin__lamp-spill,
   .origin__lamp-glow,
-  .origin__lamp-core,
-  .origin__intro::before,
-  .origin__more-plate::before,
-  .origin__row::before {
+  .origin__lamp-core {
     display: none !important;
   }
 }

@@ -39,6 +39,48 @@
   --outro-tread-ink: color-mix(in srgb, var(--band-outro) 86%, var(--text));
 }
 
+/* ── and the light theme takes a bigger step of all three ──────────────────
+   The paragraph above is right that both operands carry the theme, and it was
+   wrong about what that buys. A fixed percentage toward --text is a fixed step
+   in L*, and a fixed step in L* is NOT a fixed contrast ratio: 11% of --text
+   moves --band-outro by 10.3 L* in dark (2.5 -> 12.8, a ratio of 2.40:1) and
+   by 8.7 in light (96.9 -> 88.2, a ratio of 1.25:1). The same declaration is
+   therefore twice the separation in dark that it is in light, which is exactly
+   the "near-white on near-white" this section was sent back for.
+
+   So light takes a deeper step of each, solved for the RATIO rather than for
+   the step, and quoted against --band-outro's own L* 96.9:
+
+       --outro-ground-ink   84%   L* 84.2   1.40:1   the floor under both props
+       --outro-pool-ink     78%   L* 79.3   1.61:1   where the afterglow lands
+       --outro-tread-ink    74%   L* 76.0   1.77:1   the nosing on each tread
+
+   They were 89 / 84 / 86, which is L* 88.2 / 84.2 / 85.8 and 1.26 / 1.40 /
+   1.34 — the whole set inside a third of a stop of each other and of the band.
+
+   Dark is untouched at 89 / 84 / 86, where the same three measure L* 12.8 /
+   18.4 / 16.2 against a band of 2.0, which is 1.25 / 1.46 / 1.37. The ORDER is
+   the same in both — the pool is a step past the ground and the nosing a step
+   past the pool — and so is the reading: in dark the mix goes pale and lights
+   the floor, in light it goes dark and shades it.
+
+   The tread is the one that moves furthest, and it is the thinnest thing here:
+   4–12px of strip between two silhouettes. At 86% it was 11.1 L* off the band
+   and reading as a hairline; at 74% it is 20.9 off it and reads as a lit
+   nosing. See --outro-tread-lip below for the height that pairs with it.
+
+   The two props keep their own separation through this, which was the thing to
+   check rather than assume: `garden-arch` and `stepping-stones` are drawn as
+   pale stone with darker facets in light, so they read by their internal
+   contrast rather than against the floor, and the floor moving 4 L* does not
+   touch that. Rendered before and after at 1440x900 they are the same objects
+   on a floor that is now a floor.                                           */
+:root[data-theme='light'] {
+  --outro-ground-ink: color-mix(in srgb, var(--band-outro) 84%, var(--text));
+  --outro-pool-ink: color-mix(in srgb, var(--band-outro) 78%, var(--text));
+  --outro-tread-ink: color-mix(in srgb, var(--band-outro) 74%, var(--text));
+}
+
 .section.outro {
   --outro-pad-x: clamp(18px, 4vw, 40px);
   /* ── where the arch is allowed to reach ─────────────────────────────────
@@ -75,7 +117,53 @@
      valid CSS and only one of them is this distance. */
   --outro-copy-inset: calc(50% + 270px);
   --outro-arch-gap: 40px;
-  --outro-arch-w: clamp(230px, 29vw, 420px);
+
+  /* ── the frame is a frame, not a cut line ───────────────────────────────
+     Both props are placed from the copy's own edge outward, so their OUTER
+     edge is wherever the viewport happens to be — and measured at 1440x900 it
+     was through the middle of them. `garden-arch`'s ink runs x 0.0205..0.9795
+     of its box in dark and 0.0547..0.9385 in light; `stepping-stones` runs
+     0.0245..0.9498 and 0.0299..0.9761 (alpha > 24/255, read off the PNG
+     sources, which are the .webp's own 1024/1672-wide originals). Against the
+     boxes those widths produced:
+
+         width   arch box left   arch ink left   stone box right   stone ink right
+          1024      -95.0           -88.9            1513.6            1477
+          1200      -58.0           -50.9            1697.6            1657
+          1440       -7.6            +1.0            1519.6            1507.6
+
+     — so the arch lost its whole left leg from 1460px down, and the near stone
+     was sliced vertically by the right-hand frame at every width. A path that
+     runs off the page is a path; a stone with a straight edge down one side is
+     a fragment, and the render read as one.
+
+     So the props' room is stated once and both widths are capped by it. The
+     room is the distance from the frame to the prop's inner edge — the copy
+     box's own edge, `50% - 270px`, less the gap — and the gutter is what is
+     left over at the frame after the prop has taken its share.
+
+     ONE pair of variables, applied in mirror image, which is rule 6 and the
+     same construction --outro-copy-inset already exists for: the arch takes
+     the room on the left and the stones take the identical room on the right,
+     so a change to either number moves both props by the same distance in
+     opposite directions and the pair cannot go lopsided.
+
+     What it costs, at 1440: the arch drops from 417.6px to 392.7 (-6%) and the
+     stones from 489.6 to 392.7 (-20%). The stones' 34vw was picked because at
+     26vw each stone landed about 40px across and disappeared into a near-black
+     floor; 392.7 is 27.3vw and each stone is 41px — but that measurement was
+     made before `.outro__ground` existed, and a stone now sits on a lit floor
+     rather than on flat black. A whole 41px stone reads; a sliced 52px one
+     does not.
+
+     Below 840px both props are hidden (see the media query), so the room never
+     has to be defended where it goes small: at 840 the cap is 100px and the
+     props are already off the page. */
+  --outro-prop-gutter: clamp(8px, 1.2vw, 18px);
+  --outro-prop-room: calc(50% - 270px - var(--outro-arch-gap));
+  --outro-prop-cap: calc(var(--outro-prop-room) - var(--outro-prop-gutter));
+
+  --outro-arch-w: min(clamp(230px, 29vw, 420px), var(--outro-prop-cap));
   /* The path, in the RIGHT gutter at exactly the inset the arch takes on the
      left — one pair of variables applied in mirror image, which is rule 6, and
      the reason --outro-copy-inset is written as an inset from an edge. Fed to
@@ -87,10 +175,14 @@
      a diagonal run of six stones across a 1000x563 frame with a great deal of
      transparency around it, so each stone landed about 40px across — which in
      dark, over a near-black floor, is nothing at all, and that is what the
-     render showed: an empty right-hand half. At 34 the box is 490px, runs 80px
-     off the right of the page, and the near stone is cut by the frame rather
-     than shrunk to fit inside it. */
-  --outro-stone-w: clamp(220px, 34vw, 580px);
+     render showed: an empty right-hand half.
+
+     34vw is now a CEILING rather than the width: --outro-prop-cap takes it to
+     392.7 at 1440 so the near stone is whole. See the cap's own note above for
+     what that costs and why a whole 41px stone beats a sliced 52px one. The
+     34 is kept rather than rewritten as 27, because it is what the box takes
+     once the page is wide enough to give it the room — 1816px up. */
+  --outro-stone-w: min(clamp(220px, 34vw, 580px), var(--outro-prop-cap));
   --outro-stone-bottom: clamp(10px, 3vw, 60px);
   /* How far below the terrace the lit nosing sits. It IS the visible height of
      that strip, so it is read at the band's scale rather than the section's:
@@ -518,9 +610,12 @@
 
        section height + 100 - 1.5w
 
-   which is +44px at 1440, +52px at 1920, +79px at 1280 and +134px at 1024 —
-   positive everywhere, so the crown never meets the section's top edge and
-   there is no cut to hide. Where it comes closest it is also behind the seam,
+   which --outro-prop-cap has made larger at every width it caps: measured
+   +346 at 900, +289 at 1024, +163 at 1280, +81 at 1440 and +59 at 1600 and
+   1920, where the cap no longer binds and the width is its own 420px ceiling.
+   Positive everywhere, so the crown never meets the section's top edge and
+   there is no cut to hide. (It read +44 at 1440 and +134 at 1024 before the
+   cap; a narrower arch is a shorter one, so the clearance grew with it.) Where it comes closest it is also behind the seam,
    which is 79–90px tall there.
 
    ## Why 100px of bedding
@@ -593,11 +688,15 @@
    — 43px at 1440 — rather than being cropped by it, because a path recedes
    into a picture and a path cut off at the bottom of one is a rock.
 
-   Its box is 374px wide at 1440 against 410px of gutter, so nothing is cropped
-   there; at 1024 the gutter is 202px and the NEAR end of the path runs off the
-   right of the page, which is the correct end to lose. -0.13 is worth 72px of
-   drift and there is nothing above it in that gutter to collide with —
-   `.outro__makers` carries `z-index: 1` and this sits beside it, not under it.
+   Its box is --outro-prop-cap wide wherever 34vw would overrun the frame —
+   392.7 at 1440, 314.6 at 1280, 189.7 at 1024 — so the box's right edge keeps
+   --outro-prop-gutter clear of the viewport and the near stone's own ink lands
+   about 11px inside that. It used to be a flat 34vw: 489.6px at 1440, ending
+   79.6px past the right-hand frame with the near stone sliced down its middle,
+   which is the fragment this pass came back for. -0.13 is worth 72px of drift,
+   it is vertical only, and there is nothing above it in that gutter to collide
+   with — `.outro__makers` carries `z-index: 1` and this sits beside it, not
+   under it.
 
    --art-near: it is the closest thing to the reader on the page's last beat. */
 .outro__stones {
@@ -613,17 +712,18 @@
 }
 
 @media (max-width: 839px) {
-  /* The bound above is a fraction of the viewport, so the visible slice of the
-     arch shrinks with it: 132px at 900px wide, 112px at 860, 82px at 800. Below
-     about 100px you are looking at the outer face of one column with no crown
-     over it, which is a stone stripe rather than a threshold — so it goes at
-     840. That is 280px lower than the 1119px this used to need, because the
-     arch is no longer squeezed into an 880px block's margin.
+  /* --outro-prop-cap is a fraction of the viewport, so the WHOLE arch shrinks
+     with it rather than the frame eating its left leg: 129px at 900, 110px at
+     860, 100px at 840, 90px at 800. Below about 100px a threshold is narrower
+     than one of its own columns is tall and reads as a stone stripe, so it
+     goes at 840 — the same breakpoint this always had, now defended by the
+     prop's real width instead of by how much of it survived the frame. That is
+     still 280px lower than the 1119px this used to need, because the arch is no
+     longer squeezed into an 880px block's margin.
 
-     The stones go at the same width and by the same arithmetic, mirrored: the
-     gutter they sit in is the arch's gutter reflected, so it runs out at
-     exactly the same place. Below 840 the path would be one near stone jammed
-     against the right edge.
+     The stones go at the same width and by the same arithmetic, mirrored: they
+     take the identical cap on the other side, so it runs out at exactly the
+     same place. Below 840 the path would be one stone in a 100px gutter.
 
      The ground band and the air band both stay. Both are gradients, both cost
      nothing, and the boundary needs dissolving at 320px exactly as much as it
