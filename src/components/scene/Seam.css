@@ -1,0 +1,33 @@
+/* ── the seam's positioning base class ─────────────────────────────────────
+   The caller supplies the colour (see Seam.tsx) and may override the height.
+   Everything else about where a seam sits is the same wherever one is used,
+   so it is stated once here rather than re-derived per section.            */
+.scene__seam {
+  position: absolute;
+  left: 0;
+  /* a block, or the inline layout adds a descender gap under it and the seam
+     stops meeting the edge it is supposed to be sitting on */
+  display: block;
+  width: 100%;
+  /* Read across a whole viewport, so it scales with the viewport. The floor
+     keeps it from collapsing to a line at 320px; the ceiling keeps it from
+     becoming a landscape at 1440px, where a section's own padding starts at
+     130px and a taller band would be eating the copy's air. */
+  height: clamp(44px, 5.5vw, 90px);
+  pointer-events: none;
+}
+
+.scene__seam--top {
+  top: 0;
+}
+
+.scene__seam--bottom {
+  bottom: 0;
+}
+
+@media print {
+  /* decorative, and the print block in base.css drops everything else that is */
+  .scene__seam {
+    display: none !important;
+  }
+}

@@ -194,8 +194,10 @@ stop {
   padding: clamp(72px, 9vw, 130px) clamp(18px, 4vw, 40px);
 }
 
-/* Story / Tools / Faith paint an edge-to-edge blend; Apps / Building stay
-   flat as contrast anchors. Every boundary meets on an identical value. */
+/* Origin / Tools / Faith paint an edge-to-edge blend; Apps / Building stay
+   flat as contrast anchors. Every boundary meets on an identical value — and
+   since the bands below, it is the same --band-* token on both sides rather
+   than two hexes that happen to agree. */
 .section--blend {
   background-image: linear-gradient(
     180deg,
@@ -211,50 +213,90 @@ stop {
   background-color: var(--tint-mid);
 }
 
-#story {
-  --tint-top: #030304;
-  --tint-mid: #0a0b12;
-  --tint-bot: #08080c;
-  --story-glow-warm: rgba(245, 201, 138, 0.16);
+/* ── the bands of the page ─────────────────────────────────────────────────
+   Every one of these values is a --band-* token from tokens.css, which is the
+   one place the number is written. Read down the column and the boundaries
+   are visible as boundaries: a section's --tint-bot is the SAME TOKEN as the
+   next section's --tint-top, so "every boundary meets on an identical value"
+   above is now something this file enforces rather than asserts. It used to
+   be two hexes that happened to agree, twice over, once per theme.
+
+   --seam-fill is that section's own band, for a Seam (components/scene/)
+   sitting on the boundary above it: painted in its own colour the seam reads
+   as the section rising into the one before it. See scene/README.md — it
+   cannot read --tint-* directly, because those are registered with
+   `inherits: false` so the theme wave can animate them.
+
+   These blocks carry no theme of their own any more. The bands are per theme,
+   so the tints that read them are too, and there is no light twin to keep in
+   step — which is the duplication this replaced. The one thing that still
+   needs a light value is --origin-glow-warm, which is a colour in its own
+   right and not a band.
+
+   ── if the theme wave ever SNAPS at a section boundary, start here ────────
+   These tints are registered @property values precisely so the wave can
+   animate them: an unregistered custom property inside a gradient jumps, and
+   the wave would stop dead at every boundary. They used to be declared as
+   literal hexes, twice, once per theme — so a theme flip changed the
+   declaration on this very element. They now arrive through a var() on an
+   inherited property instead, and the value only changes because the band on
+   :root changed.
+
+   That should be identical as far as a transition is concerned: a transition
+   watches the COMPUTED value, var() substitution happens at computed-value
+   time, and a registered <color> is interpolable either way — it is the same
+   mechanism `background-color: var(--bg)` has always relied on here. It was
+   reasoned, not measured; no browser had run when it was written. So if the
+   blends ever snap instead of waving, this indirection is the first suspect,
+   and the fix is to state the hexes per theme again rather than to unpick the
+   bands.                                                                   */
+#top {
+  --seam-fill: var(--band-hero);
+}
+#origin {
+  --tint-top: var(--band-hero);
+  --tint-mid: var(--band-origin);
+  --tint-bot: var(--band-apps);
+  --seam-fill: var(--band-origin);
+  --origin-glow-warm: rgba(245, 201, 138, 0.16);
 }
 #apps {
-  --tint-mid: #08080c;
+  --tint-mid: var(--band-apps);
+  --seam-fill: var(--band-apps);
 }
 #tools {
-  --tint-top: #08080c;
-  --tint-mid: #090b13;
-  --tint-bot: #0f0d0d;
+  --tint-top: var(--band-apps);
+  --tint-mid: var(--band-tools);
+  --tint-bot: var(--band-building);
+  --seam-fill: var(--band-tools);
 }
 #building {
-  --tint-mid: #0f0d0d;
+  --tint-mid: var(--band-building);
+  --seam-fill: var(--band-building);
 }
 #faith {
-  --tint-top: #0f0d0d;
-  --tint-mid: #0c0d15;
-  --tint-bot: #0b0b10;
+  --tint-top: var(--band-building);
+  --tint-mid: var(--band-faith);
+  /* This is the one boundary on the page that did NOT meet, and had not for a
+     long time. The floor here was #0b0b10 dark / #ececed light — that is
+     --bg2, the FOOTER's colour — while the Outro sitting directly beneath
+     this section paints --bg. Faith's floor was reaching past a whole section
+     to a band two down, leaving a step of 4 values in dark and 10 in light at
+     a boundary readers had said felt abrupt. Closed here deliberately, and
+     recorded rather than quietly absorbed into the rename that surfaced it:
+     this line is the only pixel in the band rewrite that is not what it was.*/
+  --tint-bot: var(--band-outro);
+  --seam-fill: var(--band-faith);
+}
+.outro {
+  --seam-fill: var(--band-outro);
+}
+.footer {
+  --seam-fill: var(--band-foot);
 }
 
-[data-theme='light'] #story {
-  --tint-top: #fbfbfc;
-  --tint-mid: #eef0f6;
-  --tint-bot: #f8f8fa;
-  --story-glow-warm: rgba(184, 118, 58, 0.12);
-}
-[data-theme='light'] #apps {
-  --tint-mid: #f8f8fa;
-}
-[data-theme='light'] #tools {
-  --tint-top: #f8f8fa;
-  --tint-mid: #eceff6;
-  --tint-bot: #f8f5f3;
-}
-[data-theme='light'] #building {
-  --tint-mid: #f8f5f3;
-}
-[data-theme='light'] #faith {
-  --tint-top: #f8f5f3;
-  --tint-mid: #eff0f7;
-  --tint-bot: #ececed;
+[data-theme='light'] #origin {
+  --origin-glow-warm: rgba(184, 118, 58, 0.12);
 }
 
 .texture {
@@ -489,7 +531,7 @@ stop {
     transform: translateX(120%);
   }
 }
-/* see .story__pulse: these replace an animated box-shadow with two
+/* see .origin__pulse: these replace an animated box-shadow with two
    compositor-only layers */
 @keyframes pulseRing {
   0%,
@@ -615,7 +657,7 @@ stop {
   .tools__road,
   .tools__sun,
   .tools__sun-ring,
-  .story__pulse {
+  .origin__pulse {
     display: none !important;
   }
   .section,
@@ -649,7 +691,7 @@ stop {
   /* Pausing pins each animation at its 0% frame, and for these that frame is
      the dimmest one, not a resting state. The scroll cue faded to 0.4 and the
      light shafts to their darkest. An !important author declaration is the one
-     thing that outranks a running animation. (The story pulse is deliberately
+     thing that outranks a running animation. (The Origin pulse is deliberately
      left pinned: its 0% frame is the ring tucked behind the dot.) */
   .hero__scroll-arrow {
     opacity: 1 !important;

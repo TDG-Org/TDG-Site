@@ -38,10 +38,61 @@ in the same edit.
 | Accent | `--accent` `--accent-2` `--accent-soft` `--glow` `--warm` |
 | Shadow | `--card-shadow` |
 | "Playable" green | `--live-fg` `--live-bg` `--live-border` |
+| Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
+| The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
+| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-fade` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
 `--live-*` is per theme deliberately: one hardcoded `#4ea36a` failed AA in both.
+`--danger` is per theme for the same reason. Its `-soft` and `-border` are
+not — the red they are mixed from is the same in both — so they are declared
+once on `:root` and are deliberately absent from the light block.
+
+### The bands of the page
+
+One name per horizontal band of the one-page scroll, top to bottom, and the
+**only** place each of those colours is written down. `base.css` builds every
+section's `--tint-top` / `--tint-mid` / `--tint-bot` out of them, so a section's
+floor and the next section's ceiling are not two hexes that agree — they are
+the same token. That is what turns the promise above `.section--blend` ("every
+boundary meets on an identical value") into something the file enforces rather
+than asserts.
+
+`base.css` also hands each section its own band as `--seam-fill`, for a `Seam`
+from [`../components/scene/`](../components/scene/README.md) sitting on its top
+edge. A seam is a flat silhouette in a section's own colour; if the seam's
+number and the section's number ever drift apart, the seam stops being the
+section rising and becomes a shape drawn on top of it — a visible line across a
+boundary whose whole job is to be invisible.
+
+Three of the eight are an alias rather than a value, because the number already
+has an owner: `--band-hero` is `--hero-bg`, `--band-outro` is `--bg`,
+`--band-foot` is `--bg2`. Those follow the theme through the token they point
+at, so they are declared once on `:root` and are **deliberately absent** from
+the light block. The five section bands have no other owner and are stated in
+both, as rule 3 requires.
+
+Adding a section: its band goes here in both themes, its `--seam-fill` goes in
+`base.css` beside the others, in the same edit, and its tint triple reads bands
+rather than hexes.
+
+### The scene layer tokens are numbers, not colours
+
+`--art-far` / `--art-mid` / `--art-near` are the opacities the transparent-PNG
+art kit in `public/assets/parallax/` is drawn at, by how far back the layer
+reads, and `--seam-fade` is the alpha a seam's soft edge is still at halfway down,
+for a seam that dissolves into the section rather than stopping at a line. They are plain numbers because they multiply artwork that is **already**
+the right colour for the theme — the kit ships separate `-dark` and `-light`
+files and its own README is explicit that a CSS filter must never stand in for
+that swap.
+
+They are tokens rather than per-section literals because the kit's restraint is
+one decision, not seven. That README gives the ranges (mountains 0.48–0.64 dark
+/ 0.34–0.48 light, props 0.50–0.72 dark / 0.38–0.56 light); these sit inside
+them, light lower throughout, so no section has to re-guess and end up loud in
+one band and invisible in the next. The primitives that consume them are in
+[`../components/scene/`](../components/README.md).
 
 ### Radii are tight, everywhere
 
@@ -54,7 +105,7 @@ read as belonging to a different site.
 @property --tint-top { syntax: '<color>'; ... }
 ```
 
-`--tint-top`, `--tint-mid`, `--tint-bot` and `--story-glow-warm` are registered
+`--tint-top`, `--tint-mid`, `--tint-bot` and `--origin-glow-warm` are registered
 so the section blend gradients can **animate** with the theme wave. An
 unregistered custom property inside a gradient snaps instead of transitioning,
 which would make the wave stop dead at every section boundary.

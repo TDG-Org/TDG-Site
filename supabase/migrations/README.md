@@ -18,6 +18,7 @@ can rebuild, and a change nobody can read the reasoning for six months later.
 | `20260823210000_feedback_rate_limits.sql` | The feedback rate limit, made real and made visible. Replaces one 20/day cap with four rules per account over rolling windows — 60 seconds between reports, 5 an hour, 10 a day, and an identical resend inside 10 minutes that returns the ORIGINAL report's id and writes nothing, so a retry after a lost answer shows a receipt rather than a refusal. The numbers live once in `tdg_feedback_limits()`; `tdg_feedback_gate()` computes where an account stands and is shared by the submit gate and the new `tdg_feedback_quota()`, so the sentence a person is shown and the sentence they are refused with can never drift. `tdg_feedback_wait_words()` rounds a wait UP into words. Only `tdg_feedback_submit` and `tdg_feedback_quota` are granted; the numbers, the gate and the words are internal. |
 | `20260823235000_feedback_helpers_pin_search_path.sql` | `set search_path to 'public'` on the four small feedback helpers that were missing it — `tdg_feedback_kinds`, `_statuses`, `_limits` and `_wait_words` — which Supabase's advisor flags as `function_search_path_mutable`. Not exploitable and not reachable: all four are SECURITY INVOKER, revoked from every client role, and only ever called from functions that had already pinned the path. Done because the pin is the only thing keeping that true and nothing said so, and because four exceptions in a family of fifteen teach the next reader that the exception is fine. Bodies byte-for-byte identical, verified against `prosrc` in the live project first. |
 | `20260823230000_feedback_submit_serialized.sql` | One `pg_advisory_xact_lock` on the account at the top of `tdg_feedback_submit`. Every rule `20260823210000` added is read-then-decide, so two submissions in flight together each read a world where the other has not written yet: both miss the dedupe, both are told `ok` by the gate, and both insert — the double-click the 60-second cooldown was written for. With the lock the loser waits, sees the committed row, and takes the receipt path instead. A unique index would also stop the duplicate, but by raising a constraint error at a send that SUCCEEDED, which is the answer the dedupe exists to avoid. |
+| `20260826120000_tdg_account_badges.sql` | Global account badges, and the one public number the site's footer prints. `tdg_account_badges` with RLS on and **no** client policies; the catalogue is `tdg_badge_catalog()` in SQL, for the same reason `tdg_feedback_kinds()` is, so a new badge is a migration and no TypeScript. Two of the six are `derived` — Developer *is* `profiles.is_admin`, Subscriber *is* a paid `subscriptions.tier` — computed on every read rather than stored, because a stored copy is a second opinion that goes stale the moment the flag flips; `tdg_admin_badge_set` refuses one with its own sentence rather than silently doing nothing. Verbs: `tdg_my_badges` (the caller's own, taking no user id on purpose — one that took one would be a profile-scraping endpoint), `tdg_public_stats` (two integers, and **the only function on this project granted to `anon`** — no identity, no refusal, and the footer is on the pages nobody signs in to read), `tdg_admin_badges` (every catalogue row with `held`, so the console draws a full switchboard) and `tdg_admin_badge_set`, both admin verbs opening with `tdg_admin_uid()` and auditing every change through `tdg_admin_log`. `user_id` is ON DELETE CASCADE, the opposite of `tdg_feedback`: a bug report outlives its reporter because the bug is still there, and a badge is a sentence about an account. NOT to be confused with `public.tdg_badges`, which is per-app achievement state and is untouched. |
 
 
 ## Rules
@@ -35,6 +36,15 @@ can rebuild, and a change nobody can read the reasoning for six months later.
 - **Grants go to `authenticated`, never `anon`.** A signed-out caller has no
   admin row to check, so reaching these could only ever produce a refusal and a
   probe endpoint.
+
+  There is exactly **one** exception, `tdg_public_stats()` in
+  `20260826120000_tdg_account_badges.sql`, and what makes it one is that it has
+  no identity in it at all: no parameter, no `auth.uid()`, no refusal to probe
+  with, and a return shape of two integers that name nobody. It is granted to
+  `anon` because the site's footer is on every page, including all the ones
+  nobody has signed in to read. A second exception needs to clear the same bar,
+  which is a high one — the moment a function can answer differently about
+  different people, it belongs behind `authenticated`.
 
 ## Applying one
 

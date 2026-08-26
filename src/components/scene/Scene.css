@@ -1,0 +1,42 @@
+/* ── the scene layer's base class ──────────────────────────────────────────
+   Everything ThemedArt.tsx draws gets this. It carries only what is true of
+   every piece of the art kit; the caller's own class does the placing, the
+   sizing and the opacity (--art-far / --art-mid / --art-near in tokens.css).
+   Nothing here paints a colour, and nothing here filters one. See
+   public/assets/parallax/README.md.                                        */
+.scene__art {
+  position: absolute;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* base.css sets `img { max-width: 100% }`, which is right for a screenshot
+     in a column and wrong for a mountain: these are deliberately wider than
+     the box they are anchored to, so the ridge runs off both edges instead of
+     ending in mid-air inside the shell. */
+  max-width: none;
+}
+
+/* Only the two that actually move. A compositor hint on a layer that never
+   changes is a promoted layer paid for and never used, and the kit is meant
+   to be several of these per page. */
+.scene__art--moves {
+  will-change: translate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* At motionIntensity 0 both hooks resolve to a zero translate and stop
+     writing, so these are as still as StillArt is — the hint would be for
+     nothing. The art itself stays exactly where it composed: visible, still,
+     which is what the kit's README asks for rather than hiding it. */
+  .scene__art--moves {
+    will-change: auto;
+  }
+}
+
+@media print {
+  /* Same reasoning as base.css's print block: the page prints on white and
+     everything decorative comes off. */
+  .scene__art {
+    display: none !important;
+  }
+}

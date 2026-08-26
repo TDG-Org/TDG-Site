@@ -19,7 +19,7 @@
   inherits: false;
   initial-value: transparent;
 }
-@property --story-glow-warm {
+@property --origin-glow-warm {
   syntax: '<color>';
   inherits: false;
   initial-value: transparent;
@@ -51,6 +51,36 @@
   --live-fg: #59b880;
   --live-bg: rgba(74, 222, 128, 0.14);
   --live-border: rgba(74, 222, 128, 0.4);
+
+  /* ── danger ─────────────────────────────────────────────────────────────
+     The red for a destructive control and for a bad standing. Same shape as
+     the --live-* trio above and the same lesson: --danger is stated per
+     theme because ONE red cannot sit on both a near-black surface and a
+     near-white one — #e88a8a is legible on the dark console and washes out
+     on the light one, #b03636 the other way about. src/dev/DevConsole.css
+     already kept both, as a [data-theme='light'] override on every rule that
+     used them; this is that decision moved to where the palette lives.
+
+     --danger-soft and --danger-border are one red, rgb(224, 90, 90), at the
+     fill and border alphas .dev__tag[data-tone='bad'] uses — the direct
+     opposite number of .dev__tag[data-tone='live'], which is what --live-bg
+     and --live-border were lifted from. They are NOT per theme, unlike the
+     green, because that red is not: every mix of it in DevConsole.css sits
+     outside any [data-theme] block, so the same two values are already what
+     both themes paint. If the light console ever wants its own, this is the
+     one place to split it.
+
+     Written down here because it was written down eleven times over there,
+     at seven different percentages of the same red — 8, 12 and 14 for fills,
+     34, 48, 52 and 55 for borders. That spread is drift, not design, and it
+     is exactly what the second half of rule 2 is about.
+
+     The Developer console's destructive controls are the only consumer
+     today: buttons, bad tags, bad stats and standings, the danger panel, the
+     confirm box and the bad toast, all under src/dev/.                    */
+  --danger: #e88a8a;
+  --danger-soft: rgba(224, 90, 90, 0.12);
+  --danger-border: rgba(224, 90, 90, 0.52);
 
   /* the one pair the reference calls "invert": a chip that flips with theme */
   --invert-bg: #f2f2f5;
@@ -105,6 +135,68 @@
   --faith-stop-1: #dcdce4;
   --faith-stop-2: #8d8d99;
 
+  /* ── the page's horizontal bands ────────────────────────────────────────
+     One name per band of the one-page scroll, top to bottom, and the ONLY
+     place each of those colours is written down. `base.css` builds every
+     section's --tint-top / --tint-mid / --tint-bot out of these, and a Seam
+     (components/scene/) is painted from the same names through --seam-fill.
+
+     That is the whole reason they exist. A seam is a flat silhouette in a
+     section's OWN colour, sitting on the boundary above it so that section
+     reads as rising into the one before it. If the seam's number and the
+     section's number drift apart by a single step, the seam stops being the
+     section and becomes a shape drawn on top of it: a visible line straight
+     across the page, at a boundary whose whole job is to be invisible. Two
+     hexes that happen to agree can drift. One name cannot.
+
+     It also makes the promise above `.section--blend` in base.css something
+     the file enforces instead of asserts — a section's --tint-bot and the
+     next section's --tint-top are now literally the same token.
+
+     Three of the eight are an alias, not a value, because the number
+     already has an owner: the hero's floor is --hero-bg, the Outro paints
+     --bg and the footer paints --bg2. Those follow the theme through the
+     token they point at, so they are declared once, here, and correctly
+     have no entry in the light block below. The five section bands have no
+     other owner and are stated in both.                                   */
+  --band-hero: var(--hero-bg);
+  --band-origin: #0a0b12;
+  --band-apps: #08080c;
+  --band-tools: #090b13;
+  --band-building: #0f0d0d;
+  --band-faith: #0c0d15;
+  --band-outro: var(--bg);
+  --band-foot: var(--bg2);
+
+  /* ── the scene layer ────────────────────────────────────────────────────
+     Opacities for the parallax art kit, by how far back the layer reads:
+     --art-far is the mountains and the fog, --art-near the props closest to
+     the reader, --art-mid the band both families overlap in.
+
+     Numbers, not colours, because they multiply a PNG that is already the
+     right colour for this theme — the kit ships separate -dark and -light
+     artwork and public/assets/parallax/README.md is explicit that a CSS
+     filter must never stand in for the swap.
+
+     The ranges are that README's: mountains 0.48–0.64 dark and 0.34–0.48
+     light, props 0.50–0.72 dark and 0.38–0.56 light. Light sits lower right
+     through because those ranges do — the light artwork is drawn low
+     contrast and pale to begin with, so it needs less opacity to sit at the
+     same distance. Stated here once so no section re-guesses its own
+     restraint, which is how a kit meant to be quiet ends up loud in one band
+     and invisible in the next. These values are inside the ranges but have
+     NOT been looked at on a screen yet; the first section to use one should
+     check both themes and move the token, not write a literal.           */
+  --art-far: 0.5;
+  --art-mid: 0.58;
+  --art-near: 0.68;
+  /* A seam that wants to dissolve rather than stop at a line masks itself
+     with a gradient; this is the alpha that gradient is still at halfway
+     down, so every seam on the page dissolves at the same rate. Higher in
+     dark: those tints are near-black, and a fade can carry further there
+     before it starts to read as a grey smear across the boundary. */
+  --seam-fade: 0.55;
+
   /* type */
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -137,6 +229,10 @@
   --live-fg: #2e784a;
   --live-bg: rgba(45, 140, 85, 0.12);
   --live-border: rgba(45, 140, 85, 0.42);
+
+  /* --danger-soft / --danger-border are deliberately absent, not missing:
+     the red they are mixed from is the same in both themes. See :root. */
+  --danger: #b03636;
 
   --invert-bg: #141419;
   --invert-fg: #f6f6f8;
@@ -186,6 +282,21 @@
   --faith-stop-0: #14141a;
   --faith-stop-1: #33333d;
   --faith-stop-2: #6f6f7b;
+
+  /* the five section bands. --band-hero / --band-outro / --band-foot are
+     aliases of --hero-bg / --bg / --bg2 and already follow this block, so
+     they are deliberately absent rather than missing — see :root. */
+  --band-origin: #eef0f6;
+  --band-apps: #f8f8fa;
+  --band-tools: #eceff6;
+  --band-building: #f8f5f3;
+  --band-faith: #eff0f7;
+
+  /* the scene layer, at the light end of the kit's ranges — see :root */
+  --art-far: 0.36;
+  --art-mid: 0.44;
+  --art-near: 0.52;
+  --seam-fade: 0.4;
 }
 
 /* ── Theme transition ─────────────────────────────────────────────────────
