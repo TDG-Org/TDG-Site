@@ -184,12 +184,13 @@ export const STORE_APPS: StoreApp[] = [
         // carry is deactivated in Stripe: it undercut both the subscription
         // and Lifetime for anybody who still had the URL.
         priceCents: 599,
-        tagline: 'Everything above 1080p, every shape in one run, and more than one Timeline.',
+        tagline: 'Export up to the editor’s full 16,384 × 16,384 and 400,000 kbps limits, write several shapes at once, and work with multiple Timelines.',
         unlocks: [
-          'Every resolution above 1080p: QHD, 4K, DCI and vertical 4K',
-          'Video bitrates above 12,000 kbps, target and spike ceiling alike',
+          'Project and export frames above 1080p, up to 16,384 × 16,384: QHD, 4K, DCI, vertical 4K and custom sizes',
+          'Target video bitrates from 12,001 to 400,000 kbps, with manual spike ceilings up to 800,000 kbps',
           '“Also Export As”, one render writing the same edit at several shapes',
           'More than one Timeline in a project, side by side in the tab strip',
+          'Exporting several Timelines in one run, queued one after another',
         ],
         paymentLink: 'https://buy.stripe.com/bJe9ASfwOcuCeBI1Gz4ZG0h',
         plans: [
