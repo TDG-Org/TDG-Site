@@ -44,13 +44,17 @@ function Art({
       /* `.webp`, not `.png`, and this is not a preference.
          The kit ships both: the PNG is the source art the illustrator's tool
          emits and it stays in the repo, but it is up to 2.1 MB per cutout at
-         2172px wide for a layer that paints at a few hundred CSS pixels — 28
-         files, 28.0 MB, and every section of the home page draws one. The WebP
-         derivative beside it is the same artwork with its alpha intact
-         (`yuva420p`), downscaled to the width it is actually painted at: 2.0 MB
-         for the whole kit, a 93% cut, and roughly 3–4 MB off first load on a
-         site that measured its own idle main thread down to 0.1 ms/s. Point
-         this back at `.png` and you hand all of that back.
+         2172px wide for a layer that paints at a few hundred CSS pixels. The
+         WebP derivative beside it is the same artwork with its alpha intact
+         (`yuva420p`), downscaled to the width it is actually painted at — a
+         ~93% cut across the kit, and megabytes off first load on a site that
+         measured its own idle main thread down to 0.1 ms/s. Point this back
+         at `.png` and you hand all of that back.
+         The kit's current file count and byte totals live in
+         `public/assets/parallax/README.md` and are deliberately not copied
+         here: this comment carried a stale pair (28 files, 28.0 MB) for a kit
+         that had already grown to 36 and 35.4 MB. Nothing about the argument
+         needs the number, and the number belongs beside the files.
          `asset()`, never a leading slash — rule 15. */
       src={asset(`assets/parallax/${art}-${theme}.webp`)}
       alt=""
@@ -97,8 +101,25 @@ export function ThemedArt({
   return <Art art={art} className={className} moves elementRef={ref} />
 }
 
-/** Art that rides the hero's own displacement instead of its own, so a layer
- *  inside the hero sinks with it rather than against it. */
+/**
+ * Art that rides the hero's own displacement instead of its own, so a layer
+ * inside the hero sinks with it rather than against it.
+ *
+ * **Nothing calls this today, and it is kept on purpose.** The hero is a pinned
+ * `Stage` now and draws its ridges and its pine with `StillArt`; the only layer
+ * left riding the hero's rect is `Faith.tsx`'s rays, which calls
+ * `useHeroParallax` directly on a `<div>`.
+ *
+ * It stays because the block above is the reason: these are three components
+ * so that no element can ever have both parallax hooks writing to it. Delete
+ * the hero one and the next person who wants art tied to the hero either
+ * reaches for `ThemedArt` — wrong ride, and it only looks slightly off — or
+ * adds the `mode` prop, which is the bug. An export that exists so the wrong
+ * thing is hard to write is doing its job while nobody calls it.
+ *
+ * `scene/README.md` carries the rule this was decided under, and the condition
+ * for deleting it.
+ */
 export function ThemedHeroArt({
   art,
   className,

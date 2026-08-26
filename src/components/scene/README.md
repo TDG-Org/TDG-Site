@@ -26,12 +26,98 @@ write an `<img>` or a path of its own. That is what makes a change like the
 | `Moon.tsx` | `Moon` — the disc, its bloom and three quiet patches of surface, as inline SVG. |
 | `Snow.tsx` | `Snow` — falling snow on a 2D canvas, at about the cost of a gradient. |
 
-**`Stage`, `Moon` and `Snow` are not used by any section yet.** They were
-written the same way and for the same reason the two above them were: ahead of
-the sections that will hang scenery in them, so that several sections growing a
-pinned backdrop at once all reach for one implementation rather than each
-arriving at a slightly different `position: sticky`. The first caller should
-read the contracts below rather than re-derive them.
+## Who calls what
+
+This is what `grep -rn "<Stage\|<Moon\|<Snow\|<Seam\|ThemedArt\|StillArt" src/`
+returns today. Re-run it rather than trusting the table — the paragraph this
+replaced said `Stage`, `Moon` and `Snow` had no callers at all, and two of the
+three had grown one by the time anybody read it.
+
+| Primitive | Drawn by |
+| --- | --- |
+| `ThemedArt` | `Apps` (reeds, tall pine) · `Building` (fog veil, faceted pines) · `Tools` (footbridge, boulders) · `Outro` (garden arch) |
+| `ThemedHeroArt` | **Nobody.** Kept on purpose — see below. |
+| `StillArt` | `Hero` (rear ridge, main ridge, tall pine) · `Origin` (snow bank, lamppost) |
+| `Seam` | `Apps` · `Tools` · `Building` · `Faith` · `Outro` — five, every one `edge="top"` |
+| `Stage` | `Hero` (the whole pinned valley) · `Origin` (the cabin) |
+| `Moon` | `Hero` (on the horizon) · `faith/Summit.tsx` (behind the cross) |
+| `Snow` | **Nobody.** Kept on purpose — see below. |
+
+**The moon is the thread the page is strung on.** It rests on the hero's
+horizon and it arrives five sections later behind the cross on the Faith
+summit. That is the reason it is one component and not two drawings, and it is
+the reason a stage clips at its section's edge rather than bleeding: the moon
+is *handed over*, not carried across.
+
+### Faith deliberately does not use `Stage`
+
+Worth recording, because a reader who finds `Moon` inside `Hero`'s stage and
+then finds the same `Moon` in Faith with no stage around it will assume
+somebody forgot.
+
+Faith's scenery is `faith/Summit.tsx`: a `position: absolute; inset: 0` sibling
+of the `.shell`, not a pinned backdrop. The summit is **ground the reader has
+arrived at**, not a backdrop they are scrolling past — its near ridge is what
+they are standing on and travels with the section exactly, while the three
+layers behind it lag the page by 13, 26 and 30px to read as distance. A stage
+would pin all four to the viewport, which is the opposite motion, and the one
+layer that must not move relative to the ground is the cross standing on the
+crest.
+
+Everything that follows from that is Faith's own problem, and it solved each
+the way this folder would have: no `stage-host` (its section keeps `overflow:
+hidden`), so `Summit` does its own rect check against its section at a 120px
+margin — the same number `Stage` guards on and for the same reason, since an
+`onFrame` subscriber cannot see an attribute. It also declares its own
+section-level contract, `.faith-summit-host`, the way `Stage.css` ships
+`.stage-host`, and its header says so.
+
+### Two exports here have no caller, and both are kept
+
+`ThemedHeroArt` and `Snow`. One rule, applied to both, because two unused
+exports resolved two different ways is worse than either answer:
+
+> **An export with no caller is kept only when its absence would push the next
+> builder toward something worse — and only if this file says out loud that it
+> has no caller and why. Otherwise it goes.**
+
+**Neither costs a byte, and that was checked rather than assumed.** `Snow.tsx`
+is imported by nothing, so it never enters the module graph — a production
+build with sourcemaps names `Moon.tsx`, `Seam.tsx`, `Stage.tsx` and
+`ThemedArt.tsx` among its sources and not `Snow.tsx`.
+`ThemedHeroArt` is an unused export of a module that *is* imported, so Rollup
+shakes the function out: the same sourcemaps map `ThemedArt.tsx` lines 28–67,
+91–102 and 139–141 into the bundle — `Art`, `ThemedArt` and `StillArt` — and
+nothing in between, which is exactly `ThemedHeroArt`'s body.
+
+What a dead export actually costs is a reader's confidence, and this section is
+the price of keeping these two.
+
+**`ThemedHeroArt` stays because deleting it re-opens a bug.** The three art
+components are not three conveniences; being three is the *mechanism* that
+keeps `useParallax` and `useHeroParallax` off the same element — see **Three
+components, not one with a mode prop** below, which is the longest section in
+this file for a reason. Remove the hero variant and the next builder who wants
+art tied to the hero has two moves left: reach for `ThemedArt`, which gives the
+layer the wrong ride and merely looks slightly off; or add the `mode` prop,
+which is the bug. The capability is still live either way — `Faith.tsx` calls
+`useHeroParallax` directly on a `<div>` for its rays — so what would go is only
+the safe way to spend it on a piece of the art kit.
+
+**`Snow` stays for the weaker version of the same reason, and its position is
+the one to re-examine first.** It has no caller because the job it was written
+for went elsewhere: `origin/CabinScene.tsx` draws its snow inside the 3D scene,
+so the DOM canvas was never needed. That is a settled outcome, not a pending
+one, and it is fair to say so. What keeps it is that a section wanting weather
+without a 3D scene is still a plausible thing, and the mistakes it already
+answers are exactly the ones a fresh canvas makes: the 30Hz cap, `dpr` capped
+at 1.5, the draw inside the tick rather than in the write closure, the still
+field under reduced motion, and the three ways a canvas silently blanks itself
+(a resize, a DPR change, a theme swap). `Starfield` and the deleted
+`OriginField` each learned those separately; this is the third and the one with
+them written down. **If a later pass finds this paragraph still true and still
+has no caller, delete the file** — the reasoning above is worth keeping in a
+commit message, not in a module nobody imports.
 
 ---
 
@@ -54,15 +140,33 @@ is required rather than optional because a piece of this kit that is not
 positioned and sized by its caller is an absolutely positioned image at 0,0 —
 there is no useful default, so the type asks for one.
 
+`StillArt` is not `ThemedArt` with `factor={0}` and the difference is not
+cosmetic: `ThemedArt` at zero still subscribes to the frame loop and still
+writes `element.style.translate` on every frame it is near the viewport, which
+also means it still owns that property and a pointer layer still cannot share
+the element. `StillArt` calls neither hook and writes nothing. Five layers on
+the page take it — the hero's two ridges and its pine, Origin's snow bank and
+its lamppost — and every one of them is a thing standing on ground rather than
+scenery sliding past.
+
 ### `.webp`, and do not "fix" it back to `.png`
 
 The kit ships both. The `.png` is the source art the illustrator's tool emits
 and it stays in the repo; the `.webp` beside it is the same artwork with its
 alpha channel intact (`yuva420p`), downscaled to the size it is actually
-painted at. The kit is 28.0 MB as PNG and 2.0 MB as WebP — the heaviest single
-prop is 2.10 MB, and the widest piece is 2172px, for layers that land at a few
-hundred CSS pixels. The home page draws twelve of them across seven sections,
-plus four more as app-card covers, so the swap is roughly 3–4 MB off first load.
+painted at. A single cutout is up to 2.10 MB as a PNG, at 2172px wide, for a
+layer that lands at a few hundred CSS pixels; the WebP derivative is a ~93%
+cut across the whole kit. The home page draws **twelve** of these across six
+sections — Faith draws none, it authors its own terrain — plus four more as
+app-card covers.
+
+**The kit's own byte figures are in
+[`public/assets/parallax/README.md`](../../../public/assets/parallax/README.md)
+and deliberately not repeated here.** They move every time a piece is added,
+and this file carried a stale pair for exactly that reason — 28 files and
+28.0 MB, against a kit that had grown to 36 and 35.4 while nobody re-measured.
+The argument does not depend on the number and the number belongs beside the
+files.
 
 Nothing catches a regression here. A typecheck cannot see a string, the build
 copies whatever `public/` contains, and the page looks identical either way; the
@@ -198,7 +302,8 @@ against their skies, so the seam and the art sitting beside it finally agree
 with each other instead of being two unrelated decisions.
 
 `--seam-step` is 94%, and `tokens.css` shows the working. Over the six seams the
-page actually draws it puts a seam's fill at ΔL\* 5.0–6.1 in dark and 4.6–4.8 in
+page drew when this was measured — `#origin` has since traded its seam for a
+snow drift, see below — it puts a seam's fill at ΔL\* 5.0–6.1 in dark and 4.6–4.8 in
 light — nowhere near the 9.6–10.6 dark and 7.7–8.0 light a 90% step gives, which
 would be a grey stripe at every boundary that carries one. The plane it was
 calibrated against is `.card`'s own face, the quietest thing on this site that is
@@ -210,11 +315,20 @@ band as that band is from white, and the light seams on `#origin`, `#tools` and
 `#faith` sit UNDER it. That is a property of an opaque light surface, not of the
 step, and 94% stands either way.
 
-**Six boundaries carry one today** — `#origin`, `#apps`, `#tools`, `#building`,
-`#faith` and the Outro, every one of them `edge="top"`. The hero and the footer
-draw no seam, and that is a placement decision, not a gap in the palette:
-`base.css` declares a `--seam-fill` for both of them alongside the other six, so
-adding one there is a `<Seam>` and a `color:` line and nothing else.
+**Five boundaries carry one today** — `#apps`, `#tools`, `#building`, `#faith`
+and the Outro, every one of them `edge="top"`.
+
+**`#origin` used to be the sixth and is not any more.** Its boundary is now the
+`landscapes/snow-bank` cutout in `Origin.tsx`: a drift whose crest stands up
+into the hero and whose body fills down into Origin, so the lamppost's foot
+lands on something rather than on a colour change. Two silhouettes on one
+boundary is mush, so the seam came off rather than sitting behind the drift.
+The measurement two paragraphs above was taken while it was still there.
+
+The hero and the footer draw no seam either, and that is a placement decision
+rather than a gap in the palette: `base.css` declares a `--seam-fill` for the
+hero, the footer **and `#origin`** alongside the five that use one, so putting
+one back anywhere is a `<Seam>` and a `color:` line and nothing else.
 
 **One catch if you take the hero up on that.** `#top` is not the hero's id alone:
 `About.tsx`, `AppPage.tsx`, `Store.tsx` and `DevConsole.tsx` all put `id="top"` on
@@ -275,14 +389,19 @@ A backdrop that stays put while its section's content scrolls over it. It is
 `.shell`, never around it.
 
 ```tsx
-<section id="faith" className="section section--blend stage-host faith">
-  <Stage className="faith__stage">
-    <Moon className="faith__moon" />
-    <ThemedArt art="landscapes/mountain-ridge" className="faith__ridge" factor={0.04} />
+<section id="origin" className="section section--blend stage-host origin">
+  <Stage className="origin__stage">
+    <CabinScene className="origin__cabin" />
   </Stage>
   <div className="shell"> … </div>
 </section>
 ```
+
+That is `Origin.tsx`, trimmed. `Hero.tsx` is the other caller and the fuller
+one — its stage holds the sky, the moon, three art-kit layers, the light
+shafts, `Starfield`, the bloom, the grain and the vignette, all of them pinned
+for 130svh while the copy dissolves over them. **Faith has no stage and that is
+deliberate**; the reason is recorded under *Who calls what* above.
 
 This is the one architectural idea taken from the reference the site owner
 named: a fixed backdrop with ordinary sections scrolling over it, which is what
@@ -307,9 +426,14 @@ scroll container, so sticky keeps the viewport as its scrollport. `Stage.css`
 ships that one line as `.stage-host`. Same measurement with it in place: the
 stage held a **constant** offset through 1521px of scroll and released at
 1935px with its bottom sitting exactly on the section's bottom. (The constant
-was 120 rather than 0, because `useHeroTakeover` translates `#origin` by up to
-`TAKEOVER_LAG` px while it arrives and a translate carries the whole section
-with it. Constant is the part that matters.)
+was 120 rather than 0, because the `useHeroTakeover` hook that existed when
+this was measured translated `#origin` by up to `TAKEOVER_LAG` px while it
+arrived, and a translate carries the whole section with it. **That hook has
+since been deleted** — the hero pins and Origin climbs over it on a negative
+margin, with nothing writing a transform to the section any more — so a fresh
+reading will land on a different constant. Constant is the part that mattered
+and it is the part that did not change. `Stage.tsx` and `Stage.css` still name
+the hook at their own copies of this note.)
 
 It is a class rather than an edit to `.section` because only sections that hang
 scenery in a stage need it, and because `clip` also removes a section's ability
@@ -418,6 +542,19 @@ each section it appears in, and where it goes is a fact about that section.
 Drive it from `useSectionProgress` and `usePointer` in the section that draws
 it.
 
+Two sections draw one, and between them they are the worked examples. `Hero`
+puts it on the horizon inside its stage and lifts it 0.30vh while drifting it
+0.22vh left across the pin, off the one rect that section reads per frame.
+`faith/Summit.tsx` puts it behind the cross and drives it from
+`useSectionProgress` and `usePointer` together, exactly as this paragraph asks
+— and it sizes everything off `Moon`'s published geometry rather than off a
+screenshot: the disc is half the box, so a box of 2.88 cross-heights gives a
+disc of 1.44 and a radius of 0.72, which is how the whole cross is guaranteed
+to sit inside the disc at every width. Each wraps the moon in its own `<div>`
+and animates *that*, because `Moon` takes a `className` and nothing else — a
+component that also handed out a ref would be inviting two owners for one
+element's `translate`.
+
 ### Inline SVG, not an image
 
 A raster moon is a raster halo. Scale it up for the "much bigger" the site
@@ -484,6 +621,15 @@ Gradient ids are per instance, from `useId`. SVG ids are document-global and
 `url(#id)` resolves against the whole document, so a second `Moon` on one page
 would otherwise paint itself with the first one's gradients.
 
+**This file is the pattern for the rest of the site, and it now has company.**
+`components/CrossGlyph.tsx` had a fixed id and the home page grew a second and
+a third instance of it this pass — the hero's mark, the lit glyph above the
+verse, and the silhouette on the Faith summit, the last two sharing a variant
+and therefore an id. Verified in the live DOM: three `linearGradient`s, three
+ids, each path resolving to its own sibling. `KeyArt.tsx` already did the same
+thing for the five app covers. If you write a `<defs>` anywhere, copy the
+four-line recipe out of `Moon.tsx` including the punctuation strip.
+
 ---
 
 ## `Snow.tsx`
@@ -540,12 +686,16 @@ re-reads the colours and paints with none of them. A reduced-motion visitor who
 resized the window would have lost the snow for the rest of the visit with no
 code path left that could bring it back. So each of the three clears the
 `settled` flag and calls `wake()` for one more frame.
-`origin/OriginField.tsx` carries the long version of that bug; it is the same
-one.
+`origin/OriginField.tsx` carried the long version of that bug and was deleted
+this pass, so `Snow.tsx`'s own header is where it lives now. It is the same
+bug either way, and `origin/CabinScene.tsx` — the three.js scene that replaced
+that file — had to answer it again.
 
 ### The colour is read, not written
 
-`--glow`, through the same `readRGB` helper `OriginField` uses, because only
+`--glow`, through `Snow.tsx`'s own `readRGB` helper — lifted from
+`origin/OriginField.tsx` before that file was deleted this pass, so the helper
+outlived its source — because only
 the hue is wanted — the token carries this theme's own alpha (0.2 dark, 0.16
 light) and each flake needs its own. Measured in both themes: the token
 resolves to `rgba(255,255,255,0.2)` and `rgba(20,20,26,0.16)`, and the regex

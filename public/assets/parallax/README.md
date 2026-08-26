@@ -5,10 +5,20 @@ files per artwork**: a `.png` source and the `.webp` the site actually loads.
 See [Two files per artwork](#two-files-per-artwork) below — it is the first
 thing to read before adding anything here.
 
-The kit is now wired in, through `ThemedArt` / `ThemedHeroArt` / `StillArt` in
-[`src/components/scene/`](../../../src/components/scene/README.md).  It stays
-what it always was: framing layers.  The hero's wordmark, point cloud, shafts
-and copy remain the primary scene, and every guardrail below still holds.
+The kit is wired in, through `ThemedArt` and `StillArt` in
+[`src/components/scene/`](../../../src/components/scene/README.md) — twelve
+layers across six sections of the home page, plus four more as app-card covers
+in `KeyArt.tsx`.  (`ThemedHeroArt` is the third of those components and has no
+caller at the moment; `scene/README.md` says why it is kept.)  It stays what it
+always was: framing layers.  The hero's wordmark, point cloud, shafts and copy
+remain the primary scene, and every guardrail below still holds.
+
+**Seven of the eighteen pieces are not placed anywhere, and that is fine.**  A
+kit is a kit.  The [Asset selection](#asset-selection) table says which pieces
+render today and which do not; an unplaced piece is a spare, not a bug, and it
+is not a reason to delete a file or to go and find somewhere to put it.  The
+guardrails below — one structural anchor per section, do not build a scene —
+are the reason there are spares at all.
 
 Every file in this kit has a real alpha channel.  The black visible in some
 image previewers represents transparency, not a painted background.
@@ -86,7 +96,7 @@ go in.
 | `landscapes/` | Theme-paired mountain ridges, snow-bank strips, and stone footbridge cutouts | Layered hero terrain or a quiet lower-section seam. |
 | `props/` | Theme-paired trees, boulder clusters, bench, foliage/reeds, wayfinding post, garden arch, and pine grove | Sparse section-edge decoration. |
 | `transitions/` | Theme-paired stepping-stone paths | A quiet cue between Origin beats. |
-| `faith/` | Theme-paired hillside crosses | A small, reverent Faith-section detail. |
+| `faith/` | Theme-paired hillside crosses | A small, reverent detail. **Not placed** — Faith authors its own terrain and cross; see the table below. |
 | `atmosphere/` | Theme-paired fog veils | A slow, quiet layer behind a landscape or prop. |
 | `implementation-brief.md` | Implementation brief | The exact handoff prompt for Claude Code. |
 
@@ -101,26 +111,31 @@ file at a smaller size, and it never touches which of the two artworks is drawn.
 
 ## Asset selection
 
-| Asset group | Dark | Light | Placement |
+Two columns: **Placed** is where the piece renders today, from a grep of
+`art="` across `src/`; **Intent** is what the piece was drawn for and is the
+guidance for anyone placing it. Re-run the grep rather than trusting the first
+column — this table has already been out of date once.
+
+| Asset group | Files (`-dark` / `-light`, both `.webp`) | Placed | Intent |
 | --- | --- | --- | --- |
-| Mountain ridge | `landscapes/mountain-ridge-dark.webp` | `landscapes/mountain-ridge-light.webp` | Hero floor, behind the content and model. |
-| Rear mountain ridge | `landscapes/mountain-ridge-rear-dark.webp` | `landscapes/mountain-ridge-rear-light.webp` | Optional distant Hero/Origin layer, **behind** the main mountain ridge. Never use it for Faith; Faith's terrain remains Claude-authored SVG. |
-| Snow bank | `landscapes/snow-bank-dark.webp` | `landscapes/snow-bank-light.webp` | A low foreground drift that runs beyond both section edges; use sparingly as a floor, not a scene. |
-| Park lamppost | `hero/lamppost-left-dark.webp` | `hero/lamppost-left-light.webp` | Far-left edge, below navigation, no closer than 30px to the wordmark. |
-| Pine pair | `props/pine-pair-dark.webp` | `props/pine-pair-light.webp` | A secondary edge prop, never adjacent to the lamppost. |
-| Faceted pine pair | `props/pine-faceted-pair-dark.webp` | `props/pine-faceted-pair-light.webp` | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
-| Tall foreground pine | `props/tall-pine-dark.webp` | `props/tall-pine-light.webp` | One oversized edge prop, cropped by the frame. Use it alone rather than alongside another pine family. |
-| Boulder cluster | `props/boulder-cluster-dark.webp` | `props/boulder-cluster-light.webp` | A dark, chunky bottom-corner anchor; pair only with a quiet landscape layer. |
-| Canopy tree | `props/canopy-tree-dark.webp` | `props/canopy-tree-light.webp` | A distinct, softer silhouette for a later section. |
-| Park bench | `props/park-bench-dark.webp` | `props/park-bench-light.webp` | Compact lower-corner accent opposite a tree or lamppost. |
-| Bushes and reeds | `props/bushes-reeds-dark.webp` | `props/bushes-reeds-light.webp` | A low foreground cover or section seam. |
-| Fog veil | `atmosphere/fog-veil-dark.webp` | `atmosphere/fog-veil-light.webp` | Far backdrop; place behind mountains and props. |
-| Wayfinding post | `props/wayfinding-post-dark.webp` | `props/wayfinding-post-light.webp` | Origin's far edge; its boards must stay blank. |
-| Stone footbridge | `landscapes/stone-footbridge-dark.webp` | `landscapes/stone-footbridge-light.webp` | A low Origin seam, used instead of—not with—the stepping stones. |
-| Garden arch | `props/garden-arch-dark.webp` | `props/garden-arch-light.webp` | A far-edge Outro threshold, never a content container. |
-| Stepping stones | `transitions/stepping-stones-dark.webp` | `transitions/stepping-stones-light.webp` | A subtle Origin transition, behind the timeline. |
-| Hillside cross | `faith/hillside-cross-dark.webp` | `faith/hillside-cross-light.webp` | A small Faith-only lower-corner detail, below the verse. |
-| Pine grove | `props/pine-grove-dark.webp` | `props/pine-grove-light.webp` | A richer edge anchor for one later section; never beside the lamppost. |
+| Mountain ridge | `landscapes/mountain-ridge` | **Hero**, the horizon inside its pinned stage. Also the DevFleet app cover in `KeyArt.tsx`. | Hero floor, behind the content and model. |
+| Rear mountain ridge | `landscapes/mountain-ridge-rear` | **Hero**, behind the main ridge, drifting at half its rate. | Distant Hero/Origin layer, **behind** the main ridge. Never Faith — Faith's terrain is authored SVG. |
+| Snow bank | `landscapes/snow-bank` | **Origin**, and it is that section's entire boundary treatment: the crest stands up into the hero and the body fills down into Origin. It replaced the `Seam` that used to sit there — two silhouettes on one boundary is mush. | A low foreground drift that runs beyond both section edges; a floor, not a scene. |
+| Park lamppost | `hero/lamppost-left` | **Origin**, not the hero — and that is the trick. It is a child of `#origin`, so it paints over the hero's stage while its foot plants 30px inside Origin's snow; a pole living in a pinned hero is painted over the instant Origin rises. `display: none` below 1366px. | Far-left edge, below navigation, no closer than 30px to the wordmark. |
+| Pine pair | `props/pine-pair` | Not placed. | A secondary edge prop, never adjacent to the lamppost. The faceted pair below is the default; this is the plainer variation. |
+| Faceted pine pair | `props/pine-faceted-pair` | **Building**. Also the Say2Quill app cover. | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
+| Tall foreground pine | `props/tall-pine` | **Hero** (the near foreground, and the layer that answers the mouse most) and **Apps**. | One oversized edge prop, cropped by the frame. Alone in its composition, not alongside another pine family — which is a rule about one section, not about the page. |
+| Boulder cluster | `props/boulder-cluster` | **Tools**, on a pointer-sway wrapper. | A dark, chunky bottom-corner anchor; pair only with a quiet landscape layer. |
+| Canopy tree | `props/canopy-tree` | Not placed. | A distinct, softer silhouette for a later section. |
+| Park bench | `props/park-bench` | Not placed. | Compact lower-corner accent opposite a tree or lamppost. |
+| Bushes and reeds | `props/bushes-reeds` | **Apps**, the low cover along that section's floor. | A low foreground cover or section seam. |
+| Fog veil | `atmosphere/fog-veil` | **Building**, the far backdrop behind its pines. | Far backdrop; place behind mountains and props. |
+| Wayfinding post | `props/wayfinding-post` | Not placed. | Origin's far edge; its boards must stay blank. |
+| Stone footbridge | `landscapes/stone-footbridge` | **Tools** — not Origin, which this row used to say. Also the Music Everything app cover, where its repeating arches read as a bar line. | A low seam, used instead of—not with—the stepping stones. |
+| Garden arch | `props/garden-arch` | **Outro**, the far-edge threshold. Also the Makullveny app cover. | A far-edge threshold, never a content container. |
+| Stepping stones | `transitions/stepping-stones` | Not placed. Origin's behind-the-timeline layer is `origin/CabinScene.tsx` now. | A subtle Origin transition, behind the timeline. |
+| Hillside cross | `faith/hillside-cross` | **Not placed, and Faith is not the section to place it in — see below.** | It was drawn as a small Faith-only lower-corner detail below the verse. |
+| Pine grove | `props/pine-grove` | Not placed. | A richer edge anchor for one later section; never beside the lamppost. The optional painterly variation — do not substitute it for the faceted pair. |
 
 The **Faceted pine pair** is the default tree treatment for this kit: it has
 clear illustrated facets and an expressive silhouette without naturalistic
@@ -132,6 +147,39 @@ family when adding further tree props.
 replacement for the faceted pair.  It keeps the same broad illustrated facet
 language while offering an edge-overflow silhouette for a different depth plane.
 It is not a reason to add multiple trees to one composition.
+
+### Why Faith stopped using `faith/hillside-cross`
+
+**The files stay.** Nothing below is a case for deleting them, and the kit is
+not tidier for having exactly as many pieces as the page currently draws. This
+is here because the Hillside cross row in the table above used to claim a live
+placement, and a reader who went looking for it in `Faith.tsx` would find
+something else entirely.
+
+Faith draws its own terrain now — `src/components/faith/Summit.tsx`: three
+smooth authored ridges, the moon low behind them, and the site's own
+`CrossGlyph` standing on the crest with the disc directly behind it. The
+reasoning is in that file's header and in `Faith.tsx`, and it is four things at
+once rather than a preference:
+
+- **A second cross on a second hill.** Once the summit exists, this artwork
+  brings its own hill *and* its own cross into a section that already has one
+  of each. Guardrail 8 below — at most one structural anchor per section — is
+  exactly that rule, and the hill inside the artwork would have to be hidden
+  behind the hill the section draws.
+- **The wrong texture.** This piece is faceted low-poly, which is the hero's
+  language. The reference for Faith is soft, smooth, layered hills in flat
+  tones and almost entirely negative space; a facet count is the fastest way to
+  lose that.
+- **A light source that disagrees.** Its glow is painted into its own alpha,
+  lighting the cross from behind and to the right. The moon in that section is
+  a real object at a known position, and the two do not agree.
+- **It is a raster.** It cannot ride the theme wave the way a `<stop>` does,
+  and it cannot be resized without bytes. `CrossGlyph` is one path that scales
+  to any height for nothing and crosses on the wave for free.
+
+None of that is a fault in the art. It is a piece drawn for a Faith section
+that was a corner detail under a verse, and that section grew a summit.
 
 ## Richer-detail family
 
@@ -145,6 +193,10 @@ place without turning a content section into an illustrated scene.  Their dark
 versions are materially deeper midnight blue; their light partners are paler
 mist/silver with a narrow graphite-blue note.  This contrast shift is why both
 files must be swapped as actual themed assets rather than filtered.
+
+Two of the six are placed today — `stone-footbridge` in Tools and `garden-arch`
+in the Outro, one section each.  That ratio is the guardrail working, not a
+backlog: six anchors on a seven-section page would be six illustrated scenes.
 
 ## Guardrails for implementation
 
@@ -168,7 +220,11 @@ files must be swapped as actual themed assets rather than filtered.
    0.34–0.48 in light; props at 0.50–0.72 in dark and 0.38–0.56 in light.  Let
    the art disappear first when vertical space is tight.
 7. At `max-width: 640px`, hide the peripheral lamppost and bench.  Keep only a
-   simplified mountain/fog composition if it does not obscure hero copy.
+   simplified mountain/fog composition if it does not obscure hero copy.  This
+   is a floor and the page is currently stricter than it: `.origin__lamp` is
+   `display: none` until `min-width: 1366px`, because the clearance it needs
+   from the wordmark is solved from the hero's own copy column and there is no
+   room for it below that.  The bench is not placed at all.
 8. Do not build a scene from the kit.  A section gets at most one structural
    anchor (bridge, arch, wayfinder, or cross), plus optional low foliage/fog.
 

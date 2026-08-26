@@ -97,12 +97,15 @@ and not `useOffscreenPause`'s 120.
 `useOffscreenPause` cannot do this job for you. It stamps `data-live` and CSS
 `animation-play-state` follows it, but an `onFrame` subscriber never sees an
 attribute — **anything you drive from JS instead of CSS keyframes has to check
-visibility itself**, the way `Starfield` and `OriginField` do.
+visibility itself**, the way `hero/Starfield.tsx`, `origin/CabinScene.tsx`,
+`components/faith/Summit.tsx` and `components/scene/Snow.tsx` all do. (That
+list used to name `origin/OriginField.tsx`, which was deleted this pass and
+replaced by `CabinScene.tsx`; the lesson survived the file.)
 
 ## `useHeroParallax`
 
 ```tsx
-const shafts = useHeroParallax<HTMLDivElement>(0.06)
+const rays = useHeroParallax<HTMLDivElement>(0.05)
 ```
 
 The fifth hook, exported from `useParallax.ts` beside the fourth. It reads
@@ -111,18 +114,32 @@ the hero down as it sinks instead of drifting against its own distance from the
 centre of the viewport.
 
 **Which one you want.** Inside the hero, or in a section that is meant to read
-as still tied to it, use `useHeroParallax` — `Hero.tsx` moves its shafts and its
-content with it, and `Faith.tsx` gives its rays the same ride. Anything else on
-the page uses `useParallax`. There is no lerp in the hero version and it needs
-none: it tracks a rect that is already moving smoothly, so a smoother of its own
-would only add lag.
+as still tied to it, use `useHeroParallax`. Anything else on the page uses
+`useParallax`. There is no lerp in the hero version and it needs none: it tracks
+a rect that is already moving smoothly, so a smoother of its own would only add
+lag.
 
-**It does not park off screen, and `useParallax` does.** Six subscribers rather
-than eighteen, no lerp to keep the loop awake, and a guard here would have to
-buy a second rect the hook does not otherwise read — the header comment in the
-file carries the full reasoning, and says how to guard it if that ever stops
-being true. What it means for a consumer: a `useHeroParallax` layer's inline
-`translate` is current on every frame the page moves, wherever that layer is.
+**Exactly one element on the page rides it today**, and that is worth knowing
+before you read the file's header. `grep -rn 'useHeroParallax<' src/` returns
+two call sites: `Faith.tsx`'s rays, which is the live one, and
+`components/scene/ThemedArt.tsx`'s `ThemedHeroArt`, which currently has no
+caller of its own (`scene/README.md` says why it is kept anyway). The hero
+itself no longer uses it at all — it is a pinned `Stage` now, and every layer
+inside it comes off **one** shared `getBoundingClientRect` per frame in
+`Hero.tsx`, which is cheaper than a subscriber per layer each measuring the
+same element.
+
+**It does not park off screen, and `useParallax` does.** No lerp to keep the
+loop awake, no `hold()` ever, and a guard here would have to buy a second rect
+the hook does not otherwise read — a measurement added to every live frame to
+save one style write. `useParallax.ts`'s header carries the full reasoning and
+**the subscriber count it was decided against**. That number is stated there and
+deliberately not repeated here, because a figure written down twice is one that
+will eventually disagree with itself — §8 of [`AGENTS.md`](../../AGENTS.md) is
+that lesson, learned on a button size. Note when you read it that the count has
+since fallen rather than risen, so the argument got stronger. What it means for
+a consumer: a `useHeroParallax` layer's inline `translate` is current on every
+frame the page moves, wherever that layer is.
 
 **Never put both on one element.** Each writes the whole of
 `element.style.translate` every frame from its own source and neither reads what
@@ -198,10 +215,20 @@ const [section, progress] = useSectionProgress<HTMLElement>()
 viewport top, clamped. Same no-render contract as `usePointer`: `progress.p` is
 a frozen accessor over a ref, read inside your own tick.
 
-`origin/OriginField.tsx` computes exactly this expression inline and has since
-it was written. This is that line with the reasoning attached — anything new
-that wants scroll progress through a section calls this instead of writing the
-arithmetic a second time.
+`origin/CabinScene.tsx` computes exactly this expression inline —
+`(vh - rect.top) / (vh + rect.height)`, inside its own tick — and inherited it
+from `origin/OriginField.tsx`, the file it replaced this pass. This is that
+line with the reasoning attached, so anything new that wants scroll progress
+through a section calls the hook rather than writing the arithmetic a third
+time. `Faith.tsx` is the one that did, and it is the only caller today.
+
+**There is a case where you should not.** `Hero.tsx` declined it on purpose and
+its header says why: `p` runs over `vh + height` with the section entirely off
+screen at both ends, so recovering "how far through this pinned runway am I"
+from it needs the height and the viewport back again — the two measurements the
+hook was meant to save. One rect, read once and mapped directly, is cheaper and
+exact. Reach for this hook when you want a section's travel across the
+viewport; read your own rect when you want a fraction of one specific box.
 
 **What p actually means.** The travel is `vh + height`, so the run starts and
 ends with the section completely out of view. That is what makes it safe to
@@ -249,11 +276,37 @@ there still does its own rect check. `scene/Snow.tsx` does.
 
 ---
 
-## Nothing new here is wired into a section yet
+## Who calls the two that write nothing
 
 `usePointer` and `useSectionProgress` were written ahead of the sections that
-will use them, the way `components/scene/` was, so that the several sections
-about to grow scroll and pointer choreography all reach for one implementation
-rather than each inlining its own. Neither is called from anywhere in `src/`
-today, and that is deliberate rather than an oversight — the first caller
-should read the contracts above, not re-derive them.
+now use them, the way `components/scene/` was, so that the several sections
+about to grow scroll and pointer choreography would all reach for one
+implementation rather than each inlining its own. Both are wired in now. The
+table is what `grep -rn '= usePointer()' src/` and
+`grep -rn 'useSectionProgress<' src/` return — re-run them rather than trusting
+it, because this section has already been wrong once.
+
+| Caller | Hook | What it drives |
+| --- | --- | --- |
+| `components/Hero.tsx` | `usePointer` | The tall pine (26 × 11 px) and the moon (7 × 3). The ridges and the sky answer the mouse with nothing at all, which is what makes the pine read as near. |
+| `components/Origin.tsx` | `usePointer` | The lamppost, **on the x axis only** — a foot that bobs off the snow loses the illusion the whole arrangement exists to build. |
+| `components/Apps.tsx` | `usePointer` | Its private `useSway` helper, on the tall pine's wrapper. |
+| `components/Tools.tsx` | `usePointer` | The same `useSway`, on the boulder cluster's wrapper. |
+| `components/faith/Summit.tsx` | `usePointer` | The moon and the far ridge, by a few pixels. The cross takes no pointer response, deliberately. |
+| `components/Faith.tsx` | `useSectionProgress` | Read on the section and handed straight down to `faith/Summit.tsx` as the frozen accessor, where the moon, the far ridge and the crest lag the page by 30 / 26 / 13 px across the whole of `p`. |
+
+Two things in that table are worth copying rather than re-deriving.
+
+**A pointer layer goes on a WRAPPER, never on the element a parallax hook
+owns.** `Apps`, `Tools`, `Origin` and `Hero` all do it that way. `useParallax`
+writes the whole of `element.style.translate` every frame and so does a pointer
+tick, so one element with both is the same race `useHeroParallax` and
+`useParallax` have — see **Never put both on one element** above. The wrapper
+takes the pointer; the child takes the scroll.
+
+**`Apps.tsx` and `Tools.tsx` carry the same fifteen-line `useSway` twice**, and
+`Apps.tsx`'s own comment sets the trigger for fixing that: a third section that
+wants one is when it stops being worth duplicating and belongs here, beside
+`usePointer`. `faith/Summit.tsx` is not that third — it drives three layers from
+one tick with scroll and pointer terms mixed, which is not what `useSway` does —
+so the count still stands at two.

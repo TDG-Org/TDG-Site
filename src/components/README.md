@@ -14,11 +14,11 @@ shared primitives every one of these builds on live in
 
 | | |
 | --- | --- |
-| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Origin up over it. Its canvases and its typed tagline are in `hero/`. |
-| `Origin.tsx` | Seven chapters on a timeline that fills as you read. Backed by `origin/OriginField.tsx`. |
+| `Hero.tsx` | The opening scene, and a **pinned** one: a 230svh section whose `scene/Stage` holds still for 130svh while the copy dissolves over it and Origin climbs up on a `margin-top: -100svh`. Its own header draws the three boxes and names the trap in each; read it before you touch the seam. Its canvases and its typed tagline are in `hero/`. (It used to own a `useHeroTakeover` hook that slid Origin with a JS translate. That hook is gone — the overlap is CSS now, so there is nothing left to time.) |
+| `Origin.tsx` | Seven chapters on a timeline that fills as you read, over `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read. |
 | `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. |
 | `Building.tsx` | What is on our screens right now. |
-| `Faith.tsx` | A slow gradient field and one verse. |
+| `Faith.tsx` | A slow gradient field, one verse, and the summit below it — `faith/Summit.tsx`, where the page's moon finally arrives behind the cross. |
 | `Outro.tsx` | The makers note and the GitHub card that close the page. |
 
 ### The routed pages
@@ -46,18 +46,16 @@ shared primitives every one of these builds on live in
 | `AppIcon.tsx` | One app's icon, drawn the same way in all four places it appears. One component rather than four copies, because the alignment is the whole difficulty and four copies is four chances to get it wrong differently. |
 | `ImageSlot.tsx` | A picture slot: key art, else a real screenshot. `art` wins over `shot` and over a local drop, because the two are for different places — the card wants the cover, the app's own page wants the software. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
 | `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the five drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
-| `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph. |
+| `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph — and painted through `<stop>`s rather than a flat `fill` so it rides the theme wave. Three of them render on the home page, so its gradient id is per instance from `useId`, the way `scene/Moon.tsx` and `KeyArt.tsx` do it. |
 
 ### `hero/` and `origin/`
 
-Hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx` morphs
-between the twelve forms in `shapes.ts`; `Starfield.tsx` is the dust;
-`OriginField.tsx` is the same technique scaled down to ambient.
-
-**No three.js and no WebGL in any of them**, despite `three` being a dependency.
-This is the site's own proven approach. Point counts scale to what the device can
-comfortably paint, and the dust runs at 24 Hz on a capped DPR because nobody can
-tell and it is 2.5× less canvas work for an identical result.
+`hero/` is hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx`
+morphs between the twelve forms in `shapes.ts`; `Starfield.tsx` is the dust.
+**No WebGL in either**, and that is still the site's own proven approach: point
+counts scale to what the device can comfortably paint, and the dust runs at
+24 Hz on a capped DPR because nobody can tell and it is 2.5× less canvas work
+for an identical result.
 
 `hero/Tagline.tsx` is the one file in there that draws no canvas: it types the
 lines of `HERO_TAGLINES` out under the wordmark and swaps them from a shuffle
@@ -67,17 +65,63 @@ timer — it accumulates `dt`, holds the loop only while a character is actually
 pending, and lets it park through the five-second rest. Under reduced motion
 the first line renders whole, immediately, with no caret.
 
+`origin/` is the exception, and it is a recent one. `CabinScene.tsx` is **real
+three.js on a `WebGLRenderer`** — the only file in `src/` that imports `three`,
+and the reason that dependency is in `package.json` at all. It replaced
+`OriginField.tsx`, a 2D projected point field standing in for depth this
+section can now have properly, so there is one canvas in Origin where there
+were two. The cabin is **built in code** rather than loaded: no `.glb`, no
+loader, ~540 triangles in four draw calls, in the flat faceted language of the
+art kit. Its header argues each of those and is the file to read first; it is
+also lazy, behind a `Suspense`, so the chunk does not reach a reader who never
+scrolls that far.
+
+**What did not change is rule 9.** The cabin is one `onFrame` subscriber with
+no `THREE.Clock` and no `setAnimationLoop`, it holds the loop only while
+something is genuinely converging, and it returns before drawing when the
+section is off screen. A rendering library is not a licence to bring its own
+clock.
+
+### `faith/`
+
+`Summit.tsx` and `Summit.css`: the scene at the bottom of `Faith.tsx` — three
+smooth ridges, the moon low behind them, and the page's own `CrossGlyph`
+standing on the crest with the disc directly behind it. It is the sixth beat of
+the walk the home page takes, and where the hero's moon ends up five sections
+later.
+
+**The ridges are authored SVG rather than art from the kit**, and the kit's own
+README now records the exclusion from the other end: the faceted low-poly
+mountains are the hero's language and the wrong texture for smooth layered
+hills. The cross is `CrossGlyph` rather than `faith/hillside-cross` for the
+same kind of reason plus a harder one — that artwork carries its own hill and
+its own cross, which would be a second structural anchor in a section that is
+allowed one.
+
+Read it for the pattern it demonstrates: **an alignment held by arithmetic**.
+Every number hangs off two custom properties on the section, so "the cross's
+foot is on the crest line", "the cross and the moon share one x" and "the whole
+cross is inside the disc" are true by construction at every width rather than
+at the width somebody happened to open. Nothing in it is tuned per breakpoint,
+and `Summit.css` shows the working for each claim including the worst case.
+That is rule 6 — symmetry is structural, never hand-tuned — applied to a
+composition instead of to a pair of buttons.
+
 ### `scene/`
 
-`ThemedArt` / `ThemedHeroArt` / `StillArt` and `Seam`: the shared vocabulary for
-the parallax art kit in `public/assets/parallax/` and for the shaped boundaries
-between sections. It was written **before** the sections that use it, so that
+The shared vocabulary for the parallax art kit in `public/assets/parallax/`,
+for the shaped boundaries between sections, and for anything drawn rather than
+photographed: `ThemedArt` / `ThemedHeroArt` / `StillArt`, `Seam`, `Stage`,
+`Moon` and `Snow`. It was written **before** the sections that use it, so that
 seven of them would reach for the same primitives instead of each wrapping an
 `<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith` and
-`Outro` draw from it today — every section on the home page. Read
-[`scene/README.md`](scene/README.md) before you decorate anything: it has the
-reason there are three art components rather than one with a mode prop, and the
-reason a seam cannot read `--tint-top`.
+`Outro` draw from it today — every section on the home page.
+
+Read [`scene/README.md`](scene/README.md) before you decorate anything. It
+carries the caller map, the reason there are three art components rather than
+one with a mode prop, the reason a seam cannot read `--tint-top`, the
+`overflow: clip` a stage needs on its section, and why two of its exports have
+no caller and are kept anyway.
 
 ---
 
