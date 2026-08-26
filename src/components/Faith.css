@@ -1,9 +1,21 @@
+/* ── the section is taller at the bottom than at the top, on purpose ──────
+   It used to be symmetrical, with the scene layer living inside the bottom
+   padding: the hillside cross was 36px shorter than that padding, which is
+   what kept it off the verse without measuring a line of type.
+
+   The summit needs sky. The clearance below the copy is now whatever the
+   summit says it needs — faith/Summit.css derives --summit-clearance from the
+   crest line and the cross's height so the moon's disc lands exactly
+   --summit-air below the content's bottom edge at every width. The section
+   asks the scene how tall it has to be rather than the scene being trimmed to
+   fit a padding somebody picked.
+
+   The fallback is --faith-pad-y, so a build that somehow lost Summit.css gets
+   the old symmetrical section rather than no padding at all.               */
 .section.faith {
-  /* Named because the scene layer is measured against it: the hillside's box
-     is sized to be SHORTER than this, which is what keeps it off the verse.
-     One name, both uses, so the two cannot drift. */
   --faith-pad-y: clamp(88px, 11vw, 150px);
-  padding: var(--faith-pad-y) clamp(18px, 4vw, 40px);
+  padding: var(--faith-pad-y) clamp(18px, 4vw, 40px)
+    var(--summit-clearance, var(--faith-pad-y));
 }
 
 /* Same wrapper trick as Tools.css — see there for why the drift is on a
@@ -24,53 +36,6 @@
    suggestion of one. */
 .faith__seam {
   color: var(--seam-fill);
-}
-
-/* The hillside cross. This is the one placement on the page where getting it
-   slightly wrong reads as irreverent rather than as a layout bug, so it is
-   made small and put somewhere it provably cannot go wrong:
-
-   HEIGHT, not width. The box is 36px SHORTER than the section's own bottom
-   padding, so it sits entirely below where .faith__content stops — at every
-   width, whatever the verse wraps to, without measuring a line of type. Width
-   follows the file's own 3:2. At 1440px that is 171x114 in the corner and the
-   cross inside it is about 25px tall; at 375px it is 78x52. Small on purpose.
-
-   The corner is also where the section's own light stops: .faith__field is
-   masked to an ellipse that is fully transparent by the time it reaches here,
-   so the hillside sits on the plain band rather than inside the glow.
-
-   Far from the CrossGlyph in both axes and by a long way — the glyph is
-   centred at the TOP of the content, this is in the lower-right corner, and at
-   1440px that is about 520px of horizontal clear and about 380px of vertical
-   between them. The vertical is the half that holds at every width: at 375px
-   the two are still nearly 500px apart down the page even though the section
-   has no side gutter left. Never near it, never behind it, never above it.
-
-   No drop-shadow, no blur, no filter: the light around the cross is painted
-   into this file's own alpha channel, and the -dark and -light versions are
-   separate artwork drawn for different contrast ranges.                     */
-.faith__hill {
-  right: 0;
-  /* Bedded 8px into the boundary rather than resting exactly on it, so the
-     drift can never lift the hill off the section's own floor and leave it
-     hovering. 0.018 tops out at 11px on a 1200px viewport, and the hill's base
-     is solid in the file, so the 8px that goes below the edge costs nothing. */
-  bottom: -8px;
-  height: calc(var(--faith-pad-y) - 36px);
-  /* The 3:2 the comment above relies on, stated rather than waited for.
-     hillside-cross-{dark,light}.webp are both 1000x667, and the file is
-     loading="lazy", so until it arrives naturalWidth is 0 and this measured
-     0x114 at 1440px — the "171x114 in the corner" above was true only after
-     the load. Nothing moves on screen either way, the layer being absolutely
-     positioned, but `useParallax` takes its drift target from
-     `r.top + r.height / 2` and would aim at a zero-width box first. The bare
-     ratio, not `auto <ratio>`: the case being fixed is the one with no
-     intrinsic ratio yet. Re-measure if the art is ever redrawn — a ratio that
-     disagrees with the file letterboxes it, and here that would be visible on
-     a cross. */
-  aspect-ratio: 1000 / 667;
-  opacity: var(--art-far);
 }
 
 @media (prefers-reduced-motion: reduce) {

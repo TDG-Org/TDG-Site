@@ -1,0 +1,408 @@
+/* ── the summit ───────────────────────────────────────────────────────────
+   Three smooth ridges, the moon low behind them, and the cross standing on
+   the crest with the disc directly behind it. Summit.tsx's header carries the
+   reasoning and the motion; this file carries the geometry, and the geometry
+   is the part that has to be exact.
+
+   Every number below hangs off two variables, so the three claims that decide
+   whether this beat works are true BY CONSTRUCTION at every width rather than
+   at the one width somebody happened to open:
+
+     --summit-crest      how far the crest LINE sits above the section's floor
+     --summit-cross-h    the cross's height, and the unit the moon is sized in
+
+   Nothing here is measured off a screenshot and nothing is tuned per
+   breakpoint. If one of those two moves, the ridge box, the cross's foot, the
+   moon's disc and the section's own bottom padding all move with it.       */
+
+/* ── the section's contract ───────────────────────────────────────────────
+   Declared on the SECTION, the way Stage.css ships `.stage-host` for the
+   section that holds a stage. Faith.tsx puts `faith-summit-host` on `#faith`
+   beside `.section`, and Faith.css reads --summit-clearance for its own
+   bottom padding — the summit is what knows how much sky it needs, so the
+   summit is where that sum lives.                                          */
+.faith-summit-host {
+  /* Where the crest peaks, as a fraction of the section's width. Right of
+     centre, like the reference, and far enough off it that the summit cross
+     never stacks directly under the CrossGlyph at the top of the content.
+     The crest path's apex is authored at 0.62 x 1440 = 892.8 in its own
+     viewBox, so this value and that number are one decision in two places —
+     change either and change both. */
+  --summit-x: 62%;
+
+  /* The crest line, above the section's floor. 11vw between a phone floor and
+     a 168px ceiling: the hill has to be tall enough to read as a summit and
+     short enough that the sky above it stays the subject. */
+  --summit-crest: clamp(78px, 11vw, 168px);
+
+  /* The cross, and the unit everything above the crest is measured in. */
+  --summit-cross-h: clamp(56px, 7vw, 108px);
+
+  /* How far the ridge box hangs BELOW the section's floor.
+
+     A ridge that drifts upward would otherwise open a strip of bare band
+     under it. The largest upward excursion any ridge takes is the far one's:
+     half of FAR_RISE plus its pointer y, so 16px at 1440 — and Summit.tsx
+     scales that with the section's width, so this scales with it too. Every
+     width ends up with roughly twice the cover it needs: 16 against 8 at 375,
+     30 against 16 at 1440, 34 against 18 at 1920.
+
+     **It has to scale, and not for the drift.** A constant 30 was the first
+     answer and it quietly distorted the whole composition, because the band's
+     height is a vw and the dip was not: at 1440 a flat 30 ate 12% of the band
+     and at 375 it ate 21%, so the near ridge — the layer closest to the floor
+     — sank below the section's bottom edge on a phone and simply was not
+     there. Measured after, as a percentage of the crest's own height so the
+     two widths are comparable at all: the near ridge's visible ends sit at
+     23.1% / 33.7% at 375 and 24.0% / 34.5% at 1440, the far ridge's band at
+     47.3–58.7% and 46.8–59.5%, and sampling nine points across the width
+     gives the same string of which layers are visible — F-N F-N F-N FCN -CN
+     -CN FCN F-N F-N — at both. It is the same picture, not the same picture
+     with its bottom layer sliced off at the narrow end. */
+  --summit-dip: clamp(16px, 2.1vw, 34px);
+
+  /* The bottom fade. A silhouette that stops dead ON a section boundary is a
+     line, because base.css's invariant is that adjacent bands meet on an
+     identical value — so the ridges dissolve into the floor instead, at the
+     rate every other seam on this page dissolves at (--seam-fade).
+
+     Kept just under the dip's own scale so the near ridge has body above it.
+     The fade is meant to hide a boundary, not to erase the layer that sits on
+     it: at 1440 it is fully opaque 31.7px above the floor and the near ridge's
+     visible ends are at 38.0 and 54.7; at 375, 18.0 against 18.0 and 26.3. */
+  --summit-foot: clamp(18px, 2.2vw, 38px);
+
+  /* Clear sky between the moon's disc and the last line of the copy.
+
+     The ceiling is 104 and not 96 for one measured reason: the moon's BLOOM
+     reaches a further 0.72 cross-heights past the disc (the bloom's radius is
+     twice the disc's), and at 1920 that is 77.8px against an air of 96 — so
+     the bloom's outermost, zero-alpha pixel came 2.8px over the copy's bottom
+     edge at the top of the moon's drift. It is a pixel with no alpha in it and
+     nobody would ever have seen it; the rule is still that nothing sits over
+     the verse.
+
+     7.2vw and a 104px ceiling, checked across the whole range rather than at
+     the five widths that get looked at: the bloom clears the copy by 21.3px at
+     768, 9.3 at 1100, 10.1 at 1200, 12.2 at 1440 and 5.3 from 1527 up, where
+     both the crest and the cross hit their own ceilings and the scene stops
+     growing. 6.5vw was the first answer and it left only 1.6px in the middle
+     of that range, which is not a margin, it is a coincidence. */
+  --summit-air: clamp(70px, 7.2vw, 104px);
+
+  /* ── the two derived lengths ───────────────────────────────────────────
+     The crest path's apex is at viewBox y = 100 of 400, so it sits three
+     quarters of the way up the ridge box. The box's own bottom is
+     --summit-dip below the section's floor. So:
+
+        crest above floor = 0.75 x box height - dip
+
+     and solving that for the height is the line below. This is the whole of
+     the "foot on the crest line" guarantee: the cross's `bottom` is
+     --summit-crest, and the apex is at --summit-crest, and neither of them
+     can move without this calc moving too.                                */
+  --summit-band-h: calc((var(--summit-crest) + var(--summit-dip)) * 4 / 3);
+
+  /* How much room the summit needs under the copy.
+
+     The tallest solid thing in the scene is the moon's disc, whose top sits
+     1.34 cross-heights above the crest (centre 0.62 up, radius 0.72). So the
+     disc's top is exactly --summit-air below the content's bottom edge, at
+     every width, without measuring a line of type — the same trick the old
+     hillside used, one layer up. Worst-case drift eats 15px of that air
+     (half the moon's rise plus its pointer y); --summit-air's floor is 70. */
+  --summit-clearance: calc(
+    var(--summit-crest) + var(--summit-cross-h) * 1.34 + var(--summit-air)
+  );
+
+  /* ── the inks ──────────────────────────────────────────────────────────
+     Every ridge is the section's own band stepped toward the page's ink, the
+     same construction --seam-fill uses and for the same reason: painted in
+     its band flat a silhouette is invisible, because a band is exactly the
+     value it is being drawn against. A step toward --text is one declaration
+     that is right in both themes — lighter than a near-black sky, darker than
+     a near-white one — which is how the six seams already on this page read
+     and how the art kit's own -dark and -light ridges are drawn.
+
+     **The ORDER of the three flips with the theme, and that is deliberate.**
+     In both themes the far ridge is the lighter one and the near ridge the
+     darker one — that is what aerial distance looks like, and it is what the
+     kit's own art does (its dark mountains are lifted midnight blue with the
+     nearest fringe darkest; its light ones are pale mist with a graphite note
+     at the front). But "lighter" is a step TOWARD --text in dark and AWAY
+     from it in light, so one set of percentages cannot say it twice. The
+     light block below swaps the two ends. The crest sits in the middle and
+     needs no override.
+
+     13% / 9% / 5% of ink, not the 6% a seam takes. A seam is a boundary that
+     must not become a stripe; this is scenery that has to read as three
+     distances, and it is the section's subject rather than its edge.        */
+  --summit-ink-far: color-mix(in srgb, var(--band-faith) 87%, var(--text));
+  --summit-ink-crest: color-mix(in srgb, var(--band-faith) 91%, var(--text));
+  --summit-ink-near: color-mix(in srgb, var(--band-faith) 95%, var(--text));
+
+  /* The cross goes the OTHER way — toward --invert-fg, the theme's own
+     ground, which is near-black in dark and near-white in light. That is not
+     a contrarian choice, it is what the kit's own Faith artwork already does:
+     `hillside-cross-dark` is a dark cross with light behind it and
+     `hillside-cross-light` is a pale one. Against the moon it is the
+     reference's silhouette either way round — black on a pale disc in dark,
+     white on a grey one in light — and against the crest ridge behind its
+     foot it still clears by roughly the same distance in both. 18% of the
+     band keeps it inside the scene's family rather than absolute. */
+  --summit-ink-cross: color-mix(in srgb, var(--band-faith) 18%, var(--invert-fg));
+}
+
+[data-theme='light'] .faith-summit-host {
+  --summit-ink-far: color-mix(in srgb, var(--band-faith) 95%, var(--text));
+  --summit-ink-near: color-mix(in srgb, var(--band-faith) 87%, var(--text));
+}
+
+/* ── the scene's own box ──────────────────────────────────────────────────
+   A sibling of .shell, absolutely positioned over the section's padding box,
+   taking no flow space and carrying no z-index — so it paints after the
+   section's gradient field and before .faith__content, which has z-index 2.
+   Every child is decorative and says so twice: aria-hidden in the markup and
+   pointer-events here.
+
+   No `overflow` and no `mask` on this element. It is nearly a thousand pixels
+   tall at 1440 and either one would promote a compositor layer that size; the
+   fade that IS needed lives on .faith__ridges, which is a quarter of the
+   height.                                                                  */
+.faith__summit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── the moon ─────────────────────────────────────────────────────────────
+   A wrapper rather than Moon's own <svg>, because `Moon` takes a className
+   and nothing else — which is the right shape: its header says the caller
+   animates it, and Summit.tsx owns this element's `translate` outright.
+
+   The box is 2.88 cross-heights and the visible disc is exactly half of that
+   (Moon's geometry: radius 25 of a 100 viewBox), so:
+
+       disc diameter = 1.44 x the cross's height
+       disc radius   = 0.72 x
+
+   `bottom` puts the box's own bottom at (crest - 0.82h), and the centre is
+   half the box above that, so:
+
+       centre  = crest - 0.82h + 1.44h = crest + 0.62h
+       top     = centre + 0.72h        = crest + 1.34h
+       bottom  = centre - 0.72h        = crest - 0.10h
+
+   which is the shot: the disc's top clears the cross's top (crest + 1.00h) by
+   0.34 of a cross height, and its bottom tucks a tenth of one behind the hill
+   so the hill reads as being IN FRONT of it. The whole cross is inside the
+   disc — at the shaft's own half-width (0.044h) the disc still reaches 0.72h
+   from its centre, which is past both the top and the foot.
+
+   ## The worst case, measured
+
+   The moon and the cross drift at different rates on purpose — that is the
+   depth — so the disc slides behind the cross by half the difference of their
+   rises (8.5px) plus the moon's own pointer travel (7px across, 4px down),
+   all of it scaled by the section's width in Summit.tsx. Read off the live
+   page by driving the tick's own arithmetic to every corner of its range —
+   p = 0 and 1 against all nine pointer positions — and taking how far inside
+   the disc's edge each part of the cross lands, in px. At 1440, where the
+   disc's radius is 72.57 and the cross is 100.8 tall:
+
+                            at rest      worst      best
+     cross TOP,  inside by   34.27        21.38     46.69
+     cross FOOT, inside by   10.08        -2.66     22.50
+     arm TIP,    inside by   50.23        38.31     58.30
+
+   The only negative in the table is the foot with the moon near the top of
+   its travel, and it is 2.7px of the shaft's very bottom — the pixels sitting
+   ON the crest line, where the cross is read against the hill's own ink and
+   not against the disc at all. Everything else stays inside by more than a
+   fifth of the radius. The same table at 375, where Summit.tsx has scaled
+   every amplitude to half: 19.03 / 5.61 / 27.90 at rest and 12.56 / -0.79 /
+   21.94 at worst — the same shape of answer at a third of the size, which is
+   what the scaling is for.
+
+   Re-do that sum before changing MOON_RISE, CREST_RISE or the 2.88.
+
+   opacity 1, and no --art-* token. Those three are the art KIT's opacities —
+   numbers that multiply a raster already drawn at the right value. This is
+   drawn from tokens that carry their own alpha per theme: --cross-glow is
+   rgba(255,255,255,0.82) in dark and rgba(20,20,26,0.45) in light, so the
+   disc is already restrained by construction, the way a Seam is.           */
+.faith__moon {
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(var(--summit-crest) - var(--summit-cross-h) * 0.82);
+  width: calc(var(--summit-cross-h) * 2.88);
+  height: calc(var(--summit-cross-h) * 2.88);
+  /* Centred on --summit-x with margin, NOT with translate: Summit.tsx writes
+     the whole of `translate` every frame and would wipe a -50% out of it. */
+  margin-left: calc(var(--summit-cross-h) * -1.44);
+  will-change: translate;
+}
+.faith__moon-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── the three ridges ─────────────────────────────────────────────────────
+   One box for all three, hanging --summit-dip below the section's floor, so
+   there is one bottom fade instead of three and an upward drift has somewhere
+   to go. Its width is the section's own, which is what lets --summit-x mean
+   the same thing here and on the moon above.                               */
+.faith__ridges {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--summit-dip) * -1);
+  height: var(--summit-band-h);
+
+  /* The ridges dissolve into the section's floor rather than stopping on it.
+     A silhouette that ends at a boundary ends where two bands are equal —
+     base.css's invariant — so it would read as a line drawn across the page
+     rather than as ground. --seam-fade is the alpha every other seam on this
+     page is still at halfway through its own dissolve; using it here means
+     the summit's floor and the Outro's seam directly below fade at one rate.
+
+     The transparent stop is at --summit-dip, which is exactly the section's
+     bottom edge, so the fade is spent on the strip a reader can actually see.
+
+     repeat-x and not the default: the far ridge below is deliberately wider
+     than this box, and the gradient is uniform across so tiling it sideways
+     is free — while tiling it VERTICALLY would put a second fade above the
+     box for nothing. */
+  -webkit-mask-image: linear-gradient(
+    to top,
+    transparent var(--summit-dip),
+    rgb(0 0 0 / var(--seam-fade)) calc(var(--summit-dip) + var(--summit-foot) * 0.5),
+    #000 calc(var(--summit-dip) + var(--summit-foot))
+  );
+  mask-image: linear-gradient(
+    to top,
+    transparent var(--summit-dip),
+    rgb(0 0 0 / var(--seam-fade)) calc(var(--summit-dip) + var(--summit-foot) * 0.5),
+    #000 calc(var(--summit-dip) + var(--summit-foot))
+  );
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+}
+
+/* Every ridge fills the box exactly, so viewBox y = 100 lands on the crest
+   line for all three whatever the width. `display: block` because an <svg> is
+   an inline box and would otherwise carry a descender gap under it — the same
+   lesson Seam.css records.
+
+   `transition: var(--t-theme)` because a ridge is painted through
+   `currentColor` and base.css's transition list covers `body, nav, section,
+   footer, article, a, button, h1..h3, p, span, div, blockquote, img` — no
+   `svg` and no `path`. Without this line the ridges SNAP to the new theme
+   while the page around them crosses on the wave. --t-theme already carries
+   `color` and `fill` with the element's own --wave-delay substituted in, so
+   one declaration buys the ride. */
+.faith__ridge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: var(--t-theme);
+}
+
+/* Wider than its box by 16px each side, because this is the one ridge that
+   answers the pointer horizontally and a layer that slides 9px sideways
+   inside a box its own size would show bare band at one edge. It carries no
+   cross and no moon, so its own x mapping does not have to agree with
+   --summit-x — which is precisely why it is the ridge that got the pointer. */
+.faith__ridge--far {
+  left: -16px;
+  width: calc(100% + 32px);
+  color: var(--summit-ink-far);
+  will-change: translate;
+}
+
+.faith__ridge--crest {
+  color: var(--summit-ink-crest);
+}
+
+.faith__ridge--near {
+  color: var(--summit-ink-near);
+}
+
+/* ── the weld ─────────────────────────────────────────────────────────────
+   The crest ridge and the cross standing on it are ONE element taking ONE
+   translate, which is what makes "the foot is on the ridge line" a property
+   of the DOM rather than a number somebody has to keep re-checking. Give the
+   cross a drift of its own and it either lifts off the crest or matches it
+   and moves nothing.                                                       */
+.faith__crest {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  will-change: translate;
+}
+
+/* The cross's foot IS the crest line: --summit-crest is where the ridge box
+   puts viewBox y = 100, and this is the same value plus the box's own dip.
+   Its x is --summit-x of the same width the crest path is stretched across,
+   so the apex, the cross and the moon share one vertical.
+
+   42 x 100 is CrossGlyph's viewBox and the path fills it corner to corner, so
+   0.42h x h is the glyph at its own aspect and `meet` has nothing to letterbox
+   — the foot lands on this element's bottom edge exactly.                  */
+.faith__summit-cross {
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(var(--summit-crest) + var(--summit-dip));
+  display: block;
+  width: calc(var(--summit-cross-h) * 0.42);
+  height: var(--summit-cross-h);
+  margin-left: calc(var(--summit-cross-h) * -0.21);
+}
+.faith__summit-cross svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* CrossGlyph paints itself through --faith-stop-*, a white-to-grey ramp that
+   is the section's LIT centrepiece at the top of the copy. In front of the
+   moon it has the opposite job, so the fill is overridden here — a CSS
+   declaration beats the `fill` presentation attribute the component writes.
+
+   The transition is not decoration. base.css transitions `stop { stop-color }`
+   so a glyph painted through gradient stops rides the theme wave for free;
+   a flat `fill` is not in any of its lists and would snap while the page
+   crossed. --t-theme already names `fill` with --wave-delay in it, and
+   --wave-delay inherits down from the <svg>, which ThemeProvider's THEMED
+   selector does stamp. */
+.faith__summit-cross path {
+  fill: var(--summit-ink-cross);
+  transition: var(--t-theme);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Summit.tsx multiplies every offset by `mi`, so at 0 all three land on the
+     zero translate this stylesheet composed them at — visible, still, exactly
+     where they were drawn. A compositor hint for a layer that will never move
+     is a promoted layer paid for and never used; Scene.css makes the same
+     trade for the art kit. */
+  .faith__moon,
+  .faith__ridge--far,
+  .faith__crest {
+    will-change: auto;
+  }
+}
+
+@media print {
+  /* Decorative, like everything else base.css's print block drops. */
+  .faith__summit {
+    display: none !important;
+  }
+}
