@@ -83,10 +83,35 @@
      the verse.
 
      7.2vw and a 104px ceiling, checked across the whole range rather than at
-     the five widths that get looked at: the bloom clears the copy by 21.3px at
-     768, 9.3 at 1100, 10.1 at 1200, 12.2 at 1440 and 5.3 from 1527 up, where
-     both the crest and the cross hit their own ceilings and the scene stops
-     growing. 6.5vw was the first answer and it left only 1.6px in the middle
+     the five widths that get looked at. Write the table's sum down, because a
+     row of it was wrong for two passes and a bare list of numbers is exactly
+     the kind of claim nobody re-derives:
+
+        clearance = --summit-air - 0.72 x --summit-cross-h - 19 x k
+
+     0.72 cross-heights is the bloom's reach past the disc, from the paragraph
+     above. 19px is the moon's worst UPWARD drift at k = 1 — half of MOON_RISE
+     plus MOON_PY, both in Summit.tsx — and k is the motion scale that file
+     applies, clamp(0.5, width / 1440, 1.1). Quoted at the viewport width: the
+     scale is taken off the SECTION's width, which is a scrollbar narrower, so
+     every row below is the conservative side of the real figure by about a
+     tenth of a pixel.
+
+        768  19.5      1100  9.2      1200  10.1
+        1440 12.1      1584+ 5.3
+
+     5.3 is the floor of the whole tall end, not a value that starts at one
+     width: --summit-air tops out at 1444, --summit-cross-h at 1543 and k at
+     1584, so the sum keeps falling until the last of those and is flat after.
+
+     **768 is the row to read twice.** It is the only width where BOTH clamps
+     sit on their floors — 7.2vw is 55.3px against a 70px floor and 7vw is
+     53.8px against a 56px floor — so it is not a scaling of the rows above it
+     and cannot be interpolated from them. It read 21.3 until this pass, which
+     is what this same sum gives with the cross's floor left off. The floor is
+     the whole of what that row is about.
+
+     6.5vw was the first answer and it left only 1.6px at 1100, in the middle
      of that range, which is not a margin, it is a coincidence. */
   --summit-air: clamp(70px, 7.2vw, 104px);
 
@@ -109,8 +134,10 @@
      1.34 cross-heights above the crest (centre 0.62 up, radius 0.72). So the
      disc's top is exactly --summit-air below the content's bottom edge, at
      every width, without measuring a line of type — the same trick the old
-     hillside used, one layer up. Worst-case drift eats 15px of that air
-     (half the moon's rise plus its pointer y); --summit-air's floor is 70. */
+     hillside used, one layer up. Worst-case drift eats 19px of that air at
+     1440 — half the moon's rise plus its pointer y, scaled by the same k as
+     the air is by vw, so 9.5px at 720 and below and 20.9px from 1584 up. The
+     air's own floor is 70. The table above --summit-air has the sum. */
   --summit-clearance: calc(
     var(--summit-crest) + var(--summit-cross-h) * 1.34 + var(--summit-air)
   );

@@ -1,12 +1,8 @@
 import { useEffect } from 'react'
-import { onFrame } from '../lib/motion'
+import { onFrame, settle } from '../lib/motion'
 
 /** Damped pointer position, -1..1 on each axis, 0 at the viewport centre. */
 export type Pointer = { readonly x: number; readonly y: number }
-
-/** Per-frame lerp rate expressed per second, so 144Hz feels like 60Hz.
- *  Deliberately the same shape as `useParallax`'s: one settle on this site. */
-const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
 
 /**
  * Slower than `useParallax`'s 0.16, and that difference is the point.
@@ -30,11 +26,12 @@ const EPSILON = 0.0008
 
 /* -- one listener and one lerp for the whole page -------------------------
  *
- * Everything below is module state on purpose. Six consumers must not mean six
- * `pointermove` listeners and six copies of the same lerp computing the same
- * two numbers. They mean one of each, reference counted, and six reads of the
- * result -- and because the result is the same object every time, six reads of
- * one allocation.
+ * Everything below is module state on purpose. Five consumers -- what
+ * `grep -rn '= usePointer()' src/` returns, and `hooks/README.md` names each
+ * of them -- must not mean five `pointermove` listeners and five copies of the
+ * same lerp computing the same two numbers. They mean one of each, reference
+ * counted, and five reads of the result -- and because the result is the same
+ * object every time, five reads of one allocation.
  */
 let rawX = 0
 let rawY = 0
@@ -210,8 +207,9 @@ function release() {
  * consumer, read inside the consumer's OWN `onFrame` tick. Read during render
  * it gives you the value at render time and nothing afterwards.
  *
- * **One listener and one lerp for the whole page**, reference counted, so six
- * consumers cost what one does.
+ * **One listener and one lerp for the whole page**, reference counted, so
+ * every consumer after the first costs nothing. The count itself lives with
+ * the module state above and nowhere else.
  *
  * **Zero on a coarse pointer and zero under reduced motion.** Both are the
  * identity rather than a disabled feature: a layer multiplying by 0 is a layer

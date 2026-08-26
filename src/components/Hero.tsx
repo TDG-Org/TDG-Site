@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { clamp01, onFrame } from '../lib/motion'
+import { clamp01, onFrame, settle } from '../lib/motion'
 import { usePointer } from '../hooks/usePointer'
 import { CrossGlyph } from './CrossGlyph'
 import { Moon } from './scene/Moon'
@@ -138,10 +138,6 @@ const smooth = (t: number) => t * t * (3 - 2 * t)
  * off. 2 was a shade too abrupt at the end; 1.85 keeps a little slope there.
  */
 const dissolve = (t: number) => Math.pow(t, 1.85)
-
-/** Per-frame lerp rate expressed per second, so 144Hz feels like 60Hz. The
- *  same shape `useParallax` and `usePointer` use: one settle on this site. */
-const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
 
 /**
  * Below this the damped progress can no longer change a painted pixel.

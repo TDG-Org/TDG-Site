@@ -245,3 +245,33 @@ if (typeof window !== 'undefined') {
 }
 
 export const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
+
+/**
+ * A per-frame lerp rate, expressed per second, so 144Hz feels like 60Hz.
+ *
+ * ```ts
+ * current += (target - current) * settle(0.16, dt)
+ * ```
+ *
+ * The naive form is `current += (target - current) * 0.16` — a fixed fraction
+ * of the remaining distance every FRAME, which makes the settle a function of
+ * the display rather than of time. 0.16 per frame leaves 3% of the error after
+ * twenty frames: a third of a second at 60Hz and 0.14s at 144Hz. The same code
+ * reads as weight on one machine and as a snap on another, and the machine it
+ * is written on is usually the fast one.
+ *
+ * Raising the per-frame survival `(1 - rate)` to `dt * 60` makes `rate` mean
+ * "this fraction of the remaining distance per sixtieth of a second", so the
+ * curve through real time is the same at 30, 60 and 144Hz. `dt` is already
+ * clamped to 50ms above, so a backgrounded tab cannot make this jump.
+ *
+ * **It is here because it had four copies.** `hooks/useParallax`,
+ * `hooks/usePointer`, `components/Hero` and `components/origin/CabinScene`
+ * each reached the identical expression on their own, and two of them carried
+ * a comment asserting there was "one settle on this site" — which is what
+ * builders who cannot see each other write. A correction to the curve would
+ * have landed in one copy and silently not the other three, and **the
+ * divergence is only visible above 60Hz**: correct on the machine of whoever
+ * changed it, wrong on every faster one.
+ */
+export const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)

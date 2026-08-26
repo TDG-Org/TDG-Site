@@ -151,7 +151,10 @@ export function useOffscreenPause() {
       // scan and not a walk of `addedNodes`: a batch that removed one page and
       // added another has to look at everything anyway, and a section nested
       // inside an added wrapper is found without descending it by hand.
-      // `watch` is a set lookup per section, and this page has ten of them.
+      // `watch` is a set lookup per section, and this page has nine of them —
+      // `document.querySelectorAll('section, footer').length` on home, which
+      // is the honest way to ask, because the count is not the number of
+      // components a reader can see in `App.tsx`.
       if (structural) scan()
     })
     // childList only. Attributes change every frame on this site — the frame

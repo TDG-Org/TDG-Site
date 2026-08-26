@@ -82,7 +82,9 @@ const blob = useParallax<HTMLDivElement>(-0.12)
 
 Uses the standalone `translate` property rather than `transform`, so any
 transform the element already carries — centring, rotation — survives untouched.
-Lerps per second rather than per frame, so 144 Hz feels like 60 Hz.
+Lerps per second rather than per frame, so 144 Hz feels like 60 Hz — through
+`settle()` in [`../lib/motion.ts`](../lib/README.md), which every damped thing
+on this site shares.
 
 **Your layer stops updating 400px outside the viewport.** That is a contract,
 not an implementation detail: while it is parked nothing is written to
@@ -184,7 +186,8 @@ useEffect(
 ```
 
 **One `pointermove` listener and one lerp for the whole page**, reference
-counted inside the module, so six consumers cost what one does. The listener
+counted inside the module, so every consumer after the first costs nothing —
+the table at the bottom of this file is how many there are. The listener
 stores two integers and writes nothing — rule 9 forbids a listener that
 *animates*, and `motion.ts` already listens to `pointermove` as a wake source,
 so the loop is awake for the whole gesture. The lerp lives in the tick, which
@@ -272,7 +275,13 @@ check for itself.
 `data-covered` on itself when its section is off screen and `Stage.css` turns
 that into `visibility: hidden`. Same limitation, for the same reason — an
 `onFrame` subscriber inside a stage does not see the attribute, so a canvas in
-there still does its own rect check. `scene/Snow.tsx` does.
+there still does its own rect check. `scene/Snow.tsx` does, from inside
+`.origin__stage`; so does `hero/Starfield.tsx`, which has been sitting in
+`.hero__stage` since before this note was written. Ask the DOM rather than the
+call sites for which canvases are actually in one —
+`[...document.querySelectorAll('canvas')].filter(c => c.closest('.stage'))` —
+because `origin/CabinScene.tsx`'s is in there too and arrives a lazy chunk
+later than the rest of the page.
 
 ---
 

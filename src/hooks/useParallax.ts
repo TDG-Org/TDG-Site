@@ -1,8 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { onFrame } from '../lib/motion'
-
-/** Per-frame lerp rate expressed per second, so 144Hz feels like 60Hz. */
-const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
+import { onFrame, settle } from '../lib/motion'
 
 /**
  * How far outside the viewport a layer goes on being painted, in px.

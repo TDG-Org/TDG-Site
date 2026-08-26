@@ -213,12 +213,13 @@ export function PointCloud() {
     /*
      * The model fades on the COPY's clock, not the section's.
      *
-     * `#top` is 226svh tall now and pinned (Hero.tsx), so `-#top.top / vh`
-     * would take more than two viewports of scrolling to reach 1 and the
-     * model would still be at two-thirds opacity when Origin had already
-     * covered it — which is both wrong to look at and 100svh of 3D projection
-     * painted behind an opaque section. `.hero__above` is the box whose
-     * height is the pin's travel and whose bottom edge is the seam, and
+     * `#top` is 230svh tall now and pinned — `Hero.css`'s `min-height` on
+     * `.hero` is where that is declared, so read it there — which means
+     * `-#top.top / vh` would take more than two viewports of scrolling to
+     * reach 1 and the model would still be at two-thirds opacity when Origin
+     * had already covered it. That is both wrong to look at and 100svh of 3D
+     * projection painted behind an opaque section. `.hero__above` is the box
+     * whose height is the pin's travel and whose bottom edge is the seam, and
      * `height - vh` is the runway the copy dissolves over. Fading on that
      * puts the model out at the same moment the wordmark goes, and the
      * `opacity <= 0` return below then stops every point of the work.
