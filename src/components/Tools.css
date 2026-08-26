@@ -209,3 +209,60 @@
 .tools__cta.tools__cta--link:hover {
   border-bottom-color: var(--edge-hi);
 }
+
+/* ── the scene layer ───────────────────────────────────────────────────────
+   Beat four of the walk: you cross a stone footbridge. Origin, three sections
+   up, is already a path of stepping stones, so this bridge is kept small and
+   far — a bridge on the horizon rather than a bridge you are standing on —
+   because restating that beat at full size would collapse two stops of the
+   walk into one. The kit's README is explicit that the footbridge and the
+   stepping stones are used instead of each other, and three sections is what
+   buys them both a place.                                                   */
+
+/* The seam's drift is on a wrapper, not on the <svg>: useParallax is typed to
+   HTMLElement and Seam takes no ref, and a wrapper is also where the drift can
+   be given its own factor per boundary. No height on it — the Seam inside is
+   absolutely positioned and takes its own from Seam.css, so a height here
+   would be that clamp written down a second place to go stale. Zero height
+   also means useParallax reads the BOUNDARY's distance from the viewport
+   centre rather than a box whose middle moves with however tall the band
+   happens to be at this width, so all four boundaries drift by the same law. */
+.tools__seam-drift {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: translate;
+}
+/* Its own band, so it reads as this section rising into Apps. Both themes come
+   free: --seam-fill is per section in base.css and the bands are per theme. */
+.tools__seam {
+  color: var(--seam-fill);
+}
+
+/* The bridge's box lives ENTIRELY inside this section's own bottom padding —
+   the band under the last card row — which is why it can never reach a card
+   whatever the copy wraps to. Every term is vw, the same unit padding-bottom
+   is in, so the clearance holds at every width instead of at the two widths
+   somebody happened to look at: bottom + width / 1.767 stays under
+   clamp(120px, 14vw, 190px) from 320px up. 1.767 is the file's own 1673x947.
+   --art-far, and drawn first, because the brief for this section is that the
+   art is the quietest thing in it. */
+.tools__bridge {
+  left: clamp(8px, 3vw, 56px);
+  bottom: clamp(28px, 3.2vw, 44px);
+  width: clamp(96px, 9.6vw, 132px);
+  opacity: var(--art-far);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* useParallax resolves to a zero translate at motionIntensity 0, so the seam
+     rests exactly where it composed — visible and still — and the compositor
+     hint would be a promoted layer paid for and never used. Same trade as
+     scene/Scene.css makes for the art. */
+  .tools__seam-drift {
+    will-change: auto;
+  }
+}

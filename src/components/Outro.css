@@ -1,9 +1,95 @@
 .section.outro {
+  --outro-pad-x: clamp(18px, 4vw, 40px);
+  /* .outro__makers is 880px wide at most and centred inside this section's
+     content box, so this expression IS its left edge, measured from the same
+     padding box an absolutely positioned child is measured from. The arch is
+     placed against it rather than against a number somebody eyeballed, which
+     is what makes "never over the copy" a property of the CSS instead of a
+     claim about two screenshots. */
+  --outro-gutter: max(var(--outro-pad-x), calc((100% - 880px) / 2));
   background-color: var(--bg);
-  padding: clamp(72px, 9vw, 110px) clamp(18px, 4vw, 40px);
+  padding: clamp(72px, 9vw, 110px) var(--outro-pad-x);
+}
+
+/* Same wrapper trick as Tools.css — see there for why the drift is on a
+   wrapper and why it carries no height. */
+.outro__seam-drift {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: translate;
+}
+/* NOT --seam-fill. This section paints --bg flat and base.css sets its
+   --seam-fill to --band-outro, which IS --bg: the seam would be the section
+   painted on itself and would render, correctly, as nothing.
+
+   --band-foot is the colour immediately above this boundary — it is Faith's
+   own --tint-bot — so the terrace reads as Faith's floor stepping down into
+   the Outro. And this is the one boundary on the page whose two sides
+   genuinely do not meet: base.css says so in as many words, a step of 4
+   values in dark and 10 in light. A silhouette is exactly what that wants,
+   which is why this seam earns its place more than any other one here.
+
+   Borrowing a neighbour's colour, so it dissolves rather than stopping at a
+   line, at --seam-fade — the same rate every dissolving seam on the page
+   uses, per theme. The #000 in a mask is an alpha channel, not a colour. */
+.outro__seam {
+  color: var(--band-foot);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+}
+
+/* The threshold. It stands BESIDE the copy, never around it: its right edge
+   lands 18px short of --outro-gutter, which is the makers note's own left
+   edge, and whatever will not fit runs off the page and is taken by the
+   section's `overflow: hidden`. At 1440px the whole arch fits in the gutter
+   with 18px to spare; narrower, you see the near column and the spring of the
+   crown, which is what a threshold looks like from inside it.
+
+   The glow around the stones is painted into the file's own alpha. No
+   drop-shadow, no blur, no filter here. */
+.outro__arch {
+  right: calc(100% - var(--outro-gutter) + 18px);
+  /* Bedded into the boundary rather than resting on it: 0.04 can lift the arch
+     24px on a 1200px viewport, and an arch whose feet are off the ground reads
+     as a sticker. 16px of a 250-345px image is the base rocks' lower lip. */
+  bottom: -16px;
+  width: clamp(150px, 15vw, 230px);
+  opacity: var(--art-near);
+}
+
+@media (max-width: 1119px) {
+  /* Below this the makers note has grown into the gutter and there is nothing
+     left to stand an arch in — a 40px slice of one is a smudge, not a
+     threshold. The kit's rule 3 already takes the peripheral props off at
+     640px; an arch needs more room than that to still read as an arch, so it
+     goes earlier. This is the one beat of the four that does not survive to
+     mobile; the seam carries the boundary at every width. */
+  .outro__arch {
+    display: none;
+  }
 }
 
 .outro__makers {
+  /* The seam and the arch are positioned, and a positioned element paints
+     over in-flow content whatever the source order — the same reason `.shell`
+     carries z-index 1 in base.css. This block is not inside a `.shell`, so it
+     needs its own. */
+  position: relative;
+  z-index: 1;
   max-width: 880px;
   margin: 0 auto;
   text-align: center;
@@ -14,7 +100,7 @@
 }
 .h2.outro__heading {
   margin: 0 0 22px;
-  /* a touch smaller than the story heading */
+  /* a touch smaller than the Origin heading */
   font-size: clamp(32px, 4.4vw, 50px);
 }
 .outro__copy {
@@ -55,6 +141,12 @@
 @media (prefers-reduced-motion: reduce) {
   .outro__about-arrow {
     transition: none;
+  }
+  /* useParallax resolves to a zero translate at motionIntensity 0, so the seam
+     and the arch rest exactly where they composed — visible and still — and
+     the compositor hint would be a promoted layer paid for and never used. */
+  .outro__seam-drift {
+    will-change: auto;
   }
 }
 

@@ -5,6 +5,8 @@ import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
+import { Seam } from './scene/Seam'
+import { ThemedArt } from './scene/ThemedArt'
 import './Tools.css'
 
 function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
@@ -57,10 +59,32 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
 
 export function Tools() {
   const blob = useParallax<HTMLDivElement>(0.2)
+  /* The boundary drifts against the section behind it, which is what makes it
+     read as depth rather than as a shape stuck on the edge. Small on purpose:
+     the seam is the near ground at this boundary, so it moves most here, and
+     the bridge out on the horizon moves least. 0.04 is 36px of travel across a
+     full 900px screen — enough to disagree with the section behind it, not
+     enough to look like it is sliding. */
+  const seam = useParallax<HTMLDivElement>(0.04)
   const head = useReveal<HTMLDivElement>('wipe', 0)
 
   return (
     <section id="tools" className="section section--blend tools">
+      {/* ── the walk, beat four: crossing a stone footbridge ────────────────
+          Apps' treeline is behind you and #building is the far bank. The
+          `wave` is the water this bridge crosses — the only one on the page,
+          because it is the only boundary with water under it.
+
+          Both of these are drawn FIRST on purpose. Everything below them in
+          this file — the neon sun, its ring, the road grid, the horizon line
+          and its glow — is positioned with z-index auto, so DOM order alone
+          puts the art behind all of it without a single z-index. The bridge
+          does not compete with the road; it sits out past it. */}
+      <div ref={seam} className="tools__seam-drift" aria-hidden="true">
+        <Seam shape="wave" edge="top" className="tools__seam" />
+      </div>
+      <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={0.022} />
+
       {/* retro-neon band, clipped to the bottom so it can never touch a card */}
       <div className="tools__sun" aria-hidden="true" />
       <div className="tools__sun-ring" aria-hidden="true" />

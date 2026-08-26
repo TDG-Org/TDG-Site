@@ -1,3 +1,105 @@
+.section.building {
+  /* base.css's own .section floor, named here AND applied here so the two
+     cannot drift apart. The scene layer is positioned FROM this number — the
+     pines and the fog are sized to stay under it — so a padding that quietly
+     moved somewhere else would put art through the pills with nothing to
+     catch it. One name, one value, both uses. */
+  --building-floor: clamp(72px, 9vw, 130px);
+  --building-pine-w: clamp(78px, 9vw, 132px);
+  padding-bottom: var(--building-floor);
+}
+
+/* Same wrapper trick as Tools.css: useParallax is typed to HTMLElement and
+   Seam takes no ref, and the height stays in Seam.css so the clamp is written
+   once. See Tools.css for the long version. */
+.building__seam-drift {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: translate;
+}
+/* NOT --seam-fill, and that is not an oversight. #building is .section--flat,
+   so its whole background is --tint-mid, which is --band-building — and
+   base.css sets this section's --seam-fill to --band-building too. A seam
+   wearing it would be the section painted on itself: rendered, correct, and
+   invisible. --band-tools is the middle of the section above, so the band
+   reads as the water's far edge reaching this bank, which is this section's
+   beat. It is still one token from tokens.css, so both themes come free.
+
+   And because it is borrowing a neighbour's colour rather than stating its
+   own, it dissolves rather than stopping at a line: --seam-fade is the alpha
+   the mask is still at halfway down, per theme, so every dissolving seam on
+   the page dissolves at the same rate. A mask is an alpha channel, not a
+   colour — the #000 here paints nothing, exactly as in .tools__road-grid. */
+.building__seam {
+  color: var(--band-tools);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    rgba(0, 0, 0, var(--seam-fade)) 50%,
+    transparent 100%
+  );
+}
+
+/* The veil has a hard, straight bottom edge and a faint cyan speckle along its
+   top, and a straight cut across the page is worse than no fog at all. So both
+   ends are dealt with rather than hoped about:
+
+   - object-fit crops a band out of the MIDDLE of the file instead of squashing
+     a 3:1 image into a 10:1 box. At 55% the file's own bottom edge lands below
+     the box at every width the site supports — it is 126px under it at 1440px
+     and still 9px under it at 320px — and the box itself sits 30px below the
+     section, so `overflow: hidden` takes the cut away entirely.
+   - the mask dissolves the top, which is where the speckle is.
+
+   Height is the floor exactly, pushed down by 30px, so the top of the box is
+   30px clear of where the pills stop at every width. Nothing here recolours a
+   pixel; the -dark and -light files are separate artwork.                    */
+.building__fog {
+  left: -2%;
+  width: 104%;
+  height: var(--building-floor);
+  bottom: -30px;
+  object-fit: cover;
+  object-position: 50% 55%;
+  opacity: var(--art-far);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 58%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 58%);
+}
+
+/* The faceted pair, not pine-grove: the grove is painterly green and brown and
+   does not speak this site's flat graphic language.
+
+   Drawn at a tree's full height and cropped by the section's own bottom edge,
+   so what you see is crowns rising from behind the bank. That crop is also the
+   guarantee: the top of the box is `floor - 24px` at every width by
+   construction, so it is 24px clear of the pills whether the pills wrap to one
+   row or three. 1.5 is the file's own 1024x1536.                             */
+.building__pines {
+  right: clamp(6px, 2.5vw, 44px);
+  width: var(--building-pine-w);
+  bottom: calc(var(--building-floor) - 24px - var(--building-pine-w) * 1.5);
+  opacity: var(--art-mid);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Both hooks resolve to a zero translate at motionIntensity 0, so all three
+     layers rest exactly where they composed. The hint would be a promoted
+     layer paid for and never used. */
+  .building__seam-drift {
+    will-change: auto;
+  }
+}
+
 .building__scan {
   opacity: 0.5;
   background-image: repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 9px);
@@ -51,7 +153,17 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #1c1c22, #0a0a0e);
+  /* The plate behind the screenshot, and it is visible twice: while the lazy
+     image is still arriving, and permanently if it ever 404s. It used to be
+     two literal hexes with no light twin, which made it a near-black slab in
+     the light theme — right in exactly one of the two worlds this site has.
+     Same two values in dark, from tokens, so the light theme gets a soft grey
+     to off-white instead of a hole. */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--text) 7%, var(--bg2)),
+    var(--bg)
+  );
 }
 .building__art-img {
   position: absolute;

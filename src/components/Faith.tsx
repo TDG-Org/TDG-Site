@@ -1,15 +1,33 @@
 import { useHeroParallax, useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { CrossGlyph } from './CrossGlyph'
+import { Seam } from './scene/Seam'
+import { ThemedArt } from './scene/ThemedArt'
 import './Faith.css'
 
 export function Faith() {
   const rays = useHeroParallax<HTMLDivElement>(0.05)
   const blob = useParallax<HTMLDivElement>(0.12)
+  const seam = useParallax<HTMLDivElement>(0.034)
   const content = useReveal<HTMLDivElement>('holy', 0)
 
   return (
     <section id="faith" className="section section--blend faith">
+      {/* ── the walk, beat six: the hillside, and the cross on it ───────────
+          `peaks` because this is the one boundary on the walk where the land
+          actually rises: you leave the open ground of #building and climb.
+
+          The hillside is the kit's Faith-only piece and it stays that way. It
+          is small, quiet and far out in the lower-right corner, well below the
+          verse and nowhere near the CrossGlyph this section already draws —
+          see Faith.css, where the sizing makes that a fact about the boxes
+          rather than a hope about the copy. Its glow is painted into the
+          file's own alpha, so nothing here adds one. */}
+      <div ref={seam} className="faith__seam-drift" aria-hidden="true">
+        <Seam shape="peaks" edge="top" className="faith__seam" />
+      </div>
+      <ThemedArt art="faith/hillside-cross" className="faith__hill" factor={0.018} />
+
       {/* a slow gradient field: a drifting radial pair, a rotating conic
           sweep and a pulsing diagonal wash, all masked to a soft ellipse */}
       <div className="faith__field" aria-hidden="true">

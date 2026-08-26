@@ -5,6 +5,8 @@ import { useTilt } from '../hooks/useTilt'
 import { MARANATHA, NEXT_UP } from '../data/content'
 import { asset } from '../lib/asset'
 import { appHash, rememberOrigin } from '../lib/route'
+import { Seam } from './scene/Seam'
+import { ThemedArt } from './scene/ThemedArt'
 import './Building.css'
 
 function NextUpPill({ label, index }: { label: string; index: number }) {
@@ -19,12 +21,38 @@ function NextUpPill({ label, index }: { label: string; index: number }) {
 
 export function Building() {
   const blob = useParallax<HTMLDivElement>(-0.1)
+  const seam = useParallax<HTMLDivElement>(0.03)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const reveal = useReveal<HTMLDivElement>('scale', 0)
   const tilt = useTilt<HTMLDivElement>()
 
   return (
     <section id="building" className="section section--flat building">
+      {/* ── the walk, beat five: the far bank ───────────────────────────────
+          You have just crossed the water in #tools; this is the ground on the
+          other side. Three layers on three rates, which is what reads as
+          depth — 0.012 for the fog out at the back, 0.02 for the pines, 0.03
+          for the seam, which is the near bank you have just stepped onto. Five
+          layers at similar rates would read as noise, so there are three and
+          no bench.
+
+          The pines sit between the other two rather than out in front,
+          because they are cropped by this section's own bottom edge: what you
+          see is crowns standing BEYOND the ground, not a tree in the
+          foreground. That is also the safe answer — their box clears the pills
+          by exactly 24px, and a factor that could travel further than that
+          would put a tree through a pill on a tall window. 0.02 tops out at
+          12px on a 1200px viewport.
+
+          This is the page's flat contrast anchor, so it stays quieter than the
+          blended sections either side of it: the pines take --art-mid rather
+          than the --art-near a prop at an edge would normally get. */}
+      <div ref={seam} className="building__seam-drift" aria-hidden="true">
+        <Seam shape="dune" edge="top" className="building__seam" />
+      </div>
+      <ThemedArt art="atmosphere/fog-veil" className="building__fog" factor={0.012} />
+      <ThemedArt art="props/pine-faceted-pair" className="building__pines" factor={0.02} />
+
       <div className="texture building__scan" aria-hidden="true" />
       <div ref={blob} className="blob building__blob" aria-hidden="true" />
 
@@ -85,8 +113,14 @@ export function Building() {
           <div className="building__body">
             <div className="building__tags">
               <span className="building__tag">GAME</span>
+              {/* MARANATHA.tag, not a literal. This tag and the `status` on
+                  the button eleven lines down are two claims about one card,
+                  and while the tag was typed here they had already drifted:
+                  IN PLAYTEST over a status of `Coming soon`. Rule 1 — a word a
+                  visitor reads lives in src/data/. */}
               <span className="building__tag building__tag--live">
-                <span aria-hidden="true">● </span>IN PLAYTEST
+                <span aria-hidden="true">● </span>
+                {MARANATHA.tag}
               </span>
             </div>
             <h3 className="building__title">
