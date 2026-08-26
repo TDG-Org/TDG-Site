@@ -533,6 +533,133 @@
      before it starts to read as a grey smear across the boundary. */
   --seam-fade: 0.55;
 
+  /* ── how deep a section dissolves out of the one above it ───────────────
+     A FRACTION of the viewport, unitless, and the only place the number is
+     written. `Origin.css` spends it as `calc(var(--origin-dissolve) * 100svh)`
+     and `Hero.tsx` reads it off the document element and multiplies it by the
+     viewport it already measures every frame.
+
+     It has to be one number in two languages because the two are the same
+     decision. Origin's background used to open on `--band-hero` at full
+     opacity, so the section's top edge cut the hero's mountains along a ruled
+     horizontal line — the defect the site owner has now reported three times.
+     The fix is for Origin to open TRANSPARENT and ramp to its own band over
+     this distance, so the hero's ridge, its haze and its sky carry on down
+     behind the arriving section and fade out instead of stopping.
+
+     That only works while the hero's stage is still painting, and the hero
+     stops painting at `data-eclipsed`. So the eclipse test moved from "Origin
+     has reached the top of the viewport" to "Origin's dissolve has finished",
+     which is this number below the same edge. Two consumers, one value: raise
+     it here and the ramp gets longer and the hero goes on painting for exactly
+     as long as the ramp needs, with nothing to keep in step by hand.
+
+     0.78 and not 1: the hero's `overflow: clip` cuts its own stage 100svh
+     below Origin's top edge (Hero.tsx has the box arithmetic), so a dissolve
+     of a whole viewport would be racing that cut. 0.78 leaves 22svh of margin
+     and is still three quarters of a screen of ramp, which at 900px is 700px
+     of scrolling for a boundary that used to be a line.
+
+     Not per theme. It is a distance, and the geometry is the same in both. */
+  --origin-dissolve: 0.78;
+
+  /* ── the moon, both times the page draws it ─────────────────────────────
+     `scene/Moon.tsx` used to paint its disc from --cross-glow and its surface
+     from --invert-fg, and both were borrowed rather than chosen. In light
+     --cross-glow is rgba(20,20,26,0.45) — near-black — so the light theme's
+     moon rendered as a grey blob with a hole in it, which is what the site
+     owner reported. The disc now has its own ink and it is WHITE in both
+     themes, because a moon is the same object at the same phase whichever
+     palette the page is wearing.
+
+     A white disc on a near-white sky needs the sky to move rather than the
+     moon: --hero-sky's light value is shaded below, so the moon has something
+     to be brighter than. That pair is the whole decision and it is why these
+     two live next to each other.
+
+     --moon-mare is the surface, and it cannot be --invert-fg any more for the
+     same reason: in light that token is near-white, and near-white maria on a
+     white disc are no maria at all. A cool grey in both themes reads as
+     shadow on the disc without becoming a second colour on the page.
+
+     --moon-halo is the bloom. It is the only one of the three that is allowed
+     to differ in kind between themes: over a night sky the halo is the light
+     scattering, over a pale one it is the disc's own edge softening into the
+     mist, so dark gets the sky's own blue-white and light gets plain white. */
+  --moon-disc: rgba(255, 255, 255, 0.95);
+  --moon-mare: rgba(26, 32, 48, 0.2);
+  --moon-halo: rgba(214, 232, 255, 0.26);
+
+  /* ── the cross standing on the Faith summit ────────────────────────────
+     Its own three stops, and they are a SILHOUETTE rather than the lit glyph
+     --faith-stop-* draws above the verse.
+
+     The site owner's report was that the summit cross "is not finished, you
+     just have one line going up". It was finished; it was invisible. The
+     glyph's own ramp opens on #ffffff in dark, and the cross stands directly
+     in front of a white moon — so the crossbar, which sits in the top third
+     of the path and therefore inside the disc, was white on white. Only the
+     stem below the disc's edge had anything to contrast with, and a stem with
+     no crossbar is a line going up.
+
+     A cross on a ridge with the moon behind it is backlit, so it is dark in
+     both themes and the ramp runs from the ridge's own ink upward rather than
+     from white downward. Light's values are lighter than dark's because the
+     light theme's summit is a pale hillside — the silhouette still has to be
+     the darkest thing in the frame, but it cannot be the only black on a page
+     with no other black on it.
+
+     Painted through <stop>s like every other glyph on this site, so it rides
+     the theme wave. `CrossGlyph.tsx` has that argument. */
+  --summit-stop-0: #0c0f1a;
+  --summit-stop-1: #141826;
+  --summit-stop-2: #222738;
+
+  /* ── the lamppost's light ───────────────────────────────────────────────
+     The pole is artwork (`hero/lamppost-left`) and the artwork draws a lit
+     lantern, but nothing on the page ever answered it: no glow around the
+     glass, no warmth on the air, no pool on the snow the foot stands in. The
+     site owner asked for "some colour, a bit transparent, lighting to the pole
+     where the light should come from, to have a bit more warmth and glow".
+
+     Four stops rather than one, because a lamp is four different intensities
+     at four different distances and each is drawn by a different element in
+     `Origin.css`: the lantern's own core, the halo around it, the cone of lit
+     air falling down the pole, and the ellipse it puts on the ground.
+
+     They are the only warm colours in the hero's frame and that is deliberate
+     — one warm source in a cold blue valley is what makes the valley read as
+     cold. --warm is not reused for it: --warm is the site's accent (it is
+     #b8763a in light, a burnt orange), and an accent is a UI colour that
+     belongs to chips and links. A light source is not a chip.
+
+     Light theme keeps the lamp lit but quieter. A lantern at dusk still glows;
+     it just has less darkness to glow into, and the same alphas over a
+     near-white sky would read as a stain rather than as light. */
+  --lamp-core: rgba(255, 216, 154, 0.95);
+  --lamp-glow: rgba(255, 198, 122, 0.44);
+  --lamp-spill: rgba(255, 188, 108, 0.16);
+  --lamp-pool: rgba(255, 192, 116, 0.22);
+
+  /* ── the plate a card is drawn on ───────────────────────────────────────
+     --surface is rgba(255,255,255,0.045) in dark: a 4.5% white lift, which is
+     a card that is 95% whatever is behind it. That was right while the page
+     behind a card was a flat band, and it stopped being right the moment
+     there was scenery back there — the site owner's note is that the cards are
+     hard to see and should be "darker and or lighter to be easily seen
+     depending on the theme".
+
+     So `.card` takes a PLATE and keeps the lift on top of it. The plate is
+     mostly opaque, which is what makes a card read as an object in front of
+     the place rather than as a rectangle of slightly paler place; the alpha it
+     does keep is what stops the section's art dying at the card's edge.
+
+     Both values are ~0.75 alpha rather than 1 for the same reason, and each is
+     pulled toward its own theme's ground: near-black in dark so the copy on it
+     keeps the contrast it was measured at, near-white in light so a card over
+     Origin's lit snow is still a card. */
+  --card-bg: rgba(9, 10, 16, 0.74);
+
   /* type */
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -583,7 +710,24 @@
   --invert-fg: #f6f6f8;
 
   --hero-bg: #fbfbfc;
-  --hero-sky: radial-gradient(118% 96% at 74% 6%, #ffffff 0%, #f4f4f6 30%, #e6e6ea 62%, #d9d9df 100%);
+  /* ── shaded, and the moon is the reason ─────────────────────────────────
+     It was #ffffff → #f4f4f6 → #e6e6ea → #d9d9df: a sky whose darkest corner
+     is L* 88. Nothing can be brighter than that, which is why the light
+     theme's moon had to be painted dark to be seen at all, and a dark moon in
+     a bright sky is a hole rather than a moon.
+
+     So the sky takes the shading instead — a cool dusk that keeps the light
+     theme unmistakably light while giving the disc somewhere to sit. The
+     bottom two stops carry it, because that is the half of the frame the moon
+     and the ridges occupy; the top stays near-white so the wordmark and the
+     nav are reading against the same value they were measured against.
+
+     L* at the four stops: 96.0, 91.2, 83.5, 77.4 (was 100, 96.1, 91.0, 87.6).
+     The disc at --moon-disc's 0.99 white composites to ~99, so it clears the
+     sky behind it by better than 21 L* where it actually sits, against 12 the
+     other way round before. It also takes --hero-meta's contrast over the sky
+     from 4.18 up over the AA line, which was a separate open item.        */
+  --hero-sky: radial-gradient(118% 96% at 74% 6%, #f4f5f9 0%, #e6e8f0 30%, #ccd2e0 62%, #bcc4d6 100%);
   --hero-shaft: linear-gradient(
     100deg,
     transparent 0%,
@@ -652,6 +796,37 @@
   --terrain-haze: #3c485a;
   --terrain-haze-rear: #98aec0;
   --seam-fade: 0.4;
+
+  /* The moon's disc is the same white it is in dark — see :root for why it
+     stopped borrowing --cross-glow, and see --hero-sky above for the shading
+     that gives a white disc something to be brighter than. A touch MORE alpha
+     than dark, not less: over a pale sky the disc has only a few L* of room,
+     so every bit of it counts. The maria are a cool mid-grey and the halo is
+     plain white, which over mist reads as the disc's edge softening rather
+     than as light being scattered. */
+  --moon-disc: rgba(255, 255, 255, 0.99);
+  --moon-mare: rgba(124, 136, 160, 0.22);
+  --moon-halo: rgba(255, 255, 255, 0.86);
+
+  /* The summit silhouette, lighter than dark's because this hillside is pale
+     and the cross has to be the darkest thing in the frame without being the
+     only black on a page that has none. See :root. */
+  --summit-stop-0: #2c3345;
+  --summit-stop-1: #3a4254;
+  --summit-stop-2: #4c5568;
+
+  /* Same lantern, less darkness to glow into. See :root: at dark's alphas
+     these would read as a stain on a near-white sky rather than as light. */
+  --lamp-core: rgba(255, 238, 202, 0.95);
+  --lamp-glow: rgba(247, 199, 133, 0.36);
+  --lamp-spill: rgba(242, 194, 132, 0.13);
+  --lamp-pool: rgba(240, 194, 136, 0.2);
+
+  /* The plate, at this theme's ground. --surface is already #ffffff here, so
+     what this buys in light is the opposite of what it buys in dark: a card
+     over Origin's lit snow keeps a little of the snow instead of stamping a
+     hard white rectangle on it. See :root. */
+  --card-bg: rgba(255, 255, 255, 0.88);
 }
 
 /* ── Theme transition ─────────────────────────────────────────────────────

@@ -50,8 +50,19 @@ import { useId, type JSX } from 'react'
  *
  * ## Every colour is a token, and it reads in both themes
  *
- * `--glow` for the bloom, `--cross-glow` for the disc, `--invert-fg` for the
- * shading. No new token, no literal, no `filter`.
+ * `--moon-halo` for the bloom, `--moon-disc` for the disc, `--moon-mare` for
+ * the shading. No literal, no `filter`.
+ *
+ * **All three used to be borrowed and all three are now the moon's own**, and
+ * that is the whole of the light theme's fix. The disc was painted from
+ * `--cross-glow`, which is `rgba(20,20,26,0.45)` in light — near-black — so
+ * the light theme's moon rendered as a grey blob; the maria were painted from
+ * `--invert-fg`, which is near-WHITE in light, so a pale moon had pale maria
+ * and read as a disc with holes punched in it. Both were the correct
+ * conclusion from a wrong premise: the premise was that nothing can be
+ * brighter than a near-white sky, which was true of the sky and is no longer.
+ * `--hero-sky`'s light value is shaded now (see tokens.css), so the disc is
+ * white in both themes and the moon is the same object either way.
  *
  * **In the light theme it stays a pale daytime moon rather than becoming a
  * sun**, and both halves of that were a decision:
@@ -67,14 +78,19 @@ import { useId, type JSX } from 'react'
  *   that would instantly be the loudest thing on a page whose entire light
  *   palette is greys.
  *
- * A pale daytime moon in the light theme is necessarily DARKER than the sky it
- * sits in, because that sky is near-white and nothing lighter than it can be
- * seen. That is the same conclusion `--seam-fill` reaches for the same reason
- * -- it steps a band toward `--text` so a silhouette lifts above a dark sky and
- * drops below a pale one -- and `--cross-glow` already carries that flip built
- * in: `rgba(255,255,255,0.82)` in dark, `rgba(20,20,26,0.45)` in light. The
- * moon and the seams therefore agree with each other by construction rather
- * than by two people making the same judgement twice.
+ * **The paragraph that used to be here said a pale moon in light must be
+ * DARKER than its sky, and it was right about the arithmetic and wrong about
+ * which side to move.** Nothing can be brighter than a near-white sky, so the
+ * moon was stepped down toward `--text` the way `--seam-fill` steps a
+ * silhouette -- and the result was a grey disc that the site owner read, quite
+ * correctly, as a hole in the page. A seam is a silhouette and wants to drop
+ * below a pale sky; the moon is a light source and cannot, because a light
+ * source darker than everything around it is not a light source.
+ *
+ * So the SKY moved instead. `--hero-sky` in light is a shaded dusk now rather
+ * than a white one, the disc is `--moon-disc` white in both themes, and the
+ * two are one decision recorded in one place -- tokens.css, at the sky, where
+ * the note beside it carries the L* figures both halves were solved against.
  *
  * ## Why every paint goes through a gradient
  *
@@ -116,19 +132,19 @@ export function Moon({ className }: { className?: string }): JSX.Element {
             bloom is quiet by construction and the caller raises the whole
             element's opacity rather than this. */}
         <radialGradient id={bloom} gradientUnits="userSpaceOnUse" cx="50" cy="50" r="50">
-          <stop offset="0" style={{ stopColor: 'var(--glow)' }} stopOpacity="1" />
-          <stop offset="0.5" style={{ stopColor: 'var(--glow)' }} stopOpacity="0.92" />
-          <stop offset="0.68" style={{ stopColor: 'var(--glow)' }} stopOpacity="0.3" />
-          <stop offset="1" style={{ stopColor: 'var(--glow)' }} stopOpacity="0" />
+          <stop offset="0" style={{ stopColor: 'var(--moon-halo)' }} stopOpacity="1" />
+          <stop offset="0.5" style={{ stopColor: 'var(--moon-halo)' }} stopOpacity="0.92" />
+          <stop offset="0.68" style={{ stopColor: 'var(--moon-halo)' }} stopOpacity="0.3" />
+          <stop offset="1" style={{ stopColor: 'var(--moon-halo)' }} stopOpacity="0" />
         </radialGradient>
 
         {/* The disc, lit slightly from the upper left. The falloff is small on
             purpose — 1.00 to 0.78 — because a moon is a flat-looking thing at
             this size and a strong shade reads as a ball. */}
         <radialGradient id={disc} cx="0.5" cy="0.5" r="0.72" fx="0.36" fy="0.3">
-          <stop offset="0" style={{ stopColor: 'var(--cross-glow)' }} stopOpacity="1" />
-          <stop offset="0.55" style={{ stopColor: 'var(--cross-glow)' }} stopOpacity="0.95" />
-          <stop offset="1" style={{ stopColor: 'var(--cross-glow)' }} stopOpacity="0.78" />
+          <stop offset="0" style={{ stopColor: 'var(--moon-disc)' }} stopOpacity="1" />
+          <stop offset="0.55" style={{ stopColor: 'var(--moon-disc)' }} stopOpacity="0.96" />
+          <stop offset="1" style={{ stopColor: 'var(--moon-disc)' }} stopOpacity="0.84" />
         </radialGradient>
 
         {/* One gradient, three maria. Object bounding box units, so each circle
@@ -140,18 +156,18 @@ export function Moon({ className }: { className?: string }): JSX.Element {
             night moon and lightens the daytime one, which is what surface
             shading has to do to survive a theme flip. */}
         <radialGradient id={mare}>
-          <stop offset="0" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0.2" />
-          <stop offset="0.62" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0.12" />
-          <stop offset="1" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0" />
+          <stop offset="0" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="1" />
+          <stop offset="0.62" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="0.6" />
+          <stop offset="1" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="0" />
         </radialGradient>
 
         {/* The limb: a shallow pool of the same ground colour gathered at the
             lower right, opposite the disc's light. It is what keeps the moon
             from reading as a paper circle. */}
         <radialGradient id={limb} cx="0.72" cy="0.78" r="0.85">
-          <stop offset="0" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0.22" />
-          <stop offset="0.55" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0.08" />
-          <stop offset="1" style={{ stopColor: 'var(--invert-fg)' }} stopOpacity="0" />
+          <stop offset="0" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="1" />
+          <stop offset="0.55" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="0.4" />
+          <stop offset="1" style={{ stopColor: 'var(--moon-mare)' }} stopOpacity="0" />
         </radialGradient>
       </defs>
 

@@ -1,37 +1,182 @@
-/* ── the floor: the band of section under the last card row ────────────────
-   One name, one value, and everything in the scene layer is positioned FROM
-   it, the way Building.css does it. It is the only place on this page big art
-   can go, and that is a structural fact rather than a preference:
-   `.card` is `background-color: var(--surface)`, which in the dark theme is a
-   4.5% white wash — so a card is 95% TRANSPARENT and a layer parked behind the
-   grid is not hidden by it, it is read through it, directly under the copy.
-   (In light `--surface` is `#ffffff` and it would be hidden; the rule has to
-   hold in both themes, so it is the dark one that sets it.)
+/* ── two colours this file needs and no token has ──────────────────────────
+   Both are HAZE, and both belong to this section's FLOOR — the one edge of it
+   that is still a boundary between two pictures. The render that produced them
+   showed a bridge, a boulder and a neon grid all terminating on the same ruled
+   horizontal line at the `#building` join, with nothing between the depth
+   planes and nothing across the boundary.
 
-   So the floor is what buys scale. It was 120–190px, which is why the bridge
-   was 132px wide and read as a postage stamp; at 210–380px the same bridge is
-   46vw with 90–170px of clearance above its highest ink, and the boulders have
-   somewhere to be. Every art rule below subtracts its clearance from this
-   number, so "never over a card" is arithmetic and not a screenshot.
+   --tools-spray-ink is the air over the water, laid between the bridge and the
+   boulders. A haze band in a layer's own ink is the biggest depth cue there
+   is: it is what makes the near thing read as near, and it dissolves the far
+   thing's edges for free.
 
-   The extra height also keeps every card clear of the neon band, which is what
-   this padding was originally for. */
+   **One declaration each and no `[data-theme='light']` twin, deliberately.**
+   Both operands already carry the theme, so the mix flips with them and a
+   second declaration would be the same string written twice — the drift rule 2
+   exists to prevent. base.css declares every --seam-fill exactly once for
+   exactly this reason.
+
+   **Toward --text and not toward white, which is worth saying out loud because
+   haze in the world is not.** Real aerial haze lifts distant things toward the
+   sky, and in dark that is what this does. In LIGHT the band is already
+   near-white, so anything lifted toward the sky is invisible, and the only
+   direction with any contrast left in it is down. That is exactly the
+   conclusion --seam-fill reaches for exactly the same reason, and it is why
+   the two agree with each other instead of one of them being drawn twice.
+
+   9% and not --seam-step's 6%: a seam is a hard-edged shape read against a
+   band, and this is a soft gradient with no edge at either end, which needs
+   more separation before it is seen at all. It cannot become a stripe, because
+   it has no edge to make one out of.
+
+   --tools-shore-ink is not a mix at all. It is the band on the OTHER side of
+   this section's bottom edge, unchanged — which is what `.walk`'s own backdrop
+   gradient already resolves to at 100%, and what `#building` paints — so a
+   band that ends on it can have no step in it anywhere. It is aliased rather
+   than written inline so the rule below reads as what it is. (Until this pass
+   the sentence said "what `.section--blend`'s own gradient resolves to at
+   100%". That class came off this section with CONTRACT W; the value it named
+   did not move, it only changed owner. See below.)                          */
+:root {
+  --tools-spray-ink: color-mix(in srgb, var(--band-tools) 91%, var(--text));
+  --tools-shore-ink: var(--band-building);
+}
+
+/* ── the section ───────────────────────────────────────────────────────────
+   Read `Walk.tsx` and CONTRACT W in internal/checklists/cabin-interior-spec.md
+   before this file. This is the last third of one pinned camera move: the
+   camera tilts up off the table, pans to the west window on the cabin's west
+   wall, settles there while the small tools are read, and then pushes toward
+   the glass and washes out into the band below.
+
+   ── no background, and it is the load-bearing line ────────────────────────
+   `.section--blend` came off the class list. It paints --tint-top to
+   --tint-bot edge to edge, and this section is a positioned sibling of the
+   walk's stage painted later in tree order — so an opaque gradient here does
+   not sit behind the cabin, it hides the last two beats of the shot
+   completely. The backdrop for all three sections is one gradient on `.walk`,
+   underneath the canvas, and it ends on --band-building at the floor, which is
+   the value this section's own gradient ended on anyway. The join into
+   `#building` is therefore still a band meeting an identical band, and
+   --tools-shore-ink above is still the same colour it always was.
+
+   `background-color: transparent` is stated rather than left to the default,
+   because putting `.section--blend` back is a one-word change and it is the
+   one change that would hide the shot.
+
+   ── the top edge is not a boundary any more ──────────────────────────────
+   `--tools-cross`, `--tools-over-depth`, `--tools-pine-w`, `--tools-pine-rise`
+   and this section's `overflow-clip-margin` are all deleted, with the crossing
+   band and the pine pair they positioned, and with `.tools__seam-drift` and
+   its --seam-lift backfill. Tools.tsx has the reasoning. The section is back
+   to `.section`'s own `overflow: hidden`, which is safe here for a reason
+   worth writing down: the walk's sticky pin is in `.walk`, a sibling of this
+   section rather than a descendant, so this section's overflow is nowhere on
+   the pin's containing-block chain. `Stage.tsx`'s trap does not reach here.
+
+   ── the three bands, and what each one is for ────────────────────────────
+   The whole point of this pass at `#tools` is that the section was 870px tall
+   — under one viewport — so the window beat had almost no pinned scroll to
+   happen in and the camera was still moving when the reader arrived. The
+   height is spent in three named pieces rather than one padding:
+
+     --tools-lead   the PAN. From `#apps`' last card to this section's kicker,
+                    and it is the run the camera has to finish arriving at the
+                    window in. It is also what puts the heading near the middle
+                    of the screen at the moment `#tools`' top edge reaches the
+                    top of it — which is the p the walk hands the camera as
+                    `tools`, so the settle and the heading land together.
+     --tools-wash   the OUT. Under the last card row, where the camera pushes
+                    toward the glass and the frame washes to the outside light
+                    so the canvas can leave with nothing to cut.
+     --tools-scene  the LANDSCAPE. The bridge, the water, the boulders and the
+                    neon band — what the reader steps out into. Every art rule
+                    below is positioned from THIS and not from the padding, so
+                    the scene stays a band at the section's floor instead of
+                    sliding up under the grid when the wash grows.
+
+   `padding-bottom` is the sum of the last two. Splitting it is the whole
+   repair: the old `--tools-floor` was both the wash and the scene at once, so
+   every clearance below was measured from the GRID's bottom edge — and giving
+   the camera a viewport to wash out in would have dragged the bridge and the
+   boulders up with it and left 500px of empty band under them.
+
+   **--tools-scene is `clamp(220px, 23vw, 400px)`, which is --tools-floor's own
+   value, unchanged.** That is deliberate: every clearance, every ink ratio and
+   every drift figure in the art rules below keeps its exact meaning and the
+   landscape renders pixel-identical to what shipped. Only its position moved.
+
+   ── the two new numbers ──────────────────────────────────────────────────
+   Both are `svh` and not `vw`, because the pin's run is `walk height − 100svh`
+   and a beat is measured in viewports. A `vw` clamp gives a tall narrow window
+   almost no run and a short wide one too much, which is the shape of the
+   defect this section had.
+
+   46svh of lead and 62svh of wash, resolved at 1440x900: 414px and 558px,
+   against a scene band of 331px and 419px of copy. The section is 1722px, or
+   1.9 viewports, where it was 870px.
+
+   The wash is the larger of the two on purpose, and the number it is solved
+   against is one viewport. The tools cards have to be READ while the camera is
+   still pinned on the window: the grid's bottom edge reaches the top of the
+   viewport `--tools-wash + --tools-scene` before the pin releases, so a
+   padding-bottom under 100svh would let the backdrop start scrolling away
+   underneath the cards. 62 + 23vw is 889px at 1440x900 against a 900px
+   viewport — 11px short at exactly that window and comfortably over at every
+   wider or shorter one, which is why the wash's clamp ceiling is 700 rather
+   than something tidier.
+
+   ── what it does to the walk's marks ─────────────────────────────────────
+   Measured at 1440x900 with the walk's own arithmetic (`(sectionTop −
+   walkTop) / (walkHeight − vh)`):
+
+     Origin  1712px    #apps mark   0.385
+     Apps    1914px    #tools mark  0.815
+     Tools   1722px    walk         5348px, pin run 4448px
+
+   The cabin-interior spec's beat table puts the table at 0.50 and the window
+   at 0.82. The window lands where the spec asks; the table lands earlier,
+   because Origin is only 1712px of a 4448px run and no amount of padding on
+   the other two sections moves that without making them absurd. **The marks
+   are the contract, not the spec's p values** — that is exactly why they are
+   handed to the camera as numbers rather than written into it — and
+   `Walk.tsx` says the same thing from the other side.                       */
 .section.tools {
-  --tools-floor: clamp(210px, 22vw, 380px);
-  /* The bridge, and its clearance from the grid above it. The clearance is the
-     distance from the grid's bottom edge to the TOP of the bridge's ink, which
-     is what the `bottom` below is written to produce. */
+  --tools-lead: clamp(110px, 46svh, 520px);
+  --tools-wash: clamp(90px, 62svh, 700px);
+  --tools-scene: clamp(220px, 23vw, 400px);
+
+  /* The bridge, and its clearance from the TOP of the scene band, which is
+     what the `bottom` below is written to produce. It went up with the factor:
+     -0.05 is worth 32px at 1440x900 and 41px on a 900x1400 window, against 151
+     and 96 of clearance. (It used to be measured from the grid's bottom edge,
+     which was the same line while one variable was both the wash and the
+     scene. Same number, same picture, one honest name.) */
   --tools-bridge-w: clamp(240px, 46vw, 760px);
-  --tools-bridge-clear: clamp(90px, 10vw, 170px);
+  --tools-bridge-clear: clamp(96px, 10.5vw, 180px);
   /* The boulders sit lower and nearer, so they clear by more: they carry the
      biggest factor in the section and the only pointer sway, and both of those
-     are spent out of this number. The floor is 126px rather than 110 because
-     the worst case is not the widest window — -0.115 is worth 69px at 1440x900
-     and 91px on a 900x1400 one, where the clamp is sitting on its floor. */
+     are spent out of this number. The floor is 150px rather than 126 because
+     the worst case is not the widest window — -0.15 is worth 89px at 1440x900
+     and 119px on a 900x1400 one, where the clamp is sitting on its floor, and
+     7px of sway comes off after that. 24px left in the worst frame. */
   --tools-rock-w: clamp(200px, 27vw, 480px);
-  --tools-rock-clear: clamp(126px, 13vw, 220px);
-  padding-top: clamp(72px, 9vw, 120px);
-  padding-bottom: var(--tools-floor);
+  --tools-rock-clear: clamp(150px, 15vw, 250px);
+
+  padding-top: var(--tools-lead);
+  padding-bottom: calc(var(--tools-wash) + var(--tools-scene));
+  background-color: transparent;
+}
+
+/* The box the scene layer lives in: `aria-hidden` and `pointer-events: none`
+   in one place rather than nine. `clip` rather than `hidden` so it is not a
+   scroll container for no reason, and `inset: 0` is the section's PADDING box,
+   which is what every percentage in here was already resolving against. */
+.tools__clip {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
 }
 
 .tools__sun,
@@ -142,8 +287,60 @@
 .shell.tools__shell {
   max-width: 1180px;
 }
+/* ── the head's scrim ──────────────────────────────────────────────────────
+   The kicker, the heading and the lede have no plate of their own; `.card`
+   does, so the two tool cards below this block were already safe over a lit
+   backdrop and the four lines above them were not.
+
+   That did not matter while the page behind this section was a flat band. It
+   matters now: under CONTRACT W these words sit over the cabin's west window,
+   which is the BRIGHTEST thing in the whole shot — cold daylight coming in
+   against a dark room — and it is the one backdrop on this page where the dark
+   theme is the harder of the two. Origin.css has the measurement of what a lit
+   surface does to unplated type: --faint over the cabin's lit wall composites
+   to 1.5:1, which is not low contrast, it is gone.
+
+   **Same construction, same ink, same four numbers as `.apps__head-plate::before`
+   one section up, deliberately** — two headings a viewport apart over one
+   continuous shot should be plated by one idea rather than two, and the two
+   numbers they share are declared once on `.walk`. Apps.css carries the
+   geometry and the argument in full: two linear ramps intersected rather than
+   an ellipse, so the plate dissolves at the top, the bottom and the right and
+   is flush with the frame on the left, with no edge on any side.
+
+   It hangs on `.tools__head-plate`, a wrapper round the head, and not on the
+   head itself: `useReveal` writes a `clip-path` to what it reveals and a
+   clip-path clips that element's pseudo-elements to its border box, which drew
+   this scrim as a hard rectangle for the length of the wipe. Apps.css carries
+   the render that caught it and the same wrapper one section up.
+
+   Checked against this section's own copy at 1440 in a 1180px shell: "Small
+   things, sharpened." is 571px of 48px display type, ending at viewport 701,
+   and the lede's `max-width` caps it at 630. --scrim-x puts the falloff at
+   viewport 810, so the longest line here has 109px of solid plate past its
+   last glyph — the tightest of the two heads, and still clear.               */
+.tools__head-plate {
+  position: relative;
+}
 .tools__head {
   margin-bottom: 44px;
+}
+.tools__head-plate::before {
+  content: '';
+  position: absolute;
+  inset: -130px calc(-1 * var(--scrim-pad)) -150px calc(50% - 50vw - 40px);
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--card-bg);
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 110px, #000 calc(100% - 130px), transparent 100%);
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 110px, #000 calc(100% - 130px), transparent 100%);
+  mask-composite: intersect, add;
+  transition: var(--t-theme);
 }
 .h2.tools__heading {
   margin-top: 18px;
@@ -240,116 +437,88 @@
   border-bottom-color: var(--edge-hi);
 }
 
-/* ── the scene layer ───────────────────────────────────────────────────────
-   Beat four of the walk: you cross a stone footbridge. Origin, three sections
-   up, is already a path of stepping stones, and the kit's README is explicit
-   that the footbridge and the stepping stones are used instead of each other —
-   three sections is what buys them both a place.
+/* ── the scene layer, and it is all at the FLOOR now ───────────────────
+   The end of the walk: the camera pushes toward the window, the frame washes
+   to the outside light, and this is what is out there — a stone footbridge
+   over water, a near shore of boulders, two bands of haze between them, and
+   the retro-neon band beyond. Origin, three sections up, is already a path of
+   stepping stones, and the kit's README is explicit that the footbridge and
+   the stepping stones are used instead of each other; three sections is what
+   buys them both a place.
 
-   Two layers, which is what a foreground and a background need: the bridge is
-   the structural anchor and the boulder cluster is the low near cover the
-   kit's guardrail 8 allows beside one. Nothing else goes in here; a third
-   piece would be an illustrated scene rather than a place suggested.        */
+   Guardrail 8 of the kit is unmoved: one structural anchor plus low foliage
+   and fog. The footbridge is still the only anchor here and haze is fog by
+   another name.
 
-/* ── the boundary: the quiet one, and it is quiet on purpose ───────────────
-   Five boundaries, five different ideas, and this is the one carried by a
-   single unaccompanied shape. #apps above it hangs a canopy at two depths,
-   #building below it dissolves under a rising mist, #faith opens a pass and
-   the Outro fades in from nothing — so a reader arrives here having just
-   learned that a boundary on this page is something to look at, and finds one
-   clean waterline instead.
+   ── the two layers that are gone, and why they had to go ─────────────────
+   `.tools__seam-drift` — a `wave` Seam at this section's top edge with a
+   --seam-lift backfill above it, drifting at +0.03 — and `.tools__over` with
+   the `pine-pair` inside it, which rose out of this section into `#apps`'
+   floor. Between them they were the whole `#apps` -> `#tools` join, and they
+   were good: a waterline you were meant to notice, and a stand of trees
+   standing in two sections at once, which is the strongest weld there is.
 
-   That is the trade being made, not an omission. Everything loud in this
-   section is at its FLOOR — the neon band, the sun, the bridge, the boulders,
-   which between them are the busiest 380px on the page — and a boundary that
-   competed with its own section's scene would leave the reader nothing to
-   look at first. A quiet join between two carried ones is what makes the
-   carried ones read.
+   They are deleted because the join is not there any more. Under CONTRACT W
+   the reader is inside the cabin at this point in the page and the camera is
+   panning from the table to the west window; a waterline and a pine stand
+   drawn across that are a landscape join in the middle of an interior shot,
+   which is worse than no join rather than better than one. `.tools__over`'s
+   four-stop mask, --tools-cross's derivation from `--apps-floor`, and the
+   crossing's whole clamp-against-clamp table went with them.
 
-   `wave` is the only water shape of the five, used at the only boundary with
-   water under it. Hard-edged rather than dissolved: this section is blended,
-   so its own gradient is already softening the top, and a waterline wants to
-   be a silhouette.
-
-   The drift is on a wrapper, not on the <svg>: useParallax is typed to
-   HTMLElement and Seam takes no ref, and a wrapper is also where the drift can
-   be given its own factor per boundary. No height on it — the Seam inside is
-   absolutely positioned and takes its own from Seam.css, so a height here
-   would be that clamp written down a second place to go stale. Zero height
-   also means useParallax reads the BOUNDARY's distance from the viewport
-   centre rather than a box whose middle moves with however tall the band
-   happens to be at this width, so every boundary drifts by the same law.
-
-   --seam-lift is the strip of solid ink this wrapper paints ABOVE its own top
-   edge, so the section's overflow cuts the band rather than the path's own
-   straight top edge cutting it. Without it a +0.03 factor slides that edge
-   13.5px clear of the boundary on a 900px viewport and draws a line across the
-   page. It is a token now — tokens.css, beside --seam-step, which carries why
-   the number is 4vh; Apps.css carries the artefact itself. This rule used to
-   declare it, and so did three other stylesheets, for one decision.
-
-   The colour is on the WRAPPER and not on the <svg>, which is also a fix
-   rather than plumbing: base.css's `transition: var(--t-theme)` list covers
-   `div` and not `svg` or `path`, so a seam painted on the svg snapped to the
-   new theme while the page around it crossed on the wave. `color` on a div
-   transitions, the svg inherits the animated value, and `currentColor`
-   resolves against it in both the path and the ::before.
-
-   Its own band stepped --seam-step toward the page's ink, which is what
-   --seam-fill resolves to — worn flat a band would be invisible, because a
-   boundary is exactly where two bands are equal. So it reads as this section
-   rising into Apps. Both themes come free: the bands and --text are both per
-   theme, so one declaration is right in each.                               */
-.tools__seam-drift {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 0;
-  color: var(--seam-fill);
-  pointer-events: none;
-  will-change: translate;
-}
-.tools__seam-drift::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--seam-lift);
-  background-color: currentColor;
-}
+   **--seam-lift now has NO consumer at all, and this rule was the last one.**
+   tokens.css records four `height: var(--seam-lift)` declarations as its
+   population; `#apps` stopped spending it a pass ago, and `#building`,
+   `#faith` and the Outro each say in their own stylesheets that their bands
+   no longer need it. `grep -rn 'height: var(--seam-lift)' src/` returns
+   nothing since this edit — only the token's own declaration and the prose
+   about it. It is stated here rather than quietly left, because the lead owns
+   tokens.css and a token whose readers have all walked away is exactly what
+   rule 2's second half is about; see the --nav-scrolled note there for the
+   same story with the same ending.                                          */
 
 /* ── the bridge ────────────────────────────────────────────────────────────
    46vw wide and running off the left edge, where it used to be 132px tucked
-   into a corner. At 1440 that is 642px of stone and water, 173px of it above
+   into a corner. At 1440 that is 662px of stone and water, 180px of it above
    the section's bottom edge with the rest cropped by it, which is what puts
    you level with the water instead of looking down at a model of a bridge.
 
    ## The clearance is arithmetic, not a screenshot
 
    `stone-footbridge` is 1600x900 in the file the site loads, and its ink —
-   measured off the source PNG's alpha channel, not eyeballed — occupies
-   y 26.5%..80.0% of the frame. So for a box `w` wide:
+   measured off the real alpha channel at 24/255, not eyeballed — occupies
+   y 26.3%..80.3% of the frame. So for a box `w` wide:
 
        element height   = w / 1.7778  = 0.5625w
-       ink top    above the element's bottom = 0.735 x 0.5625w = 0.4134w
-       ink height                            = 0.535 x 0.5625w = 0.3009w
+       ink top    above the element's bottom = 0.7350 x 0.5625w = 0.4134w
+       ink height                            = 0.5400 x 0.5625w = 0.3038w
 
-   Setting `bottom` to `floor - clear - 0.4134w` therefore puts the top of the
-   INK exactly `clear` below the grid at every width there is, whatever the
-   copy wraps to and whatever `w` resolves to. The ink's bottom lands below the
-   section's own edge, so the water is cropped rather than ending in mid-air.
+   Setting `bottom` to `scene - clear - 0.4134w` therefore puts the top of the
+   INK exactly `clear` below the TOP OF THE SCENE BAND at every width there is,
+   whatever the copy wraps to and whatever `w` resolves to. (It read `floor`
+   and meant the grid's bottom edge, which was the same line while one variable
+   was both the wash and the scene — see --tools-scene at the top of this file.
+   Same expression, same picture, one honest name.)
 
    Worst-case drift is added on top of that and it still fits: `useParallax`
    can move a layer by at most (vh + h)/2 x |factor| while any part of it is on
-   screen, which at 1440x900 is 29px against 144px of clearance, and 47px
-   against the same 144 on a 1400px-tall window.
+   screen, which at -0.05 is 32px at 1440x900 against 151px of clearance, and
+   41px against 96 on a 900x1400 window.
+
+   **Its lower half no longer ends on a line, and that is not this rule's
+   doing.** The ink's bottom is below the section's own edge, so it is cropped
+   by the join — which is what the render showed as a ruled cut. Two things
+   fixed it and both are below: `.tools__spray` washes the footings before they
+   get there, and `.tools__shore` takes whatever is left into #building's own
+   band. A prop cropped by a boundary is fine; a prop cropped by a boundary
+   with nothing between them is the defect.
 
    `--art-mid`, not `--art-far`: at this size the far end of the range leaves
-   it a smear, and it is no longer the quietest thing in the section — the seam
-   above it is. Nothing recolours a pixel; -dark and -light are separate
-   drawings. */
+   it a smear, and it is the middle plane of three at this floor — the neon
+   band behind it, the boulders in front. (This line used to say it was not the
+   quietest thing in the section because the seam above it was; that seam is
+   deleted with the boundary it sat on.) Nothing recolours a pixel; -dark and
+   -light are separate drawings. */
 .tools__bridge {
   left: clamp(-72px, -4vw, -12px);
   width: var(--tools-bridge-w);
@@ -358,22 +527,57 @@
      every clearance below would be briefly describing a box that is not there.
      1600x900 is the .webp the site actually loads. */
   aspect-ratio: 1600 / 900;
-  bottom: calc(var(--tools-floor) - var(--tools-bridge-clear) - var(--tools-bridge-w) * 0.4134);
+  bottom: calc(var(--tools-scene) - var(--tools-bridge-clear) - var(--tools-bridge-w) * 0.4134);
   opacity: var(--art-mid);
 }
 
+/* ── the spray: the air between the bridge and the boulders ────────────────
+   Craft, not decoration: distant things are paler and lower in contrast, not
+   merely smaller, and a band of the section's own ink laid BETWEEN two depth
+   planes is the cheapest and largest depth cue available. One gradient, no
+   image, no hook.
+
+   It is drawn between the two in the DOM, which is the whole mechanism — the
+   bridge is washed by it and the boulders are drawn over it crisp, so the two
+   sit in different air. Painted --tools-spray-ink; see the top of this file
+   for why that steps toward --text in both themes.
+
+   62% of the scene band, anchored to the section's bottom edge, fully itself 45%
+   of the way DOWN its own height. At 1440 that is a 205px band whose peak
+   lands 113px above the section edge — level with the boulders' ink top at
+   115px and 67px below the bridge's at 180px, so the bridge's whole lower
+   third is behind haze and the boulders, drawn after it, are not. It takes NO
+   parallax hook and that is deliberate: it is
+   the section's air, and air that slides against the things in it is a sheet
+   of grey. Both ends are transparent, so it can draw no line anywhere.      */
+.tools__spray {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--tools-scene) * 0.62);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--tools-spray-ink) 45%,
+    transparent 100%
+  );
+}
+
 /* ── the boulders: the near shore ──────────────────────────────────────────
-   The nearest layer on this section and the only one on the page that follows
-   the cursor. `boulder-cluster` is 1000x750 and its ink runs y 28.7%..99.9% —
-   it is drawn to be cropped by the bottom of a frame — so:
+   The nearest layer in this section and one of the two on the page that follow
+   the cursor. `boulder-cluster` is 1000x750 and its ink runs y 28.7%..100% in
+   dark and 14.0%..100% in light — it is drawn to be cropped by the bottom of a
+   frame — so, taking the dark figure because it is the one that beds the box
+   lowest and therefore makes every clearance a floor:
 
        element height = 0.75w
-       ink top above the element's bottom = 0.712 x 0.75w = 0.535w
+       ink top above the element's bottom = 0.713 x 0.75w = 0.535w
 
-   and the same construction as the bridge puts its ink top `--tools-rock-clear`
-   below the grid at every width. That clearance is bigger than the bridge's
-   because more is spent out of it here: 66px of scroll drift at 1440x900, and
-   7px of pointer sway on top, leaving 115px.
+   and the same construction as the bridge puts its ink top --tools-rock-clear
+   below the top of the scene band at every width. That clearance is bigger than the bridge's
+   because more is spent out of it here: 89px of scroll drift at 1440x900 and
+   119px on a 900x1400 window, and 7px of pointer sway on top of either.
 
    The sway is on the wrapper and the drift on the <img>, one writer per
    element — Tools.tsx's `useSway` has the reasoning. The wrapper is the art's
@@ -387,7 +591,7 @@
   right: clamp(-56px, -3vw, -10px);
   width: var(--tools-rock-w);
   aspect-ratio: 1000 / 750;
-  bottom: calc(var(--tools-floor) - var(--tools-rock-clear) - var(--tools-rock-w) * 0.535);
+  bottom: calc(var(--tools-scene) - var(--tools-rock-clear) - var(--tools-rock-w) * 0.535);
   pointer-events: none;
   will-change: translate;
 }
@@ -398,19 +602,77 @@
   opacity: var(--art-near);
 }
 
-/* Below this the whole scene lives in a much shorter floor and the boulders
-   stop being a second layer and start being a lid on the bridge: measured at
-   375px they overlap its ink by 59px, and they still clear it by 54px at
-   480px. 640 is where the kit takes peripheral props off anyway, and it is the
-   width at which this section drops to one card column and its own height is
-   the thing that needs the air. The bridge stays — it is the beat, it is the
-   structural anchor, and in the mobile floor below it is 233px wide with its
-   whole ink visible. */
+/* ── the shore: the far bank's colour coming across the water ──────────────
+   The last thing drawn inside the clip, and the thing that removes the ruled
+   line at this section's bottom edge. Everything at this floor is cropped by
+   the join — the bridge's footings, the boulders' base, the near end of the
+   neon grid — and a crop is only a defect when there is nothing between the
+   prop and the boundary. This is that something.
+
+   It is not a mix and it takes no step: --tools-shore-ink IS --band-building,
+   which is exactly what `.walk`'s backdrop gradient resolves to at 100% and
+   what `#building` itself paints, so the band ends on the value it was going
+   to end on anyway and there is nowhere for a step to appear. (It used to name
+   this section's own `.section--blend` gradient. That class came off with
+   CONTRACT W; the value did not move, only its owner.) What it buys is that every
+   cut end arrives at the boundary already wearing the next section's colour.
+   Craft note: a gradient in the NEIGHBOUR's ink is a transition; a gradient in
+   your own is a vignette.
+
+   `clamp(38px, 4.4vw, 76px)` and not more. At 1440 that is 63px against 115px
+   of visible boulder, so the rock's upper half stays crisp and its base melts
+   into the bank, which is what a rock at a waterline looks like. Take it to
+   the full scene band and the boulders stop existing. The neon grid loses its
+   nearest 63px of 99 and keeps its horizon and its sun, which sit at the
+   band's top — the grid used to simply stop there, so this is a gain twice
+   over.
+
+   #building's own mist crosses UP over this same join from the other side, so
+   the two meet in the middle; neither is doing the whole job alone.        */
+.tools__shore {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(38px, 4.4vw, 76px);
+  background: linear-gradient(180deg, transparent 0%, var(--tools-shore-ink) 100%);
+}
+
+/* ── narrow ──────────────────────────────────────────────────
+   Below this the scene band is much shorter and the boulders stop being a
+   second layer and start being a lid on the bridge: measured at 375px they
+   overlap its ink by 59px, and they still clear it by 54px at 480px. 640 is
+   where the kit takes peripheral props off anyway, and it is the width at
+   which this section drops to one card column and its own height is the thing
+   that needs the air. The bridge stays — it is the beat, it is the structural
+   anchor, and in the mobile scene band below it is 233px wide with its whole
+   ink visible.
+
+   The two haze bands stay. They are gradients, they cost nothing, and the
+   bottom edge needs dissolving at 320px exactly as much as it does at 1920.
+
+   ── the two beats, at phone size ─────────────────────────────────────────
+   The camera pans to the window and washes out on a phone exactly as it does
+   on a laptop, so neither band goes to zero — but a phone's whole viewport is
+   812px and 46svh + 62svh of it would be more than a screen of empty page
+   around two stacked cards. 26svh and 34svh: 211px and 276px at 375x812.
+
+   That does mean the cards are no longer guaranteed to finish being read
+   inside the pin at these widths — 276 + 130 is 406px against an 812px
+   viewport — so the backdrop begins to scroll away under the last card. It is
+   the right trade at this size: the alternative is 812px of held-open page
+   under two cards on a device where the whole section is already four screens.
+
+   `--tools-cross: 0px` used to be here as well, so a crossing band that was
+   `display: none` could not open a clip margin it had nothing to put in. Both
+   the band and the margin are gone; the line went with them.                */
 @media (max-width: 640px) {
   .section.tools {
-    /* The band existed for the art. When the second layer comes off, the space
-       goes back to the page rather than sitting there as a hole. */
-    --tools-floor: clamp(130px, 15vw, 190px);
+    --tools-lead: clamp(90px, 26svh, 240px);
+    --tools-wash: clamp(70px, 34svh, 300px);
+    /* The scene band existed for the art. When the boulders come off, the
+       space goes back to the page rather than sitting there as a hole. */
+    --tools-scene: clamp(130px, 15vw, 190px);
     --tools-bridge-clear: 56px;
   }
   .tools__rocks-sway {
@@ -421,23 +683,29 @@
 @media (prefers-reduced-motion: reduce) {
   /* Every hook here resolves to a zero translate at motionIntensity 0 —
      `useParallax` by construction, `useSway` because it multiplies by `mi` —
-     so all three layers rest exactly where they composed, visible and still.
-     The compositor hints would be promoted layers paid for and never used.
-     Same trade as scene/Scene.css makes for the art itself. */
-  .tools__seam-drift,
+     so every layer rests exactly where it composed, visible and still. The
+     compositor hints would be promoted layers paid for and never used. Same
+     trade as scene/Scene.css makes for the art itself. (`.tools__seam-drift`
+     was the other name in this list and is deleted with the boundary it
+     drifted on.) */
   .tools__rocks-sway {
     will-change: auto;
   }
 }
 
 @media print {
-  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
-     is painted by a ::before on a plain <div> that no selector there reaches —
-     and the print block in base.css does not neutralise the --band-* tokens,
-     so the strip would come out as a near-black bar across the top of the
-     section on white paper. Decorative, so it goes, like everything else that
-     block drops. */
-  .tools__seam-drift {
+  /* The two haze bands are plain <div>s that no other print block reaches —
+     and the print block in base.css does not neutralise the --band-* tokens or
+     --card-bg, so both would come out as grey slabs on white paper and the
+     head's scrim would come out as a near-black rectangle under black type.
+     Decorative, so they go, like everything else that block drops.
+
+     (`.tools__seam-drift` and `.tools__over` used to head this list, for the
+     --seam-lift backfill and the crossing band. Both are deleted; see the
+     scene-layer note above.) */
+  .tools__spray,
+  .tools__shore,
+  .tools__head-plate::before {
     display: none !important;
   }
 }

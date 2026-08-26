@@ -33,7 +33,10 @@ export function Faith() {
           Outro), so a reader never meets the same idea twice.
 
           `ridge` HANGS from the boundary: a low, many-faceted profile, the far
-          bank you are leaving seen from below it. It drifts DOWN with the page.
+          bank you are leaving seen from below it. It drifts DOWN with the page,
+          and it is masked at its top so that the boundary itself carries none
+          of it — Faith.css has the fifteen-column measurement that made that
+          change, and it is why the band no longer needs `--seam-lift`.
 
           `peaks` RISES to meet it, `edge="bottom"` — the only seam on this page
           in that orientation, and it is the shape the old single seam here used
@@ -47,7 +50,7 @@ export function Faith() {
 
           The summit at the bottom of this section is where the climb ends. */}
       <div ref={seam} className="faith__seam-drift" aria-hidden="true">
-        <Seam shape="ridge" edge="top" />
+        <Seam shape="ridge" edge="top" className="faith__seam" />
       </div>
       <div ref={climb} className="faith__climb-drift" aria-hidden="true">
         <Seam shape="peaks" edge="bottom" className="faith__climb" />
@@ -61,9 +64,30 @@ export function Faith() {
         <div className="faith__pulse" />
       </div>
 
-      <div ref={rays} className="faith__rays" aria-hidden="true">
-        <div className="faith__ray" />
-        <div className="faith__ray faith__ray--thin" />
+      {/* ── the shafts, and why they are two boxes ──────────────────────────
+          `useHeroParallax` writes `hero.top * factor`, which scales with TOTAL
+          scroll rather than with the viewport — its own header says so. By the
+          time this section is on screen the drift is -334 to -437px, so the
+          box it is written on slides 100px relative to the section while a
+          reader passes through it, and anything positioned inside that box is
+          positioned against nothing.
+
+          A mask on the moving box is therefore a mask in the wrong place, and
+          it was measured being wrong: the section's top edge sat at 35–42% of
+          the box, which is where the old radial's own centre was, so the rays
+          arrived at the #building join at full strength and made the entire
+          remaining step there. Ablated, hiding this layer took a join that
+          measured +0.7 to +5.1 in dark, varying run to run with the breathe
+          animation, to 0.00 at every one of fifteen columns.
+
+          So the mask goes on a box that does not move and the drift stays on
+          the one that does. `.building__over` is the same shape one section up:
+          a static, masked band with drifting art inside it. */}
+      <div className="faith__rays-veil" aria-hidden="true">
+        <div ref={rays} className="faith__rays">
+          <div className="faith__ray" />
+          <div className="faith__ray faith__ray--thin" />
+        </div>
       </div>
 
       <div ref={blob} className="faith__blob" aria-hidden="true" />

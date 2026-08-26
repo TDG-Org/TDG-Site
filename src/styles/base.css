@@ -461,10 +461,17 @@ stop {
   gap: 6px;
 }
 
+/* The plate, then the lift. Two layers and not one: --card-bg is the theme's
+   own ground at ~0.75 alpha, which is what makes a card read as an object in
+   front of a section's scenery rather than as a paler patch of it, and
+   --surface stays on top as the 4.5% highlight it always was. Painted as a
+   background-image over a background-color so both survive one declaration and
+   neither has to know the other's alpha. tokens.css carries the reasoning. */
 .card {
   position: relative;
   border-radius: 3px;
-  background-color: var(--surface);
+  background-color: var(--card-bg);
+  background-image: linear-gradient(var(--surface), var(--surface));
   border: 1px solid var(--border);
   box-shadow: var(--card-shadow);
   isolation: isolate;

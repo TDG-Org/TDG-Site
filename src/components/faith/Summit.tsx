@@ -46,11 +46,62 @@ import './Summit.css'
  * file draws. It is also a raster, so it cannot ride the theme wave and
  * cannot be resized without bytes.
  *
+ * **That call was re-opened this pass and it held, on evidence rather than on
+ * the earlier reasoning.** Both files were composited over `--band-faith`'s
+ * actual value in both themes at the sizes any real placement would use — 180,
+ * 300 and 520px wide, whole and cropped to the hill alone — and three things
+ * came out of the picture that the argument above does not contain:
+ *
+ * - **The glow objection is the weakest of the four, not the strongest.** The
+ *   halo is drawn at single-digit alpha, so over a near-black band it is
+ *   invisible and over a near-white one it is invisible; the light source that
+ *   "disagrees" never actually arrives on the page. Whatever this piece costs,
+ *   it is not a second light.
+ * - **Its hill is cut by its own frame**, so its base is a ruled horizontal
+ *   line all the way across — the exact defect every seam on this page exists
+ *   to remove, and one no placement can fix from outside the raster.
+ * - **At any size where the facets stop reading, it reads as a sticker.** At
+ *   180px it is a small whole hill floating in the band; at 520 it is the
+ *   hero's texture arriving in the one section written to be smooth. There is
+ *   no size in between where it is neither.
+ *
+ * And cropping the cross off to keep the section to one cross does not work
+ * either: the stem runs down into the hill, so any crop that removes the arms
+ * leaves a post standing on a ridge.
+ *
  * `CrossGlyph` is the site's own mark, already drawn in the hero and at the
  * top of this very section, and having the page's own cross be the thing
  * standing on the summit is the point of the beat rather than a saving. It
  * is one path, it scales to any height for nothing, and its fill crosses on
  * the theme wave (see `Summit.css`).
+ *
+ * ## Where the backlight lands
+ *
+ * The cross stands in front of the moon, so it is lit from behind, and a
+ * backlight has to land on something or the reader is told about it rather
+ * than shown it. Three of the four obvious places are drawn here and the
+ * fourth is deliberately absent:
+ *
+ * - **The shadow**, thrown forward down the near face of the crest. It is the
+ *   same `CrossGlyph` path flipped about its own foot, stretched and sheared,
+ *   so the crossbar is in the shadow too — a wedge would have been cheaper and
+ *   would not have said "cross".
+ * - **The wash**, a pool of moonlight spilling over the crest line either side
+ *   of the foot. This is also the "halo where the disc meets the silhouette":
+ *   the silhouette it meets is the HILL's, which is the only edge in the frame
+ *   that has a dark side for a halo to be seen against.
+ * - **The sky**, deepened in a soft pool behind the disc, so the moon is the
+ *   brightest thing in the section rather than merely a pale thing on a pale
+ *   band. `Summit.css` carries the L* figures; the light theme is what this is
+ *   for.
+ * - **A rim down one edge of the cross is NOT drawn, and that is a finding
+ *   rather than an omission.** The whole cross is inside the disc at every
+ *   width and at every point of its drift (the sum is in `Summit.css`), and
+ *   the disc is `--moon-disc` white in BOTH themes — so a pale rim would be
+ *   white on white and a dark one would just fatten the silhouette. A rim
+ *   needs the object's edge to have something darker behind it, and here it
+ *   never does. The light lands on the hill instead, where there is dark to
+ *   land on.
  *
  * ## The alignment is arithmetic, not a screenshot
  *
@@ -68,10 +119,12 @@ import './Summit.css'
  *   `--summit-x` of the same box, and the crest's apex is authored at that
  *   same fraction of the viewBox (0.62 x 1440 = 892.8).
  * - **The whole cross is inside the moon's disc.** The disc's radius is
- *   0.72 x the cross's height and its centre sits 0.62 x that height above
- *   the crest, so the disc's top clears the cross's top by 0.34 of a cross
- *   height and its bottom tucks 0.10 of one behind the hill. `Summit.css`
- *   carries the worst-case-drift version of that sum.
+ *   `--summit-disc-r` cross-heights and its centre sits `--summit-disc-c`
+ *   above the crest — 0.98 and 0.52 today — so the disc's top clears the
+ *   cross's top by half a cross height and its bottom tucks 0.46 of one behind
+ *   the hill. `Summit.css` carries the worst-case-drift version of that sum,
+ *   and the two ratios are named properties precisely so that re-doing it is
+ *   a substitution rather than a hunt.
  *
  * ## What moves, and what does not
  *
@@ -89,18 +142,19 @@ import './Summit.css'
  * on, so it travels with the section exactly.
  *
  * **The cross has no motion of its own, and the crest ridge is the reason.**
- * The two are one element here: `.faith__crest` wraps the crest path and the
- * cross and takes a single translate, so the foot cannot come off the ridge
- * line however the section moves. Giving the cross a drift of its own would
- * either lift it off the crest or, if the crest matched it, be invisible. It
- * takes no pointer response either, and that half is a judgement rather than
- * a constraint: a cross that leans toward the cursor is the one object in
- * this section that must not.
+ * `.faith__crest` wraps the crest path, the wash, the shadow and the cross,
+ * and takes a single translate, so the foot cannot come off the ridge line
+ * and the shadow cannot come off the foot however the section moves. Giving
+ * the cross a drift of its own would either lift it off the crest or, if the
+ * crest matched it, be invisible. It takes no pointer response either, and
+ * that half is a judgement rather than a constraint: a cross that leans
+ * toward the cursor is the one object in this section that must not.
  *
- * The pointer reaches exactly two layers — the moon and the far ridge — and
- * by a few pixels. `usePointer` is 0,0 on a coarse pointer and 0,0 under
- * reduced motion, so a phone cannot shove the scenery sideways with a swipe
- * and a visitor who asked for less gets the composed frame.
+ * The pointer reaches exactly two layers — the moon and the far ridge —
+ * because those are the two that have somewhere to go. `usePointer` is 0,0 on
+ * a coarse pointer and 0,0 under reduced motion, so a phone cannot shove the
+ * scenery sideways with a swipe and a visitor who asked for less gets the
+ * composed frame.
  *
  * ## Off screen it does nothing
  *
@@ -132,27 +186,50 @@ const PARK_MARGIN = 120
  * a layer's actual excursion is half of it either side of the composed frame.
  * Bigger means it moves LESS on screen, which is what "farther away" looks
  * like: the moon is the farthest thing in the frame and the near ridge is the
- * ground, so the ladder runs 30 / 26 / 13 / 0 and never crosses.
+ * ground, so the ladder runs 88 / 44 / 11 / 0 and never crosses.
  *
- * They are small on purpose. The section runs about 1700px of scroll from
- * p = 0 to p = 1, so 30px is under two per cent of the travel — the summit
- * should read as a place you have arrived at, not as scenery sliding past.
+ * **It used to run 30 / 26 / 13 / 0 and that was the defect, not the
+ * restraint.** The paragraph here defended those numbers as "a place you have
+ * arrived at, not scenery sliding past", which is the right instinct and was
+ * spent on the wrong quantity. What a reader can see is not a layer's absolute
+ * lag — the whole section scrolls past either way — it is the RELATIVE travel
+ * between two layers they can compare, and there is exactly one such pair in
+ * this frame worth anything: the moon's disc against the cross standing in
+ * front of it. At 30 and 13 that pair moved 17px across the entire section,
+ * against a disc 145px across. Nothing moved. The reader got stillness, which
+ * is not the same thing as arrival.
  *
- * The moon's 30 and the crest's 13 are also the number that decides the shot.
- * Their difference is what the moon's disc slides against the cross standing
- * in front of it: +-8px of scroll and +-4px of pointer, against a disc radius
- * of 0.72 cross-heights (72.6px at 1440). `Summit.css` carries the worst case
- * worked through. Take these numbers apart and re-do that sum.
+ * At 88 and 11 the pair moves 77px — a fifth of the disc's new width — and the
+ * disc visibly slides down behind the cross as you come over the crest. That
+ * single relative movement IS the shot, and the ratio between the ends of the
+ * ladder is 8x, which is the spread that reads as depth rather than as one
+ * layer drawn twice.
+ *
+ * The near ridge stays at 0 and that half has not moved. It is the ground the
+ * reader is standing on and it is the layer that covers the section's own
+ * floor; a negative factor on it — the cheapest way to buy depth anywhere else
+ * on this page — would lift it off the boundary it exists to hide. This
+ * section takes its against-the-page motion at the OTHER end, at the pass:
+ * `Faith.tsx` drifts the hanging band +0.034 and the rising one -0.018.
+ *
+ * Re-do `Summit.css`'s disc-clearance sum before changing any of these.
  */
-const MOON_RISE = 30
-const FAR_RISE = 26
-const CREST_RISE = 13
+const MOON_RISE = 88
+const FAR_RISE = 44
+const CREST_RISE = 11
 
-/** Pointer amplitudes, in px. Two layers only, and single digits on both. */
-const MOON_PX = 7
-const MOON_PY = 4
-const FAR_PX = 9
-const FAR_PY = 3
+/**
+ * Pointer amplitudes, in px. Still two layers only.
+ *
+ * They went up with the ladder rather than being left behind it: at 7px
+ * against a 77px scroll excursion the pointer would have been a rounding
+ * error on the moon, and the whole point of giving those two layers a pointer
+ * is that a reader who is not scrolling can still make the frame move.
+ */
+const MOON_PX = 12
+const MOON_PY = 6
+const FAR_PX = 16
+const FAR_PY = 5
 
 /**
  * Every amplitude above is quoted at this width, and scaled to whatever the
@@ -160,15 +237,18 @@ const FAR_PY = 3
  *
  * The scene is sized in `vw` — the crest, the cross and therefore the moon's
  * radius all shrink on a phone — but a drift stated in flat pixels would not,
- * so the same 12.5px of moon-against-cross travel is a sixth of the disc's
- * radius at 1440 and a third of it at 375. Measured on the narrow end: flat
- * amplitudes left the cross's top only 5.8px inside the disc at 375px, where
- * scaling leaves it 12.1. The width is already being read every frame for the
- * off-screen guard, so this costs a divide.
+ * so an unscaled 44.5px of moon-against-cross travel is 0.36 of a cross height
+ * at 1440 and 0.67 of one at 375, and the cross would swing straight out of
+ * the disc at the narrow end. Scaled, the SAME fraction survives the whole
+ * range: 0.359 of a cross height at 1440, 0.337 at 375, 0.382 at 1920. That
+ * flatness is the whole reason the clearance sum in `Summit.css` can be stated
+ * once in cross-heights instead of once per breakpoint. The width is already
+ * being read every frame for the off-screen guard, so this costs a divide.
  *
  * The clamp's floor keeps a 320px reader from losing the drift altogether; its
- * ceiling exists because the scene stops growing at 1543px (both clamps in
- * `Summit.css` top out there) and the motion should stop growing with it.
+ * ceiling exists because the scene stops growing at 1543px (--summit-crest
+ * tops out at 1527 and --summit-cross-h at 1488) and the motion should stop
+ * growing with it.
  */
 const REF_WIDTH = 1440
 const SCALE_MIN = 0.5
@@ -184,10 +264,21 @@ const SCALE_MAX = 1.1
    narrower than about 60 viewBox units across, which is 15px once a 1440-unit
    shape has been squeezed into 375 — the floor Seam.tsx's header sets. */
 const RIDGES = {
-  /* The distant range: two long shallow swells that never rise past y = 200,
-     which is what keeps them clear of the moon's disc at every width. Visible
-     to the left and right of the crest hill and hidden behind it in the
-     middle, which is the whole of the depth effect. */
+  /* The distant range: two long shallow swells that never rise past y = 200.
+     Visible to the left and right of the crest hill and hidden behind it in
+     the middle, which is the whole of the depth effect.
+
+     **That 200 used to be justified as "what keeps them clear of the moon's
+     disc at every width", and it no longer does.** The disc is 1.96 cross-
+     heights across now rather than 1.44, so its lower limb sits about where
+     this range's apex does and the two cross for most of the drift. That is
+     not a regression to route around — a far range silhouetted against a low
+     moon is the picture — but it does mean this layer meets a bright disc with
+     a hard top edge, and a hard edge between two depth planes is the one thing
+     this pass exists to remove. So the crossing is paid for with haze: the
+     far ridge carries a fade across its own top in `Summit.css`, in its own
+     ink, which is the aerial perspective the composition was missing and the
+     reason this range finally has something to read against. */
   far: 'M0 400 L0 236 C150 231 250 206 396 202 C530 198 626 236 772 240 C900 243 1010 214 1150 208 C1268 203 1352 226 1440 242 L1440 400 Z',
   /* The summit. One broad dome with its apex at (892.8, 100) — 0.62 of the
      width, the same fraction `--summit-x` puts the cross and the moon at. The
@@ -277,8 +368,21 @@ export function Summit({ progress }: { progress: SectionProgress }): JSX.Element
           the crest cannot tuck its lower edge behind the hill — and in front
           of nothing but the section's own gradient field. */}
       <div ref={moon} className="faith__moon">
+        {/* The sky, deepened behind the disc. It is a child rather than a
+            sibling so it inherits the moon's translate for free — one more
+            element to paint, but not one more style write per frame, and a
+            pool that drifts WITH the moon is the only version that cannot
+            slide off it. `Summit.css` has the L* figures and why the light
+            theme is what this exists for. */}
+        <div className="faith__moon-sky" />
         <Moon className="faith__moon-disc" />
       </div>
+
+      {/* In front of the moon and behind the ridges, which is the only place
+          it works: it exists to take the moon's BLOOM to nothing before the
+          section's own floor cuts it, and it must not touch the ridges, which
+          dissolve there on their own. `Summit.css` has the measurement. */}
+      <div className="faith__floor" />
 
       {/* The three ridges share one box so they share one bottom fade. The
           box hangs `--summit-dip` below the section's floor, which is what an
@@ -295,9 +399,14 @@ export function Summit({ progress }: { progress: SectionProgress }): JSX.Element
           <path d={RIDGES.far} fill="currentColor" />
         </svg>
 
-        {/* The crest and the cross are ONE element, and that is the weld: a
-            single translate carries both, so the foot cannot come off the
-            ridge line however the reader scrolls. */}
+        {/* The crest, the light it catches, the shadow it throws and the cross
+            itself are ONE element, and that is the weld: a single translate
+            carries all four, so the foot cannot come off the ridge line and
+            the shadow cannot come off the foot however the reader scrolls.
+
+            Order is paint order and it is the physics: the hill, then the
+            moonlight spilling over its crest line, then the wedge of that
+            light the cross blocks, then the cross. */}
         <div ref={crest} className="faith__crest">
           <svg
             className="faith__ridge faith__ridge--crest"
@@ -308,8 +417,30 @@ export function Summit({ progress }: { progress: SectionProgress }): JSX.Element
           >
             <path d={RIDGES.crest} fill="currentColor" />
           </svg>
+
+          <span className="faith__crest-wash" />
+
+          {/* The same glyph, flipped about its own foot and stretched. A
+              trapezoid would have been one `clip-path` and no extra svg, and
+              it would have thrown the shadow of a post: the crossbar is the
+              whole reason the site owner could tell this cross was not
+              finished, so it is in the shadow too. It paints through
+              `CrossGlyph`'s own stops, which `Summit.css` redirects by
+              redeclaring --summit-stop-* on this wrapper — the component
+              writes `stopColor` as an inline style, so a stylesheet cannot
+              beat it, and redefining what the inline style READS is the only
+              override here that does not need `!important`. */}
+          <span className="faith__cross-shadow">
+            <CrossGlyph variant="summit" />
+          </span>
+
+          {/* `summit`, not `faith`. The variant above the verse is a LIT ramp
+              that opens on white; in front of a white disc its crossbar was
+              white on white. See CrossGlyph.tsx — and see `Summit.css` for the
+              second half of that bug, which was that the ridge box's own mask
+              was cutting the top 38% of this glyph off entirely. */}
           <span className="faith__summit-cross">
-            <CrossGlyph variant="faith" />
+            <CrossGlyph variant="summit" />
           </span>
         </div>
 

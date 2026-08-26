@@ -28,20 +28,25 @@ write an `<img>` or a path of its own. That is what makes a change like the
 
 ## Who calls what
 
-This is what `grep -rn "<Stage\|<Moon\|<Snow\|<Seam\|ThemedArt\|StillArt" src/`
-returns today. Re-run it rather than trusting the table — the paragraph this
-replaced said `Stage`, `Moon` and `Snow` had no callers at all, and two of the
-three had grown one by the time anybody read it.
+This is what `grep -rn "<Stage\|<Moon\|<Snow\|<Seam\|<ThemedArt\|<StillArt"
+src/ --include=*.tsx` returns today. Re-run it rather than trusting the table —
+the paragraph this replaced said `Stage`, `Moon` and `Snow` had no callers at
+all, and two of the three had grown one by the time anybody read it; the
+version after that named `Apps` in four rows and `Apps` draws none of them now.
+
+**Every row here was counted while three other builders were editing the same
+tree**, and the section that moved most was `#apps`, whose scenery went into
+the new `Walk.tsx`. Treat the table as a snapshot with a grep beside it.
 
 | Primitive | Drawn by |
 | --- | --- |
-| `ThemedArt` | `Apps` (reeds, tall pine) · `Building` (fog veil, faceted pines) · `Tools` (footbridge, boulders) · `Outro` (garden arch) |
+| `ThemedArt` | `Building` ×5 (two stands of faceted pines, two fog veils, the wayfinding post) · `Origin` ×2 (pine pair, pine grove) · `Outro` ×2 (garden arch, stepping stones) · `Tools` ×2 (footbridge, boulders) — **eleven** |
 | `ThemedHeroArt` | **Nobody.** Kept on purpose — see below. |
-| `StillArt` | `Hero` (rear ridge, main ridge, tall pine) · `Origin` (snow bank, lamppost) |
-| `Seam` | `Apps` ×2 · `Faith` ×2 · `Tools` · `Building` · `Outro` — **seven**, across five boundaries, and one of the seven is `edge="bottom"` |
-| `Stage` | `Hero` (the whole pinned valley) · `Origin` (the cabin) |
+| `StillArt` | `Hero` (rear ridge, main ridge, tall pine) · `Origin` (snow bank, lamppost) — **five** |
+| `Seam` | `Building` · `Faith` ×2 · `Outro` ×2 — **five**, across three boundaries. One is `edge="bottom"` (Faith's rising range) and one boundary draws the same shape twice (the Outro's terrace and the lit nosing under its treads) |
+| `Stage` | `Hero` (the whole pinned valley) · `Walk` (the cabin, which used to be `Origin`'s) |
 | `Moon` | `Hero` (on the horizon) · `faith/Summit.tsx` (behind the cross) |
-| `Snow` | `Origin` (the near flake layer, in front of the cabin) |
+| `Snow` | `Walk` (the near flake layer, in front of the cabin) |
 
 **The moon is the thread the page is strung on.** It rests on the hero's
 horizon and it arrives five sections later behind the cross on the Faith
@@ -89,12 +94,14 @@ lines 28–67, 91–102 and 139–141 into the bundle — `Art`, `ThemedArt` and
 What a dead export actually costs is a reader's confidence, and this section is
 the price of keeping it.
 
-**`Snow` used to be the second, and it has a caller now.** `Origin.tsx` mounts
-it as `<Snow className="origin__flakes" density={NEAR_SNOW} />`, a near flake
+**`Snow` used to be the second, and it has a caller now.** `Walk.tsx` mounts it
+as `<Snow className="walk__flakes-canvas" density={NEAR_SNOW} />`, a near flake
 layer in front of `origin/CabinScene.tsx`'s own in-scene snow — two depths at
 one boundary rather than one. So the paragraph that used to sit here, ending
 "if a later pass finds this still true and still has no caller, delete the
-file", is answered: the file stays because something draws it.
+file", is answered: the file stays because something draws it. (It was
+`Origin.tsx` that drew it until the pinned stage moved into `Walk.tsx`; the
+component and its arguments did not change, only which file mounts it.)
 
 **The bytes line went with it.** "Neither costs a byte" was true only while
 nothing imported `Snow.tsx`; it is in the module graph now and a build's
@@ -114,7 +121,7 @@ the safe way to spend it on a piece of the art kit.
 
 **`Snow` is not in this section any more.** It sat here on the weaker version
 of the same argument, while `origin/CabinScene.tsx`'s in-scene snow looked as
-though it had made the DOM canvas unnecessary. It had not: `Origin.tsx` draws
+though it had made the DOM canvas unnecessary. It had not: the walk draws
 both, the canvas in FRONT of the scene, because a near layer sized to the
 section's own box is a different thing from flakes inside a 3D frustum. The
 mistakes the file already answers — the 30Hz cap, `MAX_DPR`, the draw inside
@@ -160,13 +167,21 @@ and it stays in the repo; the `.webp` beside it is the same artwork with its
 alpha channel intact (`yuva420p`), downscaled to the size it is actually
 painted at. A single cutout is up to 2.10 MB as a PNG, at 2172px wide, for a
 layer that lands at a few hundred CSS pixels; the WebP derivative is a ~93%
-cut across the whole kit. The home page draws **thirteen** of these across six
+cut across the whole kit. The home page draws **sixteen** of these across five
 sections — Faith draws none, it authors its own terrain — plus four more as
-app-card covers. Counted with `grep -rn '<ThemedArt\|<StillArt' src/`: eight
-`ThemedArt` (Building 3, Apps 2, Tools 2, Outro 1) and five `StillArt` (Hero 3,
-Origin 2). It said twelve until `atmosphere/fog-veil` was placed a SECOND time
-in `#building`, at the boundary as well as on the floor — same file, same URL,
-same request, so the byte figures did not move and the layer count did.
+app-card covers. Counted with `grep -rn '<ThemedArt\|<StillArt' src/
+--include=*.tsx`: eleven `ThemedArt` (Building 5, Origin 2, Outro 2, Tools 2)
+and five `StillArt` (Hero 3, Origin 2).
+
+It said thirteen across six sections until this pass, and the count moves for
+two different reasons that are worth telling apart. One is a piece being drawn
+a second time: `atmosphere/fog-veil` was, at `#building`'s boundary as well as
+on its floor, and `props/pine-faceted-pair` now is too, at two sizes and two
+opacities with the fog band between them — same file, same URL, same request,
+so the byte figures do not move and the layer count does. The other is
+sections trading scenery: `#apps` drew three of these at the start of this pass
+and none at the end, its art having moved into `Walk.tsx`. Only the first kind
+is free.
 
 **The kit's own byte figures are in
 [`public/assets/parallax/README.md`](../../../public/assets/parallax/README.md)
@@ -255,18 +270,28 @@ Seam({
 ```
 
 An inline `<svg>` band: `viewBox="0 0 1440 120"`, `preserveAspectRatio="none"`,
-`aria-hidden="true"`, one path per shape, filled with `currentColor`. Five
+`aria-hidden="true"`, one path per shape, filled with `currentColor`. **Six**
 silhouettes in the art kit's flat low-poly voice — `ridge` a low mountain
 profile, `peaks` the same idea taller and far more angular, `dune` two soft
 swells overlapping through a shallow trough, `wave` one long lazy S, `steps` a
-blocky terrace with no diagonal in it at all.
+stone stair in perspective descending to the left, and `firs` a conifer
+treeline of eleven trees at four depths on one baseline.
+
+`firs` is the newest and `steps` is the most rewritten. It was "a blocky
+terrace with no diagonal in it at all" and at the height and colour a seam is
+drawn at, that read as a row of flat grey rectangles — UI that had failed to
+load rather than ground. Its own comment in `Seam.tsx` has the diagnosis; the
+short version is that a shape whose every edge is level is the one shape a
+level alpha ramp cannot dissolve. It descends monotonically now and spends
+7.5% to 83.3% of the band, which is what lets one mask draw its far end pale
+and its near end solid.
 
 `preserveAspectRatio="none"` because a seam is a proportion of the viewport and
 not a picture: it stretches to whatever width it is given and takes its height
 from CSS. That is also why none of the paths carry a thin feature — a
 1440-unit shape squeezed into 375px turns anything narrow into a spike.
 
-All five are authored in the `edge="top"` orientation, mass along the top of
+All six are authored in the `edge="top"` orientation, mass along the top of
 the band and the silhouette hanging down. `edge="bottom"` mirrors that same
 path with `translate(0,120) scale(1,-1)`, so there is exactly one path per
 shape and the two edges cannot drift into two slightly different mountains.
@@ -323,13 +348,19 @@ band as that band is from white, and the light seams on `#origin`, `#tools` and
 `#faith` sit UNDER it. That is a property of an opaque light surface, not of the
 step, and 94% stands either way.
 
-**Five boundaries carry one today** — `#apps`, `#tools`, `#building`, `#faith`
-and the Outro — but that is five *joins* and **seven** `<Seam>`s, because two
-of them carry two bands. `grep -rn '<Seam' src/` is the population: `#apps`
-hangs a far treeline with a nearer canopy over it, and `#faith` hangs a bank
-from above while a range climbs to meet it.
+**Three boundaries carry one today** — `#building`, `#faith` and the Outro —
+and that is three *joins* and **five** `<Seam>`s, because two of them carry two
+bands. `grep -rn '<Seam' src/ --include=*.tsx` is the population: `#faith`
+hangs a bank from above while a range climbs to meet it, and the Outro draws
+its stair twice, the second copy a few pixels lower in a stronger ink so every
+tread gets a lit nosing.
 
-**Six are `edge="top"`; one is not.** `#faith`'s rising range is
+It was five joins and seven seams a pass ago, when `#apps` and `#tools` each
+carried one. Both of those sections traded their scenery into `Walk.tsx` while
+this was being written, which is the whole reason the paragraph above tells you
+to re-run the grep.
+
+**Four are `edge="top"`; one is not.** `#faith`'s rising range is
 `edge="bottom"` — the only one on the page — because what it wants is the
 mirrored path, mass at the bottom and silhouette rising, at a boundary that is
 still a section's TOP. `Faith.css` flips the anchor back to the wrapper's own
@@ -337,10 +368,53 @@ origin for exactly that and says why. Do not read `edge` here as "which end of
 the section"; read it as "which way the shape points".
 
 **Where a boundary carries two bands, the second one takes `--seam-step-2`.**
-94% is the primary band at all five joins and 92% is the second, always the
-masked one — both tokens in `tokens.css`, which carries the L\* table they were
-picked from. They were two literal `92%`s in `Apps.css` and `Faith.css` until a
-later pass.
+94% is the primary band and 92% is the second, always the masked one — both
+tokens in `tokens.css`, which carries the L\* table they were picked from. They
+were two literal `92%`s in `Apps.css` and `Faith.css` until a later pass.
+
+The Outro's second band is the exception and says so at its own rule: a lit
+nosing 3–7px tall is not a band read against a band, it is a line, and a line
+needs more separation than a wash before it is seen at all. It takes 88% —
+declared privately in `Outro.css` with that argument beside it, per rule 2.
+
+### The TOP of a seam is not an edge of anything, and it may not sit on a join
+
+The newest rule here, and it was measured into existence. A `Seam` path is
+solid from y = 0 down to its silhouette, so an `edge="top"` band carries a
+straight horizontal top edge whether the shape has one or not — and the caller
+puts that edge exactly on the boundary. Three seams did, and the cost was the
+same in every one:
+
+| join | dark | light |
+| --- | --- | --- |
+| `#tools` -> `#building` (`dune`) | +5.9 L\* at every column | -4.5 at every column |
+| `#building` -> `#faith` (`ridge`) | +6.2 to +10.6 | -6.4 to -8.8 |
+
+A step that is present at every column, with nothing varying on either side of
+it, is not a ragged join — it is a ruled line drawn across the viewport, which
+is the one thing a boundary treatment may not add. Both are masked at the top
+now, `transparent` at their first stop, and both joins measure 0.00 in dark and
+-0.07 in light across fifteen columns.
+
+Two things follow and neither is optional:
+
+- **A top-faded band needs no `--seam-lift`.** That token exists because a
+  drift slides a solid top edge clear of the join; with `transparent` as the
+  first stop there is no edge for the drift to expose, in either direction, at
+  any scroll position. `.building__seam-drift::before` and
+  `.faith__seam-drift::before` are both gone, and the Outro's band never had
+  one — it has argued this since it was written.
+- **The stops go against the SHAPE, not against round numbers.** Each of the
+  three masks names the viewBox band its silhouette occupies and places its
+  ramp so the shallow end reads at part alpha and the deep end reads solid.
+  That is the dissolve and the aerial perspective out of one gradient.
+
+The same rule reaches past seams. `.faith__field` and `.faith__rays` are
+ambient gradients with no shape at all, and their radial masks did not reach
+zero at their section's edges either: ablated one at a time, they were the
+whole of what was left at the `#building` join once the seam was fixed. **Any
+layer that spans a section has to be at zero alpha at both of its horizontal
+edges, and that is arithmetic on the mask's own radius rather than a look.**
 
 **`#origin` used to be the sixth and is not any more.** Its boundary is now the
 `landscapes/snow-bank` cutout in `Origin.tsx`: a drift whose crest stands up
@@ -413,16 +487,19 @@ A backdrop that stays put while its section's content scrolls over it. It is
 `.shell`, never around it.
 
 ```tsx
-<section id="origin" className="section section--blend stage-host origin">
-  <Stage className="origin__stage">
-    <CabinScene className="origin__cabin" />
+<section className="section stage-host walk">
+  <Stage className="walk__stage">
+    <CabinScene className="walk__cabin" />
   </Stage>
   <div className="shell"> … </div>
 </section>
 ```
 
-That is `Origin.tsx`, trimmed. `Hero.tsx` is the other caller and the fuller
-one — its stage holds the sky, the moon, three art-kit layers, the light
+That is `Walk.tsx`, trimmed — the file that owns the cabin's pinned stage now;
+it was `Origin.tsx` when every `#origin` measurement below was taken, and the
+measurements are kept as they were because what they establish is a property of
+`stage-host` rather than of that section. `Hero.tsx` is the other caller and
+the fuller one — its stage holds the sky, the moon, three art-kit layers, the light
 shafts, `Starfield`, the bloom, the grain and the vignette, all of them pinned
 for 130svh while the copy dissolves over them. **Faith has no stage and that is
 deliberate**; the reason is recorded under *Who calls what* above.

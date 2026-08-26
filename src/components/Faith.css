@@ -5,10 +5,16 @@
 
    The summit needs sky. The clearance below the copy is now whatever the
    summit says it needs — faith/Summit.css derives --summit-clearance from the
-   crest line and the cross's height so the moon's disc lands exactly
-   --summit-air below the content's bottom edge at every width. The section
-   asks the scene how tall it has to be rather than the scene being trimmed to
-   fit a padding somebody picked.
+   crest line, the cross's height and the disc's two ratios so that the moon's
+   BLOOM lands exactly --summit-air below the content's bottom edge at every
+   width. The section asks the scene how tall it has to be rather than the
+   scene being trimmed to fit a padding somebody picked.
+
+   It grew by about 140px at 1440 this pass and that is the moon arriving at
+   its real size — the disc is 242.7px across here against the hero's 244.8,
+   which is the same object at the end of the walk as at the start of it. Read
+   the sum in Summit.css rather than this paragraph; it is the file that owns
+   the number and this one only spends it.
 
    The fallback is --faith-pad-y, so a build that somehow lost Summit.css gets
    the old symmetrical section rather than no padding at all.               */
@@ -26,21 +32,34 @@
    hook read the BOUNDARY's own distance from the viewport centre rather than a
    box whose middle moves with however tall the band is at this width.
 
-   `--seam-lift` is spent by the HANGING band only. A `Seam` path is solid from
-   y = 0 down to its silhouette, so it carries a straight horizontal top edge,
-   and +0.034 — the largest boundary factor on the page — slides that edge
-   15.3px clear of the join on a 900px viewport and draws a line across it. The
-   lift is a strip of the band's own ink painted above its top edge, so the
-   section's overflow cuts the band rather than the path cutting it. Apps.css
-   carries the artefact; the number is `--seam-lift` in tokens.css, which has
-   why 4vh is right in every window.
+   **Neither band spends `--seam-lift` any more, and the hanging one used to.**
+   A `Seam` path is solid from y = 0 down to its silhouette, so it carries a
+   straight horizontal top edge, and +0.034 — the largest boundary factor on
+   the page — slides that edge 15.3px clear of the join on a 900px viewport.
+   The lift answered that by painting a strip of the band's own ink above the
+   wrapper, so the section's overflow cut the band rather than the path cutting
+   it. It fixed the drift and left the real defect standing: a solid edge ON
+   the join, at every scroll position, in both themes.
 
-   The RISING band takes none, and since the promotion that is a fact about
-   this file rather than about the token: `--seam-lift` sits on `:root` and
-   inherits into both wrappers, so what makes a boundary spend it is having a
-   `::before` at all — and `.faith__climb-drift` has none and wants none. It is
-   `edge="bottom"`, so its mass is at the bottom and its
-   own top is transparent, and there is no edge there to expose.
+   Measured — 1440x900, the join parked at viewport y = 400, one pixel either
+   side, fifteen columns across the width, after #building's own snow field had
+   been closed from its side: dark +6.2 to +10.6, light -6.4 to -8.8, with the
+   row ABOVE reading a constant 3.78 dark / 96.71 light at all fifteen. A step
+   that is present at every column with nothing varying above it is not a
+   ragged join, it is a ruled line, and it was this band making it.
+
+   So the hanging band is masked at its top instead — see `.faith__seam` below
+   — and with `transparent` as its first stop there is no edge left for the
+   drift to expose in either direction, which is what makes the lift
+   unnecessary rather than merely deleted. The Outro's seam has been built on
+   that argument since it was written; #building's `dune` and this `ridge` now
+   share it, which is three of the page's five joins treated one way.
+
+   The RISING band never spent it: it is `edge="bottom"`, so its mass is at the
+   bottom and its own top is transparent, and there was no edge there to
+   expose. `--seam-lift` is on `:root` and still inherits into both wrappers;
+   what made a boundary spend it was having a `::before` at all, and neither
+   has one now.
 
    The colour is on the wrappers, not on the `<svg>`s, and that is a fix rather
    than plumbing: base.css's `transition: var(--t-theme)` list covers `div` and
@@ -61,19 +80,53 @@
 /* The near band: the far bank you are leaving, hanging into this section. Its
    own band stepped --seam-step toward the page's ink, which is what
    --seam-fill resolves to — see Tools.css for why a band worn flat would be
-   invisible. Hard-edged all the way, because it is the nearer of the two and a
-   near edge is a hard one. */
+   invisible.
+
+   It used to be hard-edged all the way, on the argument that it is the nearer
+   of the two and a near edge is a hard one. That is still true of its LOWER
+   edge, which is the shape's own silhouette and is untouched. It was never
+   true of the upper one: the top of a `Seam` is not an edge of anything, it is
+   where the path's flat mass runs out of viewBox, and putting it on the join
+   is what the measurement above caught.
+
+   `ridge`'s silhouette runs y 24..80 of the 120 viewBox, so its ink occupies
+   20% to 67% of the band and everything above 20% is that flat mass. The stops
+   are placed against those two numbers:
+
+       transparent 0     the join, which therefore carries no ink at all
+       0.44        18%   the shallowest facet, which reads at not quite half
+       #000        38%   below every part of the profile's upper reach
+       --seam-fade 74%   the page's dissolve rate, through the deepest facets
+       transparent 100%  closed at the band's own bottom edge
+
+   What that draws is a many-faceted profile whose low points are solid and
+   whose high shoulders recede into haze — which is what a bank seen from below
+   does — with nothing at the boundary to make a line out of. The mask is on
+   the <svg> and the colour is on this wrapper: `color` is in base.css's
+   `transition: var(--t-theme)` list for a `div` and not for an `svg`, so this
+   is also what keeps the band on the theme wave instead of snapping.
+
+   A mask is an alpha channel and not a colour: the #000 paints nothing.     */
 .faith__seam-drift {
   color: var(--seam-fill);
 }
-.faith__seam-drift::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--seam-lift);
-  background-color: currentColor;
+.faith__seam {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    rgba(0, 0, 0, 0.44) 18%,
+    #000 38%,
+    rgba(0, 0, 0, var(--seam-fade)) 74%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    rgba(0, 0, 0, 0.44) 18%,
+    #000 38%,
+    rgba(0, 0, 0, var(--seam-fade)) 74%,
+    transparent 100%
+  );
 }
 
 /* ── the far range, climbing ───────────────────────────────────────────────
@@ -181,23 +234,106 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Both hooks resolve to a zero translate at motionIntensity 0, so the two
-     bands rest exactly where this stylesheet composed them — visible, still,
-     and the slot of sky at its resting width. The hint would be a promoted
-     layer paid for and never used. */
+  /* Every hook in this section resolves to a zero translate at motionIntensity
+     0, so all four layers rest exactly where this stylesheet composed them —
+     visible, still, and the slot of sky at its resting width. The hint would be
+     a promoted layer paid for and never used.
+
+     It listed only the two bands until this pass. `.faith__blob` and
+     `.faith__rays` carry the same `will-change: translate` and the same two
+     hooks behind it, and were being promoted for a drift that never happens —
+     `useHeroParallax` writes `hero.top * factor * mi`, which is exactly 0 here,
+     and `useParallax` snaps to the identity rather than easing to it. */
   .faith__seam-drift,
-  .faith__climb-drift {
+  .faith__climb-drift,
+  .faith__blob,
+  .faith__rays {
     will-change: auto;
   }
 }
 
+/* ── the join at the top: three readings, and what each of them settled ────
+   The Building/Faith boundary has been measured three times. Every reading is
+   1440x900 with the boundary parked at viewport y = 400, the one-pixel step
+   from y = 399 to y = 400, at fifteen columns across the width. Keeping all
+   three is the point: two of them are the failure and its cause.
+
+   ## One — the original, and the diagnosis
+
+   Dark: -10.1, -9.9, -8.8, -7.9, -4.1, -3.3, -1.9, +3.9, -1.9, -5.9, -7.1,
+   -7.4, -3.7, -6.9, -6.9. Light: no step at all except where a silhouette
+   happened to cross the line.
+
+   That asymmetry was the diagnosis. The two bands meet on an identical value
+   by construction — base.css gives #faith a --tint-top of var(--band-building),
+   the same token #building paints its floor with — so the step could not be
+   the band. It was Building's lit snow field, a pale raster over a near-black
+   sky in dark and over a near-white one in light, cut off dead by its own
+   section's bottom edge. In light there was barely a value change to cut; in
+   dark there was a bright wedge ending on a line.
+
+   ## Two — the veil built HERE, which measured worse
+
+   A mist band across the top of this section: Faith's own ink lifted 16%
+   toward --text, capped at 0.55 alpha on the join, spent over 8.4vw, in front
+   of the hanging seam and behind the rising one. Afterwards: +2.1, +2.3, +3.6,
+   +4.3, +8.9, +8.9, +10.3, +15, +9.3, +5.6, +5.3, +4.8, +8.5, +5.3, +5.3.
+
+   Read the two rows together and the reason is in them. Before, the steps
+   change sign across the width, because Building's snow silhouette rises and
+   falls and the two sides differ by a different amount at every x — there is
+   no constant to subtract. Afterwards every column is positive and all within
+   a few units of each other, which is the definition of the defect: a veil
+   sized to close the worst column over-corrects all the others and turns a
+   varying join into a uniform bright line. It manufactured a ruled edge while
+   removing a ragged one. It is gone, and nothing has replaced it here.
+
+   ## Three — closed from Building's side, and what that left
+
+   `.building__haze` now fades that section's floor into its own
+   `--band-building` before the boundary, which is the same token this section
+   opens on. Measured after it landed, the row ABOVE the join reads a constant
+   3.78 in dark and 96.71 in light at all fifteen columns — the ragged edge is
+   gone and there is nothing left varying on that side.
+
+   What that exposed was this file's own band. The step became dark +6.2 to
+   +10.6 and light -6.4 to -8.8, present at every column, and the cause was the
+   `ridge` seam: a `Seam` path is solid from y = 0, so its flat mass was
+   sitting on the join in --seam-fill. That is fixed above, by masking the
+   band's top rather than by adding anything — see `.faith__seam`. Reading four
+   is in this pass's report.
+
+   The lesson the three readings carry, and the reason none of them is
+   deleted: **at a boundary, remove ink; do not add it.** Both fixes that
+   worked took something off the join. The one that failed put something on
+   it.                                                                       */
+
+/* ── the ambient field, and why its mask may not touch a horizontal edge ───
+   The three animated gradients inside this are `inset: 0` on the section, so
+   this mask is the only thing standing between them and both of this section's
+   joins. It was `80% 78% at 50% 44%` with `transparent 86%`, and neither end
+   reached zero: at the top edge the vertical distance is 44/78 = 0.56 of the
+   radius and at the bottom 56/78 = 0.72, both inside the 0.86 stop. So the
+   field painted straight up to the boundary and stopped there.
+
+   Measured at the #building join with everything else in place, ablating one
+   layer at a time: the whole remaining step was this and `.faith__rays`. With
+   both hidden the step was 0.00 at every one of fifteen columns; with only
+   this hidden it fell from +3.2..+7.7 to +2.3..+5.7. Neither is a seam and
+   neither draws a shape — they were making a ruled line out of pure ambience.
+
+   `50% at 50%` puts the vertical distance at exactly one radius at BOTH edges,
+   which is past `transparent 86%` with room: the field is at zero alpha for
+   the first and last 7% of the section, and full-strength through the middle
+   where the copy is. The horizontal radius is untouched at 80%, because the
+   left and right edges of this section are the frame and not a boundary.   */
 .faith__field {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(80% 78% at 50% 44%, #000, transparent 86%);
-  mask-image: radial-gradient(80% 78% at 50% 44%, #000, transparent 86%);
+  -webkit-mask-image: radial-gradient(80% 50% at 50% 50%, #000, transparent 86%);
+  mask-image: radial-gradient(80% 50% at 50% 50%, #000, transparent 86%);
 }
 .faith__drift {
   position: absolute;
@@ -234,13 +370,52 @@
   animation: gradPulse 14s ease-in-out infinite;
 }
 
+/* ── the shafts: a static mask, and a moving box inside it ─────────────────
+   Faith.tsx has the beat and the measurement. The short version is that the
+   mask used to live on `.faith__rays`, which `useHeroParallax` drags by 334 to
+   437px while this section is on screen, so the mask was sliding relative to
+   everything it was supposed to be positioned against and arrived at the
+   #building join at full strength.
+
+   Three radii were tried on the moving box before the box was split, and the
+   reason none of them could work is worth keeping: `62%` put the section's top
+   edge at 0.41 of the radius and its bottom at 0.74, both inside `transparent
+   78%`; `30%` and `26%` were derived from a viewport-scaled drift of 62px and
+   the real drift is five to seven times that. `useParallax`'s drift is bounded
+   by the viewport and can be absorbed by a margin. This hook's is not, and its
+   own header says so in as many words.
+
+   ## The veil, which does not move
+
+   `inset: 0` on the section, so its mask is anchored to the two joins it has
+   to stay off. Centred at 42% with a vertical radius of 44%, the top edge is
+   0.955 of a radius away and the bottom edge 1.32, both past `transparent
+   82%`: this layer is at zero alpha for the first 6% and the last 22% of the
+   section, whatever the box inside it is doing. The horizontal radius stays
+   58% — the left and right edges are the frame, not a boundary.
+
+   `overflow: hidden` because the box inside is deliberately larger than the
+   section and has to be cut somewhere; the mask has reached zero well before
+   the cut, so the cut is never visible.
+
+   ## The box that does move
+
+   Keeps the drift, the overhang and the compositor hint, and carries no mask
+   of its own. `.building__over` one section up is the same shape: a static,
+   masked band with drifting art inside it.                                  */
+.faith__rays-veil {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(58% 44% at 50% 42%, #000, transparent 82%);
+  mask-image: radial-gradient(58% 44% at 50% 42%, #000, transparent 82%);
+}
 .faith__rays {
   position: absolute;
   inset: -20% -10%;
   pointer-events: none;
   will-change: translate;
-  -webkit-mask-image: radial-gradient(58% 62% at 50% 40%, #000, transparent 78%);
-  mask-image: radial-gradient(58% 62% at 50% 40%, #000, transparent 78%);
 }
 .faith__ray {
   position: absolute;
@@ -372,14 +547,7 @@
   text-wrap: pretty;
 }
 
-@media print {
-  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
-     is painted by a ::before on a plain <div> that no selector there reaches —
-     and the print block in base.css does not neutralise the --band-* tokens,
-     so the strip would come out as a near-black bar across the top of the
-     section on white paper. Decorative, so it goes, like everything else that
-     block drops. */
-  .faith__seam-drift {
-    display: none !important;
-  }
-}
+/* This file's print block is gone with the --seam-lift backfill it existed
+   for. Both bands here are `<svg class="scene__seam">` inside wrappers that
+   now paint nothing of their own, and Seam.css's own print block already drops
+   every `.scene__seam`, so there is nothing left for a rule here to catch. */

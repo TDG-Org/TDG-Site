@@ -1,37 +1,52 @@
 /* ── the section ───────────────────────────────────────────────────
    Read Hero.tsx's header before this file: the hero is pinned, and the two
-   sections now overlap by a viewport on purpose.
+   sections still overlap by a viewport on purpose.
 
-   `margin-top: -100svh` pulls this section up onto the hero's last 100svh.
-   That is what makes Origin climb over a backdrop that has NOT moved: a
-   `Stage` releases its pin at its own section's bottom edge, so without the
-   overlap the hero's scenery would start scrolling away the instant Origin
-   appeared, at exactly the speed Origin arrived, which is an ordinary page.
-   The hero is 230svh and 130svh of it is flow, so this margin takes back
-   precisely the 100svh the hero added: **the document is not one pixel
-   longer than it would be with a plain 130svh hero.** (Measured at a 414px
-   viewport: #top 952px = 230.0svh, .hero__above 538px = 130.0svh, this
-   margin −414px = −100svh. This line carried 226/126 until that measurement;
-   Hero.css is where the 230 is actually declared, so read it there rather
-   than trusting this restatement of it.) #origin's border-box
-   top is still where `scrollIntoView` and `rememberOrigin` expect it.
+   ── the margin that used to be here ───────────────────────────────────────
+   `margin-top: -100svh` pulled this section up onto the hero's last 100svh,
+   and it does exactly the same job today — from `.walk`, one level up. Under
+   CONTRACT W this section is the first child of a wrapper that holds the whole
+   cabin walk, and a first-in-flow-child's top margin COLLAPSES out through its
+   parent's top edge: left here it would either have moved the whole walk or
+   slid this section up inside a wrapper that stayed put, silently, with
+   nothing on screen naming a margin. Walk.css owns it now and carries the
+   measurement (hero 230svh, 130svh of flow, so the document is not one pixel
+   longer than a plain 130svh hero would make it).
 
-   `z-index: 4` is what paints this over the hero, and it is now doing two
+   **Nothing about this section's document position changed.** `.walk` has no
+   padding and no border and this is its first in-flow child, so `.walk`'s
+   border-box top and `#origin`'s are the same line — which is what keeps
+   `scrollIntoView`, `rememberOrigin`, `takeOrigin` and CONTRACT D's dissolve
+   measuring from where they always did.
+
+   `z-index: 4` is what paints this over the hero, and it is now doing three
    jobs. The second is the lamppost: it is a child of this section, so it
    inherits this stacking level and is drawn over the hero's stage while
    staying under .hero__frame's z-index 5. Hero.css's note on `.hero` has the
-   other half of that arrangement.
+   other half of that arrangement. The third arrived with the walk — the
+   cabin's stage is a SIBLING of this section now, at `z-index: 0`, so this
+   number is also what puts Origin's mist, treeline, snow bank, lamppost, grid
+   and blob in front of the canvas rather than behind it. That is why the
+   background rule below had to give its band up: at 4, an opaque band on this
+   section is a lid on the whole shot.
 
    `overflow: clip` with a margin, replacing `.section`'s own
-   `overflow: hidden`, and it is doing two jobs as well:
-     1. `hidden` is a scroll container, so it would stop the cabin's sticky
-        stage from pinning — the exact trap Stage.tsx's header measures.
-     2. `overflow-clip-margin` is what lets the lamppost rise out of the top
-        of this section into the hero. `hidden` cannot do this at all; the
-        property is only defined for `clip`.
+   `overflow: hidden`, and it now does ONE job rather than two:
+     `overflow-clip-margin` is what lets the lamppost rise out of the top of
+     this section into the hero, and it is defined only for `clip` — `hidden`
+     cannot be given a margin at all.
+   The second job used to be that `hidden` is a scroll container and would have
+   stopped the cabin's sticky stage from pinning. That stage is a SIBLING of
+   this section now (`.walk`), so this section's overflow is nowhere on the
+   pin's containing-block chain and `hidden` here would break nothing. The trap
+   is real and it moved: Walk.css states it on the element that can still
+   spring it.
+
    The margin opens every edge equally, which is why `.origin__clip` below
    exists. 130svh is the tallest the pole can ever be (--pole-h is capped at
-   78svh x 1.5 = 117svh, plus its 30px plant) with room to spare.
+   78svh x 1.5 = 117svh, plus its 30px plant) with room to spare — and `.walk`
+   carries the identical margin on the identical line, because the pole has to
+   escape both boxes to reach the hero.
 
    **The fallback is `.section`'s own `overflow: hidden`**, which is what a
    browser with no `overflow: clip` (Safari before 16) keeps. There the pole
@@ -42,30 +57,55 @@
    `overflow-clip-margin` share (Chrome 90 / Firefox 102 / Safari 16), so
    there is no browser that gets one and not the other.
 
+   One line about `hidden` that USED to be here is no longer true and has been
+   removed rather than left to mislead: it said `hidden` on this section would
+   stop the cabin's stage pinning. The stage is not in this section any more —
+   it is a sibling, in `.walk` — so `#origin`'s overflow is nowhere on the
+   pin's containing-block chain. `.walk` is where that trap lives now, and
+   Walk.css states it there. `clip` stays here for the margin alone.
+
    The one dropped declaration is `will-change: translate, scale`, which was
    here for `useHeroTakeover` — a deleted hook, the last thing that wrote a
    transform to this element. Nothing writes one any more, so the promotion
    would be a full-section compositor layer paid for and never used.
 
-   The shadow is what that hook's JavaScript used to ramp: a soft dark edge
-   above this section, so it reads as a sheet lifting over the valley rather
-   than as a colour boundary. It is a constant now because the section
-   genuinely does climb over a still hero — there is no lag left to disguise,
-   so there is nothing for JavaScript to time. Its ink is
-   --origin-arrival-ink, declared per theme in tokens.css beside
-   --card-shadow; nothing here composes a colour. (It was --hero-takeover-ink
-   on :root in Hero.css until this pass, which is where the old name came
-   from: a token named after the hook, kept in the file that had stopped
-   reading it. Resolved shadow measured before and after the move, both
-   themes: rgba(0, 0, 0, 0.6) 0px -30px 78px -26px dark, rgba(23, 18, 45, 0.3)
-   0px -30px 78px -26px light, unchanged.)                                   */
+   ── the arrival shadow is GONE, and that is the point ─────────────────────
+   `box-shadow: 0 -30px 78px -26px var(--origin-arrival-ink)` used to sit on
+   this rule: a soft dark edge above this section so it read as a sheet
+   lifting over the valley rather than as a colour boundary. It was the right
+   answer to a different question. This pass's whole job is that the section's
+   top edge must become UNFINDABLE, and a shadow is a thing whose only job is
+   to be found — it is painted at the border box's edge, it cannot be masked
+   (an outer shadow is clipped to outside the box, so there is no ramp to put
+   on it), and it therefore drew a dark smudge along exactly the line the
+   dissolve below exists to erase. Removed rather than softened: an edge
+   treatment on an edge that is not supposed to exist has nothing to be right
+   about.
+
+   **`--origin-arrival-ink` in tokens.css now has no consumer.** It is stated
+   here because the lead owns that file and a token whose one reader walked
+   away is the thing rule 2's second half is about — see the --nav-scrolled
+   note there for the same story. `grep -rn 'origin-arrival-ink' src/` is the
+   population; it returns two declarations and, since this edit, nothing else.
+
+   ── --origin-veil is declared on `.walk` now ─────────────────────────────
+   The dissolve distance, spelled once, as a length. It used to be declared
+   here and it is declared on `.walk` in Walk.css, because the backdrop ramp
+   and the stage mask that spend it moved there with the stage — and `.walk`'s
+   top edge is this section's top edge, so it is still measured from exactly
+   the same line. The two rules left in THIS file, `.origin__grid`'s mask and
+   `.origin__blob`'s clearance, inherit it from the wrapper. One declaration,
+   four consumers, two files; rule 6 rather than four calc()s that agree until
+   one of them does not.
+
+   ── --origin-sink is GONE ────────────────────────────────────────────────
+   It was how deep this section sank into `#apps`' ink before its floor, and it
+   sized `.origin__sink`. Under CONTRACT W that floor is not a boundary — see
+   the note where the sink used to be rendered in Origin.tsx.                */
 .origin {
   z-index: 4;
-  margin-top: -100svh;
-  box-shadow: 0 -30px 78px -26px var(--origin-arrival-ink);
   overflow: clip;
   overflow-clip-margin: 130svh;
-
 
   /* ── the row's one set of measurements ───────────────────────────────────
      A chapter's prose now sits in a panel BELOW the heading rather than in the
@@ -96,33 +136,66 @@
   --origin-pad-bot: 30px;
 }
 
-/* The section's own background, not another floating layer: a broad soft
-   band at the top (hero's light continuing down past the seam) and a warm
-   pool low on the opposite side, over the same three-stop tint blend every
-   other section uses. Both stay clear of the text column (.origin__intro is
-   left-aligned, max 660px) and low-alpha enough not to touch contrast. */
-.origin.section--blend {
-  background-image:
-    radial-gradient(1200px 480px at 50% -8%, var(--glow), transparent 60%),
-    radial-gradient(1000px 720px at 4% 100%, var(--origin-glow-warm), transparent 68%),
-    linear-gradient(
-      180deg,
-      var(--tint-top) 0%,
-      var(--tint-mid) 30%,
-      var(--tint-mid) 70%,
-      var(--tint-bot) 100%
-    );
+/* ── CONTRACT D and CONTRACT W meet here: the section paints no band ───────
+   This section used to carry `.section--blend` and a gradient of its own:
+   transparent at the top over --origin-veil (CONTRACT D, the fix for "the
+   blend with the mountains ... is still too visible as just a line"), holding
+   --band-origin through the middle, sinking to --band-apps at the floor.
+
+   **The gradient moved to `.walk` and the class came off, and it is a change
+   of OWNER rather than of colour.** Under CONTRACT W the cabin's stage is this
+   section's SIBLING, not its child, and this section is `z-index: 4` — so any
+   opaque background here is painted ON TOP of the canvas rather than behind
+   it. The dissolve, the hold and the ramp into the next band all still happen,
+   over a longer box: `.walk`'s top edge is this section's top edge, so
+   CONTRACT D's ramp is measured from exactly the same line and the hero's
+   ridges still carry on down behind it and fade rather than stopping.
+   Walk.css has the four-band gradient and the argument.
+
+   **The other half of CONTRACT D is in Hero.tsx and only works if both halves
+   match.** The hero stops painting at `data-eclipsed`, and that test reads
+   "Origin's dissolve has finished" from --origin-dissolve on the document
+   element. Nothing about it changed here: the number, the line it is measured
+   from and the element it is read off are all where they were.
+
+   ── what stays: the warm pool ────────────────────────────────────────────
+   --origin-glow-warm is the one thing this section still paints edge to edge,
+   and it is kept precisely BECAUSE this section is above the canvas. It is the
+   cabin's own light lying along the snow at the reader's left — one warm
+   source in a cold blue valley, on the air rather than on a surface — and a
+   layer like that belongs in front of the scene it is lighting, not behind it.
+   At `6% 62%` it clears the dissolve above (which ends at --origin-veil) and
+   sits over the stretch of the walk where the reader is still outside.
+
+   It is soft by construction and cannot draw an edge: a single radial at
+   0.16 alpha in dark and 0.12 in light, reaching `transparent` at 68% of its
+   own 900x620 box. base.css declares the colour per theme beside the tints.
+
+   `background-color: transparent` is written out rather than left to the
+   default. `.section--flat` and `.section--blend` both set a background, and
+   the one-word change that would put either class back on this element is
+   exactly the change that would hide the whole shot — so the floor is stated
+   where somebody would have to delete it on purpose.                        */
+.origin {
+  background-color: transparent;
+  background-image: radial-gradient(
+    900px 620px at 6% 62%,
+    var(--origin-glow-warm),
+    transparent 68%
+  );
   transition:
     var(--t-theme),
-    var(--t-tint),
     --origin-glow-warm 0.6s ease var(--wave-delay, 0ms);
 }
 
 /* The section's own clip box. See Origin.tsx's comment above it: the section
    itself has a 130svh clip margin so the lamppost can escape, and this is
    what stops everything ELSE escaping with it. Same box the section's own
-   overflow used to clip to, no margin, and it is not a scroll container, so
-   the sticky pin inside still pins. */
+   overflow used to clip to, no margin.
+
+   `clip` rather than `hidden` for the margin's sake alone now. It used to be
+   the line that kept the cabin's sticky pin alive; the pin is in `.walk` and
+   this box is nowhere on its chain any more. */
 .origin__clip {
   position: absolute;
   inset: 0;
@@ -130,105 +203,284 @@
   pointer-events: none;
 }
 
-/* The cabin's canvas fills its stage's pin, which is one viewport tall and
-   sticky — the framing CabinScene.tsx says it was composed for. It sizes its
-   own backing store from this box's client size, so the box has to have one
-   before the first frame; `inset: 0` on a pin that is already 100svh does. */
-.origin__cabin {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+/* ── the grid, intersected with the dissolve ───────────────────────────────
+   `.texture` is `inset: 0`, so this box is the section's box and its radial
+   mask has ink from the first row of pixels down — which under CONTRACT D is
+   a lattice of hairlines drawn over the hero's mountains, arriving on the
+   boundary at full strength. It is visible in the shipped page: the grid
+   squares start exactly on the ruled line.
 
-/* ── the near snow ─────────────────────────────────────────────────
-   The second half of this section's weather, in front of the cabin's own.
-   Origin.tsx has the depth ladder and the density; this file has the box and
-   the one per-theme decision.
+   Two mask layers intersected rather than one. The radial says WHERE on the
+   page the grid lives and is untouched; the linear is the same
+   transparent-to-solid ramp over --origin-veil that the background and the
+   stage run, and the two are combined with `mask-composite` so the grid can
+   only paint where BOTH allow it.
 
-   Same box as .origin__cabin above, and for the same reason: Snow sizes its
-   backing store from this element's client box, so the box has to have one
-   before the first frame, and `inset: 0` on a pin that is already 100svh
-   does. It is the LATER of the two canvases in the DOM and neither carries a
-   z-index, so this paints over the cabin and both stay under .shell's
-   z-index: 1 — the copy is never at risk from either.
+   `intersect, add` and not a single `intersect`, which is the trap. The list
+   is per layer and the BOTTOM layer composites against a transparent-black
+   destination, so `intersect` there would intersect the ramp with nothing and
+   the whole mask would come out empty. `add` on the bottom layer leaves it as
+   itself; the top layer then intersects with it. (`.card__edge` in base.css
+   gets away with a single `exclude` only because XOR with an empty destination
+   happens to be the identity.)
 
-   pointer-events is already none twice over — .stage sets it and the property
-   inherits — and it is restated because this is a full-viewport box sitting
-   directly under the reader's cursor, and a canvas that quietly ate a click
-   on a chapter would be found by a person and not by a test.
-
-   ── opacity, and why it is a token and not a number ───────────────
-   --art-near is the kit's opacity for "the props closest to the reader" —
-   0.68 dark, 0.52 light — and it is the same token .origin__lamp is drawn at,
-   which is the other near object in this section. It is doing real work here
-   rather than dressing:
-
-   Snow takes its hue from --glow, which is this site's palette inverting the
-   way it should: rgba(255,255,255,0.2) in dark, rgba(20,20,26,0.16) in light.
-   Only the triple is read, so the flakes are white on dark and near-black on
-   light. White on #0a0b12 is snow. Near-black on #eef0f6 needs the second
-   look, and the answer is that flakes DARKER than the sky is the right
-   direction here and not a bug — CabinScene reaches the same conclusion from
-   the other end, putting its light-theme flakes part way DOWN the tone ramp
-   because "near-white snow over a near-white sky is invisible". What the
-   token cannot fix alone is how far down. Composited against the bands, per
-   flake alpha 0.16 (smallest, farthest) to 0.66 (largest, nearest):
-
-     light, over --band-origin (#eef0f6 when these were measured; the band has
-     since been re-derived from the hero ridge's ink and is #ebf0fb, which moves
-     the rows below by under one level and changes nothing this rule decides)
-       without this rule   rgb(203,205,211) .. rgb( 94, 95,101)
-       at --art-near 0.52  rgb(220,222,228) .. rgb(163,164,170)
-     dark, over --band-origin (#0a0b12 when measured; now #040c19, same note)
-       without this rule   rgb( 49, 50, 56) .. rgb(172,172,174)
-       at --art-near 0.68  rgb( 37, 38, 44) .. rgb(120,121,124)
-
-   The light row is the one that needed it. rgb(94,95,101) on a near-white band
-   is a dark speck — closer to soot than to snow — and there would be one of
-   those for every flake near the front of the field. At 0.52 the same flake is
-   a mid grey, and the far end of the field lands on rgb(220,222,228), which is
-   within a few steps of the rgb(214,215,219) CabinScene's own light flakes
-   composite to right behind it. The two layers read as one snowfall at two
-   depths, which is the whole point of drawing both.
-
-   Dark needed the same token for the opposite reason: rgb(172,172,174) is
-   most of the way to --text, and a field of that behind seven chapters of
-   prose is a glare. It is the argument CabinScene's own ramp cap makes about
-   the same section, one layer nearer.
-
-   Opacity on this element and NOT on .stage: Stage.css says out loud that a
-   caller wants opacity on its own layers, one at a time, because on the stage
-   it would promote a full-viewport compositor layer for every section that has
-   one. Here it promotes one layer for one canvas that is already being
-   composited.                                                              */
-.origin__flakes {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-  opacity: var(--art-near);
-}
-
+   The `-webkit-` pair is the same arrangement in the legacy keywords, for the
+   Chrome and Safari versions that shipped `-webkit-mask-composite` before the
+   standard property. A browser with neither falls back to the default `add`,
+   which is the UNION of the two layers — i.e. exactly the grid this file drew
+   before this edit. A fallback that lands on the old behaviour rather than on
+   an empty or a black box is why the ramp is a second mask layer and not a
+   third background layer.                                                    */
 .origin__grid {
   opacity: 0.72;
   background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 76px 76px;
-  -webkit-mask-image: radial-gradient(74% 70% at 22% 30%, #000, transparent 78%);
-  mask-image: radial-gradient(74% 70% at 22% 30%, #000, transparent 78%);
+  -webkit-mask-image:
+    radial-gradient(74% 70% at 22% 30%, #000, transparent 78%),
+    linear-gradient(180deg, transparent 0, #000 var(--origin-veil));
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    radial-gradient(74% 70% at 22% 30%, #000, transparent 78%),
+    linear-gradient(180deg, transparent 0, #000 var(--origin-veil));
+  mask-composite: intersect, add;
 }
 
+/* ── the blob moved below the dissolve ─────────────────────────────────────
+   It was `top: 8%`, which on a 1712px section is 137px — a 420px disc under a
+   24px blur, sitting entirely inside a 702px dissolve zone whose whole purpose
+   is that Origin paints nothing there. A mask would not have helped: this box
+   is 420px tall at 8% down, so a ramp measured from its own top is measured
+   from the wrong place, and it drifts, so there is no fixed place to measure
+   from at all.
+
+   So it moves instead, and the number has to clear the drift as well as the
+   veil. `useParallax(0.18)` writes `centreOffset * -0.18`, and the largest
+   centreOffset it will ever paint at is `vh/2 + PARK_MARGIN + height/2` =
+   450 + 400 + 210 = 1060px on a 900px viewport, which is 191px of upward
+   travel; the blur adds 24px more. --origin-veil + 26svh puts the box top at
+   936px, which leaves 936 - 191 - 24 = 721px, clear of the veil's 702 by 19px
+   at the worst frame the guard allows. Both terms scale with svh, so the
+   clearance holds at every viewport height.
+
+   What it costs: the glow is no longer a sky glow near the boundary, it is a
+   warm lift over the cabin's right-hand snow, which is where the reader
+   actually is by the time they can see it.                                  */
 .origin__blob {
-  top: 8%;
+  top: calc(var(--origin-veil) + 26svh);
   right: 6%;
   width: 420px;
   height: 420px;
   filter: blur(24px);
+}
+
+/* ── the valley's mist ─────────────────────────────────────────────────────
+   Aerial perspective at the boundary: a band of this section's own ink lying
+   against the hero's ridges ABOVE its top edge, so the mountains pale into the
+   air Origin arrives in rather than being cut off by it. Origin.tsx says why
+   the ink is --band-origin and not --terrain-haze.
+
+   The profile is transparent -> band -> transparent, and both ends matter. The
+   top end is what makes this mist rather than a wash. The BOTTOM end has to be
+   zero because the section's own ramp starts at zero on the same row: a band
+   that arrived at the boundary carrying any alpha at all would put back the
+   step CONTRACT D just removed, one layer nearer. So the two gradients meet at
+   nothing and the join is a continuous curve with no row of pixels in it.
+
+   22svh, and it drifts. `left`/`right` are 0 rather than a width, so a layer
+   that escapes upward through the section's 130svh clip margin cannot escape
+   SIDEWAYS through it and put a scrollbar on the document — the same trap
+   `.origin__ground` below records having measured at 1470px against a 1430px
+   client width.
+
+   ── and it is invisible at scroll 0 ───────────────────────────────────────
+   Origin's top edge is at 130svh and the fold is at 100svh, so 30svh is the
+   whole budget for anything that reaches up out of this section — and this
+   band and the treeline below are the only two things that spend it.
+
+   At scroll 0 this band's centre sits at (1.30 - 0.11) x svh, so its
+   centreOffset is 0.69 x svh and `useParallax(0.05)` lifts it by 0.0345 x svh.
+   Top edge on screen at (1.30 - 0.22 - 0.0345) x svh = 1.0455 x svh: 4.55svh
+   of fold, 41px on a 900px window, and it holds at every height because every
+   term is a fraction of svh.
+
+   The one place the arithmetic breaks is the clamp floor. Below a 545px
+   viewport --haze-rise pins at 120px, which is more than 22svh, and at 400svh
+   the band's top crosses the fold by 13px. Nothing shows: the gradient opens on
+   `transparent` and 13px is 11% of the band, which under --art-far is under 9%
+   of --band-origin — a wash of about 4/255 over the hero's floor in either
+   theme. Worth stating rather than worth fixing.                            */
+.origin__haze {
+  --haze-rise: clamp(120px, 22svh, 300px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1 * var(--haze-rise));
+  height: var(--haze-rise);
+  pointer-events: none;
+  will-change: translate;
+  opacity: var(--art-far);
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    var(--band-origin) 62%,
+    transparent 100%
+  );
+}
+
+/* ── the treeline that crosses the boundary ────────────────────────────────
+   Origin.tsx has the reasoning; this file has the geometry. The short version:
+   the cabin's trees are inside a WebGL canvas inside `.origin__clip` and
+   cannot leave, so the trees that overlap the hero are a second row, built the
+   way the lamppost is — a child of #origin, outside the clip box, escaping
+   upward through `overflow-clip-margin: 130svh`.
+
+   ── the band ──────────────────────────────────────────────────────────────
+   `overflow: clip` is not optional. Both trees are deliberately wider than the
+   space they sit in and the near one hangs off the right-hand edge on purpose,
+   and the section's clip margin opens every edge equally — so without a clip
+   of its own this row would hang off the side of the document. `clip` and not
+   `hidden`, because `hidden` is a scroll container and there is a sticky pin
+   in this section; `.origin__ground` below carries the measurement.
+
+   --tl-rise is how far the crowns stand ABOVE Origin's top edge. 17svh, which
+   at a 900px viewport is 153px, against a hero ridge whose crest sits about
+   190px above the same boundary — so the crowns are INSIDE the mountain band
+   rather than poking over it, which is what makes them read as trees on a
+   slope in front of the range instead of as a second range.
+
+   The band's top is 1.42 x --tl-rise above the boundary, and the 0.42 is
+   headroom the near tree's own drift has to fit inside. Solved rather than
+   guessed, at 1440 x 900 with --tl-near-w resolving to 600px: the crown's
+   distance below the band's top comes out `175.5 - 0.11 x scroll` px, which is
+   95px while the crown is halfway up the hero, 64px at the scroll where the
+   crown reaches the top of the viewport, and zero at a scroll of 1595 — by
+   which point the crown is 642px ABOVE the viewport. So the band never clips
+   the tree anywhere it can be seen, and the clip that does eventually happen
+   is free.
+
+   ── invisible at scroll 0, and the budget it is spent from ────────────────
+   30svh, the same budget the mist above spends 4.5 of. This band's top is
+   1.42 x 17 = 24.14svh above the boundary, so it opens at 1.0586 x svh: 5.86svh
+   of fold, 53px on a 900px window and 70px on a 1200px one. The two layers are
+   checked against the SAME budget on purpose — they are the only two things in
+   this section that reach up, and a builder who raises one has to look at the
+   other.
+
+   The clamp floor is the same footnote the mist carries. Below a 565px
+   viewport --tl-rise pins at 96px and at 400svh the band's top crosses the
+   fold by 16px; the crowns are 40px below that, so what is on screen is the
+   transparent margin above the artwork and nothing else.
+
+   ── and it has no bottom edge ─────────────────────────────────────────────
+   A row of trees clipped along the band's floor is precisely the cut edge this
+   pass exists to remove, so the trunks dissolve instead. The mask's stop is
+   written out of the same two variables the box is, not as a percentage:
+   solid to a tenth of --tl-drop past the boundary, gone by the band's floor,
+   which is 113px of fade at a 900px window and holds at every size. The snow
+   bank drawn on top of them finishes the join.                              */
+.origin__treeline {
+  --tl-rise: clamp(96px, 17svh, 230px);
+  --tl-drop: clamp(80px, 14svh, 190px);
+  --tl-near-w: clamp(240px, 42vw, 700px);
+  --tl-far-w: clamp(130px, 20vw, 320px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1.42 * var(--tl-rise));
+  height: calc(1.42 * var(--tl-rise) + var(--tl-drop));
+  overflow: clip;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0 calc(1.42 * var(--tl-rise) + 0.1 * var(--tl-drop)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0 calc(1.42 * var(--tl-rise) + 0.1 * var(--tl-drop)),
+    transparent 100%
+  );
+}
+
+/* ── the near tree: big, mirrored, and cut by the frame ────────────────────
+   `props/pine-grove`, and Origin.tsx carries why it is this file and not the
+   faceted pair — the short version is that it was rendered both ways and the
+   pair's -dark artwork composites LIGHTER than this section's sky, so a big
+   near pine drawn from it read as one more pale peak among the ridge's peaks.
+   The grove is the darker file and a near conifer is meant to be the darkest
+   thing in the frame.
+
+   **Mirrored, and that is what puts the crop on the right tree.** The file
+   draws its tall pine on the LEFT of the frame and its smaller one plus two
+   bushes on the right (ink x 0.091-0.967, the tall tree's mass under 0.63).
+   Anchored to the right-hand edge unmirrored, the frame would crop the SMALL
+   tree and leave the big one drawn whole in the corner, which is a sticker.
+   `scaleX(-1)` swaps them, so at `right: -0.34 x width` the tall pine is cut
+   by the viewport and the small one stands complete beside it. Measured at
+   1430px of section and --tl-near-w resolving to 600px: the box runs
+   x 1034-1634, the small tree's ink starts at 1054, the tall one's at 1256 and
+   is cut at 1430 with 150px of it off-frame. The reading column ends at 994,
+   so 60px of clear air between the words and the nearest ink.
+
+   `transform` is safe on an element `ThemedArt` owns, and that is worth a line
+   because it looks unsafe. `useParallax` writes the standalone `translate`
+   property rather than `transform` precisely so a transform the element
+   already carries survives untouched — `scene/README.md` gives that as the
+   reason the hook uses `translate` at all.
+
+   The vertical anchor is derived from the artwork's own alpha rather than
+   eyeballed. Measured at 24/255 on the .webp that is actually painted: ink
+   runs y 0.0067-0.9887 dark and 0.0073-0.9940 light. The box is 2:3, so the
+   transparent margin above the ink is 0.0067 x 1.5 = 0.01 of the WIDTH, and
+   `top` subtracts exactly that to land the crown on --tl-rise. One number for
+   both themes: the two files differ by 0.0006 of the height.                */
+.origin__tree--near {
+  width: var(--tl-near-w);
+  aspect-ratio: 2 / 3;
+  height: auto;
+  right: calc(-0.34 * var(--tl-near-w));
+  top: calc(0.42 * var(--tl-rise) - 0.01 * var(--tl-near-w));
+  transform: scaleX(-1);
+  opacity: var(--art-near);
+}
+
+/* ── the far pair behind it ────────────────────────────────────────────────
+   `props/pine-pair`, small, at --art-far, and left of the grove so the two
+   groups overlap rather than sit side by side.
+
+   Flat facets are the right language for a FAR tree in this kit even though
+   they are the hero's language for near ones: at 286px wide under --art-far
+   the pale slate that made this file wrong in the foreground is exactly what
+   distance looks like against a night sky, and against a pale one it is the
+   graphite note the light artwork was drawn with.
+
+   Crown at 0.52 x --tl-rise rather than at --tl-rise: a farther tree of the
+   same species subtends a smaller angle, and lowering the crown is how that
+   reads without the two silhouettes becoming one shape at two sizes.
+
+   Ink runs y 0.0727-0.9387 dark and 0.0640-0.9413 light, so the transparent
+   margin above it is 0.0727 x 1.5 = 0.109 of the width — subtracted for the
+   same reason the grove's 0.01 is, and one number for both themes because the
+   two files differ by 0.009 of the height, 3px on a 286px box.
+
+   It goes first at narrow widths. Guardrail 6 of the art kit: art is what
+   disappears when space runs out, and below 700px the reading column IS the
+   section, so the layer with the least to lose is the one that is already
+   behind the other one.                                                     */
+.origin__tree--far {
+  width: var(--tl-far-w);
+  aspect-ratio: 2 / 3;
+  height: auto;
+  right: 9%;
+  top: calc(0.9 * var(--tl-rise) - 0.109 * var(--tl-far-w));
+  opacity: var(--art-far);
+}
+@media (max-width: 700px) {
+  .origin__tree--far {
+    display: none;
+  }
 }
 
 /* ── the ground at the boundary ───────────────────────────────────
@@ -261,9 +513,41 @@
    own WIDTH, measured from the box's top edge, off the real alpha at 24/255:
    the dark file's ink begins at 0.6679 of its height and the light file's at
    0.6454, and the files are 3:1, so those are 0.2226 and 0.2151 of the width.
-   A head per theme, because one number would put one of them 13px out. Both
-   files run to 0.998 of their height, so the drift has no bottom edge to
-   show; it simply fills down into the section.
+   A head per theme, because one number would put one of them 13px out.
+
+   ── the bottom edge this file used to say it did not have ─────────────────
+   The line here read: "Both files run to 0.998 of their height, so the drift
+   has no bottom edge to show; it simply fills down into the section." The
+   first clause is true and the conclusion does not follow. Ink that runs to
+   the last row of the box is ink that STOPS on the last row of the box, and
+   this drift is painted at --art-mid — 0.58 dark, 0.44 light — so where it
+   ends the composite steps by the whole of its contribution.
+
+   It is the second ruled line in this section and it is 122px below the first
+   at a 1440x900 window: --snow-w resolves to 1814px, the box is 3:1 so 605px
+   tall, `top` puts its bottom 122px past the boundary, and in the light theme
+   that reads as a pale blue band ending on a straight edge across the whole
+   viewport. It is the cut visible under the seam in the shipped page.
+
+   So the drift dissolves instead of stopping, and the mask's one stop is
+   written out of the SAME three variables `top` is rather than as a
+   percentage of the element. That matters: the boundary's position inside this
+   element is not a constant, because --snow-w is `max(126vw, 132vh)` and
+   --snow-rise is a clamp of its own. Computed across the range it moves from
+   76.7% of the element (1000 x 1200) to 87.6% (320 x 568), so a single
+   percentage would have been three points early on a tall narrow window and
+   six points late on a phone — solid past the boundary in one and already
+   fading before it in the other.
+
+     `--snow-head * --snow-w + --snow-rise`
+
+   is the boundary, exactly, in both themes and at every size, because it is
+   `top`'s own expression with the band cancelled out. The drift is therefore
+   solid down to the seam and dissolves below it, over whatever room is left —
+   109px at 1440 x 900, 31px at 320 x 568 — into the cabin's own snow, which
+   is what is behind it there. That is also the right picture rather than
+   merely the safe one: this is the ground AT the boundary, so its crest is
+   solid and its skirt melts into the field beyond.
 
    --snow-rise is how far the crest stands ABOVE Origin's top edge, which is
    how far up into the hero the ground reaches.                             */
@@ -291,6 +575,16 @@
   aspect-ratio: 2172 / 724;
   top: calc(var(--band) - var(--snow-rise) - var(--snow-w) * var(--snow-head));
   opacity: var(--art-mid);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0 calc(var(--snow-head) * var(--snow-w) + var(--snow-rise)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0 calc(var(--snow-head) * var(--snow-w) + var(--snow-rise)),
+    transparent 100%
+  );
 }
 
 /* ── the lamppost ─────────────────────────────────────────────
@@ -397,11 +691,34 @@
   will-change: translate;
 }
 
-.origin__lamp {
+/* Five boxes and one geometry. The pole and its four light layers are all the
+   SAME rectangle — same `left`, same `width`, same 2:3 aspect, same
+   `translateY(-98%)` — so every gradient below can be written as a percentage
+   of the artwork's own frame and the light cannot come off the lantern
+   whatever the pointer does. Rule 6: one set of variables on the common
+   parent, applied identically, never a literal here and a different literal
+   there.
+
+   The pool is deliberately NOT in this list. It is the one layer whose box is
+   a different shape, because it is an ellipse on the ground rather than a
+   thing hanging on the pole; its own rule below states the relationship it
+   keeps to this box instead. */
+.origin__lamp,
+.origin__lamp-spill,
+.origin__lamp-glow,
+.origin__lamp-core,
+.origin__lamp-pool {
   display: none;
 }
 @media (min-width: 1366px) {
-  .origin__lamp {
+  /* The measurements live on the WRAPPER now rather than on `.origin__lamp`,
+     because five elements read them and only one used to. Nothing moves: a
+     custom property is substituted into the property that consumes it, on the
+     element that declares that property, so the `100%` inside --gutter still
+     resolves against `.origin__lamp-drift`'s padding box either way — and that
+     wrapper is `inset: 0`, so it is the section's full width, which is the
+     hero's width, which is what every fraction below is a fraction of. */
+  .origin__lamp-drift {
     /* the hero's copy column, written exactly as .hero__content writes it, so
        this number cannot drift from where the wordmark actually is */
     --gutter: calc(max(0px, (100% - 1240px) / 2) + clamp(18px, 4.5vw, 56px));
@@ -412,24 +729,276 @@
       calc((var(--gutter) - 30px - var(--lamp-a)) / 0.27)
     );
     --pole-w: min(var(--lamp-fit), calc(78svh + 20px));
+    --lamp-left: max(calc(var(--lamp-a) - 0.377 * var(--pole-w)), calc(-0.355 * var(--pole-w)));
+  }
+
+  .origin__lamp,
+  .origin__lamp-spill,
+  .origin__lamp-glow,
+  .origin__lamp-core {
     display: block;
+    position: absolute;
     width: var(--pole-w);
     aspect-ratio: 2 / 3;
     height: auto;
-    left: max(calc(var(--lamp-a) - 0.377 * var(--pole-w)), calc(-0.355 * var(--pole-w)));
+    left: var(--lamp-left);
     /* how deep the ink's foot is planted inside Origin — see the note above */
     top: 30px;
     transform: translateY(-98%);
+    pointer-events: none;
+  }
+
+  .origin__lamp {
     opacity: var(--art-near);
   }
 }
+
+/* ── the lamppost's light ──────────────────────────────────────────────────
+   "can you add some color a bit transparent lighting to the pole where the
+   light should come from to have a bit more warmth and glow" — the site
+   owner. The artwork has drawn a lit lantern since the day it was placed and
+   nothing on the page ever answered it: no glow on the glass, no warmth on the
+   air, no pool on the snow the foot is planted in.
+
+   Four radial gradients, not a box-shadow and not a filter. A shadow cannot be
+   an ellipse lying on the ground at a different angle from the thing casting
+   it, and a filter would repaint the whole 407px pole on every frame of the
+   breath below. Four compositable layers cost four gradients and composite on
+   the GPU.
+
+   The inks are --lamp-core / --lamp-glow / --lamp-spill / --lamp-pool from
+   tokens.css, both themes, and they are the only warm colours in this frame on
+   purpose. tokens.css says why they are not --warm: --warm is the site's
+   accent, a UI colour that belongs to chips and links, and a light source is
+   not a chip.
+
+   ── where the lantern is ──────────────────────────────────────────────────
+   Sampled off both .webp files rather than guessed. Taking "the lit glass" as
+   the warm opaque ink (r > 200, g > 170, b < 200, r > b + 30):
+
+     dark   x 0.4280-0.5710  y 0.1547-0.2447   centre (0.4995, 0.1997)
+     light  x 0.4270-0.5670  y 0.1373-0.1753   centre (0.4970, 0.1563)
+
+   and the lantern HOUSING, read per row at 24/255, runs y 0.10-0.27 in both
+   with its widest row (the cap brim) at 0.15 dark and 0.18 light. One position
+   for both themes — `50% 19.5%` of the box — because the two glass centres are
+   0.004 of the width and 0.04 of the height apart, which on a 407 x 611 box is
+   1.8px sideways and 27px down. The 27 is the light file drawing a taller
+   lantern rather than a lantern in a different place; 19.5% splits it and sits
+   inside the housing in both.
+
+   ── the clearance table, re-measured ──────────────────────────────────────
+   The rule this arrangement is solved against has not changed: the ink stays
+   30px clear of the hero's copy column wherever the pointer is. What is new is
+   that there are now four more inks, and the discipline is that **three of
+   them sit inside the SAME 0.377-0.625 budget the artwork already spends**, so
+   --lamp-fit above did not have to move and the pole did not have to shrink.
+
+   Taking "ink" at the kit's own threshold — the alpha it calls not-ink is
+   8/255, 0.0314 — a radial gradient of peak alpha A that ramps linearly to
+   zero at radius R has its last ink at f = 1 - 0.0314/A of R:
+
+     layer  peak A  geometric rx   f      ink rx    right edge of ink
+     core   0.95    0.075 W        0.967  0.0725 W  0.5725 W
+     glow   0.44    0.130 W        0.929  0.1208 W  0.6208 W
+     spill  0.16    0.125 W        0.804  0.1005 W  0.6005 W
+     art    -       -              -      -         0.6250 W   (the pole)
+
+   All three are under the artwork's 0.625, and the glow — the widest — is also
+   inside it on the left, at 0.5 - 0.1208 = 0.3792 against the pole's 0.377. So
+   the whole lit lamp fits inside the silhouette's own footprint and every
+   clearance in the block above is a floor for it too, at every width, by
+   construction rather than by arithmetic that has to be redone.
+
+   Resolved at a 1440px window (section 1430px, svh 900): --gutter 151px,
+   --lamp-fit 407.26px, --pole-w 407.26px, --lamp-left -143.54px. Ink right
+   edges including the 10px of pointer — pole 121.00, glow 119.28, spill
+   111.02, core 99.63 — against a copy column at 151px. Clearances 30.00,
+   31.72, 39.98, 51.37. The pole is still the tightest thing in the frame.
+
+   ── and the pool, which is the one exception, stated ──────────────────────
+   The pool breaks the horizontal budget: its ink reaches 234.6px, which is
+   84px PAST the copy column's left edge. It is allowed to, and the reason is
+   that the 30px rule is a distance to the hero's copy and this ellipse is
+   nowhere near it. The pool is centred on the pole's foot, which is 30px
+   inside Origin — 1200px down the document at a 900px window. The lowest thing
+   in the hero above it is the bottom strip at 872px and the first ink below it
+   is Origin's own kicker at 1300px; the pool's ink stops at 1247. Fifty-three
+   pixels of clear air below it, three hundred above.
+
+   It also runs off the left-hand edge of the viewport, which constraint (2) in
+   the block above forbids for the pole. That constraint is about a SILHOUETTE:
+   a pole cut in half by the screen edge reads as broken art. A pool of light
+   has no silhouette to cut, and light arriving from beyond the frame is what
+   light does.                                                               */
+@media (min-width: 1366px) {
+  /* The lantern's own core: a small hard disc on the glass. Geometric radius
+     0.075 W against a glass half-width of 0.0715 W, so it covers the pane and
+     falls off just outside it rather than lighting the ironwork. */
+  .origin__lamp-core {
+    background-image: radial-gradient(
+      7.5% 5% at 50% 19.5%,
+      var(--lamp-core),
+      transparent 100%
+    );
+  }
+
+  /* The halo. Taller than it is wide — 0.13 W against 0.20 of the box's height,
+     which is 0.30 W — because the horizontal budget is what the copy column
+     constrains and the vertical one is not, and because a hooded lantern
+     throws further down than sideways anyway. */
+  .origin__lamp-glow {
+    background-image: radial-gradient(13% 20% at 50% 19.5%, var(--lamp-glow), transparent 100%);
+  }
+
+  /* The cone of lit air, falling from the glass to the foot. It is an ellipse
+     centred on the lantern with a vertical radius of 79% of the box, so its
+     bottom lands on 98.5% — the row the pole's own ink ends on, which is the
+     snow. An ellipse is symmetric, so it would glow as far UP as it does down;
+     the mask cuts that off just above the lantern, where the halo above is
+     already painting and the join cannot be found. */
+  .origin__lamp-spill {
+    background-image: radial-gradient(
+      12.5% 79% at 50% 19.5%,
+      var(--lamp-spill),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(180deg, transparent 10%, #000 24%);
+    mask-image: linear-gradient(180deg, transparent 10%, #000 24%);
+  }
+
+  /* The pool on the snow. Its own box, because this is the one layer that is
+     not hanging on the pole: it is as wide as the artwork's frame and a
+     quarter as tall, centred on the foot rather than hung from the top, so
+     `translateY(-50%)` against the pole's `-98%`. `closest-side` from the
+     centre of a 4:1 box gives rx = 0.5 W and ry = 0.125 W, which at this ink's
+     0.22 leaves 0.4285 W of ink sideways and 0.107 W up and down. */
+  .origin__lamp-pool {
+    display: block;
+    position: absolute;
+    width: var(--pole-w);
+    aspect-ratio: 4 / 1;
+    height: auto;
+    left: var(--lamp-left);
+    top: 30px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background-image: radial-gradient(closest-side, var(--lamp-pool), transparent 100%);
+  }
+
+  /* ── the breath ─────────────────────────────────────────────────────────
+     A lantern that is exactly the same brightness on every frame is a decal.
+     7.4s is long enough that nobody watching the copy notices it starting and
+     short enough that a reader who does look at the lamp sees it move once.
+
+     CSS keyframes and not JS, deliberately: this is the one effect in the
+     section that is time-based rather than scroll-linked, so on the frame loop
+     it would hold() forever and the page could never park — 71ms of main
+     thread per second against 0.1, which is the measurement `lib/motion.ts`
+     records. On a keyframe it also gets `useOffscreenPause` for free.
+
+     0% and 100% are the FULL frame, not the dim one. base.css pauses every
+     animation inside an off-screen section with
+     `animation-play-state: paused !important`, which pins it at 0%, and its
+     own comment records that the scroll cue and the light shafts were both
+     found parked at their dimmest. A lamp that goes out when the reader looks
+     away would be the same bug.
+
+     The dim end is 0.86 and not lower: opacity scales the ink radius as well
+     as the peak, so at the bottom of the breath the glow's ink reaches
+     0.929 -> 0.905 of its radius. It only ever shrinks, so the clearance table
+     above is a bound and not an average. */
+  .origin__lamp-core,
+  .origin__lamp-glow {
+    animation: lampBreath 7.4s ease-in-out infinite;
+  }
+}
+
+@keyframes lampBreath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.86;
+  }
+}
+
+/* ── the sink into #apps is GONE, and CONTRACT W is why ───────────────
+   Three rules stood here: `.origin__sink`, a clipped band at this section's
+   floor; `.origin__dusk`, a four-stop ramp into --band-apps inside it; and
+   `.origin__nightfall`, a crest of the same ink rising against the page on
+   `useParallax(-0.07)`. They were the fix for the site owner's report that the
+   cabin's lit snow "just stops" and near-black #apps begins — and the reason
+   the fix had to be drawn OVER the stage was that the ruled line was the
+   canvas, which ended, opaque, exactly on this section's bottom edge.
+
+   **The canvas does not end there any more.** Under CONTRACT W it carries on
+   behind #apps and #tools as one continuous camera move: through the door,
+   left to the table, up to the window. This boundary is the middle of an
+   interior shot now, not a join between two bands, and a landscape transition
+   painted across it would be actively worse than nothing — a fade to night
+   laid over the inside of a lit cabin at the exact moment the camera turns
+   toward the table.
+
+   So all three are deleted rather than retuned, along with --origin-sink and
+   the -0.07 rung of Origin.tsx's depth ladder. #apps' treeline crossing up
+   over the same join went with them and Apps.css says so from the other side.
+   An edge treatment on an edge that does not exist has nothing to be right
+   about — the same sentence this file already spends on the arrival shadow.
+
+   The only thing still painted at this section's floor is `.walk`'s own
+   backdrop gradient, which is one continuous ramp across all three sections
+   and has no stop anywhere near here. See Walk.css.                         */
 
 .shell.origin__shell {
   max-width: 1100px;
 }
 
+/* ── the intro's scrim ─────────────────────────────────────────────────────
+   The same plate the chapter rows below take, at half the reach, and for the
+   same reason: the lede's last two lines cross the cabin's roof and its lit
+   snow, and white body copy on lit snow is the defect the site owner asked to
+   have fixed by name.
+
+   Weaker than the rows' plate rather than equal to it. The heading is 40px
+   display type with a lot of counter, so it survives on far less help than
+   15.5px body copy does, and this is the top of the section — where the
+   dissolve is deliberately letting the hero through and a strong plate would
+   be the one opaque rectangle in a boundary built out of nothing but ramps.
+
+   `position: relative` is what the ::before needs and it is the only thing it
+   changes: `.origin__intro` is a block in normal flow inside `.shell`, which
+   already carries the stacking context, and `useReveal('wipe')` writes
+   `clip-path` and `opacity` to this element — neither of which a positioned
+   child can fight, and both of which the scrim should ride anyway. */
 .origin__intro {
+  position: relative;
   max-width: 660px;
+}
+.origin__intro::before {
+  content: '';
+  position: absolute;
+  /* Out into the air around the words, so the scrim's own edge is never on a
+     line of type: -22px top and left because the kicker starts hard against
+     both, -34px bottom because the lede is the part that needs it most.
+
+     The right bleed is a PERCENTAGE and the other three are pixels, which is
+     rule 16 rather than an inconsistency. Right is the only one of the four
+     that can push past the viewport: at 320px the shell is 284px wide and ends
+     18px from the edge, so a -60px bleed would have put this box at 362 in a
+     320px document — exactly the overflow `.origin__ground` records having
+     measured at 1470 against a 1430 client width, and exactly the kind the
+     section's 130svh clip margin does NOT catch. -3% is 8.5px there and 19.8px
+     at 1440, and it clears the viewport at every width between. The left bleed
+     needs no such care: overflow past the left edge produces no scrollbar. */
+  inset: -22px -3% -34px -22px;
+  z-index: -1;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--card-bg) 74%, transparent);
+  -webkit-mask-image: radial-gradient(78% 104% at 32% 52%, #000 0 38%, transparent 100%);
+  mask-image: radial-gradient(78% 104% at 32% 52%, #000 0 38%, transparent 100%);
+  transition: var(--t-theme);
 }
 .h2.origin__heading {
   margin: 22px 0 24px;
@@ -483,8 +1052,71 @@
     transform 0.95s cubic-bezier(0.2, 0.55, 0.24, 1),
     var(--t-theme);
 }
+
+/* ── the plate a chapter is read off ───────────────────────────────────────
+   "and also make the cards darker and or lighter to be easily seen depending
+   on the theme" — the site owner, and these rows are the cards they meant.
+
+   The rows have always been transparent, which was right while the page behind
+   them was a flat band and stopped being right the day a lit cabin arrived
+   back there. Measured on the shipped page: --faint on the cabin's lit wall
+   composites to rgb(224,224,222) over rgb(200,180,140), which is 1.5:1 — the
+   chapter tags are not low contrast, they are gone. "Making what we needed" is
+   white display type on a lit window.
+
+   `.card` in base.css already answers this with --card-bg, a ~0.75-alpha plate
+   at each theme's own ground. A row is not a `.card` and should not become one
+   — it has no border, no shadow, no tilt-lit edge, and seven of them are an
+   index rather than a shelf — so it takes the same INK through the same token
+   and nothing else.
+
+   ── why a scrim and not a rectangle ───────────────────────────────────────
+   Seven opaque boxes down the left of the section is a table of contents, not
+   a timeline, and it would also hide the cabin the section is about. So the
+   plate is masked the way a film title card sits over a shot: solid under the
+   words, gone by the row's own right edge, with nothing to find at either end.
+
+   The ellipse is `74% 130% at 26% 50%`. Horizontally it is opaque out to
+   0.44 x 74% = 32.6% either side of 26%, so from -6.6% to 58.6% of the row,
+   and it reaches zero exactly at 100% — no edge to see, because there is no
+   alpha left when the box runs out. The longest chapter title, "Making what we
+   needed" at clamp(21px, 2.4vw, 27px), ends at 47% of a 1100px row and the
+   longest meta line at 25%, so every word on the row sits on solid plate.
+   Vertically the radius is 130% of the row, so the mask is opaque through the
+   whole height and the 4px gaps between rows close up: seven scrims read as
+   one soft column down the left of the timeline, which is the reading this
+   wants — a place the words live, not seven boxes.
+
+   ── what it buys, computed ────────────────────────────────────────────────
+   Over the brightest thing behind it (the cabin's lit wall, rgb(200,180,140)),
+   --card-bg at 0.74 composites to rgb(59,54,48) in dark. On that:
+     --text   rgb(242,242,245)   10.65:1
+     --faint  rgb(165,165,167)    4.85:1   (was 1.5:1)
+   In light, --card-bg at 0.88 over the darkest thing behind it composites to
+   about rgb(239,239,240), and --text lands at 15.7:1.
+
+   ── and the hover wash moved onto it ──────────────────────────────────────
+   `.origin__row:hover` used to raise the row's own `background-color` to
+   --surface. That paints UNDER this plate, and --surface is a 4.5% white wash
+   in dark — 1.2% of it survives 0.74 of --card-bg, which is nothing. So the
+   lift is a `background-image` on the plate instead, over the plate's own
+   `background-color`, which is exactly the two-layer arrangement `.card` uses
+   and for exactly the same reason: neither layer has to know the other's
+   alpha.                                                                     */
+.origin__row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--card-bg);
+  -webkit-mask-image: radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent 100%);
+  mask-image: radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent 100%);
+  transition: var(--t-theme);
+}
+.origin__row:hover::before {
+  background-image: linear-gradient(var(--surface), var(--surface));
+}
 .origin__row:hover {
-  background-color: var(--surface);
   border-color: var(--border);
 }
 .origin__row[data-turn] {
@@ -602,8 +1234,10 @@
    it on a browser that has no :has(). Split, the worst case is that a
    keyboard visitor there gets the focus ring and no sweep. */
 .origin__row:has(.origin__toggle:focus-visible) {
-  background-color: var(--surface);
   border-color: var(--border);
+}
+.origin__row:has(.origin__toggle:focus-visible)::before {
+  background-image: linear-gradient(var(--surface), var(--surface));
 }
 .origin__row:has(.origin__toggle:focus-visible) .origin__sweep {
   opacity: 1;
@@ -696,12 +1330,27 @@
   gap: var(--origin-gap);
   margin-top: 14px;
 }
+/* 0.58 and not the 0.42 that was here. The numeral is a ghost on purpose —
+   it is `aria-hidden` and the tag beside it already says CH. 01 — but on the
+   shipped page it was a ghost of a ghost: --faint is itself 0.58 alpha, so
+   0.42 of it is 0.244 of --text, which over the plate above composites to
+   rgb(104,104,105) and 2.15:1. Against the cabin's lit snow, where these
+   actually sit, it was closer to 1.1:1 and the numerals simply were not there
+   — visible in the shipped screenshots, where 01 and 02 read as smudges and
+   06 is absent.
+
+   0.58 puts it at 0.336 of --text, rgb(120,120,121), 2.71:1 in dark and 2.43:1
+   in light. Deliberately still under the 3:1 a graphic would need: this is
+   decoration behind a title that carries the same number in text two lines
+   up, and the thing being fixed is that it was invisible, not that it was
+   quiet. The two themes land within 0.3 of each other, which is the check that
+   matters — one opacity over one token, correct in both for one reason. */
 .origin__numeral {
   flex: none;
   width: var(--origin-numeral-w);
   font: 500 clamp(40px, 5.2vw, 66px) / 0.86 var(--font-serif);
   color: var(--faint);
-  opacity: 0.42;
+  opacity: 0.58;
 }
 .origin__title {
   display: block;
@@ -759,9 +1408,72 @@
 /* ── the way on ───────────────────────────────────────────────────────────
    The quiet forward link, the same shape as .outro__about: an underline that
    lights, not a CTA. The home page is deliberately the short version now, so
-   the end of the timeline has to point at the long one. */
+   the end of the timeline has to point at the long one.
+
+   ── and it is the one line in this section that had no plate ─────────────
+   Measured on the rendered page at 1440x900, over the walk's own canvas: at
+   scroll 2600 the link sits on rgb(55,60,70) in dark and rgb(165,165,170) in
+   light — the cabin's doorway, which is the brightest thing in the frame at
+   the moment the camera crosses the threshold. --accent-2 on those is 4.03:1
+   and 3.24:1, and 13px body copy needs 4.5. It was the last unplated string in
+   this section: the intro has a scrim, the seven chapter rows have one each,
+   and this sat under all of them with nothing.
+
+   It hangs on `.origin__more-plate`, a wrapper round the link's box, and not
+   on `.origin__more-wrap` itself: `useReveal('wipe')` writes a `clip-path` to
+   what it reveals and a clip-path clips that element's pseudo-elements to its
+   border box, so on the revealing element this scrim was a hard rectangle for
+   the length of the wipe. Apps.css carries the render that caught it and the
+   same wrapper two sections down.
+
+   Same ink and the same construction as the two head plates — two linear
+   ramps intersected, so the plate
+   dissolves at the top, the bottom and the right and is flush with the frame
+   on the left, with no edge on any side. Apps.css argues the shape; `.walk`
+   declares the two numbers all three share.
+
+   What differs here is only the vertical bleed, because what it is plating is
+   one 13px line rather than a three-line head: 56px above and 64px below, with
+   the ramps at 46px and 52px, so the solid band starts 10px above the link and
+   ends 12px below it. Small numbers for a small object; the plate is 132px
+   tall against a link that is 22.
+
+   --scrim-x is the shared stop and it is generous for this one — the falloff
+   starts at viewport 810 and the link ends at 510 — which is the right way to
+   be wrong for the last line before a section boundary.
+
+   ── and this is the section the asymmetric bleed was decided for ─────────
+   The right bleed is `--scrim-pad`, the section's own padding, and the left is
+   `calc(50% - 50vw - 40px)`. Apps.css argues the pair; `#origin` is why. This
+   section is `overflow: clip` with a 130svh margin that opens EVERY edge, so a
+   right bleed measured in `vw` — and `100vw` includes the scrollbar — would
+   hang past the frame with nothing to clip it and put a horizontal scrollbar
+   on the whole document. That is the trap `.origin__ground` above records
+   having measured at 1470px against a 1430px client width. Overflow past the
+   LEFT edge produces no scrollbar, so `50vw` is free there and is what lets
+   the plate reach the frame at every width.                                                                      */
+.origin__more-plate {
+  position: relative;
+}
 .origin__more-wrap {
   margin-top: 34px;
+}
+.origin__more-plate::before {
+  content: '';
+  position: absolute;
+  inset: -56px calc(-1 * var(--scrim-pad)) -64px calc(50% - 50vw - 40px);
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--card-bg);
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 46px, #000 calc(100% - 52px), transparent 100%);
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    linear-gradient(90deg, #000 0 var(--scrim-x), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 46px, #000 calc(100% - 52px), transparent 100%);
+  mask-composite: intersect, add;
+  transition: var(--t-theme);
 }
 .origin__more {
   display: inline-flex;
@@ -809,6 +1521,45 @@
   }
 }
 
+/* ── print ─────────────────────────────────────────────────────────────────
+   Everything this section added that is a plain <div> or a ::before rather
+   than a piece of the art kit. The kit's own layers are already dropped for
+   free — `Scene.css` drops `.scene__art`, so the treeline, the snow bank and
+   the lamppost go, and base.css names `.texture`, `.blob` and `.origin__pulse`,
+   so the grid and the glow go. (`Stage.css` drops `.stage`, which is what
+   takes the cabin and the near snow off the page; that stage is in `.walk`
+   now, so it is not this file's line any more.) What none of those reach is a
+   `<div>` painted in a band.
+
+   And they have to be named, because **base.css's print block does not
+   neutralise the --band-* tokens or --card-bg.** It rewrites --bg, --surface,
+   --text and the hero's set, and stops. So the mist would print a grey wash
+   over the boundary, and every chapter row would print its plate: in the dark
+   theme that is rgba(9,10,16,0.74), a near-black rectangle under black type.
+   `Tools.css` records the identical trap for the identical reason and this is
+   the same fix beside it. (`.origin__dusk` used to head this list and printed
+   a solid --band-apps slab across the foot of the page. It is deleted; the
+   backdrop it belonged to is `.walk`'s now, and Walk.css drops that.)
+
+   This section's own background is a single radial in --origin-glow-warm, and
+   it is NOT named here: base.css's print block already forces `.section` to
+   `background: #fff !important`, which takes a background-image with it.
+
+   The lamp's four warm layers go with them. They are the one warm source in
+   the frame on a screen and they are four orange gradients on white paper. */
+@media print {
+  .origin__haze,
+  .origin__lamp-pool,
+  .origin__lamp-spill,
+  .origin__lamp-glow,
+  .origin__lamp-core,
+  .origin__intro::before,
+  .origin__more-plate::before,
+  .origin__row::before {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .origin__panel,
   .origin__copy,
@@ -823,18 +1574,36 @@
     opacity: 1;
     translate: none;
   }
-  /* The overlap is scroll that exists only so the hero can be climbed over
-     while it holds still, and at motionIntensity 0 the hero is one screen
-     tall again (Hero.css) with nothing to hold. Give the 100svh back rather
-     than pulling this section up over a hero that is no longer there.
-     Stated in the same edit as the hero's, because the two are one number. */
-  .origin {
-    margin-top: 0;
-  }
+  /* The `margin-top: 0` that used to be here is on `.walk` now, with the
+     margin itself and with the whole of the argument — Walk.css. The overlap
+     is scroll that exists only so the hero can be climbed over while it holds
+     still, and at motionIntensity 0 the hero is one screen tall again
+     (Hero.css) with nothing to hold. Nothing about the effect on this section
+     changed: `.walk`'s top edge is this section's top edge in both states. */
+
   /* Nothing writes to this at motionIntensity 0 — usePointer snaps to the
      identity and stops — so the promotion would be a compositor layer paid
-     for and never used. Scene.css gives its own back for the same reason. */
-  .origin__lamp-drift {
+     for and never used. Scene.css gives its own back for the same reason.
+
+     The same is true of the layers `useParallax` drives: at mi 0 the hook
+     resolves to a zero translate, writes it once and stops holding, so each
+     rests exactly where it composed — visible and still, which is what the art
+     kit asks for rather than hiding them. (`.origin__nightfall` was the third
+     name in this list and is deleted; see the note where the sink used to
+     be.) */
+  .origin__lamp-drift,
+  .origin__haze {
     will-change: auto;
+  }
+
+  /* The lamp's breath is the one thing in this section driven by keyframes
+     rather than by the frame loop, so it needs saying here as well as being
+     paused by base.css when the section is off screen. `none` and not a
+     paused state: 0% is already the full frame (see the keyframe), so the
+     lantern rests lit rather than resting at whatever brightness the pause
+     happened to catch. */
+  .origin__lamp-core,
+  .origin__lamp-glow {
+    animation: none;
   }
 }

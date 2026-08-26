@@ -25,6 +25,30 @@
   bottom: 0;
 }
 
+/* ── a mirrored band used at a section's TOP edge ──────────────────────────
+   `edge` is which way the shape POINTS, not which end of the section it sits
+   on — Seam.tsx and scene/README.md both say so. A band that wants the
+   mirrored path (mass at the bottom, silhouette RISING) at a top boundary
+   therefore asks for `edge="bottom"` and then has to put the anchor back,
+   because `--bottom` above was written for a seam actually sitting on a
+   section's bottom edge.
+
+   The failure it prevents is total rather than cosmetic: these bands hang off
+   a zero-height drift wrapper, and in a zero-height box `bottom: 0` and
+   `top: 0` are the same line — so an unflipped rising band is drawn entirely
+   ABOVE its wrapper and the join clips every pixel of it away.
+
+   It is a class rather than two lines in each caller because three boundaries
+   now want it: `#apps` hangs a fir line rising into Origin's clearing and the
+   Outro hangs the hill's foot rising into `#faith`. `Faith.css` still writes
+   the same two declarations by hand at `.faith__climb` with the same reasoning
+   beside them; that file is not this pass's to edit, and it should adopt this
+   class the next time somebody is in it.                                    */
+.scene__seam--rise {
+  top: 0;
+  bottom: auto;
+}
+
 @media print {
   /* decorative, and the print block in base.css drops everything else that is */
   .scene__seam {

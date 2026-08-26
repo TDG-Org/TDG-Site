@@ -6,22 +6,34 @@ See [Two files per artwork](#two-files-per-artwork) below — it is the first
 thing to read before adding anything here.
 
 The kit is wired in, through `ThemedArt` and `StillArt` in
-[`src/components/scene/`](../../../src/components/scene/README.md) — thirteen
-layers across six sections of the home page, plus four more as app-card covers
-in `KeyArt.tsx`.  Thirteen layers, not thirteen pieces: `atmosphere/fog-veil`
-is drawn TWICE in `#building` and the same file answers both, so the layer
-count is one ahead of the piece count.  It read twelve until the second one
-was placed.  (`ThemedHeroArt` is the third of those components and has no
-caller at the moment; `scene/README.md` says why it is kept.)  It stays what it
-always was: framing layers.  The hero's wordmark, point cloud, shafts and copy
-remain the primary scene, and every guardrail below still holds.
+[`src/components/scene/`](../../../src/components/scene/README.md) — **sixteen
+layers across five sections** of the home page, plus four more as app-card
+covers in `KeyArt.tsx`.  Counted with `grep -rn '<ThemedArt\|<StillArt' src/
+--include=*.tsx`: eleven `ThemedArt` (Building 5, Origin 2, Outro 2, Tools 2)
+and five `StillArt` (Hero 3, Origin 2).  It said thirteen across six until this
+pass, and both halves of that had moved.
 
-**Seven of the eighteen pieces are not placed anywhere, and that is fine.**  A
+Sixteen LAYERS, not sixteen pieces: `atmosphere/fog-veil` and
+`props/pine-faceted-pair` are each drawn twice in `#building`, and the same
+file answers both times, so the layer count runs two ahead of the piece count.
+(`ThemedHeroArt` is the third of those components and has no caller;
+`scene/README.md` says why it is kept.)  It stays what it always was: framing
+layers.  The hero's wordmark, point cloud, shafts and copy remain the primary
+scene, and every guardrail below still holds.
+
+**Four of the eighteen pieces are not placed anywhere, and that is fine.**  A
 kit is a kit.  The [Asset selection](#asset-selection) table says which pieces
 render today and which do not; an unplaced piece is a spare, not a bug, and it
 is not a reason to delete a file or to go and find somewhere to put it.  The
 guardrails below — one structural anchor per section, do not build a scene —
 are the reason there are spares at all.
+
+> **This count and the table's first column were taken while three other
+> builders were editing the same tree**, and `#apps` in particular changed
+> under the measurement: it drew `props/tall-pine`, `props/canopy-tree` and
+> `props/bushes-reeds` at the start of the pass and draws none of them at the
+> end, its scenery having moved into the new `Walk.tsx`.  The grep is the
+> answer, not this paragraph.  Run it before you rely on either number.
 
 Every file in this kit has a real alpha channel.  The black visible in some
 image previewers represents transparency, not a painted background.
@@ -69,8 +81,9 @@ ffmpeg -y -i in.png -vf "scale='if(gt(iw,1000),1000,iw)':-1:flags=lanczos" \
 ### Why this matters enough to be the first section in the file
 
 The PNG kit is **36 files, 35.4 MB** — the heaviest single decorative prop is
-2.10 MB, the widest piece is 2172px.  The WebP kit is the same 36 pieces at
-**2.3 MB**: a 93% reduction, and roughly 2–3 MB of eager image bytes off the
+2.10 MB, the widest piece is 2172px.  Re-measured this pass and unchanged: no
+art was added or removed, only placed.  The WebP kit is the same 36 files at
+**2.35 MB**: a 93% reduction, and roughly 2–3 MB of eager image bytes off the
 home page's first load.  This is a site whose own documentation is proud of taking a
 parked reader from 71 ms of main thread per second down to 0.1 ms.  A 1.6 MB
 decorative arch undoes that work for a real visitor on a real connection, and
@@ -125,20 +138,20 @@ column — this table has already been out of date once.
 | Rear mountain ridge | `landscapes/mountain-ridge-rear` | **Hero**, behind the main ridge, drifting at half its rate. | Distant Hero/Origin layer, **behind** the main ridge. Never Faith — Faith's terrain is authored SVG. |
 | Snow bank | `landscapes/snow-bank` | **Origin**, and it is that section's entire boundary treatment: the crest stands up into the hero and the body fills down into Origin. It replaced the `Seam` that used to sit there — two silhouettes on one boundary is mush. | A low foreground drift that runs beyond both section edges; a floor, not a scene. |
 | Park lamppost | `hero/lamppost-left` | **Origin**, not the hero — and that is the trick. It is a child of `#origin`, so it paints over the hero's stage while its foot plants 30px inside Origin's snow; a pole living in a pinned hero is painted over the instant Origin rises. `display: none` below 1366px. | Far-left edge, below navigation, no closer than 30px to the wordmark. |
-| Pine pair | `props/pine-pair` | Not placed. | A secondary edge prop, never adjacent to the lamppost. The faceted pair below is the default; this is the plainer variation. |
-| Faceted pine pair | `props/pine-faceted-pair` | **Building**. Also the Say2Quill app cover. | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
-| Tall foreground pine | `props/tall-pine` | **Hero** (the near foreground, and the layer that answers the mouse most) and **Apps**. | One oversized edge prop, cropped by the frame. Alone in its composition, not alongside another pine family — which is a rule about one section, not about the page. |
+| Pine pair | `props/pine-pair` | **Origin**, the far tree layer. | A secondary edge prop, never adjacent to the lamppost. The faceted pair below is the default; this is the plainer variation. |
+| Faceted pine pair | `props/pine-faceted-pair` | **Building, twice** — one stand at 27vw against the floor and a second at 14vw much further back, the same file at `--art-far` with the fog band drawn between them. Size, opacity and haze are the three things doing the distance, and none of them costs a byte. Also the Say2Quill app cover. | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
+| Tall foreground pine | `props/tall-pine` | **Hero** (the near foreground, and the layer that answers the mouse most). It was also in **Apps** until that section's scenery moved into `Walk.tsx` this pass. | One oversized edge prop, cropped by the frame. Alone in its composition, not alongside another pine family — which is a rule about one section, not about the page. |
 | Boulder cluster | `props/boulder-cluster` | **Tools**, on a pointer-sway wrapper. | A dark, chunky bottom-corner anchor; pair only with a quiet landscape layer. |
-| Canopy tree | `props/canopy-tree` | Not placed. | A distinct, softer silhouette for a later section. |
+| Canopy tree | `props/canopy-tree` | Not placed. It was in **Apps** until that section's scenery moved this pass. | A distinct, softer silhouette for a later section. |
 | Park bench | `props/park-bench` | Not placed. | Compact lower-corner accent opposite a tree or lamppost. |
-| Bushes and reeds | `props/bushes-reeds` | **Apps**, the low cover along that section's floor. | A low foreground cover or section seam. |
-| Fog veil | `atmosphere/fog-veil` | **Building, twice** — the far backdrop behind its pines, and a shallow band cropped out of the same file at the section's top boundary. One URL, one request, two layers. `props/tall-pine` is also drawn twice on the home page, but in two different sections — this is the only piece drawn twice inside ONE. | Far backdrop; place behind mountains and props. |
-| Wayfinding post | `props/wayfinding-post` | Not placed. | Origin's far edge; its boards must stay blank. |
+| Bushes and reeds | `props/bushes-reeds` | Not placed. It was **Apps**' low floor cover until that section's scenery moved this pass. | A low foreground cover or section seam. |
+| Fog veil | `atmosphere/fog-veil` | **Building, twice** — the far backdrop between its two stands of pines, and a shallow band cropped out of the same file at the section's top boundary. One URL, one request, two layers. It is no longer the only piece drawn twice inside one section: `props/pine-faceted-pair` is now as well, in the same one, for the same reason. | Far backdrop; place behind mountains and props. |
+| Wayfinding post | `props/wayfinding-post` | **Building**, its one structural anchor — the signpost on the far bank, in the band that crosses up into `#tools`. Not Origin, which this Intent column still says: a signpost belongs where a path arrives at somewhere, and Origin's far edge is a clearing with a cabin in it. | Origin's far edge; its boards must stay blank. |
 | Stone footbridge | `landscapes/stone-footbridge` | **Tools** — not Origin, which this row used to say. Also the Music Everything app cover, where its repeating arches read as a bar line. | A low seam, used instead of—not with—the stepping stones. |
 | Garden arch | `props/garden-arch` | **Outro**, the far-edge threshold. Also the Makullveny app cover. | A far-edge threshold, never a content container. |
-| Stepping stones | `transitions/stepping-stones` | Not placed. Origin's behind-the-timeline layer is `origin/CabinScene.tsx` now. | A subtle Origin transition, behind the timeline. |
+| Stepping stones | `transitions/stepping-stones` | **Outro**, in the right gutter, mirrored so the path recedes toward the arch. Not Origin: that section's behind-the-timeline layer is `origin/CabinScene.tsx` now. It is not a second structural anchor beside the arch — it is a path on the ground, which is what guardrail 8's "plus optional low foliage" clause is for. | A subtle Origin transition, behind the timeline. |
 | Hillside cross | `faith/hillside-cross` | **Not placed, and Faith is not the section to place it in — see below.** | It was drawn as a small Faith-only lower-corner detail below the verse. |
-| Pine grove | `props/pine-grove` | Not placed. | A richer edge anchor for one later section; never beside the lamppost. The optional painterly variation — do not substitute it for the faceted pair. |
+| Pine grove | `props/pine-grove` | **Origin**, the near tree layer, with `pine-pair` behind it. | A richer edge anchor for one later section; never beside the lamppost. The optional painterly variation — do not substitute it for the faceted pair. |
 
 The **Faceted pine pair** is the default tree treatment for this kit: it has
 clear illustrated facets and an expressive silhouette without naturalistic
@@ -197,9 +210,17 @@ versions are materially deeper midnight blue; their light partners are paler
 mist/silver with a narrow graphite-blue note.  This contrast shift is why both
 files must be swapped as actual themed assets rather than filtered.
 
-Two of the six are placed today — `stone-footbridge` in Tools and `garden-arch`
-in the Outro, one section each.  That ratio is the guardrail working, not a
-backlog: six anchors on a seven-section page would be six illustrated scenes.
+Five of the six are placed today — `pine-grove` in Origin, `stone-footbridge`
+in Tools, `wayfinding-post` in Building, and `garden-arch` plus
+`stepping-stones` in the Outro.  It was two when this paragraph was written and
+the ratio was called the guardrail working; read it again now and the guardrail
+is still what it always was, which is **one structural anchor per SECTION** and
+never a quota on the kit.  Every section named above has exactly one:
+`stepping-stones` is a path lying on the Outro's floor, not a second threshold
+beside the arch, and `pine-grove` is a tree.
+
+The one that stays unplaced is `hillside-cross`, and the section it was drawn
+for is the section that may not have it — see below.
 
 ## Guardrails for implementation
 

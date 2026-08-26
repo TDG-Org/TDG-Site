@@ -10,12 +10,26 @@ import './Outro.css'
 export function Outro() {
   const makers = useReveal<HTMLDivElement>('wipe', 0)
   const card = useReveal<HTMLDivElement>('rise', 0)
-  /* Two layers, and they disagree about which way to go — which is the whole
-     of what makes a boundary read as behind something. `useParallax` writes
-     `centreOffset * -factor`, so +0.03 on the seam climbs more slowly than the
-     page and sits at the back, and -0.075 on the arch moves against it and
-     comes forward. The first pass had +0.024 and +0.04: same direction, within
-     a percent and a half of each other, so nothing moved against anything. */
+  /* ── the depth ladder ─────────────────────────────────────────────────────
+     `useParallax` writes `centreOffset * -factor`, so a positive factor climbs
+     more slowly than the page and sits at the back, and a negative one moves
+     against it and comes forward.
+
+        +0.015 the air     this section's own ink rising into #faith's hillside
+        +0.030 the seam    the terrace fading in below the join
+        -0.090 the arch    the threshold you walk through
+        -0.130 the stones  the path arriving at it, nearest, on the ground
+
+     Slowest to fastest is 0.015 to 0.13, nearly nine times, against two layers
+     0.045 apart before this pass. Two positives and two negatives, so the ends
+     of the ladder travel 0.145 of the page APART — relative travel between two
+     layers going opposite ways is the SUM of their factors, which is why the
+     sign is worth more here than the magnitude.
+
+     `.outro__ground` takes no hook at all, deliberately: it is the ground the
+     arch stands on rather than an object on it, and a floor that slides
+     against the things standing on it is a rug. */
+  const air = useParallax<HTMLDivElement>(0.015)
   const seam = useParallax<HTMLDivElement>(0.03)
 
   return (
@@ -47,36 +61,107 @@ export function Outro() {
 
             **The arch cannot cross this boundary, and that was computed rather
             than left open.** A layer that belongs to both sections is the
-            strongest way to hide a join — it is how the lamppost works four
-            sections up — and only an UPWARD crossing can work anywhere on this
-            page, because each section paints over the one before it, so a
+            strongest way to hide a join — it is how the lamppost works five
+            sections up, and how #apps, #tools and #building each hide theirs
+            in this pass — and only an UPWARD crossing can work anywhere on
+            this page, because each section paints over the one before it, so a
             layer sent DOWN out of its own section is covered by the section it
             lands in. Upward is available here: this section is later in the
             DOM than `#faith`. What is not available is the height. The arch is
-            bedded 76px below this section's floor and is `1.5w` tall against a
+            bedded 100px below this section's floor and is `1.5w` tall against a
             section that is `2 x padding + 254px`, so its crown already sits
-            BELOW the top edge by 20px at 1440, 36 at 1920, 55 at 1280 and 110
+            BELOW the top edge by 44px at 1440, 52 at 1920, 79 at 1280 and 134
             at 1024; crossing needs it taller, and its width is bounded by the
             copy's own left edge, so the extra height can only come from
             hanging further off the left of the page. At 1024 a crown at the
             join needs `w = 410` against a box whose left edge would then be at
             −215 — the entire left column, ink and all, outside the viewport.
-            An arch with one leg is not a threshold. So this boundary is
-            carried by the shape and the arch stands under it. */}
+            An arch with one leg is not a threshold.
+
+            **So the thing that crosses is the AIR, and it is the only crossing
+            on the page that carries no shape at all.** `.outro__air` is a band
+            of this section's own `--band-outro` reaching up over the join into
+            the foot of #faith's hillside and fading out at both ends. It is
+            aerial perspective doing the join's work: Faith's near ridge
+            recedes into the colour of the section below it instead of meeting
+            it on a line, and because --band-outro IS --bg, the half of the band
+            that lies below the join paints exactly nothing. One gradient, no
+            silhouette, nothing on the join line itself — which is the same
+            idea this boundary always had, now reaching across instead of
+            stopping at the edge. */}
+        <div ref={air} className="outro__air" aria-hidden="true" />
+        {/* ── the light you walked out of ──────────────────────────────────
+            The moon is the thread this page is strung on: it rests on the
+            hero's horizon and it stands behind the cross on the Faith summit,
+            directly above this section. So the air at the top of the Outro is
+            still carrying it — a wide bloom hanging over the shallow end of
+            the stair, in `--glow`, inside a wash of `--band-faith`, which is
+            the band this section is walking out of.
+
+            It is doing three of the four jobs this half of the section had
+            nobody to do. It is the one light source, which the arch and the
+            stones below are then read against. It is the haze band between the
+            terrace's plane and theirs. And it is what fills the top right,
+            which the render showed as two hundred pixels of flat black beside
+            a stair — air is only air when something is happening in it.
+
+            Behind the terrace on purpose: the light is BEYOND the crest, and
+            drawing it first is what makes the stone read in front of it.   */}
+        <div className="outro__afterglow" aria-hidden="true" />
         <div ref={seam} className="outro__seam-drift" aria-hidden="true">
+          {/* The lit nosing on every tread, and it is the same path a few
+              pixels lower rather than a second drawing. What shows is the
+              strip between the two silhouettes — under each tread and under
+              each chamfer, and nothing at all beside a riser, because a
+              vertical edge shifted straight down exposes nothing. That is
+              exactly where a stair's next tread top catches the light.
+
+              Both bands hang off ONE drift wrapper, so there is one hook and
+              one writer of `style.translate` between them; the offset is
+              `top` on this box and never a transform. */}
+          <div className="outro__tread">
+            <Seam shape="steps" edge="top" className="outro__seam" />
+          </div>
           <Seam shape="steps" edge="top" className="outro__seam" />
         </div>
-        {/* The nearest art in this section and the one that drifts most — you
-            are walking through this, not looking at it. It is now 29vw wide
-            and taller than the makers note, where it used to be 216px tucked
-            in a gutter, and the room for that came from this section's own
-            padding rather than from the copy: see Outro.css.
 
-            `useParallax` only ever writes a VERTICAL translate, so the 40px it
-            keeps off the copy cannot be spent by the motion, however large the
-            factor gets. That is what lets this one be the loudest layer in the
-            section without the clearance becoming a thing to re-check. */}
-        <ThemedArt art="props/garden-arch" className="outro__arch" factor={-0.075} />
+        {/* Everything that has to be cut at this section's own edges. The
+            section is `overflow: clip` with a margin now, so that the air band
+            above can reach into #faith, and a clip margin opens every edge
+            equally — so without this box the arch, which is bedded 100px below
+            the floor, would stand on top of the GitHub strip. */}
+        <div className="outro__clip" aria-hidden="true">
+          {/* The ground the last two things on this walk stand on. It is also
+              what fills the right-hand half of this section, which the render
+              showed as several hundred pixels of flat black beside a single
+              arch. Air is only air when something is happening in it. */}
+          <div className="outro__ground" />
+          {/* The arch: 29vw wide and taller than the makers note, where it
+              used to be 216px tucked in a gutter, and the room for that came
+              from this section's own padding rather than from the copy — see
+              Outro.css.
+
+              `useParallax` only ever writes a VERTICAL translate, so the 40px
+              it keeps off the copy cannot be spent by the motion, however
+              large the factor gets. That is what lets it be one of the loudest
+              layers in the section without the clearance becoming a thing to
+              re-check. */}
+          <ThemedArt art="props/garden-arch" className="outro__arch" factor={-0.09} />
+          {/* `transitions/stepping-stones` — in the kit from the beginning and
+              drawn by nothing until now. The walk has crossed water on a
+              bridge, climbed to a summit and is arriving at a gate; a path of
+              flat stones leading to the gate's foot is the last thing you
+              would actually pass on it.
+
+              It sits in the RIGHT gutter, at exactly the inset the arch takes
+              on the left, out of the same two variables applied in mirror
+              image — rule 6, and the reason `--outro-copy-inset` is stated as
+              an inset from an edge rather than as a coordinate. The art is
+              mirrored so the path recedes toward the arch rather than away
+              from it; that is a `transform`, and `useParallax` writes the
+              standalone `translate` property, so the two never touch. */}
+          <ThemedArt art="transitions/stepping-stones" className="outro__stones" factor={-0.13} />
+        </div>
 
         <div ref={makers} className="outro__makers">
           <div className="kicker outro__kicker">

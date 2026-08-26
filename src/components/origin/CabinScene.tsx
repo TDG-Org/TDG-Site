@@ -3,6 +3,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
+  DoubleSide,
   DynamicDrawUsage,
   Fog,
   Mesh,
@@ -15,30 +16,94 @@ import {
 } from 'three'
 import { clamp01, onFrame, settle, wake } from '../../lib/motion'
 import { MAX_DPR, onDprChange } from '../../lib/dpr'
+import type { WalkProgress } from '../Walk'
 
 /**
- * The Origin section's backdrop: a cabin in a snowy forest that the reader
- * walks toward as they read the seven chapters. Far, cold and seen from the
- * corner at the top of the section; at the door, close and still slightly
- * angled, by the bottom of it. It is also a nod to Makullveny's own flagship
- * theme, "Cozy Cabin".
+ * One continuous 3D shot behind THREE sections: the reader crosses a snowfield
+ * to a cabin while they read Origin, walks in through its door, settles looking
+ * down at the big table while they read the project cards, and finishes on the
+ * west window while they read the small tools. It is also a nod to Makullveny's
+ * own flagship theme, "Cozy Cabin".
+ *
+ * ## The walk, and where its progress comes from
+ *
+ * This component does NOT measure a section any more. `Walk.tsx` owns the
+ * container that wraps Origin, Apps and Tools, computes the sticky pin's own
+ * travel, and hands it down as `progress` — see `WalkProgress`, and
+ * `internal/checklists/cabin-interior-spec.md`, which is the transcription of
+ * the owner's hand-drawn floor plan and camera path and is the authority for
+ * the shot.
+ *
+ * Two of the three numbers in that object are marks rather than progress:
+ * `apps` and `tools` are the `p` at which each section's top reaches the top of
+ * the viewport. **Every beat below is expressed against those marks rather than
+ * against a literal**, so the two settled beats land exactly as a heading
+ * arrives and stay aligned when anybody changes a section's height.
+ *
+ * ```
+ *   p 0        -> 0.62A   THE APPROACH   the existing orbit, then in to the door
+ *   p 0.62A    -> 0.90A   THE THRESHOLD  through the doorway; the room opens
+ *   p 0.90A    -> A       THE TURN       left to the south-west corner
+ *   p A        -> A+0.8dT THE TABLE      held, high, looking down at the paper
+ *   p ...      -> T       LOOKING UP     off the table, round to the west window
+ *   p T        -> 1       THE WINDOW     held, then a push into the outside light
+ * ```
+ *
+ * `A = progress.apps`, `T = progress.tools`, `dT = T - A`. The stations are
+ * `SHOT` below and the interpolation is `shotAt`; both carry their own numbers.
  *
  * ## What is in the picture, and where it came from
  *
  * The composition answers two reference paintings the site owner supplied — a
  * log cabin in a snowy wood at night — and their contents are the spec:
  *
- * - a deep blue night sky, never black, with the distant hills a soft LIGHTER
- *   band on the horizon (`HILL_R`, and the tone ladder above `T_TREE`)
- * - a real forest in ranks: near pines almost black with visible bare trunks
- *   and cropped by the frame, and behind them ranks that go paler and bluer
- *   with distance (`TREES`, `RANKS`, `RANK_R`)
+ * - a deep blue night sky, never black, with a soft LIGHTER band closing the
+ *   horizon (the outermost rank of `RANK_R`, and the tone ladder above
+ *   `T_TREE`). That band was a range of HILLS until this pass, and the site
+ *   owner replaced it: "trees in the foreground like in an actual forest
+ *   instead of boring mountains". It is a treeline now, and everything below
+ *   is the same request answered at the other depths.
+ * - a real forest in ranks: wall trunks close enough to the lens that the
+ *   frame cuts their tops off (`TRUNKS`), near pines almost black with visible
+ *   bare trunks, and behind them ranks that go paler and bluer with distance
+ *   (`TREES`, `RANKS`, `RANK_R`)
  * - the cabin in the middle distance, log-built, stone chimney, smoke rising,
- *   a porch, windows glowing warm
+ *   a porch, windows glowing warm — at night. In light the house is dark and
+ *   it is daytime; see `ROLES`.
  * - the window light POOLING on the snow and falling off fast, which is the
  *   emotional centre of both paintings and of this scene (`pool`, `halo`)
  * - ground that has been walked on: drifts, a footpath trodden to the door,
- *   bare weeds and small rocks (`driftAt`, `PATH`, `WEEDS`, `STONES`)
+ *   the shade of the trees lying across it, bare weeds and small rocks
+ *   (`driftAt`, `snowTone`, `PATH`, `WEEDS`, `STONES`)
+ * - and an eye at a standing person's height by the end of the walk, so the
+ *   walls have height and the roofline is against the sky (`Y_NEAR`)
+ *
+ * And, since the walk goes indoors, a ROOM — transcribed from the owner's floor
+ * plan, plan view with north at the top and the camera entering from the south:
+ *
+ * | where | what | built by |
+ * | --- | --- | --- |
+ * | south wall | the front door the camera comes through | `buildWorld` |
+ * | north wall, centre-left | the fireplace, set into the wall | `hearth` |
+ * | west wall, middle | the window the camera ends on | `SW_*` |
+ * | east wall, middle | a second window, background only | `EW_*` |
+ * | south-west corner | the big table and the paper | `TABLE_*` `PAPER_*` |
+ * | south-east corner | a small desk, against the east wall | `DESK_*` |
+ * | centre-south | a chair, pulled out, facing the desk | `chair` |
+ * | north-west | the woodpile beside the hearth | `interior` |
+ * | north-east | a dresser under the east window | `interior` |
+ *
+ * Two things on that table are a legibility requirement rather than
+ * decoration, and the owner asked for both by name. **The paper** is a large
+ * flat low-contrast field filling the frame behind where the project cards sit,
+ * with no high-contrast edge crossing them — see `T_PAPER`, `PAPER_X0` and the
+ * framing measurements on `ST_TABLE`. **The fire** is the room's light source
+ * and the only
+ * animated thing in it: layered emissive geometry, vertex-animated off the same
+ * `onFrame` dt everything else here runs on, no texture and no new dependency.
+ * It is warmer than everything else in frame because it is the one thing drawn
+ * in `--warm` rather than on the tone ramp, and its light reaches the walls,
+ * the table, the floor and the hearth through `hearthAt`, which BAKES it.
  *
  * **Two things in the references are deliberately NOT here.** The aurora,
  * because it would be the loudest thing on a page whose whole palette is
@@ -69,21 +134,74 @@ import { MAX_DPR, onDprChange } from '../../lib/dpr'
  * - **It is editable by the next person.** Every dimension below is a named
  *   constant in a file git can diff. A binary mesh is not.
  *
- * The whole scene is **five draw calls**, and its triangle count is a range
- * rather than a number, because the tier decides it. Measured from
- * `renderer.info.render.triangles` on a frame that drew: **721 on `low`, 1084
- * on `mid`, 1467 on `high`**, plus 200 / 420 / 640 snow points. `low` is not an
- * edge case — it is every viewport under 760px and every machine with four
- * cores or fewer, which is most phones — so a single figure quoted from `high`
- * describes the scene most visitors never get.
+ * The scene is **six draw calls for about 300px of scroll and three where the
+ * reader spends most of their time**, and its triangle count is a range
+ * rather than a number,
+ * because the tier decides it. `low` is not an edge case — it is every viewport
+ * under 760px and every machine with four cores or fewer, which is most phones
+ * — so a single figure quoted from `high` describes the scene most visitors
+ * never get. Counted per section as it is emitted:
  *
- * Those were 342 / 462 / 600 in four calls before the forest, the ground
- * detail and the chimney smoke, and the growth is where a low-poly scene
- * should spend: **more instances of cheap shapes, not detail on one.** A far
- * tree is one triangle, a weed is one, a rock is four; the two ranks of
- * treeline behind the cabin cost less between them than three near conifers.
- * The fifth draw call is the smoke, which needs its own material because it is
- * lit by the sky and everything else warm in the scene is lit by the fire.
+ * ```
+ *                        low     mid    high
+ *   ground + drifts      128     262     386
+ *   THE ROOM             232     292     292
+ *   everything else
+ *     outdoors           726    1108    1512
+ *   window + door glow    60      60      60
+ *   THE FIRE              88      88      88
+ *   chimney smoke         15      20      25
+ *                       ----    ----    ----
+ *   total               1249    1830    2363
+ *   snow points          200     420     640
+ * ```
+ *
+ * The draw calls are not a tier's business at all — every tier draws the same
+ * objects — and they were counted on the live page rather than reasoned about,
+ * by patching `drawArrays` and bucketing every submission by its vertex count
+ * (the world is 6570 verts, the snow 640, the fire 264, the wall glow 156, the
+ * smoke 75, the lit openings 24). Over two seconds at each place:
+ *
+ * ```
+ *   approach          world snow glow smoke openings ......... 5, at 30Hz
+ *   through the door  all six of them, for about 300px of scroll  6
+ *   the table         world snow fire ...................... 3, at 15Hz
+ *   the window        world snow fire ...................... 3, at 15Hz
+ *   past the walk     nothing at all ....................... 0
+ * ```
+ *
+ * That measurement found a real one: the fire's buffer was being submitted
+ * TWICE per frame, because a transparent `DoubleSide` material is two passes in
+ * three.js unless it is told otherwise. See `forceSinglePass` where it is made.
+ *
+ * It was 902 / 1371 / 1884 in five calls before this pass, so the room, the
+ * fire and the coarser snow grid have cost **347 / 459 / 479 triangles, which
+ * is 38% / 33% / 25%.** Three things pay for it.
+ *
+ * **The reader is in the room for three fifths of the walk.** The old figure
+ * bought a backdrop for one section; this one buys the backdrop for three, and
+ * the two settled beats in it are the frames the project cards and the small
+ * tools are read against. 292 triangles for the entire interior — walls,
+ * fireplace, table, paper, desk, chair, beams, woodpile, dresser, rug — is less
+ * than the near conifers alone cost outdoors.
+ *
+ * **Nothing here is vertex-bound and nothing ever was.** The world is ONE
+ * static non-indexed buffer with a per-vertex tone, built once at mount and
+ * uploaded once — which is also why nothing in the room is an InstancedMesh:
+ * instancing buys one draw call for N copies of one geometry, and the merge
+ * already has one draw call for every triangle in the scene. The per-frame work
+ * is a damped scalar, one `lookAt`, `flakes` positions, five billboarded puffs
+ * and twelve flame quads, and only the last of those is new.
+ *
+ * **What actually costs per frame is FILL, and indoors this pass spends far
+ * less of it.** Outside, the transparent warm layer covers a third of the frame
+ * at the door and the snow fills the sky. Inside, `openAir` takes the window
+ * glow, the door pool and the smoke to zero — they are all on the outside faces
+ * of walls the reader is now behind — the snow drops to a third and parks every
+ * flake that would fall indoors under the floor, and what is left is the world,
+ * the flames and the fire's own wash. Three draw calls and a nearly empty
+ * blend, at 15Hz rather than 30 once the camera settles. **The table beat is
+ * cheaper to draw than the approach it came from.**
  *
  * All of it is still deliberate: this is a silhouette with warm windows, not
  * an architectural render, and it sits behind seven chapters of prose that
@@ -104,23 +222,27 @@ import { MAX_DPR, onDprChange } from '../../lib/dpr'
  * that never scrolls stops `sticky` dead. `Stage.tsx`'s header has that
  * measurement and the rest of the traps.
  *
- * `Origin.tsx` is the live mount:
+ * `Walk.tsx` is the live mount, and it is a WRAPPER round three sections rather
+ * than a section — which is the whole reason it exists. A `Stage` inside
+ * `#origin` pins for `#origin`'s height and cannot paint behind Apps or Tools,
+ * so the pin has to belong to a box that contains all three:
  *
  * ```tsx
  * const CabinScene = lazy(() =>
  *   import('./origin/CabinScene').then((m) => ({ default: m.CabinScene })),
  * )
- * // ...inside <section id="origin" className="section section--blend stage-host origin">
- * <Stage className="origin__stage">
+ * // ...inside <div className="walk stage-host">
+ * <Stage className="walk__stage">
  *   {cabin ? (
  *     <Suspense fallback={null}>
- *       <CabinScene className="origin__cabin" />
+ *       <CabinScene className="walk__cabin" progress={progress} />
  *     </Suspense>
  *   ) : null}
  * </Stage>
+ * <Origin /> <Apps /> <Tools />
  * ```
  *
- * `.origin__cabin` in `Origin.css` is `position: absolute; inset: 0; width:
+ * `.walk__cabin` is `position: absolute; inset: 0; width:
  * 100%; height: 100%; display: block`, and that is all it has to be:
  * `.stage__pin` is already sticky and one viewport tall. There is no
  * `margin-bottom: -100svh` anywhere and there must not be — `Stage`'s outer
@@ -129,10 +251,11 @@ import { MAX_DPR, onDprChange } from '../../lib/dpr'
  * negative margin, on a `.origin__scene` class that has never existed anywhere
  * in this repo. It was wrong before `Stage` was written and it is wronger now.)
  *
- * `cabin` is Origin's own deferred-mount flag and not part of this component's
- * contract: `React.lazy` splits the chunk but fires the import the moment the
- * component renders, so the flag is what stops a visitor who reads the hero and
- * leaves from downloading three.js. See `Origin.tsx`.
+ * `cabin` is the Walk's own deferred-mount flag and not part of this
+ * component's contract: `React.lazy` splits the chunk but fires the import the
+ * moment the component renders, so the flag is what stops a visitor who reads
+ * the hero and leaves from downloading three.js. The IntersectionObserver
+ * behind it moved out of `Origin.tsx` unchanged and watches `.walk` now.
  *
  * **The className lands on a container `<div>`, not on the canvas.** The canvas
  * is created inside the effect and appended to that container, so every mount
@@ -172,12 +295,12 @@ import { MAX_DPR, onDprChange } from '../../lib/dpr'
  * - **Rule 3, both themes, as a design problem.** Dark is the night scene the
  *   brief describes. Light is NOT that scene dimmed: it is the same geometry as
  *   a bright overcast day, with a compressed tonal range, snow that all but
- *   merges with the sky, and windows that read warm against daylight rather
- *   than as a beacon. See `ROLES`. Everything the art pass added goes through
- *   the same ramp, which is why the forest recedes correctly in both:
- *   dark's sky sits at the BOTTOM of that ramp and light's near the top, so
- *   one fog mix lifts a distant rank off the one and sinks it toward the
- *   other.
+ *   merges with the sky, and — since this pass — **a house whose lights are
+ *   off**, because a lit window at midday is a mistake and not atmosphere.
+ *   See `ROLES`. Everything the art pass added goes through the same ramp,
+ *   which is why the forest recedes correctly in both: dark's sky sits at the
+ *   BOTTOM of that ramp and light's near the top, so one fog mix lifts a
+ *   distant rank off the one and sinks it toward the other.
  * - **Rule 5, every state gets a face.** No WebGL, a refused context, a lost
  *   context and an unreadable palette all resolve to the same face: an empty
  *   transparent canvas. The section keeps its own gradients, its art kit and
@@ -195,23 +318,61 @@ import { MAX_DPR, onDprChange } from '../../lib/dpr'
  * splits it because its twelve form definitions in `hero/shapes.ts` are the
  * largest thing on that section and none of it is needed to paint the hero.
  * Here the weight really is three.js. Nothing in this file runs at import time
- * beyond the three.js module itself. Measured on this build: the lazy chunk is
- * **527 kB raw / 136.8 kB gzipped**, and `npm run build` puts three.js and
+ * beyond the three.js module itself. Measured two passes ago: the lazy chunk
+ * was **527 kB raw / 136.8 kB gzipped**, and `npm run build` puts three.js and
  * this file in it and neither in the entry bundle. It is a separate file only
  * because of the dynamic import — pull this in statically and all of that
  * lands in the entry bundle, which is already flagged at 500 kB. (The forest
  * and the ground detail cost 8 kB raw and 3.8 kB gzipped of that, over the
  * 519 / 133 it was before them. Geometry built from named constants
  * compresses; a mesh would not have.)
+ *
+ * **That pair has NOT been re-measured since**, and the honest thing is to say
+ * so rather than to let a stale number read as a current one. What this pass
+ * added to the source is ten rows of a coordinate table, one more rank, four
+ * trunks and a great deal of prose; comments do not survive minification and
+ * number tables compress, so the expectation is under a kilobyte gzipped —
+ * but an expectation is not a measurement. Re-run `npm run build` and replace
+ * both figures the next time somebody is in here with the tree to themselves.
  */
-export function CabinScene({ className }: { className?: string }) {
+export function CabinScene({
+  className,
+  progress,
+}: {
+  className?: string
+  progress: WalkProgress
+}) {
   const host = useRef<HTMLDivElement | null>(null)
+  /*
+   * The prop is read from inside `onFrame`, and `progress` is a FROZEN ACCESSOR
+   * over a ref rather than a value — the same shape `useSectionProgress` and
+   * `usePointer` hand back, so nothing re-renders sixty times a second. The
+   * object identity is therefore stable for the life of the mount and the ref
+   * below is only here so the effect's `[]` deps stay honest: an effect that
+   * closed over the first `progress` and never saw a second one would be a
+   * silent bug the day somebody makes Walk hand back a fresh object.
+   */
+  const walkRef = useRef(progress)
+  walkRef.current = progress
 
   useEffect(() => {
     const mount = host.current
     if (!mount) return
-    const section = mount.closest('section')
-    if (!section) return
+    /*
+     * The palette is read off the MOUNT, not off a section, and that is the
+     * walk's doing rather than a preference. `Stage` is a sibling of the three
+     * sections inside `.walk`, so `mount.closest('section')` is null here and
+     * the old read would have returned before drawing anything at all.
+     *
+     * Nothing is lost by moving it: every token this reads — `--text`,
+     * `--surface`, `--accent-2`, `--warm` and the three `--band-*` — is
+     * declared on `:root` in `styles/tokens.css`, custom properties inherit,
+     * and `base.css` sets only `--tint-*` and `--seam-fill` per section. So the
+     * values resolve identically on any element in the document, and reading
+     * them here rather than two ancestors up means this component no longer
+     * cares what shape its caller's DOM is.
+     */
+    const section = mount
 
     // ── palette ───────────────────────────────────────────────────────────────
     /*
@@ -328,7 +489,25 @@ export function CabinScene({ className }: { className?: string }) {
     const fog = new Fog(new Color(), FOG_NEAR, FOG_FAR)
     scene.fog = fog
 
-    const camera = new PerspectiveCamera(FOV_MIN, 1, 0.6, 220)
+    /*
+     * The near plane is 0.14 and was 0.6, and the doorway is why.
+     *
+     * The camera goes THROUGH a 1.2m opening with a door leaf standing in most
+     * of it, and at the moment it passes the wall the near plane is a rectangle
+     * 0.61 wide floating 60cm ahead of the lens. Measured on the entry line at
+     * x = 0.34: that rectangle reaches x = 0.645 and the jamb is at 0.6, so the
+     * wall would be sliced open at the right of the frame for the whole
+     * threshold beat. At 0.14 the near rectangle is 0.14 wide and the closest
+     * anything comes to it is the door leaf's free edge at 0.15.
+     *
+     * It costs depth precision and the scene can afford it: with a 24-bit
+     * buffer, near 0.14 and far 220, the resolvable step at the treeline's 45m
+     * is about a millimetre and at the cabin's 12m about a tenth of one.
+     * Nothing here is coplanar by accident — the path sits PATH_LIFT above the
+     * snow, the pools sit above the path, the window bars sit 1cm proud of the
+     * panes — and every one of those offsets is centimetres, not microns.
+     */
+    const camera = new PerspectiveCamera(FOV_MIN, 1, 0.14, 220)
 
     const geometries: BufferGeometry[] = []
     const materials: (MeshBasicMaterial | PointsMaterial)[] = []
@@ -488,6 +667,173 @@ export function CabinScene({ className }: { className?: string }) {
       smokeColAttr.needsUpdate = true
     }
 
+    // ── the fire ──────────────────────────────────────────────────────────
+    /*
+     * The room's one light source, and the only animated thing inside it.
+     *
+     * "make sure the fire has good SVGs or however way you want to make it look
+     * nice" — this is WebGL, so the WebGL answer: layered emissive geometry
+     * whose vertices are rewritten every drawn frame. No texture file, no
+     * sprite sheet, no new dependency, and nothing to 404 after deploy.
+     *
+     * **One buffer, two halves, and only the second half is ever rewritten.**
+     * The first `fireStaticTris` triangles are what the fire DOES to the room —
+     * the wash on the hearth face, the pool on the floor, the low warmth on
+     * the table and the west wall, the two lanterns — and none of that changes
+     * shape, only brightness, which is `fireMat.opacity`. The flames and the
+     * ember bed are the moving half and start at `fireBase`. Splitting them
+     * into two meshes would be a sixth draw call to save writing 200 floats.
+     *
+     * `DoubleSide`, and it is the one material in this file that has it. Every
+     * other surface here is a facet of a solid whose back nobody may see, so
+     * `pushQuad` and `tri` STATE their winding and `FrontSide` catches the
+     * mistakes — `pushQuad`'s note has the four pools that were culled for a
+     * whole pass because of it. A flame is not a solid: it is billboarded at
+     * the camera every frame, so "which way is out" is not a property it has.
+     * Backface culling on a shape with no back is a bug waiting for the day
+     * the camera crosses its plane. It costs nothing — the same triangle is
+     * rasterised once either way.
+     */
+    const fireStatic = buildFireStatic()
+    const fireStaticTris = fireStatic.pos.length / 9
+    const fireTris = fireStaticTris + FLAMES * FLAME_ROWS * 2 + 2
+    const firePos = new Float32Array(fireTris * 9)
+    const fireRgba = new Float32Array(fireTris * 12)
+    firePos.set(fireStatic.pos)
+    fireRgba.set(fireStatic.rgba)
+    /** Where the moving half starts, in floats. */
+    const fireBase = fireStaticTris * 9
+    const fireBaseC = fireStaticTris * 12
+    const fireGeo = new BufferGeometry()
+    const firePosAttr = new BufferAttribute(firePos, 3)
+    const fireColAttr = new BufferAttribute(fireRgba, 4)
+    firePosAttr.setUsage(DynamicDrawUsage)
+    fireColAttr.setUsage(DynamicDrawUsage)
+    fireGeo.setAttribute('position', firePosAttr)
+    fireGeo.setAttribute('color', fireColAttr)
+    const fireMat = new MeshBasicMaterial({
+      transparent: true,
+      depthWrite: false,
+      vertexColors: true,
+      side: DoubleSide,
+      // **`forceSinglePass` is not optional here and it was measured, not
+      // assumed.** three.js renders a TRANSPARENT DoubleSide material in two
+      // passes — back faces, then front — so that a closed transparent solid
+      // sorts correctly against itself. Counted on the live page by patching
+      // `drawArrays` and bucketing by vertex count: at the settled table beat
+      // the 264-vertex fire buffer was submitted 58 times over 29 renders,
+      // exactly twice per frame, while the world and the snow went once each.
+      // Nothing in this buffer is a closed solid — they are flat tongues and
+      // flat washes — so the second pass is a duplicate of the first and the
+      // only thing it buys is a fourth draw call in the one beat this file
+      // works hardest to keep cheap.
+      forceSinglePass: true,
+    })
+    const fireMesh = new Mesh(fireGeo, fireMat)
+    fireMesh.frustumCulled = false
+    fireMesh.renderOrder = 2
+    scene.add(fireMesh)
+    geometries.push(fireGeo)
+    materials.push(fireMat)
+    /** Seconds of fire that have been drawn. Frozen at 0 under reduced motion. */
+    let fireT = 0
+
+    /**
+     * The flicker, as one scalar in 0..1.
+     *
+     * Three sines at rates with no common period — 2.7, 4.31 and 0.93 Hz —
+     * because two sines beat visibly and a single one is a pulse. Slow and
+     * uneven is the brief; the fastest term here is a 230ms wobble, which is
+     * about the rate a real log fire changes brightness at, and the 0.93 term
+     * is what makes one flare-up in every few seconds bigger than the others.
+     *
+     * It never reaches 0. A fire that goes out and comes back is a fault
+     * light; the floor is 0.48 and the ceiling is 1.
+     *
+     * At `fireT === 0` — the single frame a reduced-motion visitor gets — this
+     * is 0.850 rather than some degenerate end of its range, because the two
+     * offset terms are deliberately phased. The rest pose has to be a real
+     * picture, exactly as `layoutSmoke`'s does.
+     */
+    const flicker = () =>
+      0.74 +
+      0.1 * Math.sin(fireT * 2.7) +
+      0.08 * Math.sin(fireT * 4.31 + 1.7) +
+      0.08 * Math.sin(fireT * 0.93 + 0.4)
+
+    /**
+     * Lay the flames and the ember bed out for the current clock and camera.
+     *
+     * `rx` / `rz` is the camera's own screen-right projected onto the ground,
+     * the same billboard `layoutSmoke` takes. A flame is a flat tongue and the
+     * camera swings about 70 degrees across the room, so a fixed facing would
+     * go edge-on somewhere in the middle of the shot.
+     *
+     * Each tongue is `FLAME_ROWS` quads stacked, narrowing and fading to
+     * nothing at the tip, with the lateral offset scaled by `k * k` so the
+     * root stays planted and only the top licks about. A tongue drawn as one
+     * quad cannot do that, and a tongue whose base moved would read as a flag.
+     */
+    const layoutFire = (rx: number, rz: number) => {
+      let at = fireBase
+      let ct = fireBaseC
+      const push = (x: number, y: number, z: number, a: number) => {
+        firePos[at++] = x
+        firePos[at++] = y
+        firePos[at++] = z
+        fireRgba[ct++] = 1
+        fireRgba[ct++] = 1
+        fireRgba[ct++] = 1
+        fireRgba[ct++] = a
+      }
+      // The ember bed: a flat patch on the firebox floor, breathing on its own
+      // slow term so the base of the fire is never as dark as the gap between
+      // two tongues. Written first, so the tongues draw over it.
+      const bed = 0.5 + 0.34 * (0.5 + 0.5 * Math.sin(fireT * 1.31 + 2.2))
+      const ex = EMBER_HW
+      const ez = EMBER_HZ
+      for (const [ox, oz] of [
+        [-ex, -ez],
+        [ex, -ez],
+        [ex, ez],
+        [-ex, -ez],
+        [ex, ez],
+        [-ex, ez],
+      ]) {
+        push(FIRE_X + ox, FIRE_Y + 0.015, FIRE_Z + oz, bed)
+      }
+      for (let i = 0; i < FLAMES; i++) {
+        const ph = i * 2.13
+        const bx = (i - (FLAMES - 1) / 2) * FLAME_GAP
+        // Per-tongue height pulse. Out of phase with its neighbours, so the
+        // three never rise and fall together — which is the single tell that
+        // separates a fire from a flag.
+        const tall = 0.72 + 0.4 * (0.5 + 0.5 * Math.sin(fireT * 1.7 + ph))
+        const row = (r: number): [number, number, number] => {
+          const k = r / FLAME_ROWS
+          const y = FIRE_Y + FLAME_H * tall * Math.pow(k, 0.85)
+          const w = FLAME_W * tall * Math.pow(1 - k, 0.7)
+          const u = bx + FLAME_SWAY * Math.sin(fireT * 2.2 + ph + k * 2.4) * k * k
+          return [u, y, w]
+        }
+        for (let r = 0; r < FLAME_ROWS; r++) {
+          const [u0, y0, w0] = row(r)
+          const [u1, y1, w1] = row(r + 1)
+          const a0 = Math.pow(1 - r / FLAME_ROWS, 1.1)
+          const a1 = Math.pow(1 - (r + 1) / FLAME_ROWS, 1.1)
+          const px = (u: number, w: number) => FIRE_X + rx * (u + w)
+          const pz = (u: number, w: number) => FIRE_Z + rz * (u + w)
+          const A: [number, number, number, number] = [px(u0, -w0), y0, pz(u0, -w0), a0]
+          const B: [number, number, number, number] = [px(u0, w0), y0, pz(u0, w0), a0]
+          const C: [number, number, number, number] = [px(u1, w1), y1, pz(u1, w1), a1]
+          const D: [number, number, number, number] = [px(u1, -w1), y1, pz(u1, -w1), a1]
+          for (const q of [A, B, C, A, C, D]) push(q[0], q[1], q[2], q[3])
+        }
+      }
+      firePosAttr.needsUpdate = true
+      fireColAttr.needsUpdate = true
+    }
+
     // ── snow ──────────────────────────────────────────────────────────────
     // One Points object over one buffer that is mutated in place. No per-flake
     // object, no texture: square flakes are what a `PointsMaterial` with no map
@@ -620,9 +966,14 @@ export function CabinScene({ className }: { className?: string }) {
         arr[at + 2] = toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * t)
       }
       bodyColor.needsUpdate = true
-      setLinear(fog.color, p.sky)
       setLinear(coreMat.color, p.warm)
       setLinear(softMat.color, p.warm)
+      // The fire is drawn in the same pigment as the windows, and that is the
+      // point: --warm is the ONE warm thing on this site, so the hearth, the
+      // lanterns and the light coming out of the windows are the same source
+      // seen from two sides. Its brightness is a per-theme palette entry
+      // (`fire`) and its flicker is the material's opacity; see `flicker`.
+      setLinear(fireMat.color, p.warm)
       // Falling snow has to be seen against BOTH the sky and the cabin. On the
       // night scene that is near-white. On the day scene near-white snow over a
       // near-white sky is invisible, so the flakes sit part way down the ramp:
@@ -633,7 +984,12 @@ export function CabinScene({ className }: { className?: string }) {
         toLinear(p.deep[1] + (p.pale[1] - p.deep[1]) * f),
         toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * f),
       )
-      snowMat.opacity = p.snowAlpha
+      // The two ALPHAS that used to be set here — the snow's and the smoke's —
+      // are written in the tick now, because both of them fade with the walk as
+      // well as with the theme and this function only runs on a `dirty` frame.
+      // Set in both places, the last writer would be whichever ran last, which
+      // is `applyPalette` at the bottom of the tick: every theme change would
+      // have snapped the snow back to full outdoor opacity for one frame.
       // Smoke, on the same ramp for the same reason and in the other
       // direction: in dark it has to sit clear of a near-black sky, in light
       // it has to sit clear of a near-white one, and one ramp position gives
@@ -644,7 +1000,6 @@ export function CabinScene({ className }: { className?: string }) {
         toLinear(p.deep[1] + (p.pale[1] - p.deep[1]) * k),
         toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * k),
       )
-      smokeMat.opacity = p.smokeAlpha
     }
 
     // ── size ──────────────────────────────────────────────────────────────
@@ -793,26 +1148,34 @@ export function CabinScene({ className }: { className?: string }) {
     let prevBoxZ = 0
     let boxed = false
     let pending = 0
+    // Scratch for the camera, filled by `shotAt` every drawn frame. Two arrays
+    // reused rather than two literals per frame: `motion.ts` keeps one `Frame`
+    // object alive for exactly this reason, and this runs in the same loop.
+    const eye: V = [0, 0, 0]
+    const aim: V = [0, 0, 0]
 
     const stop = onFrame(({ vh, mi, dt, now, hold }) => {
       if (!alive || !cssW || !cssH) return
-      const rect = section.getBoundingClientRect()
+      // The CANVAS's rect. It used to be the section's, and there is no section
+      // any more — this is mounted in a `Stage` that is a SIBLING of the three
+      // sections the walk wraps. It is also the honest box either way: the pin
+      // is what paints, so the pin is what has to be on screen.
+      const rect = cv.getBoundingClientRect()
 
-      // 0 as the section's top reaches the viewport bottom, 1 as its bottom
-      // reaches the viewport top — the same measure `useSectionProgress` makes
-      // a hook of, and for the same reason: it is a rect, not a scroll offset,
-      // so it does not care which element owns the scroll.
-      //
-      // The walk itself is mapped onto a SUB-RANGE of that. At progress 1 the
-      // section is entirely above the viewport, so a walk that finished there
-      // would finish where nobody could see it. WALK_OUT puts the reader at the
-      // door at roughly the moment the last chapter reaches the bottom of the
-      // screen, and holds them there while the section leaves.
-      const p = (vh - rect.top) / (vh + rect.height)
-      const wanted =
-        mi === 0
-          ? WALK_REST
-          : clamp01((clamp01(p) - WALK_IN) / (WALK_OUT - WALK_IN))
+      /*
+       * The walk's own progress, handed down rather than measured.
+       *
+       * `Walk.tsx` computes `-rect.top / (height - vh)` on `.walk`, which is
+       * the sticky pin's own travel and therefore exactly the run the camera
+       * should follow. This component used to compute `(vh - rect.top) /
+       * (vh + height)` on `#origin` — `useSectionProgress`'s measure — and that
+       * is the wrong one now for a reason worth stating: it runs over
+       * `vh + height` with the element off screen at BOTH ends, so recovering
+       * "how far through the pin am I" out of it needs the height and the
+       * viewport handed back as well. The pin's travel needs neither.
+       */
+      const marks = walkRef.current
+      const wanted = mi === 0 ? restFor(marks) : clamp01(marks.p)
 
       // Off screen: no render, no hold. `useOffscreenPause` stamps `data-live`
       // for CSS animations and cannot see an onFrame subscriber, so this
@@ -834,26 +1197,27 @@ export function CabinScene({ className }: { className?: string }) {
       }
 
       /*
-       * Reduced motion SNAPS to the rest frame. It does not ease to it.
+       * Reduced motion SNAPS to a composed rest frame. It does not ease to it.
        *
-       * `wanted` is already WALK_REST at mi 0, but the damped `walk` below is
-       * not, and letting it converge is a camera pulling back over about a
-       * second: `motion.ts` wakes the loop for a full second on the media-query
-       * change and this tick holds it, so the whole move plays out. The one
-       * moment that move would ever happen is the moment somebody standing at
-       * the cabin door turned "Reduce motion" ON. `hooks/usePointer.ts` states
-       * the rule next door in this same pass and it is the same rule for the
-       * same reason: an eased return IS motion, and this is the one time it
-       * would ever play.
+       * `wanted` is already `restFor(marks)` at mi 0, but the damped `walk`
+       * below is not, and letting it converge is a camera gliding across the
+       * room over about a second: `motion.ts` wakes the loop for a full second
+       * on the media-query change and this tick holds it, so the whole move
+       * plays out. The one moment that move would ever happen is the moment
+       * somebody standing in the cabin turned "Reduce motion" ON.
+       * `hooks/usePointer.ts` states the rule next door and it is the same rule
+       * for the same reason: an eased return IS motion, and this is the one
+       * time it would ever play.
        *
        * `walk < 0` is the other snap, and always was one: the first frame lands
        * on target rather than flying in from nowhere.
        *
        * Every other time-varying term in this tick already stops dead at mi 0
        * rather than easing. The snow's fall is `fall * step * mi`; its sway is
-       * frozen by `t` below; the window opacities are pure functions of `walk`,
-       * so they arrive the moment it does. The theme cross-fade is the single
-       * exception and it is deliberate — the note on it says why.
+       * frozen by `t` below; the fire's and the smoke's clocks are held at 0;
+       * the window opacities are pure functions of `walk`, so they arrive the
+       * moment it does. The theme cross-fade is the single exception and it is
+       * deliberate — the note on it says why.
        */
       if (walk < 0 || (mi === 0 && walk !== wanted)) {
         walk = wanted
@@ -863,11 +1227,9 @@ export function CabinScene({ className }: { className?: string }) {
         urgent = true
       }
 
-      // The CANVAS's rect, not the section's. The two are the same thing when
-      // this is mounted `inset: 0` over the section and are not when it is
-      // mounted in a `Stage`, and it is the painted box that has to be framed.
-      // Before the gates rather than after them; frameSlice says why, and what
-      // it costs on the mount that ships.
+      // Frame the slice of the canvas that is actually on screen. Before the
+      // gates rather than after them; frameSlice says why, and what it costs on
+      // the mount that ships.
       if (frameSlice(window.innerWidth || 1200, vh)) settled = false
 
       /*
@@ -883,8 +1245,9 @@ export function CabinScene({ className }: { className?: string }) {
        * would be byte-identical to the one already on the canvas.
        *
        * This used to set `dirty` unconditionally for every frame of the fade,
-       * which both bypassed SCENE_HZ and re-ran applyPalette's ~1670 vertex
-       * colours at display refresh — and on a fast display most of those frames
+       * which both bypassed SCENE_HZ and re-ran applyPalette's whole colour
+       * buffer — 6570 vertices on `high` since the room went in — at display
+       * refresh — and on a fast display most of those frames
        * were painting a mix that had not started moving. `holding` keeps the
        * loop alive across the wait without drawing into it; `fading` is what
        * says there is something new to draw.
@@ -894,21 +1257,38 @@ export function CabinScene({ className }: { className?: string }) {
       const fading = holding && fadeK > 0
 
       const converging = Math.abs(wanted - walk) > WALK_EPS
-      const snowing = mi > 0
-      if (converging || snowing || holding) hold()
-      if (!converging && !snowing && !fading && settled && !dirty) return
+      const animating = mi > 0
+      if (converging || animating || holding) hold()
+      if (!converging && !animating && !fading && settled && !dirty) return
 
-      // 30Hz, this section's existing number. A camera on a damped scalar and
-      // snow drifting at about a metre a second are both well inside what that
-      // reads as, and it is half the GPU work of an uncapped scene sitting
-      // behind prose. A scroll that outruns it is absorbed by the damping,
-      // which is the other half of why this does not judder on a trackpad.
+      // 30Hz outside, this section's existing number. A camera on a damped
+      // scalar and snow drifting at about a metre a second are both well inside
+      // what that reads as, and it is half the GPU work of an uncapped scene
+      // sitting behind prose. A scroll that outruns it is absorbed by the
+      // damping, which is the other half of why this does not judder on a
+      // trackpad.
+      //
+      // **15Hz once the camera is inside and settled, and that is the one new
+      // number in this gate.** Indoors the smoke is off and every flake in the
+      // room is parked; what is left moving is the fire, whose fastest term is
+      // a 230ms wobble — three and a half frames at 15Hz — and the snow still
+      // falling past the two windows, at about a metre a second across a
+      // 1.66m opening. Neither is legible at 30 in a way it is not at 15.
+      //
+      // It matters because indoors is where the reader STOPS. The table beat is
+      // 1532px of cards to read over a backdrop that would otherwise repaint
+      // thirty times a second for as long as they sit there, and halving that
+      // is the difference between a backdrop and a screensaver. While the
+      // camera is still moving the full rate is back, because a camera move at
+      // 15Hz is a camera move you can count.
       //
       // `urgent` is the bypass, and `dirty` is not. A blanked drawing buffer
       // has to be repainted now; a cross-fade is motion, and motion waits its
       // turn like the rest of the motion in here.
+      knotsOf(marks)
+      const hz = !converging && !fading && insideness(wanted) > 0.99 ? FIRE_HZ : SCENE_HZ
       pending += dt
-      if (pending < 1 / SCENE_HZ && !urgent) return
+      if (pending < 1 / hz && !urgent) return
       const step = pending
       pending = 0
 
@@ -932,34 +1312,65 @@ export function CabinScene({ className }: { className?: string }) {
       // the list live in `settle`'s own header and nowhere else, because a list
       // kept in five places is the failure the export exists to prevent.
       // Damping is also what stops an opening chapter from snapping the
-      // shot: a disclosure growing the section changes `rect.height`, which
-      // steps the target, and a welded camera would jump on the frame it
+      // shot: a disclosure growing a section changes where the marks land,
+      // which steps the target, and a welded camera would jump on the frame it
       // happens.
       walk += (wanted - walk) * settle(WALK_RATE, step)
 
-      // Apparent size, not distance, is what the eye reads on an approach, and
-      // apparent size goes as 1/d. Interpolating the RECIPROCAL of the distance
-      // means the cabin grows at an even rate across the scroll; interpolating
-      // the distance itself makes the last third of the walk lunge. The
-      // smoothstep on top is the "unhurried" part — it eases in and out of the
-      // move so neither end starts or stops on a hard edge.
-      const e = walk * walk * (3 - 2 * walk)
-      const near = Z_NEAR * framePull
-      const inv = 1 / Z_FAR + (1 / near - 1 / Z_FAR) * e
-      const dist = 1 / inv
-      const u = clamp01((Z_FAR - dist) / (Z_FAR - near))
-
-      // The orbit. See AZ_FAR: `u` is linear in DISTANCE rather than in
-      // apparent size, which is what puts the swing at the far end of the walk
-      // and leaves the last third a clean straight push-in.
-      const az = AZ_FAR + (AZ_NEAR - AZ_FAR) * u
-      const sinA = Math.sin(az)
-      const cosA = Math.cos(az)
-      const camX = sinA * dist
-      const camZ = LOOK_Z + cosA * dist
-      const camY = Y_FAR + (Y_NEAR - Y_FAR) * u
+      // ── the camera ──────────────────────────────────────────────────────
+      // Six beats, four holds and five moves, all of it in `shotAt`; the eye
+      // and the aim come back in two scratch arrays so the tick allocates
+      // nothing. TWO narrow-frame corrections are passed rather than read,
+      // because they pull opposite ways: `framePull` stands the approach
+      // further back so the cabin still fits, and `inPullFor(camera.fov)` moves
+      // the interior closer so the paper still fills. See `IN_PULL_MIN`.
+      shotAt(walk, framePull, inPullFor(camera.fov), eye, aim)
+      const camX = eye[0]
+      const camY = eye[1]
+      const camZ = eye[2]
       camera.position.set(camX, camY, camZ)
-      camera.lookAt(0, LOOK_Y_FAR + (LOOK_Y_NEAR - LOOK_Y_FAR) * u, LOOK_Z)
+      camera.lookAt(aim[0], aim[1], aim[2])
+
+      // The camera's own screen-right, projected onto the ground. Everything
+      // billboarded in this scene takes it: the smoke outside and the flames
+      // inside. It used to be derived from the orbit's azimuth as
+      // `(cos az, -sin az)`, which is the same vector for a camera that is
+      // always aiming at the pivot and is simply wrong for one that turns in
+      // a room. Taken from the look direction it is right for both.
+      let fwdX = aim[0] - camX
+      let fwdZ = aim[2] - camZ
+      const fl = Math.hypot(fwdX, fwdZ) || 1
+      fwdX /= fl
+      fwdZ /= fl
+      const rx = -fwdZ
+      const rz = fwdX
+
+      // How far in the room has closed round the camera. 0 at the door mouth,
+      // 1 by the end of the threshold — and it is what turns the whole outdoor
+      // half of the scene off, which is the biggest single saving in this file.
+      const inside = insideness(walk)
+      /*
+       * And how much OPEN AIR is still between the reader and the front wall,
+       * which is a different question with a different answer.
+       *
+       * `inside` is keyed on the knots, because the frame-rate gate needs it
+       * before the camera has been placed. This is keyed on the camera's own z,
+       * because the thing it fades is every quad on the OUTSIDE of the front
+       * wall and what matters to those is the wall, not the beat.
+       *
+       * The two were the same term for one pass and the render caught it. The
+       * doorway's own lit quad is 45cm wide and 2.1m tall standing at z = -0.06;
+       * from 12m out that is the narrow bright slot beside a dark leaf that the
+       * reference paintings are about, and from a metre out it is a warm
+       * rectangle across half the frame. At `1 - inside` it was still at 0.48
+       * with the camera in the doorway — the room, the fire and the whole
+       * threshold beat behind a sheet of orange.
+       *
+       * 0.4 to 3.0 in z is where it goes. At `ST_DOOR` (z = 2.55) it is 0.92, so
+       * the arrival at the door keeps the light it was composed with; by z = 0.9
+       * it is 0.10 and by the wall it is nothing.
+       */
+      const openAir = smooth((camZ - 0.4) / 2.6)
 
       // The windows warm and brighten as the door gets closer, but the FLOOR
       // matters more than the ramp: at the far end of the walk the cabin is a
@@ -967,55 +1378,137 @@ export function CabinScene({ className }: { className?: string }) {
       // warm point of light. At 0.16 it was a smudge; at 0.4 it is a lit
       // window seen through weather. The halo keeps its low
       // floor, because a bloom on something that small is just a blur.
-      const lit = e * e * (3 - 2 * e)
-      coreMat.opacity = shown.core * (0.4 + 0.6 * lit)
-      softMat.opacity = shown.halo * (0.12 + 0.88 * lit)
+      //
+      // `openAir` is the new factor on both, and it is not an optimisation
+      // dressed as art: every quad in these two layers is on the OUTSIDE face
+      // of a wall. From in the room they are back-facing and contribute
+      // nothing, so fading them out across the threshold costs no pixel
+      // anybody was going to see and takes two draw calls with it.
+      const lit = approachLit(walk)
+      coreMat.opacity = shown.core * (0.4 + 0.6 * lit) * openAir
+      softMat.opacity = shown.halo * (0.12 + 0.88 * lit) * openAir
+      // In light `halo` is 0, so this whole layer paints nothing — and a
+      // transparent material at opacity 0 is NOT free: three.js still submits
+      // it, and this layer is the largest fill in the scene, two pools and a
+      // deck that between them cover a good third of the frame at the door,
+      // blended per fragment. Skipping the object is one comparison a frame.
+      // It cannot flicker on the theme wave either: the fade runs the opacity
+      // smoothly to and from 0 and the mesh vanishes at the end of it, where
+      // there is nothing left to see.
+      softMesh.visible = softMat.opacity > 0.002
+      coreMesh.visible = coreMat.opacity > 0.002
+
+      // The fire, and the mirror image of the two above: it is every quad
+      // INSIDE the room, so it is off until the reader is in there. The
+      // flicker rides on top of the theme's own peak, so light theme turns the
+      // hearth DOWN rather than out — see ROLES.
+      fireMat.opacity = shown.fire * inside * flicker()
+      fireMesh.visible = fireMat.opacity > 0.002
+
+      // The fog is the section's own band, and the section under this canvas
+      // changes twice across the walk. Ramped from --band-origin to
+      // --band-tools over the table beat, which is the stretch where the only
+      // exterior left in frame is what shows through a window: a wash that
+      // lands on Tools' band is a wash the section below can be faded into,
+      // and one that lands on Origin's is a hole. In dark the two bands are
+      // #040c19 and #090b13 and in light #ebf0fb and #eceff6, so this is worth
+      // about five values — but they are the five that decide the join.
+      const bandK = smooth((walk - KNOT[2]) / Math.max(1e-4, KNOT[4] - KNOT[2]))
+      const s0 = shown.sky
+      const s1 = shown.skyOut
+      // Written out rather than through `mixRGB`, which returns a fresh triple:
+      // this runs on every drawn frame and the loop is not allowed to make
+      // garbage. `applyPalette` can use it because it only runs when `dirty`.
+      fog.color.setRGB(
+        toLinear(s0[0] + (s1[0] - s0[0]) * bandK),
+        toLinear(s0[1] + (s1[1] - s0[1]) * bandK),
+        toLinear(s0[2] + (s1[2] - s0[2]) * bandK),
+      )
 
       // Snow. The box rides the camera; the camera's displacement is taken back
       // out of the flakes so they stay put in the world. It is pushed along the
-      // LOOK direction rather than down -z: once the camera orbits, "ahead" and
-      // "-z" are up to 38 degrees apart, and a box pushed down -z would sit off
+      // LOOK direction rather than down -z: once the camera turns, "ahead" and
+      // "-z" are up to 90 degrees apart, and a box pushed down -z would sit off
       // to one side of the shot with its near edge inside the frame.
-      const boxX = camX + sinA * SNOW_AHEAD
-      const boxZ = camZ + cosA * SNOW_AHEAD
+      const boxX = camX + fwdX * SNOW_AHEAD
+      const boxZ = camZ + fwdZ * SNOW_AHEAD
       const dx = boxed ? boxX - prevBoxX : 0
       const dz = boxed ? boxZ - prevBoxZ : 0
-      prevBoxX = boxX
-      prevBoxZ = boxZ
-      boxed = true
       snow.position.set(boxX, 0, boxZ)
+      snowMat.opacity = shown.snowAlpha * (0.34 + 0.66 * openAir)
+      snow.visible = snowMat.opacity > 0.002
       // The sway is frozen at mi 0 rather than merely slowed. Left running it
       // would move the flakes sideways on any frame something else forced a
       // redraw — a resize, a theme change — for a visitor who asked for no
       // motion at all.
       const t = mi > 0 ? now * 0.001 : 0
-      for (let i = 0; i < flakes; i++) {
-        let x = lx[i] - dx
-        let z = lz[i] - dz
-        if (x > SNOW_HX) x -= SNOW_HX * 2
-        else if (x < -SNOW_HX) x += SNOW_HX * 2
-        if (z > SNOW_HZ) z -= SNOW_HZ * 2
-        else if (z < -SNOW_HZ) z += SNOW_HZ * 2
-        lx[i] = x
-        lz[i] = z
-        let y = ly[i] - fall[i] * step * mi
-        if (y < 0) y += SNOW_HY
-        ly[i] = y
-        const at = i * 3
-        snowPos[at] = x + Math.sin(t * 0.6 + phase[i]) * sway[i]
-        snowPos[at + 1] = y
-        snowPos[at + 2] = z + Math.cos(t * 0.45 + phase[i]) * sway[i] * 0.6
+      if (snow.visible) {
+        // Only advanced on frames the flakes are actually stepped, so a layer
+        // that was skipped cannot come back with a whole gap's worth of
+        // displacement to take out of its positions in one frame.
+        prevBoxX = boxX
+        prevBoxZ = boxZ
+        boxed = true
+        for (let i = 0; i < flakes; i++) {
+          let x = lx[i] - dx
+          let z = lz[i] - dz
+          if (x > SNOW_HX) x -= SNOW_HX * 2
+          else if (x < -SNOW_HX) x += SNOW_HX * 2
+          if (z > SNOW_HZ) z -= SNOW_HZ * 2
+          else if (z < -SNOW_HZ) z += SNOW_HZ * 2
+          lx[i] = x
+          lz[i] = z
+          let y = ly[i] - fall[i] * step * mi
+          if (y < 0) y += SNOW_HY
+          ly[i] = y
+          const wx = boxX + x + Math.sin(t * 0.6 + phase[i]) * sway[i]
+          const wz = boxZ + z + Math.cos(t * 0.45 + phase[i]) * sway[i] * 0.6
+          const at = i * 3
+          snowPos[at] = wx - boxX
+          /*
+           * Snow does not fall indoors, and the flake box does not know that.
+           * It is 26m by 30m and it rides the camera, so once the camera is in
+           * the room a third of the field is inside it — and `depthWrite:
+           * false` with the depth TEST on means the walls hide the flakes
+           * BEHIND them and not the ones in front.
+           *
+           * A flake in the room is parked six metres under the floor instead of
+           * being skipped, because the buffer is a fixed length and there is no
+           * "skip" — and under the floor is the one place in this world that is
+           * always occluded: the ground plane is 280m by 230m at y = -0.02 and
+           * the camera is always above it, so every ray to y = -6 crosses it
+           * first. The flakes OUTSIDE the walls keep falling, which is the
+           * whole reason this is a test rather than an opacity: snow going past
+           * the west window while the reader is looking at it is most of what
+           * makes that window read as a window.
+           */
+          snowPos[at + 1] = inside > 0.5 && inRoom(wx, wz) ? -6 : y
+          snowPos[at + 2] = wz - boxZ
+        }
+        snowAttr.needsUpdate = true
       }
-      snowAttr.needsUpdate = true
 
       // Smoke. The clock advances only while motion is wanted, exactly like
       // the snow's sway two lines up, and for the same reason: a frame forced
       // by a resize or a theme change must not move anything for a visitor who
       // asked for no motion. The layout still runs, because that ONE frame is
       // the whole picture they get.
+      //
+      // It rides the same `openAir` fade the window light does. The chimney is
+      // on the roof and the reader is under it; a plume drawn from inside the
+      // room is five transparent quads inside the ceiling.
+      smokeMat.opacity = shown.smokeAlpha * openAir
+      smokeMesh.visible = smokeMat.opacity > 0.002
       if (mi > 0) smokeT += step
       else smokeT = 0
-      layoutSmoke(cosA, -sinA)
+      if (smokeMesh.visible) layoutSmoke(rx, rz)
+
+      // The fire, on the same rule: one clock, advanced only on drawn frames
+      // and only while motion is wanted, and a rest pose at zero that is a real
+      // picture rather than an empty buffer. See `flicker`.
+      if (mi > 0) fireT += step
+      else fireT = 0
+      if (fireMesh.visible) layoutFire(rx, rz)
 
       if (dirty) {
         applyPalette(shown)
@@ -1091,10 +1584,44 @@ const Z_NEAR = 13.4
 /** Radians off the cabin's front axis; negative puts the camera to the left. */
 const AZ_FAR = -0.66
 const AZ_NEAR = -0.235
-const Y_FAR = 7.4
-const Y_NEAR = 2.45
-const LOOK_Y_FAR = 2.9
-const LOOK_Y_NEAR = 2
+/**
+ * The eye, and where it is pointed. These four are the "camera angle a bit
+ * lower" the site owner asked for, and the reason the old ones read as a
+ * diorama is worth stating, because it is not the number anybody looks at
+ * first.
+ *
+ * Y_NEAR was 2.45 and LOOK_Y_NEAR was 2 — a 2.45m eye is only 70cm over a
+ * standing person, so the pitch was fine. What put the reader above the house
+ * was the arrival being **level**: at -1.9 degrees of pitch the ridge landed
+ * at 0.81 of the frame's half-height, 20% of the frame from the top edge, and
+ * the whole building sat in the lower two thirds with the snowfield running
+ * up behind it. A roofline against the GROUND is what a model on a table
+ * looks like; a roofline against the SKY is what a house looks like. And at
+ * 2.45 the eye cleared the porch roof at 3.12, so dark-03-origin is looking
+ * down onto its snow cap — the single clearest tell in that shot.
+ *
+ * So the near end drops to 1.72 (a standing person, measured off nothing more
+ * exotic than where eyes are) and the aim goes UP to 2.30, which tilts the
+ * camera 2.5 degrees above horizontal. Measured on a 1440x900 slice at the end
+ * of the walk: the ridge sits at 0.75 of the half-frame with a quarter of the
+ * frame of sky over it, the chimney at 0.77, the door top at 0.09 and its
+ * threshold at -0.49 — the house standing in the upper two thirds with the
+ * porch, the steps and the light on the snow filling the lower one. The eye
+ * is now BELOW the eave at 2.72 for the last third of the walk, so the porch
+ * roof is read from underneath, which is what gives the porch depth. That is
+ * also what made two holes visible; see `box`'s `floor` and `interior`.
+ *
+ * The far end comes down with it, 7.4 to 6.2, because the descent has to stay
+ * a descent — the reader drops 4.5m over the walk rather than 5, and the far
+ * pitch eases from -4.9 degrees to -3.1. Any lower and the opening shot loses
+ * the snowfield: at 6.2 the ground enters the frame 16.3m out and runs back to
+ * the treeline, and at 4 it would enter at 10 and the bottom of the frame
+ * would be sky-coloured fog.
+ */
+const Y_FAR = 6.2
+const Y_NEAR = 1.72
+const LOOK_Y_FAR = 3.35
+const LOOK_Y_NEAR = 2.3
 /**
  * The orbit's pivot, and the point the camera looks at. Between the front wall
  * (z = 0) and the cabin's own centre (z = -3): pivot on the centre and the
@@ -1103,19 +1630,17 @@ const LOOK_Y_NEAR = 2
  */
 const LOOK_Z = -2
 
-/**
- * Where in the section's own 0..1 traversal the walk starts and finishes.
- *
- * Progress 0 is the section's top at the viewport bottom and progress 1 is its
- * bottom at the viewport top, so the last fifth of that range happens with the
- * section already above the screen. WALK_OUT lands the reader at the door while
- * they can still see it; after that the shot simply holds.
+/*
+ * WALK_IN and WALK_OUT are gone with the section measurement they mapped.
+ * `Walk.tsx` hands down the pin's own travel, which already starts where the
+ * walk starts and ends where it ends: there is no sub-range left to carve out
+ * of it, and a pair of constants that only ever multiplied by 1 would read as
+ * a knob somebody could turn.
  */
-const WALK_IN = 0.06
-const WALK_OUT = 0.8
 
 /**
- * Where the scene rests for a visitor who asked for less motion.
+ * Where the APPROACH rests for a visitor who asked for less motion, in the
+ * approach's own 0..1 rather than the walk's. `restFor` is what maps it.
  *
  * Not 0 and not 1. A still of the far end is a speck in fog — the section would
  * look like it failed to load. A still of the near end is a wall of cabin
@@ -1132,6 +1657,14 @@ const WALK_OUT = 0.8
  * the camera at 17.6m and 16.1 degrees off axis — still a three-quarter view,
  * so the still gets the two faces the move exists to show, rather than the
  * flat elevation the old path's rest pose (5.6 degrees) settled on.
+ *
+ * Lowering the eye did not move it either, and this time the check was the
+ * FRAME rather than the angle, because that is what an eye height changes.
+ * At 0.62 the reader stands 2.21m up; the ridge lands at 0.52 of the frame's
+ * half-height, the chimney at 0.59 with its whole plume under the top edge,
+ * and the cabin spans -0.42 to 0.54 across it. Square in the middle of the
+ * shot with room on all four sides, which is the one thing a rest pose has to
+ * be.
  */
 const WALK_REST = 0.62
 
@@ -1148,6 +1681,15 @@ const WALK_RATE = 0.14
 const WALK_EPS = 0.0006
 
 const SCENE_HZ = 30
+/**
+ * The rate once the camera is inside AND settled — which is the table beat and
+ * the window beat, and therefore most of the time anybody spends looking at
+ * this canvas. The gate that picks between the two states its case; this is
+ * the number. 15Hz is 66ms between frames and the fire's fastest term is a
+ * 230ms wobble, so the flicker is sampled three and a half times per cycle,
+ * which is above where a slow brightness change starts to step.
+ */
+const FIRE_HZ = 15
 
 /* ────────────────────────────────────────────────────────────────────────────
    Framing
@@ -1229,8 +1771,9 @@ const FOG_NEAR = 12
  * see the tone ladder above — and at 74 that factor is already 0.87 at 66m and
  * 1.0 at 74m. Every rank past the middle distance collapses onto the sky, and
  * the tone ceiling (a tone is clamped at 1) means no amount of pigment can
- * bring it back. Solved from the ladder: three ranks and a hill band need the
- * factor to still be worth 0.45 at 60m, which is FOG_FAR ≈ 100.
+ * bring it back. Solved from the ladder: four ranks of forest — the far one
+ * now standing where the hill band did — need the factor to still be worth
+ * 0.45 at 60m, which is FOG_FAR ≈ 100.
  *
  * It also does the thing the owner asked for at the other end of the walk.
  * At 74 the cabin at the start of the approach was 63% dissolved — "a shape in
@@ -1263,7 +1806,9 @@ const MAX_PIXELS = 2_400_000
 type Quality = {
   /** How many of `TREES` get built, best composition first. */
   trees: number
-  /** Treeline teeth in the nearest rank; the outer rank gets a quarter more. */
+  /** How many of `TRUNKS` — the near wall trees — get built. Same rule. */
+  trunks: number
+  /** Teeth in the nearest treeline rank; the outer ranks scale off it, RANK_N. */
   teeth: number
   /** How many of `RANK_R` are drawn at all. */
   ranks: number
@@ -1281,6 +1826,21 @@ type Quality = {
   patchZ: number
   /** Nudges every tree rank's segment count together. See `RANKS`. */
   cone: number
+  /**
+   * How much of the OPTIONAL interior gets built. 0 is the room, the
+   * fireplace, the table, the paper, the desk, the chair, the woodpile and the
+   * rug — everything the shot is composed on, and `low` gets all of it,
+   * because `low` is a phone and a phone spends the same five viewports in
+   * that room as a desktop does. 1 adds the floorboards, the window reveals,
+   * the second beam, the dresser, the loose sheets and the books, and is what
+   * both other tiers get: `mid` and `high` differ in FOREST, which is where
+   * the two of them differ in everything else too.
+   *
+   * Nothing in the interior is a COUNT of something cheap the way the forest
+   * is, so there is nothing here to scale smoothly. It is a subject rather
+   * than a texture, and the budget note says what that costs.
+   */
+  room: number
   aa: boolean
 }
 
@@ -1292,35 +1852,27 @@ type Quality = {
  * the snow field, how much is lying on the ground, and whether the driver is
  * asked for multisampling.
  *
- * Measured per tier, on a frame that drew, by counting each section of
- * `buildWorld` as it was emitted:
+ * The per-section counts and what this pass added to them are in the file
+ * header, which is where the budget lives; this table is what each tier BUYS.
  *
- * ```
- *                      low     mid    high
- *   ground + drifts     98     178     282
- *   path + footprints   32      44      60
- *   stones + weeds      20      36      56
- *   cabin              244     264     270
- *   trees              222     418     637
- *   treeline teeth      16      50      63
- *   hills               14      14      14
- *   light + smoke       75      80      85
- *                     ----    ----    ----
- *   total              721    1084    1467
- *   snow points        200     420     640
- *   draw calls           5       5       5
- * ```
+ * The shape of it is the budget policy. Everything that scales is a COUNT of
+ * something cheap rather than detail on something expensive — a far tree is one
+ * triangle, a weed is one, a rock is four — and the two things that do NOT
+ * scale are the cabin and the room, because both are the subject and a subject
+ * cannot be cheap. `low` spends 29% of itself on the interior and gets every
+ * prop the shot is composed on; what it gives up is `room: 0`, which is the
+ * floorboards, the window reveals, the second beam, the dresser, the books and
+ * the loose sheets. See `Quality.room`.
  *
- * The shape of that table is the budget policy. `low` spends a third of itself
- * on the cabin, because the cabin is the subject and the subject cannot be
- * cheap; everything that scales is a COUNT of something cheap rather than
- * detail on something expensive. It is also why the hills never move: fourteen
- * triangles is already the whole horizon.
+ * `patchX` / `patchZ` grew by about 20% in each axis in this pass and that is
+ * the largest single line of the growth outdoors: the renders said the snow was
+ * reading as a flat pale grey field, and half the fix was more facets on it.
+ * The other half spends tone rather than triangles — see `snowTone`.
  */
 const TIERS: Record<'low' | 'mid' | 'high', Quality> = {
-  low: { trees: 7, teeth: 16, ranks: 1, stones: 3, weeds: 4, logs: 4, corners: 2, prints: 5, puffs: 3, flakes: 200, patchX: 8, patchZ: 6, cone: 4, aa: false },
-  mid: { trees: 13, teeth: 22, ranks: 2, stones: 5, weeds: 8, logs: 5, corners: 3, prints: 8, puffs: 4, flakes: 420, patchX: 11, patchZ: 8, cone: 5, aa: true },
-  high: { trees: 20, teeth: 28, ranks: 2, stones: 8, weeds: 12, logs: 6, corners: 3, prints: 12, puffs: 5, flakes: 640, patchX: 14, patchZ: 10, cone: 6, aa: true },
+  low: { trees: 11, trunks: 2, teeth: 16, ranks: 3, stones: 3, weeds: 4, logs: 4, corners: 2, prints: 5, puffs: 3, flakes: 200, patchX: 9, patchZ: 7, cone: 4, room: 0, aa: false },
+  mid: { trees: 20, trunks: 3, teeth: 24, ranks: 3, stones: 5, weeds: 8, logs: 5, corners: 3, prints: 8, puffs: 4, flakes: 420, patchX: 13, patchZ: 10, cone: 5, room: 1, aa: true },
+  high: { trees: 30, trunks: 4, teeth: 32, ranks: 3, stones: 8, weeds: 12, logs: 6, corners: 3, prints: 12, puffs: 5, flakes: 640, patchX: 16, patchZ: 12, cone: 6, room: 1, aa: true },
 }
 
 /**
@@ -1350,9 +1902,11 @@ type Palette = {
   pale: RGB
   /** The theme's shadow: the bottom of the tone ramp. */
   deep: RGB
-  /** What distance dissolves into. The section's own band. */
+  /** What distance dissolves into while the reader is outside: Origin's band. */
   sky: RGB
-  /** Window light. */
+  /** And what it dissolves into by the end of the walk: Tools' band. */
+  skyOut: RGB
+  /** Window light, hearth light, lamplight. One warm on this site. */
   warm: RGB
   /** The ends of the tone ramp, per theme. See ROLES. */
   floor: number
@@ -1366,6 +1920,8 @@ type Palette = {
   /** Peak opacity of the lit openings and of their bloom. */
   core: number
   halo: number
+  /** Peak opacity of the hearth, its light in the room, and the two lanterns. */
+  fire: number
 }
 
 /**
@@ -1386,9 +1942,30 @@ type Palette = {
  * sits under, and that is correct: on an overcast day a snowfield and the sky
  * are nearly the same value and the cabin and the trees carry all the contrast.
  * It is also exactly how the parallax kit's own light artwork is drawn, as
- * cut-outs on white. The windows stay warm but stop being a beacon — they read
- * as warm against daylight — and the bloom around them drops to a third,
- * because a halo that is atmosphere at night is a smudge at noon.
+ * cut-outs on white.
+ *
+ * **And in light the house lights are OFF.** That is the site owner's call and
+ * it is the right one: a lit pane, a spill through the door and two warm pools
+ * on the snow are the picture of a house at NIGHT, and drawn over a daylit
+ * scene they read as a mistake rather than as atmosphere — L-y1900.png caught
+ * them as two orange rectangles on a grey building. `halo` at 0 takes the wall
+ * bloom, the deck pool and every pool on the snow with it in one number,
+ * because all of them live on `softMat` and its opacity IS `halo` times the
+ * walk's ramp.
+ *
+ * `core` is deliberately not 0. At 0.15 over the interior's own T_DOOR the
+ * panes come out a step warmer than the shadow behind them, which is what a
+ * window with a room behind it looks like from outside on an overcast day.
+ * Taking it to 0 leaves four flat dark holes in the wall, which is a different
+ * wrong picture rather than no picture — see the brief's "or down to a faint
+ * interior tint".
+ *
+ * **None of that is a switch.** Both numbers are palette entries, so
+ * `lerpPalette` cross-fades them over THEME_FADE with every other pigment here,
+ * behind the same `--wave-delay` the rest of the page rides: the lights go
+ * DOWN as the theme wave crosses this canvas rather than snapping out in the
+ * middle of a scene that is otherwise dissolving. The theme note in the effect
+ * is the mechanism; this is the only place that decides what it fades TO.
  *
  * Every entry is a token name. There is no colour in this file.
  */
@@ -1397,6 +1974,7 @@ const ROLES = {
     pale: '--text',
     deep: '--band-origin',
     sky: '--band-origin',
+    skyOut: '--band-tools',
     warm: '--warm',
     floor: 0.03,
     ceil: 0.55,
@@ -1406,11 +1984,13 @@ const ROLES = {
     smokeAlpha: 0.42,
     core: 0.95,
     halo: 1,
+    fire: 1,
   },
   light: {
     pale: '--surface',
     deep: '--accent-2',
     sky: '--band-origin',
+    skyOut: '--band-tools',
     warm: '--warm',
     floor: 0.26,
     ceil: 1,
@@ -1418,8 +1998,26 @@ const ROLES = {
     snowAlpha: 0.7,
     smoke: 0.72,
     smokeAlpha: 0.46,
-    core: 0.74,
-    halo: 0.3,
+    // Daytime. The house is not lit; see the note above for what each of these
+    // two numbers switches off and why `core` is a tint rather than a zero.
+    core: 0.15,
+    halo: 0,
+    /*
+     * **The hearth goes DOWN in light, and it does not go out.** The rule that
+     * takes `halo` to 0 above is about the house seen from OUTSIDE — a spill on
+     * the snow and two lit panes at midday read as a mistake. Inside a cabin in
+     * daylight there is still a fire, and a dead black hearth in the middle of
+     * the shot reads as a mistake of the other kind. It goes quiet at 0.42 and
+     * the two windows carry the light instead, which is what a room actually
+     * looks like on an overcast morning: you can see the flames and you cannot
+     * see what they are lighting.
+     *
+     * 0.42 rather than something lower because light's tone ramp starts at 0.26
+     * and runs to 1 — the room is PALE in this theme, and warm over pale is a
+     * far weaker read than warm over near-black. The same alpha does about a
+     * third as much work here as it does in dark.
+     */
+    fire: 0.42,
   },
 } as const
 
@@ -1472,12 +2070,14 @@ function readPalette(section: Element): Palette | null {
   const pale = parseColor(cs.getPropertyValue(role.pale))
   const deep = parseColor(cs.getPropertyValue(role.deep))
   const sky = parseColor(cs.getPropertyValue(role.sky))
+  const skyOut = parseColor(cs.getPropertyValue(role.skyOut))
   const warm = parseColor(cs.getPropertyValue(role.warm))
-  if (!pale || !deep || !sky || !warm) return null
+  if (!pale || !deep || !sky || !skyOut || !warm) return null
   return {
     pale,
     deep,
     sky,
+    skyOut,
     warm,
     floor: role.floor,
     ceil: role.ceil,
@@ -1487,6 +2087,7 @@ function readPalette(section: Element): Palette | null {
     smokeAlpha: role.smokeAlpha,
     core: role.core,
     halo: role.halo,
+    fire: role.fire,
   }
 }
 
@@ -1502,6 +2103,7 @@ function lerpPalette(a: Palette, b: Palette, k: number): Palette {
     pale: mixRGB(a.pale, b.pale, k),
     deep: mixRGB(a.deep, b.deep, k),
     sky: mixRGB(a.sky, b.sky, k),
+    skyOut: mixRGB(a.skyOut, b.skyOut, k),
     warm: mixRGB(a.warm, b.warm, k),
     floor: n(a.floor, b.floor),
     ceil: n(a.ceil, b.ceil),
@@ -1511,6 +2113,7 @@ function lerpPalette(a: Palette, b: Palette, k: number): Palette {
     smokeAlpha: n(a.smokeAlpha, b.smokeAlpha),
     core: n(a.core, b.core),
     halo: n(a.halo, b.halo),
+    fire: n(a.fire, b.fire),
   }
 }
 
@@ -1543,7 +2146,19 @@ const setLinear = (target: Color, c: RGB) =>
    ──────────────────────────────────────────────────────────────────────────*/
 
 type V = [number, number, number]
-type Solid = { pos: number[]; tone: number[] }
+/**
+ * The world under construction. `hearth` is a BUILD-TIME switch, not runtime
+ * state: `buildWorld` turns it on around the block that emits the room and off
+ * again afterwards, and every triangle emitted while it is on gets the fire's
+ * baked contribution added to its tone. See `hearthAt`.
+ *
+ * It lives on the solid rather than in a module-level `let` because there is
+ * exactly one solid being built at a time and this way that is enforced by the
+ * shape of the thing instead of by nobody having made the mistake yet. It rides
+ * as a seventh argument to `tri` in all but name, without threading a seventh
+ * argument through `quad`, `box`, `panel`, `post`, `stone` and `tooth`.
+ */
+type Solid = { pos: number[]; tone: number[]; hearth: boolean }
 
 /**
  * The one light this scene has, and it is baked.
@@ -1577,19 +2192,69 @@ const SHADE_FLOOR = 0.55
  * drawn at T_SNOW is a path you cannot see.
  */
 const T_SNOW = 0.94
+/**
+ * Snow with something standing over it. Trees, and the cabin's own bulk, laid
+ * on the patch as a per-cell tone rather than as geometry — see `snowTone`.
+ *
+ * 0.52 and was 0.62. A tree's shadow on snow is the strongest tonal event in a
+ * winter landscape and at 0.62 it was 21 values below open snow in dark, which
+ * is a stain rather than a shadow. At 0.52 it is 34.
+ *
+ * It is deliberately still well above `T_WALL` at 0.46. The deepest shade on
+ * the ground must not reach the value of the building standing on it, or the
+ * cabin stops being the darkest mass in the frame and the silhouette the whole
+ * exterior is composed around goes soft.
+ */
+const T_SHADE = 0.52
 const T_TRACK = 0.85
 const T_PRINT = 0.68
 const T_WALL = 0.46
-const T_HILL = 0.85
 const T_TRIM = 0.34
 const T_STONE = 0.3
 const T_ROOF = 0.24
 const T_DOOR = 0.19
 const T_WEED = 0.14
 /**
- * Near / mid / far / farthest, palest last, and the numbers are derived rather
- * than picked. `tri` scales each by its own facet's light, and then the fog
- * mixes the result back toward the sky, so what the eye finally gets is
+ * ── the room's own ladder ─────────────────────────────────────────────────
+ *
+ * Everything indoors is read against the paper, and the paper is read against
+ * the cards standing on it, so this ladder is solved from the top down rather
+ * than from the bottom up like the forest's.
+ *
+ * `T_PAPER` is the only large flat field in the room and it has to be the
+ * brightest thing in frame that is not the fire. Every up-facing surface takes
+ * `tri`'s full lit tone (`LIGHT` is 0.855 of the way up-facing), so a paper at
+ * 0.70 lands at an effective 0.654 — measured through the dark ramp, rgb
+ * (92, 97, 106), against the table top's (37, 44, 55) underneath it.
+ *
+ * **It is 0.70 and not 0.78 because of the CARDS, not because of the room.**
+ * At 0.78 the paper is rgb (101, 106, 115), and the fire's own wash lifts the
+ * middle of the frame to (114, 115, 117) — where `--text` at #f2f2f5 lands at
+ * 4.27:1, which is under the 4.5:1 floor. At 0.70 the same measurement is
+ * (105, 106, 109) and 4.9:1, which clears it. **That is not a licence to skip
+ * the scrims**: a heading over a backdrop is still a heading over a backdrop,
+ * and the brief asks for them. It is the margin the scrims get to work with.
+ *
+ * `T_HEARTH` is nearly zero on purpose. The inside of a firebox is the darkest
+ * thing in any room with a fire in it, and the flames have to be seen against
+ * something — a firebox at wall tone is a warm rectangle rather than a fire.
+ *
+ * None of these needs a second set for light. The ramp's two ends swap roles
+ * between themes and everything indoors recedes correctly in both for the same
+ * reason the forest does; see the note on `T_TREE`.
+ */
+const T_PAPER = 0.7
+const T_ROOM = 0.3
+const T_FLOOR = 0.26
+const T_RUG = 0.36
+const T_TABLE = 0.22
+const T_BEAM = 0.15
+const T_HEARTH = 0.04
+/**
+ * Near / mid / far / farthest / horizon, palest last, and the numbers are
+ * derived rather than picked. `tri` scales each by its own facet's light, and
+ * then the fog mixes the result back toward the sky, so what the eye finally
+ * gets is
  *
  *     lift above the sky  =  (floor + toneEffective * span) * (pale - sky) * (1 - fog)
  *
@@ -1597,7 +2262,13 @@ const T_WEED = 0.14
  * spacing the mid rank came out at 20 against the near rank's 22 and the two
  * were indistinguishable. Measured on the dark theme's green channel at each
  * rank's typical distance from the near camera, these give 17 / 22 / 32 / 38,
- * with the hills at 47 — five separations that hold.
+ * with the top rung at 47 — five separations that hold.
+ *
+ * T_TREE_HAZE is that top rung, and it was called T_HILL until this pass. The
+ * VALUE has not moved by a thousandth; what changed is what wears it. The hill
+ * band it was named for is gone and the outermost tooth rank stands at its
+ * radius instead, so the ladder is unchanged and the name is now true. See
+ * RANK_R.
  *
  * The same numbers work in light for a reason that is worth stating, because
  * it looks like luck: light's sky sits near the PALE end of its own ramp, so
@@ -1609,6 +2280,7 @@ const T_TREE = 0.13
 const T_TREE_MID = 0.26
 const T_TREE_FAR = 0.46
 const T_TREE_RIM = 0.66
+const T_TREE_HAZE = 0.85
 const T_TRUNK = 0.1
 
 /* The cabin, in metres. Front wall at z = 0, ground at y = 0. */
@@ -1630,10 +2302,205 @@ const WIN_X = 1.72
 const WIN_HW = 0.49
 const WIN_Y0 = 1.74
 const WIN_Y1 = 2.66
-/** The chimney, on the camera's side of the ridge. `buildSmoke` reads these. */
-const CHIM_X = -1.95
-const CHIM_Z = -3.6
+/**
+ * The chimney, on the camera's side of the ridge and NOW OVER THE FIREPLACE.
+ *
+ * It was at (-1.95, -3.6), which is the middle of the roof — fine while the
+ * only thing under that roof was a shell, and a plain contradiction now that
+ * there is a hearth in the north wall with a breast rising off it. A stack that
+ * comes out of the roof two and a half metres in front of the flue it is
+ * supposed to be carrying is the kind of thing nobody sees and everybody who
+ * reads the file has to work around.
+ *
+ * So it moves to sit on the breast: FIRE_X exactly, and far enough back that
+ * its 0.78 footprint is inside the breast's own. What that costs is only ever
+ * paid on the exterior, which is the only place it is seen. Measured at the
+ * reduced-motion rest pose on a 1440x900 slice, as fractions of the frame's
+ * half-width and half-height: the stack's top was at (-0.244, 0.591) and is at
+ * (-0.202, 0.536) — 4% of a half-frame to the right and 6% down, against a
+ * ridge that sits at 0.539. It is still on the near slope, still well clear of
+ * the ridge line, and it now stands at almost exactly the ridge's own height on
+ * screen rather than above it, which reads as a chimney at the back of a roof
+ * instead of one in the middle of it.
+ */
+const CHIM_X = -1.25
+const CHIM_Z = -5.25
 const CHIM_Y = 5.8
+
+/* ────────────────────────────────────────────────────────────────────────────
+   The room, in metres. Plan view, north at -z; the camera enters from +z.
+   ──────────────────────────────────────────────────────────────────────────*/
+
+/**
+ * How far inside the outer shell the room's own surfaces stand.
+ *
+ * It has to be SMALL, because the gap between the outer wall and this one is
+ * exactly what a glancing sightline can escape along: at 6cm the flank window
+ * is sealed until the ray runs 49 units of z per unit of x.
+ */
+const IN_T = 0.06
+const IN_X = CAB_HW - IN_T
+/** South (the door wall) and north (the fireplace wall). */
+const IN_Z0 = CAB_Z0 - IN_T
+const IN_Z1 = CAB_Z1 + IN_T
+/**
+ * The floor, a hair under the threshold, so the doorway shows a room and not a
+ * 40cm drop into a cellar.
+ */
+const IN_Y = DECK_Y - 0.02
+
+/**
+ * The ceiling, which is not a surface this file draws: the roof's own underside
+ * is already two slabs meeting watertight at the ridge over the whole footprint
+ * and wound facing down. This is where it IS, so anything standing in the room
+ * can stop against it.
+ */
+function ceilAt(x: number) {
+  return RIDGE_Y - ROOF_T - (Math.abs(x) / EAVE_X) * (RIDGE_Y - EAVE_Y)
+}
+
+/**
+ * The west window — the one the camera ends on, and the reason the last beat
+ * has a subject at all.
+ *
+ * It grew in this pass, from 1.2 x 0.9 to 1.66 x 1.26, and moved 1.1m north.
+ * As an exterior detail seen at 12m it only had to be a lit hole; as the
+ * BACKDROP the small tools cards are read against it has to be a field, and a
+ * field wants to be most of the frame. `SW_Z0` is its north edge and `SW_Z1`
+ * its south one, which is the order the wall strips in `buildWorld` are
+ * written in.
+ *
+ * The floor plan puts it in the west wall's "upper half" and the owner's own
+ * words put it "right next to the table". Those disagree by about a metre, and
+ * this is the owner's: its centre is at z = -3.03, the room's own midpoint, so
+ * it starts 50cm past the table's far edge. A window in the north half would be
+ * a pan across an empty wall to get to it.
+ */
+const SW_Y0 = 1.16
+const SW_Y1 = 2.42
+const SW_Z0 = -3.86
+const SW_Z1 = -2.2
+
+/**
+ * The east window. Background only — the camera never settles on it — and it
+ * exists for two reasons that are both about the other side of the room.
+ *
+ * It puts daylight on the desk in the south-east corner, which is otherwise the
+ * one corner nothing lights; and it is what the reader sees BEHIND the table
+ * during the turn, so the room reads as having two sides rather than one wall
+ * and a void. It is smaller and higher than the west one because it is over a
+ * desk rather than beside a table.
+ *
+ * **Cutting it means cutting the exterior east wall too.** That wall is a
+ * single quad facing +x, so from inside it is back-facing and culled: a window
+ * cut only in the inner skin would be a hole straight out of the cabin. Six
+ * more triangles out there, on a wall no position on the walk can see.
+ */
+const EW_Y0 = 1.34
+const EW_Y1 = 2.34
+const EW_Z0 = -3.55
+const EW_Z1 = -2.35
+
+/**
+ * The fireplace: north wall, centre-left, "about a third of the wall's width".
+ *
+ * The wall is 6.28 inside, so a third is 2.09 and `FP_HW` is 1.05. It is centre
+ * LEFT — west of the middle — because that is the floor plan, and because it
+ * puts the fire on the same side of the room as the table and the window, so
+ * the one light source is behind everything the camera settles on rather than
+ * across the room from it.
+ *
+ * The surround stands proud of the wall and the firebox is cut back THROUGH it
+ * into the wall's own thickness and 26cm beyond, which is the only geometry in
+ * this file that leaves the building. Nothing can see it: the exterior north
+ * wall is a quad facing -z that occludes it from outside, and its own back
+ * panel is back-facing from out there.
+ */
+const FIRE_X = -1.25
+const FP_HW = 1.05
+/** The surround's face, standing into the room from the north wall. */
+const FP_FZ = IN_Z1 + 0.48
+/** The firebox: opening, and how far back it goes. */
+const FP_OPEN_HW = 0.62
+const FP_OPEN_Y0 = IN_Y + 0.18
+const FP_OPEN_Y1 = 1.52
+const FP_BZ = IN_Z1 - 0.26
+const MANTEL_Y = 1.72
+const MANTEL_T = 0.17
+
+/**
+ * The fire itself, and the point the baked light comes from.
+ *
+ * `FIRE_Y` is the ember bed, 18cm up the firebox from the floor, and `FIRE_Z`
+ * is far enough forward in the box that a tongue at full height is not clipped
+ * by the opening's own lintel from a low angle.
+ */
+const FIRE_Y = FP_OPEN_Y0
+const FIRE_Z = FP_BZ + 0.34
+const EMBER_HW = 0.46
+const EMBER_HZ = 0.24
+/** Three tongues, four rows each: twelve quads, and the room's only motion. */
+const FLAMES = 3
+const FLAME_ROWS = 4
+const FLAME_H = 0.62
+const FLAME_W = 0.19
+const FLAME_GAP = 0.2
+const FLAME_SWAY = 0.11
+
+/**
+ * The big table, south-west corner, against the west wall, running back from
+ * the south wall.
+ *
+ * **2.05 by 2.70, and it was 1.74 by 2.22 until the settled beat was actually
+ * rendered.** The floor plan says the far edge is "roughly a third of the way
+ * into the room", which is z = -2.0 of 5.88, and this reaches -2.80, which is
+ * 47%. The frame is why, and it is the same argument the brief makes about
+ * props: never scale a prop down to fit, move it so the frame crops it.
+ * Measured on the first render of `ST_TABLE`, at 1440x900: a 1.74 x 2.22 table
+ * left the top right quarter of the frame showing floor and the table's own far
+ * edge running diagonally through the middle of it — a hard tonal step
+ * straight across where the project cards sit, which is precisely what the
+ * paper exists to prevent. At 2.05 x 2.70 the paper alone covers 96% of the
+ * frame's width at the aim and 74% at the top of it, and the step is off the
+ * frame on three sides.
+ *
+ * It stays clear of the door by 37cm (the opening is x -0.6 to 0.6, the table's
+ * east edge is -0.97) and its south edge touches the south wall, which is the
+ * plan's "running back from the south wall".
+ */
+const TABLE_X0 = -IN_X + 0.12
+const TABLE_X1 = -0.97
+const TABLE_Z0 = -0.1
+const TABLE_Z1 = -2.8
+const TABLE_Y = IN_Y + 0.76
+const TABLE_T = 0.07
+
+/**
+ * The paper, and it is a LEGIBILITY REQUIREMENT rather than a prop.
+ *
+ * The owner asked for it by name: "when the camera is facing down on the table,
+ * you could add a big paper or something to be a solid background when the UI
+ * is showing the project cards". So it is one flat sheet 1.80 by 2.44 covering
+ * nearly the whole top, at one tone, with nothing drawn on it anywhere the
+ * cards land. Nothing else stands on it; the note in `interior` has the render
+ * that decided that.
+ *
+ * `T_PAPER` is the other half of it. It is the brightest large field in the
+ * room by a clear margin in both themes, and it is FLAT: no facet steps, no
+ * gradient, one quad, one tone. See the tone ladder.
+ */
+const PAPER_X0 = -2.9
+const PAPER_X1 = -1.1
+const PAPER_Z0 = -0.24
+const PAPER_Z1 = -2.68
+
+/** The small desk, south-east corner, against the east wall. Mirrored against
+ *  the big table and smaller, which is the floor plan. */
+const DESK_X0 = 1.42
+const DESK_X1 = IN_X - 0.12
+const DESK_Z0 = -0.4
+const DESK_Z1 = -1.72
+const DESK_Y = IN_Y + 0.74
 
 function norm(v: V): V {
   const l = Math.hypot(v[0], v[1], v[2]) || 1
@@ -1666,7 +2533,22 @@ function tri(s: Solid, a: V, b: V, c: V, base: number, out?: V) {
     nz = -nz
   }
   const d = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]
-  const t = clamp01(base * (SHADE_FLOOR + (1 - SHADE_FLOOR) * Math.max(0, d)))
+  let t = base * (SHADE_FLOOR + (1 - SHADE_FLOOR) * Math.max(0, d))
+  // The room's second light, baked at the facet's centroid. `LIGHT` above is
+  // the sky, and inside a cabin the sky reaches almost nothing; without this
+  // the whole interior comes out at one flat value because every surface in it
+  // is turned away from the one direction the scene knows about.
+  if (s.hearth) {
+    t += hearthAt(
+      (a[0] + b[0] + c[0]) / 3,
+      (a[1] + b[1] + c[1]) / 3,
+      (a[2] + b[2] + c[2]) / 3,
+      nx,
+      ny,
+      nz,
+    )
+  }
+  t = clamp01(t)
   for (const q of p) s.pos.push(q[0], q[1], q[2])
   s.tone.push(t, t, t)
 }
@@ -1677,11 +2559,22 @@ function quad(s: Solid, a: V, b: V, c: V, d: V, base: number, out?: V) {
 }
 
 /**
- * A box standing on `yBase`. No bottom face: everything built with this stands
- * on the snow or on the deck, and the camera never drops below y = 2.5, so two
- * triangles per box would pay for a surface nobody can reach.
+ * A box standing on `yBase`. No bottom face by default: most things built with
+ * this stand on the snow or on the deck, and their undersides are pressed
+ * against something.
+ *
+ * That default used to be stated as "the camera never drops below y = 2.5, so
+ * two triangles per box would pay for a surface nobody can reach", and lowering
+ * the eye to 1.72 killed the claim rather than weakening it. The porch roof
+ * sits at 2.94: from the door the reader is now looking UP at it, and what a
+ * missing bottom face shows is not a dark underside but the inside of the box,
+ * which is back-facing and culled — a rectangular hole with the sky in it,
+ * straight over the door. `floor` is the two triangles for the boxes that
+ * really can be seen from below, and it is passed at exactly two call sites:
+ * the porch roof, and the chimney's footing course where it overhangs the
+ * stack. Everything else is still standing on something.
  */
-function box(s: Solid, x: number, yBase: number, z: number, w: number, h: number, d: number, base: number) {
+function box(s: Solid, x: number, yBase: number, z: number, w: number, h: number, d: number, base: number, floor?: boolean) {
   const x0 = x - w / 2
   const x1 = x + w / 2
   const y0 = yBase
@@ -1689,6 +2582,7 @@ function box(s: Solid, x: number, yBase: number, z: number, w: number, h: number
   const z0 = z - d / 2
   const z1 = z + d / 2
   quad(s, [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], base, [0, 1, 0])
+  if (floor) quad(s, [x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0], base, [0, -1, 0])
   quad(s, [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], base, [0, 0, 1])
   quad(s, [x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], base, [0, 0, -1])
   quad(s, [x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], base, [1, 0, 0])
@@ -1734,15 +2628,36 @@ function post(s: Solid, x: number, yBase: number, z: number, r: number, h: numbe
  * A tooth in a treeline, a weed and a blade of dry grass are all ONE triangle,
  * which means each has exactly one side and is invisible from the other. The
  * camera moves 30 metres across this scene, so "face the camera" is not a
- * constant — but it is very nearly one, because everything using this stands
- * more than 20m from the arc and the arc subtends a narrow angle from there.
- * This is a point on the walk at about progress 0.35, and measured against it
- * the worst case over the whole walk is 14 degrees off face-on, which a flat
- * triangle does not betray.
+ * constant, and this is the single point everything flat is pointed at
+ * instead: a position on the walk at about progress 0.35.
  *
- * Billboarding them per frame is the alternative and it is the wrong trade:
- * these live in the merged static world mesh, and orienting them would mean
- * rewriting a few hundred vertices every frame for an error nobody can see.
+ * **The number this note used to carry was 14 degrees of worst-case error and
+ * it was wrong** — it survived the change from a straight dolly to an orbit
+ * without being re-solved, and an orbit is exactly what breaks it. Measured
+ * against the arc at 121 samples, on the arrangement BEFORE this pass: the
+ * treeline's worst tooth was 63.4 degrees off face-on and the worst weed 80.8.
+ * On the arrangement after it, with a rank added and the arc opened wider to
+ * the right, the worst tooth is 59.1 and the worst weed is the same 80.8 —
+ * both a little better than they were, neither anywhere near 14.
+ *
+ * **It is still the right trade, and the claim that matters is 90.** Under 90
+ * degrees a single-sided triangle is foreshortened; at 90 it disappears. The
+ * worst case in the scene is 80.8, which is one dry weed at (-14.5, 12) at one
+ * end of one walk, squeezed to a sixth of its width — and a dry stalk seen
+ * nearly edge-on looks like a dry stalk seen nearly edge-on. At 59 a distant
+ * tooth is at half width, in a treeline whose whole job is to be a fringe of
+ * varying widths. Nothing in here ever flips to its back face.
+ *
+ * Two better rules were solved and both came out WORSE at the maximum, which
+ * is why this is still one constant: facing each prop at its own nearest point
+ * on the arc gives 96.5 for the weeds (the camera swings hardest around
+ * whatever it passes closest to), and facing each at the mean bearing over the
+ * whole arc gives 75.0 for the weeds but 60.5 for the teeth. Neither is worth
+ * a per-prop solve.
+ *
+ * Billboarding them per frame is the other alternative and it is the wrong
+ * trade for a different reason: these live in the merged static world mesh,
+ * and orienting them would mean rewriting a few hundred vertices every frame.
  */
 const VIEW_FROM: [number, number] = [-12, 22]
 
@@ -1867,28 +2782,126 @@ const smooth = (t: number) => {
  * height: a clamped facet is flat and up-facing, which is the plane's own
  * normal and therefore the plane's own tone.
  */
-function driftAt(x: number, z: number) {
-  const edge =
+/**
+ * How much of the patch's own character a point is allowed to have: 1 in the
+ * middle, tapering to 0 over the last five metres of every side.
+ *
+ * It was inline in `driftAt` and is hoisted because `snowTone` needs exactly
+ * the same taper for exactly the same reason. The drift has to reach the flat
+ * plane at the plane's own HEIGHT or the join shows as a step; the tone has to
+ * reach it at the plane's own TONE or the join shows as a line. One function,
+ * so the two can never disagree about where the patch ends.
+ */
+function patchEdge(x: number, z: number) {
+  return (
     smooth((PATCH_HX - Math.abs(x - PATCH_CX)) / 5) *
     smooth((z - PATCH_Z0) / 5) *
     smooth((PATCH_Z1 - z) / 5)
+  )
+}
+
+function driftAt(x: number, z: number) {
+  const edge = patchEdge(x, z)
   const d = Math.max(Math.abs(x) / 5.2, Math.max(-z / 7.4, z / 9))
   const trodden = smooth((d - 0.8) / 0.4)
   // The footpath is flat for the same reason the yard is: it is walked on. It
   // is also what keeps the path's own quads from being buried — see `patchTop`.
   const walked = smooth((distToPath(x, z) - PATH_FLAT) / PATH_FADE)
+  /*
+   * **Every amplitude here went up by about half in this pass, and the reason
+   * is the renders rather than a preference.** In `r2-D-1400.png` the snow is a
+   * flat pale grey field across the bottom third of the frame with barely a
+   * facet in it — and the drifts were already here, so more of the same was not
+   * the answer. Two things were wrong at once and this is one of them: at 0.22
+   * of relief across a 4m cell the facet is tilted four degrees, and four
+   * degrees of tilt is nothing at all to `tri`'s shading. At 0.30, across cells
+   * that are now 3.5m rather than 4m, it is seven — which is the difference
+   * between a facet the eye finds and one it does not. The other half of the
+   * fix is `snowTone`, which spends contrast rather than height.
+   *
+   * The two banks nearest the walk (the first and the last) grew most, because
+   * the reader passes within a few metres of both and a drift is only relief if
+   * you can see across it.
+   *
+   * None of it can put a mound in front of the lens: `trodden` flattens
+   * everything within about 4m of the cabin and `walked` flattens the whole
+   * footpath corridor, and the reader is on the footpath for the entire walk.
+   */
   const h =
-    0.22 * Math.sin(x * 0.36 + 1.7) * Math.cos(z * 0.29 - 0.6) +
-    0.13 * Math.sin(x * 0.9 + z * 0.7) +
+    0.3 * Math.sin(x * 0.36 + 1.7) * Math.cos(z * 0.29 - 0.6) +
+    0.18 * Math.sin(x * 0.9 + z * 0.7) +
+    0.07 * Math.sin(x * 1.9 - z * 1.6 + 2.2) +
     // Banked drifts. The sines above are weather; these are the places snow
     // actually piles up, which is wherever something has been standing in the
-    // wind all winter. The third is out where the walk begins, so the opening
-    // shot has relief in its foreground rather than a flat sheet.
-    bank(x, z, -12.5, -3, 7, 4.2, 0.55) +
-    bank(x, z, 10.5, 6, 6.5, 4.6, 0.45) +
-    bank(x, z, -22, 22, 9, 7, 0.6) +
-    bank(x, z, -28, 30, 9, 8, 0.75)
+    // wind all winter. The third and fourth are out where the walk begins, so
+    // the opening shot has relief in its foreground rather than a flat sheet.
+    bank(x, z, -12.5, -3, 7, 4.2, 0.82) +
+    bank(x, z, 10.5, 6, 6.5, 4.6, 0.62) +
+    bank(x, z, -22, 22, 9, 7, 0.8) +
+    bank(x, z, -28, 30, 9, 8, 1.05) +
+    bank(x, z, 6.5, 14.5, 5.5, 5, 0.5)
   return Math.max(0, h * edge * trodden * walked)
+}
+
+/**
+ * What TONE a square of the snow patch is, as opposed to what height it is.
+ *
+ * The ground in dark-02-seam.png is a flat sheet of pale grey across the whole
+ * bottom of the frame, and the reason it is flat is worth naming, because the
+ * drifts were supposed to fix it and could not: every quad of the patch is
+ * emitted with `[0, 1, 0]` as its outward direction and `tri` shades it from
+ * its OWN normal, so a facet only darkens if it is tilted — and the drifts are
+ * 22cm of relief across a 4m cell, which is four degrees, which is nothing.
+ * The snow is not flat because it has no shape. It is flat because everything
+ * on it is pointing at the same sky.
+ *
+ * So the tone is decided per cell instead, and it costs no triangle at all —
+ * this is a value handed to `quad`, not geometry. Two things move it:
+ *
+ * - **What is standing over it.** A disc per near tree and one for the cabin,
+ *   pushed half a shadow's length down the light's own ground direction so
+ *   each one runs away from its trunk the way a shadow does, and sized to
+ *   still cover the trunk it belongs to. `max` and not a sum: two trees
+ *   shading the same square do not make it twice as dark, they make it as dark
+ *   as the darker one.
+ * - **Weather.** Two sines at a twelfth of the shadow's depth, so no two
+ *   squares of open snow are quite the same value.
+ *
+ * The result is blocky, at a 4m grain on `high` and a 5.7m one on `low`, and
+ * that is not a compromise — it is the same faceted step the rest of the scene
+ * is drawn in, and it is what the reference art does to a snowfield. What it
+ * must not do is show at the patch's border, which is what `patchEdge` is for.
+ */
+const SHADE_DX = -LIGHT[0] / LIGHT[1]
+const SHADE_DZ = -LIGHT[2] / LIGHT[1]
+function snowTone(x: number, z: number, shade: [number, number, number][]) {
+  const edge = patchEdge(x, z)
+  if (edge <= 0) return T_SNOW
+  let dark = 0
+  for (const [sx, sz, r] of shade) {
+    const k = 1 - Math.min(1, Math.hypot(x - sx, z - sz) / r)
+    if (k > dark) dark = k
+  }
+  /*
+   * The weather term is 0.095 and was 0.055, and there are two of them now.
+   * This is the other half of the "the snow reads as a flat pale grey field"
+   * fix — see `driftAt` for the first — and it is the half that does most of
+   * the work, because it is the only thing in the scene that can make two
+   * up-facing facets different values at all. The second sine runs at four
+   * times the first's frequency and a third of its depth, so the field breaks
+   * into patches within patches rather than into one regular corrugation.
+   *
+   * Measured on the dark theme's green channel across the `high` patch: the
+   * open snow now spans 27 values against the 11 it spanned before, under a
+   * ceiling that has not moved. Nothing here is brighter than it was; the
+   * range is spent downward, which is what stops it glaring behind prose.
+   */
+  const t =
+    T_SNOW +
+    (T_SHADE - T_SNOW) * smooth(dark) +
+    0.095 * Math.sin(x * 0.47 + 1.1) * Math.cos(z * 0.39 - 2.3) +
+    0.032 * Math.sin(x * 1.9 - 0.7) * Math.cos(z * 1.55 + 0.8)
+  return T_SNOW + (t - T_SNOW) * edge
 }
 
 /** A soft round bank of snow, tapering to nothing at `rx` / `rz`. */
@@ -2034,6 +3047,7 @@ function pathAt(k: number): [number, number, number] {
  * one the frame crops. 1 is the middle distance at five tiers. 2 is the far
  * rank at three, no snow, and it is read as a silhouette. Spending a near
  * rank's forty triangles on a tree forty metres off in fog buys nothing.
+ * Rank 3 is the wall trunks, and it lives in `TRUNKS` rather than here.
  *
  * **None of them sits on the camera's path**, and that is measured rather than
  * eyeballed: the arc runs from (-31.9, 39.1) to (-3.1, 11.0), and the closest
@@ -2048,6 +3062,23 @@ function pathAt(k: number): [number, number, number] {
  * the frame outright — which is correct. There is no room at the end for a
  * near tree that does not stand in the window's light on the snow, and that
  * pool is the picture.
+ *
+ * **The ten entries added in this pass are all BEHIND or BESIDE the cabin, and
+ * that is deliberate rather than timid.** The site owner asked for a frame that
+ * feels filled, "like an actual forest", and the half of the frame that was
+ * empty was the half a tree can be added to for free: past z = -7 nothing can
+ * occlude the cabin and nothing can come near the arc, so the only question
+ * left is composition. They are placed at irregular intervals — 4.5m, then 6m,
+ * then 3m — because an even spacing is the one thing that reads as planted.
+ * Their scales run 1.3 to 2.1 so the crowns land at different heights and
+ * OVERLAP, which is what a stand of trees looks like and a row of them does
+ * not. Two of them (index 25, 6) sit close enough behind the ridge that their
+ * crowns break the roofline, which is the cheapest way to weld the building
+ * into the wood behind it.
+ *
+ * They are interleaved rather than appended, because the tier takes the first
+ * N: appended, every one of them would be a thing only an eight-core desktop
+ * ever saw, and `low` is most phones.
  */
 const TREES: [number, number, number, number][] = [
   [-29.4, 27.4, 2.6, 0],
@@ -2056,27 +3087,91 @@ const TREES: [number, number, number, number][] = [
   [-9.5, -6, 1.5, 1],
   [8.2, -4.6, 1.35, 1],
   [-19.5, 14, 2.4, 1],
+  [14.5, 2.2, 2.3, 1],
   [-6.2, -12.5, 1.7, 2],
   [-25.7, 20.1, 2.2, 1],
   [2, 26, 2.3, 1],
   [11.2, -9.5, 1.5, 1],
+  [-16.8, -3.5, 1.9, 1],
   [-13.4, 1.5, 1.2, 1],
   [12.8, 2.4, 1.3, 1],
   [-4, -17, 1.8, 2],
   [7.5, 18, 2.1, 1],
   [-12.5, 6, 2, 1],
   [3.5, -16, 1.6, 2],
+  [21, -2.5, 1.8, 2],
   [-15, -8, 1.4, 2],
   [16, -14, 1.5, 2],
   [-19, -18, 1.6, 2],
   [18, 6, 1.6, 2],
+  [-22.5, -9, 1.7, 2],
+  [0.5, -21, 1.9, 2],
+  [-2.5, -9.5, 1.3, 2],
+  [6.5, -19, 1.6, 2],
+  [24, -12, 1.5, 2],
+  [-27, -14, 1.6, 2],
+  [13.5, -21, 1.4, 2],
 ]
 
-/** Skirt tiers and segments per rank. See `TREES`. */
+/**
+ * The trunks the reader walks BETWEEN: x, z, scale, all of them rank 3.
+ *
+ * This is the other half of the site owner's "trees in the foreground like in
+ * an actual forest". A forest seen from inside is not a treeline you look at,
+ * it is a few enormous verticals that pass close enough to the lens to be cut
+ * off by the frame, with everything else read between them — and until this
+ * pass the only prop in this scene that ever came within 8m of the camera was
+ * a single conifer at the very start of the walk.
+ *
+ * Each is a conifer with rank 3's proportions, so up close it is a bare
+ * vertical with no visible top and at a distance it is a tall pine. They are
+ * measured against the whole arc rather than its ends, the same way `TREES`
+ * is, and each carries the walk range over which it is actually in the frame:
+ *
+ * ```
+ *                clearance  in frame  sx at 0 -> 1   crown leaves frame
+ *   -6.6, -6.0     17.4m    all of it  -0.29 -0.92   walk 0.72
+ *    7.0, -1.5     16.1m    all of it   0.20  0.94   walk 0.75
+ *    4.6,  7.2      8.6m    0.00-0.49   0.38  (2.4)  walk 0.51
+ *  -24.6, 23.4     10.0m    0.00-0.12  -0.44  (-9)   never; it is passed
+ * ```
+ *
+ * The first two are the pair that matters, which is why they are the two
+ * `low` buys. At the start of the walk they are tall pines standing 50-something
+ * metres off, one either side of the cabin; by the arrival they are at
+ * sx -0.92 and 0.94 — hard against the left and right edges of the frame —
+ * their crowns have climbed past the top of it, and what is left of each is a
+ * dark vertical with no top, sixteen metres from the lens. Nothing else in
+ * this scene changes that much across the walk, and that CHANGE is the depth:
+ * the cabin's own screen width barely doubles over the same stretch.
+ *
+ * The third is the overtake. It passes 8.6m from the lens and leaves the frame
+ * to the right halfway through, so the reader goes past it, which no amount of
+ * parallax between two distant things can imitate.
+ *
+ * None of them ever covers the cabin. The test was not "is it beside it" but
+ * "is it nearer than the cabin AND inside the cabin's own screen span,
+ * ridge included", run over 121 samples of the walk; all four are outside that
+ * span at every one of them.
+ *
+ * It is a separate array from `TREES` rather than four more rows in it because
+ * it wants its own budget knob: these are the most expensive trees in the
+ * scene per unit and the most valuable, so `low` buys two and `high` four,
+ * which is not the ratio the rest of the forest scales at.
+ */
+const TRUNKS: [number, number, number][] = [
+  [-6.6, -6, 3.2],
+  [7, -1.5, 3],
+  [4.6, 7.2, 2.7],
+  [-24.6, 23.4, 3],
+]
+
+/** Skirt tiers, segments and proportions per rank. See `TREES` and `conifer`. */
 const RANKS = [
-  { tiers: 7, seg: 5, tone: T_TREE, snow: true },
-  { tiers: 5, seg: 4, tone: T_TREE_MID, snow: false },
-  { tiers: 3, seg: 3, tone: T_TREE_FAR, snow: false },
+  { tiers: 7, seg: 5, tone: T_TREE, snow: true, tall: 4.3, bare: 1.15 },
+  { tiers: 5, seg: 4, tone: T_TREE_MID, snow: false, tall: 4.3, bare: 1.15 },
+  { tiers: 3, seg: 3, tone: T_TREE_FAR, snow: false, tall: 4.3, bare: 1.15 },
+  { tiers: 5, seg: 5, tone: T_TREE, snow: false, tall: 4.6, bare: 2.55 },
 ]
 
 /**
@@ -2123,32 +3218,99 @@ const WEEDS: [number, number, number][] = [
    ──────────────────────────────────────────────────────────────────────────*/
 
 /**
- * The ranks the reader never walks into: two arcs of single-triangle trees and
- * a band of hills behind them, all of it standing round the clearing.
+ * The ranks the reader never walks into: three arcs of single-triangle trees
+ * standing round the clearing, the farthest of them holding the horizon.
  *
  * **One triangle per tree.** `landscapes/mountain-ridge-dark.webp` draws its
  * whole treeline as a serrated fringe along the foot of the ridge, and that is
  * exactly the right amount of tree for something forty metres off — it is a
- * shape, not an object. Fifty-four of these cost what two near conifers do,
- * and they are the thing that makes the cabin sit IN a forest rather than in
- * front of a few of them.
+ * shape, not an object. A hundred and twenty of these cost what four near
+ * conifers do, and they are the thing that makes the cabin sit IN a forest
+ * rather than in front of a few of them.
+ *
+ * **The third rank is where the hills used to be, and that is the site
+ * owner's call: "trees in the foreground like in an actual forest instead of
+ * boring mountains".** What stood at 48m was a seven-facet band at T_HILL,
+ * and it read exactly as described — a smooth pale ridge, the one shape in
+ * the picture that was not made of trees. Rank 2 takes its radius, its tone
+ * (T_HILL is renamed T_TREE_HAZE and is the same 0.85, so the tone ladder's
+ * top rung and the "soft lighter band on the horizon" both survive) and its
+ * job of closing the horizon, and gives it a serrated edge instead of a
+ * smooth one. It costs 51 triangles on `high` against the band's 14, which is
+ * the single largest line in this pass's growth and the most visible.
+ *
+ * Its teeth are wide on purpose. At 45m the arc is 190m long, so 51 of them
+ * are 3.7m apart, and at 1.7–4.3m of half-width they OVERLAP — which is the
+ * difference between a treeline and a row of spikes with sky between them.
+ *
+ * The spacing carries a jitter of ±0.42 of a slot as well as the radial one.
+ * Evenly spaced teeth with only a radius wobble still read as a comb, because
+ * the eye finds the rhythm before it finds the depth; the jitter cannot
+ * reorder them, so the arc is still swept once in order and no two teeth can
+ * swap places and cross.
  *
  * The arc skips the wedge in front of the cabin, which is the clearing the
- * camera stands in and walks through. A tooth is flat, so it must never be
- * near enough to be caught side-on; the nearest any of them comes to the arc
- * is about 20m, where a 4m triangle is a distant tree and not a piece of card.
+ * camera stands in and walks through. It is not centred on that wedge: the
+ * walk comes in from the left, so the gap is opened wider to the left
+ * (-1.12 rad) than to the right (0.86) and the right-hand teeth close in
+ * nearer the front of the frame, where there was nothing. A tooth is flat, so
+ * it must never be near enough to be caught side-on; the nearest any of them
+ * comes to the arc is about 20m, where a 4m triangle is a distant tree and not
+ * a piece of card.
  */
-const RANK_R = [26, 34]
-const RANK_TONE = [T_TREE_FAR, T_TREE_RIM]
+const RANK_R = [25, 33, 45]
+const RANK_TONE = [T_TREE_FAR, T_TREE_RIM, T_TREE_HAZE]
+/** Radial scatter, half-width and height per rank: [base, extra]. */
+const RANK_SPREAD = [3.2, 4, 5.5]
+const RANK_W = [
+  [0.85, 1.05],
+  [1.15, 1.5],
+  [1.7, 2.6],
+]
+const RANK_H = [
+  [2.6, 2.9],
+  [3, 3.4],
+  [4.4, 4.6],
+]
+/** How many teeth each rank gets, as a multiple of the tier's own number. */
+const RANK_N = [1, 1.25, 1.6]
 /** The arc the teeth stand on, in radians, measured from +z round through the back. */
-const TEETH_A0 = 1.08
-const TEETH_A1 = 5.2
-/** The hills, further out and paler again. */
-const HILL_R = 48
-const HILL_STEPS = 7
+const TEETH_A0 = 0.86
+const TEETH_A1 = 5.16
 
 function buildWorld(tier: Quality): Solid {
-  const s: Solid = { pos: [], tone: [] }
+  const s: Solid = { pos: [], tone: [], hearth: false }
+
+  /*
+   * What is standing on the snow, as discs the ground can be shaded by. Built
+   * FIRST because the ground is, and built from the tier's own lists rather
+   * than from the whole of `TREES` — a shadow cast by a tree this machine
+   * never drew is a stain on the snow with nothing over it.
+   *
+   * Only ranks 0, 1 and 3 cast. Rank 2 is a silhouette twenty metres back
+   * whose shadow would be behind it and mostly behind the cabin as well, and
+   * the loop runs once per patch cell per caster.
+   */
+  const shade: [number, number, number][] = []
+  const cast = (x: number, z: number, h: number, r: number) => {
+    const dx = h * SHADE_DX * 0.5
+    const dz = h * SHADE_DZ * 0.5
+    shade.push([x + dx, z + dz, Math.hypot(dx, dz) + r])
+  }
+  for (let i = 0; i < tier.trees && i < TREES.length; i++) {
+    const [tx, tz, ts, rk] = TREES[i]
+    if (rk === 2) continue
+    cast(tx, tz, RANKS[rk].tall * ts, 1.5 * ts)
+  }
+  for (let i = 0; i < tier.trunks && i < TRUNKS.length; i++) {
+    const [tx, tz, ts] = TRUNKS[i]
+    cast(tx, tz, RANKS[3].tall * ts, 1.5 * ts)
+  }
+  // The cabin's own, from the middle of the building at roughly eave height.
+  // It falls to the right and back, which is where the walk is not, so what it
+  // actually does is stop the snow behind the far corner from being the same
+  // value as the snow in front of the near one.
+  cast(0, (CAB_Z0 + CAB_Z1) / 2, EAVE_Y, 4.6)
 
   // ── ground ───────────────────────────────────────────────────────────────
   // One enormous flat quad for everything the fog is going to eat anyway, and a
@@ -2181,7 +3343,10 @@ function buildWorld(tier: Quality): Solid {
         [x1, driftAt(x1, z1), z1],
         [x1, driftAt(x1, z0), z0],
         [x0, driftAt(x0, z0), z0],
-        T_SNOW,
+        // Sampled at the cell's centre, one value for both its triangles. A
+        // per-VERTEX tone would need `tri` to take three of them and would
+        // buy a gradient across a cell nobody can see the edges of anyway.
+        snowTone((x0 + x1) / 2, (z0 + z1) / 2, shade),
         [0, 1, 0],
       )
     }
@@ -2298,23 +3463,33 @@ function buildWorld(tier: Quality): Solid {
   sideL(SW_Z0, SW_Z1, 0, SW_Y0)
   sideL(SW_Z0, SW_Z1, SW_Y1, WALL_H)
   sideL(SW_Z1, CAB_Z0, 0, WALL_H)
-  quad(
-    s,
-    [CAB_HW, 0, CAB_Z1],
-    [CAB_HW, 0, CAB_Z0],
-    [CAB_HW, WALL_H, CAB_Z0],
-    [CAB_HW, WALL_H, CAB_Z1],
-    T_WALL,
-    [1, 0, 0],
-  )
+  // The east flank, cut round its own window for the first time in this pass.
+  // It is a wall no position on the walk can see — the arc never leaves the
+  // west side — so the six triangles are bought entirely for the INSIDE, where
+  // the opening is what stops the desk's corner being a dead black wall.
+  const sideR = (z0: number, z1: number, y0: number, y1: number) =>
+    quad(s, [CAB_HW, y0, z1], [CAB_HW, y0, z0], [CAB_HW, y1, z0], [CAB_HW, y1, z1], T_WALL, [1, 0, 0])
+  sideR(CAB_Z1, EW_Z0, 0, WALL_H)
+  sideR(EW_Z0, EW_Z1, 0, EW_Y0)
+  sideR(EW_Z0, EW_Z1, EW_Y1, WALL_H)
+  sideR(EW_Z1, CAB_Z0, 0, WALL_H)
 
   // ── roof ─────────────────────────────────────────────────────────────────
-  // Two slanted slabs: the shingle plane, its underside (visible from the last
-  // few metres of the walk, where the camera is below the eave) and the fascia
-  // that joins them. Then a snow cap laid over each, inset from the ridge and
+  // Two slanted slabs: the shingle plane, its underside and the fascia that
+  // joins them. Then a snow cap laid over each, inset from the ridge and
   // stopping short of the eave so a dark strip of shingle still reads at the
   // bottom edge — which is how a snowy roof actually looks and is the cheapest
   // possible way to say "snow" on a slope.
+  //
+  // **Which of those three the reader sees is now the whole second half of the
+  // walk.** The eye drops through the eave's own height of 2.72 at about walk
+  // 0.48, 22m out, so from there in it is UNDER the roof: the top plane and
+  // its cap swing out of sight and what is left is the fascia and the shaded
+  // underside. That is the point of the lower camera rather than a cost of it
+  // — a roof you are looking down on is a model and a roof you are looking up
+  // at is a building — but it does mean the cap is a wide-shot detail. It is
+  // still bought for `low`, because `low` is a phone, and on a phone the
+  // FRAME_PULL keeps the reader further out for longer.
   for (const sign of [-1, 1]) {
     const ex = sign * EAVE_X
     const up: V = [sign * -0.5, 0.87, 0]
@@ -2368,7 +3543,9 @@ function buildWorld(tier: Quality): Solid {
   // it masonry at 12 metres, which is the only distance it is ever read at.
   box(s, CHIM_X, 1.9, CHIM_Z, 0.78, 1.5, 0.78, T_STONE)
   box(s, CHIM_X, 3.3, CHIM_Z, 0.64, 2.6, 0.64, T_STONE)
-  box(s, CHIM_X, CHIM_Y - 0.22, CHIM_Z, 0.82, 0.24, 0.82, T_STONE)
+  // `floor` on the footing only: it overhangs the 0.64 stack by 9cm on every
+  // side, and from a 1.72m eye the reader is looking up at that overhang.
+  box(s, CHIM_X, CHIM_Y - 0.22, CHIM_Z, 0.82, 0.24, 0.82, T_STONE, true)
   box(s, CHIM_X, CHIM_Y, CHIM_Z, 0.72, 0.14, 0.72, T_SNOW)
   for (let i = 0; i < tier.stones && i < 4; i++) {
     const sy = 2.3 + i * 0.72
@@ -2446,7 +3623,9 @@ function buildWorld(tier: Quality): Solid {
   // Three-sided posts rather than boxes: at 12m nobody counts a post's faces,
   // and it is four triangles each back into the tree budget.
   for (const sign of [-1, 1]) post(s, sign * 1, DECK_Y, DECK_Z - 0.3, 0.11, 2.5, T_TRIM, 0.4)
-  box(s, 0, DECK_Y + 2.5, DECK_Z / 2 + 0.25, 2.5, 0.18, DECK_Z + 0.5, T_ROOF)
+  // `floor` because the eye now arrives BELOW this. Its underside is the porch
+  // ceiling, and a ceiling in shade is what gives the porch depth; see `box`.
+  box(s, 0, DECK_Y + 2.5, DECK_Z / 2 + 0.25, 2.5, 0.18, DECK_Z + 0.5, T_ROOF, true)
   box(s, 0, DECK_Y + 2.68, DECK_Z / 2 + 0.25, 2.3, 0.1, DECK_Z + 0.2, T_SNOW)
   // A rail each side, so the porch reads as a porch and not as a canopy on
   // two sticks. Flat quads, not boxes: a rail is seen edge-on from the walk
@@ -2490,50 +3669,43 @@ function buildWorld(tier: Quality): Solid {
     panel(s, cx - 0.045, cx + 0.045, WIN_Y0, WIN_Y1, 0.04, T_TRIM)
     panel(s, cx - WIN_HW, cx + WIN_HW, (WIN_Y0 + WIN_Y1) / 2 - 0.04, (WIN_Y0 + WIN_Y1) / 2 + 0.04, 0.04, T_TRIM)
   }
-  // and one on the flank window, which the angled approach looks straight at
+  /*
+   * The west window's own bar, and it is a TRANSOM rather than a mullion —
+   * horizontal, high, and nothing down the middle.
+   *
+   * It used to be a vertical bar on the centre line, which is right for a
+   * window seen at 12m from outside and wrong the moment that window became
+   * the backdrop the small tools cards are read against. Rendered at the
+   * settled window beat, the opening fills 73% of the frame's width and that
+   * bar ran straight down the middle of it: rgb (42,49,60) against snow at
+   * (120,124,132), in the one column of the frame where a heading sits. It is
+   * the "no cut edges, ever" rule and the "no high-contrast edge where a card's
+   * text lands" rule failing in the same place.
+   *
+   * A transom 20cm down from the head still says "window" — the reveal, the
+   * sill and the wall around it are doing most of that work anyway. Measured on
+   * the settled window frame at 1440x900, where the opening runs from 110px to
+   * 830px: at 34cm the bar landed at 304px, which is 34% down the viewport and
+   * straight through the top row of cards. At 20cm it lands at 224px, 25% down,
+   * which is where a kicker and an h2 already are.
+   */
+  const sw = SW_Y1 - 0.2
   quad(
     s,
-    [-CAB_HW - 0.04, SW_Y0, (SW_Z0 + SW_Z1) / 2 - 0.045],
-    [-CAB_HW - 0.04, SW_Y0, (SW_Z0 + SW_Z1) / 2 + 0.045],
-    [-CAB_HW - 0.04, SW_Y1, (SW_Z0 + SW_Z1) / 2 + 0.045],
-    [-CAB_HW - 0.04, SW_Y1, (SW_Z0 + SW_Z1) / 2 - 0.045],
+    [-CAB_HW - 0.04, sw - 0.045, SW_Z0],
+    [-CAB_HW - 0.04, sw - 0.045, SW_Z1],
+    [-CAB_HW - 0.04, sw + 0.045, SW_Z1],
+    [-CAB_HW - 0.04, sw + 0.045, SW_Z0],
     T_TRIM,
     [-1, 0, 0],
   )
 
-  /*
-   * ── the backs of the openings ────────────────────────────────────────────
-   *
-   * Every wall here is single-sided and facing out, so an opening cut in one
-   * is a hole THROUGH the cabin: the far wall's inside face is back-facing and
-   * culled, and what shows in the gap is the forest behind the building.
-   *
-   * That was true from the day the flank window was cut and it never showed,
-   * because the old camera sat 9 degrees off the front axis and could barely
-   * see that wall at all. The orbit puts it in the shot for the whole first
-   * half of the walk, which is exactly the kind of latent bug a camera change
-   * exposes — the geometry did not become wrong, it became visible.
-   *
-   * One quad behind each opening, WIDER than the opening on every side. The
-   * width is the fix rather than the depth: a backing panel set 25cm behind a
-   * hole seen from 38 degrees shifts 20cm across it in projection, which on a
-   * 49cm half-window leaves a slot of daylight down one edge. The overhang is
-   * buried in the wall, so it costs nothing to be generous with it.
-   */
-  for (const sign of [-1, 1]) {
-    const cx = sign * WIN_X
-    panel(s, cx - WIN_HW - 0.4, cx + WIN_HW + 0.4, WIN_Y0 - 0.4, WIN_Y1 + 0.4, -0.25, T_DOOR)
-  }
-  panel(s, -DOOR_HW - 0.5, DOOR_HW + 0.5, DECK_Y - 0.3, DECK_Y + DOOR_H + 0.4, -0.4, T_DOOR)
-  quad(
-    s,
-    [-CAB_HW + 0.3, SW_Y0 - 0.4, SW_Z0 - 0.4],
-    [-CAB_HW + 0.3, SW_Y0 - 0.4, SW_Z1 + 0.4],
-    [-CAB_HW + 0.3, SW_Y1 + 0.4, SW_Z1 + 0.4],
-    [-CAB_HW + 0.3, SW_Y1 + 0.4, SW_Z0 - 0.4],
-    T_DOOR,
-    [-1, 0, 0],
-  )
+  // ── the room ─────────────────────────────────────────────────────────────
+  // Five viewports of the walk happen in here, so it is a room rather than the
+  // four flat panels that used to stand behind the openings. `interior` has it
+  // all, and it is a separate function because it is half the geometry in this
+  // file and `buildWorld` was already long.
+  interior(s, tier)
 
   // ── the door, standing open ──────────────────────────────────────────────
   // The whole section is about arriving somewhere, so the door is ajar rather
@@ -2555,8 +3727,7 @@ function buildWorld(tier: Quality): Solid {
 
   // ── trees ────────────────────────────────────────────────────────────────
   const treeSeed = rng(0xc4b1)
-  for (let i = 0; i < tier.trees && i < TREES.length; i++) {
-    const [tx, tz, ts, rk] = TREES[i]
+  const plant = (tx: number, tz: number, ts: number, rk: number) => {
     const r = RANKS[rk]
     conifer(
       s,
@@ -2569,62 +3740,419 @@ function buildWorld(tier: Quality): Solid {
       treeSeed() * Math.PI * 2,
       r.tone,
       r.snow,
+      r.tall,
+      r.bare,
     )
     // Snow banked against the foot of the near ones. The reference art draws
     // this too — `props/pine-faceted-pair-dark.webp` has a whole shelf of
     // faceted snow chunks at the base — and four triangles is what stops a
-    // trunk from looking pushed into the ground like a pin.
-    if (rk === 0) stone(s, tx, tz, PLANT_Y, 0.62 * ts, 0.3 * ts, T_SNOW, treeSeed() * 6.28)
+    // trunk from looking pushed into the ground like a pin. Rank 3 buys it
+    // too, and needs it more than anything else here: a wall trunk is the one
+    // thing in the scene the reader gets close enough to see the FOOT of.
+    if (rk === 0 || rk === 3) stone(s, tx, tz, PLANT_Y, 0.62 * ts, 0.3 * ts, T_SNOW, treeSeed() * 6.28)
+  }
+  for (let i = 0; i < tier.trees && i < TREES.length; i++) {
+    const [tx, tz, ts, rk] = TREES[i]
+    plant(tx, tz, ts, rk)
+  }
+  for (let i = 0; i < tier.trunks && i < TRUNKS.length; i++) {
+    const [tx, tz, ts] = TRUNKS[i]
+    plant(tx, tz, ts, 3)
   }
 
-  // ── the ranks behind them ────────────────────────────────────────────────
+  // ── the ranks behind them, out to the horizon ────────────────────────────
+  // Three arcs now, the outermost of which stands where the hill band used to.
+  // See RANK_R for what that swap is and whose call it was.
   const rankSeed = rng(0x71d3)
   for (let r = 0; r < tier.ranks && r < RANK_R.length; r++) {
-    const n = Math.round(tier.teeth * (r === 0 ? 1 : 1.25))
+    const n = Math.round(tier.teeth * RANK_N[r])
     for (let i = 0; i < n; i++) {
-      const a = TEETH_A0 + ((i + 0.5) / n) * (TEETH_A1 - TEETH_A0)
-      const rad = RANK_R[r] + (rankSeed() * 2 - 1) * 3.4
-      const tx = Math.sin(a) * rad
-      const tz = LOOK_Z + Math.cos(a) * rad
+      // The jitter is applied to the SLOT rather than to the angle, so it can
+      // never carry a tooth past its neighbour: at ±0.42 of a slot two
+      // adjacent teeth can close to 16% of the spacing and no further.
+      const slot = i + 0.5 + (rankSeed() * 2 - 1) * 0.42
+      const a = TEETH_A0 + (slot / n) * (TEETH_A1 - TEETH_A0)
+      const rad = RANK_R[r] + (rankSeed() * 2 - 1) * RANK_SPREAD[r]
       tooth(
         s,
-        tx,
-        tz,
+        Math.sin(a) * rad,
+        LOOK_Z + Math.cos(a) * rad,
         PLANT_Y,
-        0.85 + rankSeed() * 1.05,
-        2.6 + rankSeed() * 2.9,
+        RANK_W[r][0] + rankSeed() * RANK_W[r][1],
+        RANK_H[r][0] + rankSeed() * RANK_H[r][1],
         RANK_TONE[r],
       )
     }
   }
 
-  // ── and the hills ────────────────────────────────────────────────────────
-  // A single band of facets on the horizon, standing on nothing and reaching
-  // nowhere: the fog turns it into the soft lighter edge the reference
-  // paintings put behind their trees, and that is all it has to be.
-  const hillSeed = rng(0x2f8c)
-  let prev: [number, number, number] | null = null
-  for (let i = 0; i <= HILL_STEPS; i++) {
-    const a = TEETH_A0 + (i / HILL_STEPS) * (TEETH_A1 - TEETH_A0)
-    const rad = HILL_R + (hillSeed() * 2 - 1) * 5
-    const hx = Math.sin(a) * rad
-    const hz = LOOK_Z + Math.cos(a) * rad
-    const hy = 5.5 + hillSeed() * 6
-    if (prev) {
+  return s
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   The room
+   ──────────────────────────────────────────────────────────────────────────*/
+
+/**
+ * The fire's baked contribution to a facet's tone, at that facet's centroid.
+ *
+ * **The scene has exactly one runtime light and it is `LIGHT`, which is the
+ * sky.** Indoors the sky reaches almost nothing: every interior surface is
+ * turned away from it, so `tri` gives the whole room one flat value and the
+ * result is a cardboard box. This is the second source, and it is baked into
+ * the same tone the sky's is, which means it costs nothing per frame and adds
+ * no material, no light object and no shader.
+ *
+ * What it CANNOT do is make anything warm — a tone is one number on a ramp
+ * between two greys. The warmth is the `fire` layer's job, and the two are
+ * meant to be read together: this is what the fire LIGHTS, and the quads in
+ * `buildFireStatic` are the colour of the light doing it.
+ *
+ * The falloff is inverse-square-ish rather than inverse-square: at true
+ * inverse-square the far corner of a 6m room is at 3% of the near wall and
+ * comes out black, which is true of a real single candle and wrong for a room
+ * with plastered log walls bouncing everything. `HEARTH_FALL` at 0.055 puts the
+ * table at 0.82 of the peak, the west window's reveal at 0.52 and the
+ * south-east corner at 0.35.
+ *
+ * Nothing up-facing above the flame gets any of it, which includes the table
+ * top and therefore the paper: the fire is at y = 0.88 and the table is at
+ * 1.18, so `ndl` is negative there and the term is zero. That is correct — a
+ * fire in a hearth does not light the top of a table across the room — and it
+ * is also why the paper's own tone has to carry it.
+ */
+const HEARTH_P: V = [FIRE_X, FIRE_Y + 0.28, FIRE_Z + 0.12]
+const HEARTH_K = 0.46
+const HEARTH_FALL = 0.055
+/**
+ * And a ceiling on it, because the falloff has none of its own. Anything within
+ * half a metre of the flame and facing it takes essentially the whole of
+ * HEARTH_K, and 0.46 of tone on top of a light theme that already starts its
+ * ramp at 0.26 is a white-hot surface. Nothing in the room is that close except
+ * the hearth slab and the firebox — the firebox is exempted outright, see
+ * `hearth` — so this is the guard for whatever gets put there next.
+ */
+const HEARTH_MAX = 0.34
+function hearthAt(px: number, py: number, pz: number, nx: number, ny: number, nz: number) {
+  const dx = HEARTH_P[0] - px
+  const dy = HEARTH_P[1] - py
+  const dz = HEARTH_P[2] - pz
+  const d2 = dx * dx + dy * dy + dz * dz
+  const d = Math.sqrt(d2) || 1
+  const ndl = (dx * nx + dy * ny + dz * nz) / d
+  if (ndl <= 0) return 0
+  return Math.min(HEARTH_MAX, (HEARTH_K * ndl) / (1 + d2 * HEARTH_FALL))
+}
+
+/** A flat rectangle lying on the floor, a table or a shelf, at `y`. */
+function lie(s: Solid, x0: number, x1: number, z0: number, z1: number, y: number, base: number) {
+  quad(s, [x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], base, [0, 1, 0])
+}
+
+/** A flat rectangle standing on the z = `z` plane, facing `dir` (+1 or -1). */
+function wallZ(s: Solid, x0: number, x1: number, y0: number, y1: number, z: number, dir: number) {
+  quad(s, [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z], T_ROOM, [0, 0, dir])
+}
+
+/** The same on the x = `x` plane. */
+function wallX(s: Solid, z0: number, z1: number, y0: number, y1: number, x: number, dir: number) {
+  quad(s, [x, y0, z0], [x, y0, z1], [x, y1, z1], [x, y1, z0], T_ROOM, [dir, 0, 0])
+}
+
+/**
+ * The whole inside of the cabin.
+ *
+ * Read `internal/checklists/cabin-interior-spec.md` before changing anything in
+ * here: it is the transcription of the owner's hand-drawn floor plan, and every
+ * placement below is a row of its table.
+ *
+ * **Nothing in here is instanced, and that is the right answer rather than a
+ * missed one.** InstancedMesh buys one draw call for N copies of one geometry;
+ * this file already has ONE draw call for the entire world, because every
+ * triangle in it — ground, forest, cabin, room and every prop — is merged into
+ * a single static non-indexed buffer with a per-vertex tone, built once at
+ * mount and uploaded once. Instancing the four table legs would add a draw
+ * call, a second material and a per-instance matrix, to save 24 triangles out
+ * of two thousand in a scene that has never once been vertex-bound. The merge
+ * is strictly the better trade at this size and it is why the budget below is
+ * quoted in draw calls as well as triangles.
+ *
+ * **What IS culled is what the camera cannot reach.** The spline is one path
+ * and it is known at build time, so:
+ *
+ * - there is no ceiling of its own; the roof's underside already is one
+ * - the north wall's gable is one triangle rather than a wall
+ * - nothing is drawn on the north-east quarter above desk height, because the
+ *   camera is looking west or down for every frame it is in the room
+ * - every surface here is single-sided and wound inward, so the half of each
+ *   the reader stands behind costs nothing
+ *
+ * `s.hearth` is on for the whole of it, which is what gives every facet the
+ * fire's own baked light on top of the sky's. See `hearthAt`.
+ */
+function interior(s: Solid, tier: Quality) {
+  s.hearth = true
+  const props = tier.room
+
+  // ── the shell ────────────────────────────────────────────────────────────
+  lie(s, -IN_X, IN_X, IN_Z1, IN_Z0, IN_Y, T_FLOOR)
+  // Floorboards: five lines cut across the floor, a shade under it. The floor
+  // is the largest single field in the room after the paper, and `tri` shades
+  // from the facet's own normal — so a flat floor is one value however big it
+  // is, exactly the way the snowfield outside was. Ten triangles is what stops
+  // it being a sheet. Same fix, indoors; see `snowTone` for the outdoor one.
+  if (props >= 1) {
+    for (let i = 1; i < 6; i++) {
+      const bx = -IN_X + (i / 6) * IN_X * 2
+      lie(s, bx - 0.018, bx + 0.018, IN_Z1 + 0.1, IN_Z0 - 0.1, IN_Y + 0.004, T_BEAM)
+    }
+  }
+  // north wall and its gable. The apex is the roof's own underside rather than
+  // 4.5: at 4.5 there was a 15cm triangular gap under the ridge that the old
+  // camera could not reach and the new one, tilting up off the table, can. At
+  // `ceilAt(0)` the two meet exactly — solved, not nudged: the gable's edges
+  // and the ceiling's slopes differ by 0.024 per unit x, so the triangle sits
+  // 0 to 5cm INSIDE the slab all the way out and cannot show a seam.
+  wallZ(s, -IN_X, IN_X, IN_Y, WALL_H, IN_Z1, 1)
+  tri(s, [-IN_X, WALL_H, IN_Z1], [IN_X, WALL_H, IN_Z1], [0, ceilAt(0), IN_Z1], T_ROOM, [0, 0, 1])
+  // south wall, round the door, and its own gable
+  wallZ(s, -IN_X, -DOOR_HW, IN_Y, WALL_H, IN_Z0, -1)
+  wallZ(s, DOOR_HW, IN_X, IN_Y, WALL_H, IN_Z0, -1)
+  wallZ(s, -DOOR_HW, DOOR_HW, DECK_Y + DOOR_H, WALL_H, IN_Z0, -1)
+  tri(s, [IN_X, WALL_H, IN_Z0], [-IN_X, WALL_H, IN_Z0], [0, ceilAt(0), IN_Z0], T_ROOM, [0, 0, -1])
+  // west wall, round the window the camera ends on
+  wallX(s, IN_Z1, SW_Z0, IN_Y, WALL_H, -IN_X, 1)
+  wallX(s, SW_Z0, SW_Z1, IN_Y, SW_Y0, -IN_X, 1)
+  wallX(s, SW_Z0, SW_Z1, SW_Y1, WALL_H, -IN_X, 1)
+  wallX(s, SW_Z1, IN_Z0, IN_Y, WALL_H, -IN_X, 1)
+  // east wall, round its own
+  wallX(s, IN_Z1, EW_Z0, IN_Y, WALL_H, IN_X, -1)
+  wallX(s, EW_Z0, EW_Z1, IN_Y, EW_Y0, IN_X, -1)
+  wallX(s, EW_Z0, EW_Z1, EW_Y1, WALL_H, IN_X, -1)
+  wallX(s, EW_Z1, IN_Z0, IN_Y, WALL_H, IN_X, -1)
+  /*
+   * The reveals: the 6cm of wall thickness round the window the camera settles
+   * on. Without them the opening is a cut with nothing in it, and from any
+   * angle off square the reader sees along the gap between the two skins
+   * straight out of the building. Eight triangles, and they are what make the
+   * last beat read as a window in a wall rather than a bright rectangle.
+   *
+   * Only the west one gets them. The east window is never nearer than 4m and
+   * never off square by more than a few degrees, so its gap is under a pixel.
+   */
+  if (props >= 1) {
+    const rz = (z: number, dir: number) =>
       quad(
         s,
-        [prev[0], PLANT_Y, prev[2]],
-        [hx, PLANT_Y, hz],
-        [hx, hy, hz],
-        [prev[0], prev[1], prev[2]],
-        T_HILL,
-        [-Math.sin(a), 0.35, -Math.cos(a)],
+        [-CAB_HW, SW_Y0, z],
+        [-IN_X, SW_Y0, z],
+        [-IN_X, SW_Y1, z],
+        [-CAB_HW, SW_Y1, z],
+        T_TRIM,
+        [0, 0, dir],
       )
-    }
-    prev = [hx, hy, hz]
+    rz(SW_Z0, -1)
+    rz(SW_Z1, 1)
+    quad(s, [-CAB_HW, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z0], [-IN_X, SW_Y1, SW_Z1], [-CAB_HW, SW_Y1, SW_Z1], T_TRIM, [0, -1, 0])
+    quad(s, [-CAB_HW, SW_Y0, SW_Z0], [-IN_X, SW_Y0, SW_Z0], [-IN_X, SW_Y0, SW_Z1], [-CAB_HW, SW_Y0, SW_Z1], T_SNOW, [0, 1, 0])
+  }
+  // Two ceiling beams. They are bought for one beat — the tilt up off the table
+  // — and they are what that beat is FOR: the room's height comes into frame,
+  // and a bare sloped ceiling has no scale in it. `floor` on both, because from
+  // in the room the reader is looking up at their undersides.
+  // -2.45 and not -1.85, and the settled table frame is why: a beam at -1.85
+  // is 50cm north of that station's eye and 55cm under it, which puts a dark
+  // bar across the top right corner of the one frame in this file that is not
+  // allowed to have a bar across it. At -2.45 both beams are behind the frame's
+  // top edge there, and both are still in the tilt-up that follows it.
+  for (const bz of [-2.45, -4.55]) {
+    if (bz < -3 && props < 1) continue
+    box(s, 0, 2.56, bz, IN_X * 2, 0.17, 0.19, T_BEAM, true)
   }
 
-  return s
+  // ── the fireplace ────────────────────────────────────────────────────────
+  hearth(s)
+
+  // ── the big table, and the paper on it ───────────────────────────────────
+  const tcx = (TABLE_X0 + TABLE_X1) / 2
+  const tcz = (TABLE_Z0 + TABLE_Z1) / 2
+  box(s, tcx, TABLE_Y - TABLE_T, tcz, TABLE_X1 - TABLE_X0, TABLE_T, TABLE_Z0 - TABLE_Z1, T_TABLE, true)
+  for (const lx of [TABLE_X0 + 0.16, TABLE_X1 - 0.16]) {
+    for (const lz of [TABLE_Z0 - 0.18, TABLE_Z1 + 0.18]) {
+      post(s, lx, IN_Y, lz, 0.075, TABLE_Y - TABLE_T - IN_Y, T_TABLE, 0.5)
+    }
+  }
+  // THE PAPER. One quad. See TABLE_PAPER and T_PAPER for why it is one quad and
+  // why nothing is ever drawn on the part of it the cards stand on.
+  lie(s, PAPER_X0, PAPER_X1, PAPER_Z1, PAPER_Z0, TABLE_Y + 0.002, T_PAPER)
+  /*
+   * **Nothing else stands on this table, and that is the second attempt.**
+   *
+   * The first put a lantern and two loose sheets at its north end, on the
+   * reasoning that the north end is out of the way. It is not: the camera looks
+   * WEST at this beat, so the frame's horizontal axis runs along z and north is
+   * the RIGHT-HAND EDGE, not the top. Rendered, the lantern was a dark box in
+   * the top right corner and the sheets a brighter step under it, both of them
+   * inside the middle 78% of the frame where `.shell` puts the cards.
+   *
+   * There is nowhere on this table that is out of that frame — measured on the
+   * render, the paper alone fills it to within 8% at the top and 12% at the
+   * sides — so the props went to the desk and the mantel instead, where the
+   * turn and the tilt-up both pass them. What is left here is one flat field,
+   * which is what the owner asked for: "a big paper or something to be a solid
+   * background when the UI is showing the project cards".
+   */
+
+  // ── the small desk, the chair, and the corners ───────────────────────────
+  const dcx = (DESK_X0 + DESK_X1) / 2
+  const dcz = (DESK_Z0 + DESK_Z1) / 2
+  box(s, dcx, DESK_Y - 0.06, dcz, DESK_X1 - DESK_X0, 0.06, DESK_Z0 - DESK_Z1, T_TABLE, true)
+  for (const lz of [DESK_Z0 - 0.14, DESK_Z1 + 0.14]) {
+    post(s, DESK_X0 + 0.14, IN_Y, lz, 0.07, DESK_Y - 0.06 - IN_Y, T_TABLE, 0.9)
+  }
+  // The lantern that used to be on the big table, and a stack of books beside
+  // it. The desk is where they belong: it is in frame for the whole turn and
+  // for none of the settled table beat, so they are read as the room being
+  // lived in rather than as things standing on the backdrop.
+  box(s, dcx - 0.42, DESK_Y, dcz + 0.34, 0.17, 0.28, 0.17, T_TRIM)
+  if (props >= 1) box(s, dcx + 0.34, DESK_Y, dcz - 0.24, 0.3, 0.12, 0.22, T_TRIM)
+  // A candle on the mantel, which is the other warm anchor and the one thing in
+  // the room above waist height that is not structure. It is in frame at the
+  // threshold and again through the tilt-up.
+  box(s, FIRE_X + 0.66, MANTEL_Y + MANTEL_T, FP_FZ - 0.26, 0.08, 0.22, 0.08, T_TRIM)
+  chair(s, 0.62, -1.42, -0.5)
+  // North-west: the woodpile beside the hearth, which is the one prop in the
+  // room that explains the fire. North-east: a dresser under the east window,
+  // which is the one thing stopping that corner being a bare wall behind the
+  // desk. Both are chest height or lower, so neither is ever in the frame the
+  // reader reads over — they are what the TURN passes.
+  box(s, -2.7, IN_Y, -5.06, 0.78, 0.62, 0.74, T_TABLE)
+  if (props >= 1) {
+    for (let i = 0; i < 3; i++) {
+      const ly = IN_Y + 0.12 + i * 0.2
+      panel(s, -2.98 + (i % 2) * 0.3, -2.78 + (i % 2) * 0.3, ly, ly + 0.16, -4.68, T_TRIM)
+    }
+    box(s, 2.42, IN_Y, -4.72, 1.2, 0.86, 0.5, T_TABLE)
+    for (let i = 0; i < 2; i++) {
+      panel(s, 1.94, 2.9, IN_Y + 0.26 + i * 0.3, IN_Y + 0.3 + i * 0.3, -4.46, T_TRIM)
+    }
+  }
+  // The rug. Two triangles, and it does more per triangle than anything else in
+  // the room: it is the one thing between the hearth and the table that is
+  // neither floor nor furniture, and it lands exactly where the camera's own
+  // pan crosses the floor on the way from one to the other.
+  lie(s, -2.9, -0.2, -4.5, -2.7, IN_Y + 0.008, T_RUG)
+
+  s.hearth = false
+}
+
+/**
+ * The fireplace, set into the north wall.
+ *
+ * Six pieces: a surround standing proud of the wall with the firebox cut
+ * through it, the firebox's own five inward-facing surfaces, a mantel beam, the
+ * breast rising off it to the ceiling, and a hearth slab on the floor in front.
+ *
+ * The breast is capped along the ROOF's own slope rather than square, and that
+ * is not decoration: `ceilAt` is a straight line in x and the breast is 1.6
+ * wide, so a square top at any height either pokes through the roof on its west
+ * side or leaves a wedge of daylight on its east one. Capped on the slope its
+ * top edge lies exactly in the ceiling plane, which is watertight by
+ * construction at every width somebody might give it later.
+ */
+function hearth(s: Solid) {
+  const fl = FIRE_X - FP_HW
+  const fr = FIRE_X + FP_HW
+  const ol = FIRE_X - FP_OPEN_HW
+  const or_ = FIRE_X + FP_OPEN_HW
+  // the surround's face, in four strips round the opening
+  const face = (x0: number, x1: number, y0: number, y1: number) =>
+    quad(s, [x0, y0, FP_FZ], [x1, y0, FP_FZ], [x1, y1, FP_FZ], [x0, y1, FP_FZ], T_STONE, [0, 0, 1])
+  face(fl, ol, IN_Y, MANTEL_Y)
+  face(or_, fr, IN_Y, MANTEL_Y)
+  face(ol, or_, IN_Y, FP_OPEN_Y0)
+  face(ol, or_, FP_OPEN_Y1, MANTEL_Y)
+  // its two returns to the wall
+  for (const sign of [-1, 1]) {
+    const sx = FIRE_X + sign * FP_HW
+    quad(s, [sx, IN_Y, IN_Z1], [sx, IN_Y, FP_FZ], [sx, MANTEL_Y, FP_FZ], [sx, MANTEL_Y, IN_Z1], T_STONE, [sign, 0, 0])
+  }
+  /*
+   * The firebox: back, two sides, lintel and floor, all facing in and all at
+   * T_HEARTH, which is nearly black.
+   *
+   * **`s.hearth` goes OFF for it, and that is the one exemption in the room.**
+   * `hearthAt` puts the fire's baked light on every facet that faces it, and
+   * the firebox's five surfaces face it from 30cm: at full strength the boost
+   * is 0.455 of tone, which took the inside of the firebox to rgb (185,185,190)
+   * in light theme — paler than the surround around it and paler than the wall.
+   * The render is unambiguous about how wrong that looks: the darkest thing in
+   * any room with a fire in it is the inside of the fireplace, and the flames
+   * have nothing to be read against without it.
+   *
+   * It is also true rather than convenient. A firebox is soot, and the light
+   * this term models is the light REFLECTING off a surface; soot at 500 degrees
+   * an inch from a flame reflects nothing worth drawing.
+   */
+  s.hearth = false
+  quad(s, [ol, FP_OPEN_Y0, FP_BZ], [or_, FP_OPEN_Y0, FP_BZ], [or_, FP_OPEN_Y1, FP_BZ], [ol, FP_OPEN_Y1, FP_BZ], T_HEARTH, [0, 0, 1])
+  for (const sign of [-1, 1]) {
+    const sx = FIRE_X + sign * FP_OPEN_HW
+    quad(s, [sx, FP_OPEN_Y0, FP_BZ], [sx, FP_OPEN_Y0, FP_FZ], [sx, FP_OPEN_Y1, FP_FZ], [sx, FP_OPEN_Y1, FP_BZ], T_HEARTH, [-sign, 0, 0])
+  }
+  quad(s, [ol, FP_OPEN_Y1, FP_BZ], [or_, FP_OPEN_Y1, FP_BZ], [or_, FP_OPEN_Y1, FP_FZ], [ol, FP_OPEN_Y1, FP_FZ], T_HEARTH, [0, -1, 0])
+  lie(s, ol, or_, FP_BZ, FP_FZ, FP_OPEN_Y0, T_HEARTH)
+  s.hearth = true
+  // the mantel, projecting 10cm past the surround, and read from underneath
+  box(s, FIRE_X, MANTEL_Y, (IN_Z1 + FP_FZ - 0.1) / 2, FP_HW * 2 + 0.26, MANTEL_T, FP_FZ - 0.1 - IN_Z1, T_TRIM, true)
+  // the breast, capped on the roof's slope
+  const by = MANTEL_Y + MANTEL_T
+  const bl = FIRE_X - 0.8
+  const br = FIRE_X + 0.8
+  quad(s, [bl, by, FP_FZ], [br, by, FP_FZ], [br, ceilAt(br), FP_FZ], [bl, ceilAt(bl), FP_FZ], T_STONE, [0, 0, 1])
+  for (const bx of [bl, br]) {
+    quad(
+      s,
+      [bx, by, IN_Z1],
+      [bx, by, FP_FZ],
+      [bx, ceilAt(bx), FP_FZ],
+      [bx, ceilAt(bx), IN_Z1],
+      T_STONE,
+      [bx < FIRE_X ? -1 : 1, 0, 0],
+    )
+  }
+  // The hearth slab on the floor. Exactly the surround's own width and no
+  // wider: the woodpile stands at x = -3.09 to -2.31 and the slab's west edge
+  // is at -2.30, so the two meet without one sinking into the other.
+  box(s, FIRE_X, IN_Y, FP_FZ + 0.33, FP_HW * 2, 0.07, 0.66, T_STONE)
+}
+
+/**
+ * A chair, pulled out, facing the desk — which on the floor plan is the one
+ * piece of furniture that is not against a wall.
+ *
+ * `face` is the direction it is turned, in radians from +z. It is a seat, a
+ * back and four legs, and it costs 38 triangles: the most expensive prop in the
+ * room per unit of meaning, and it earns it by being the thing that says
+ * somebody sits here. The camera passes it during the turn and never settles on
+ * it, which is why it is a silhouette rather than a piece of joinery.
+ */
+function chair(s: Solid, cx: number, cz: number, face: number) {
+  const c = Math.cos(face)
+  const sn = Math.sin(face)
+  const at = (u: number, v: number): [number, number] => [cx + c * u - sn * v, cz + sn * u + c * v]
+  const seat = IN_Y + 0.44
+  const [sx, sz] = at(0, 0)
+  box(s, sx, seat, sz, 0.46, 0.05, 0.46, T_TABLE, true)
+  for (const u of [-0.18, 0.18]) {
+    for (const v of [-0.18, 0.18]) {
+      const [lx, lz] = at(u, v)
+      post(s, lx, IN_Y, lz, 0.032, seat - IN_Y, T_TABLE, 0.3)
+    }
+  }
+  // The back, behind the seat rather than beside it: `at(0, -0.22)` is one
+  // radius back along the chair's own facing, so turning the chair turns it.
+  const [bx, bz] = at(0, -0.22)
+  box(s, bx, seat + 0.05, bz, 0.44, 0.42, 0.05, T_TABLE, true)
 }
 
 /**
@@ -2649,6 +4177,16 @@ function buildWorld(tier: Quality): Solid {
  * `snow` lays a pale facet along every other segment of the lower skirts. It
  * is the difference between a dark forest and a SNOWY one, and it is only
  * bought for the near rank, where it is the only place it can be seen.
+ *
+ * `tall` and `bareK` are the rank's own proportions, and rank 3 exists
+ * entirely for them. A tree in the near foreground of a real forest shot is
+ * not a small tree drawn big; it is a MATURE tree, bare for most of its height,
+ * whose crown is out of the frame altogether. At bareK 2.55 and scale 3 the
+ * lowest branch is at 7.7m, which from six metres away is two and a half
+ * frames above the top edge — so what the reader gets is a dark vertical with
+ * no top, which is the whole point of it. The same tree at 50m is a tall pine
+ * with a high crown, which is also correct, and is why these are trees rather
+ * than bare posts.
  */
 function conifer(
   s: Solid,
@@ -2661,9 +4199,11 @@ function conifer(
   rot: number,
   base: number,
   snow: boolean,
+  tall = 4.3,
+  bareK = 1.15,
 ) {
-  const top = 4.3 * scale
-  const bare = 1.15 * scale
+  const top = tall * scale
+  const bare = bareK * scale
   // The trunk runs the whole height: the gaps between skirts are where a real
   // pine shows its own stem, and stopping it at the first tier leaves a tree
   // that is hollow wherever you can see into it.
@@ -2910,16 +4450,6 @@ function buildGlowCore(): Glow {
 }
 
 /**
- * The flank window's opening. It lives in `buildWorld` as three wall strips
- * around a gap; these are the numbers, hoisted so the glow layer can find the
- * same hole rather than a second set that agrees with it by hand.
- */
-const SW_Y0 = 1.5
-const SW_Y1 = 2.4
-const SW_Z0 = -3
-const SW_Z1 = -1.8
-
-/**
  * Everything the light does to what is around it: the wall glow around each
  * opening, and the warm pools it lays on the deck and out across the snow.
  *
@@ -2993,17 +4523,27 @@ function buildGlowSoft(): Glow {
    * diffs the frame. Keep it last, or that measurement silently starts
    * reporting some other quad.
    *
-   * It was `2.9 -> 7.4` and it is now shorter, wider and brighter, because the
-   * shot moved. The camera arrives 11m from the wall at eye height 2.45, which
-   * puts the bottom edge of the frame on the ground 6.8m away — measured — so
-   * the old pool spent its last two and a half metres below the picture. What
-   * was left in frame was 12,245 lit pixels of a 78,763-pixel pool.
+   * It was `2.9 -> 7.4`, then `1.6 -> 6.4`, and it is now shorter again, for
+   * the same reason both times: the shot moved and the bottom edge of the
+   * frame came up the ground toward the door.
    *
-   * Widening it rather than lengthening it puts the light back where the
-   * reference paintings put it: a broad warm patch spreading sideways from the
-   * door across cold ground, not a carpet runner pointing at the reader.
+   * The eye is now 1.72m and the aim is 2.5 degrees ABOVE horizontal, which
+   * puts the bottom edge of the frame across the ground 6.3m ahead of the
+   * reader on the centre line — z = 4.9 in world terms, with the corners
+   * reaching further. Projected at the arrival, `1.6 -> 6.4` put the fan's far
+   * LEFT corner at -1.34 of the frame's half-height, half of that edge under
+   * the picture, while its right corner stayed in: a pool cropped on one side
+   * only, which reads as a mistake in a way a symmetric crop does not. At
+   * `1.6 -> 5.4` the same corner lands at -1.13 and its opposite number comes
+   * in from -0.97 to -0.85, so what is lost is a wedge of the fan's last band,
+   * where its own `(1 - k)^2` ramp has already taken the alpha to zero.
+   *
+   * Wider rather than longer, both times, and that is the composition rather
+   * than the arithmetic: the reference paintings put a broad warm patch
+   * spreading sideways from the door across cold ground, not a carpet runner
+   * pointing at the reader.
    */
-  pool(g, DOOR_SLOT * 0.6, 1.6, 6.4, 1.5, 4.1, 0.62)
+  pool(g, DOOR_SLOT * 0.6, 1.6, 5.4, 1.6, 4.4, 0.62)
   return g
 }
 
@@ -3060,9 +4600,602 @@ function pool(g: Glow, cx: number, z0: number, z1: number, w0: number, w1: numbe
   }
 }
 
+/**
+ * A soft-edged rectangle of light lying ON something: the inner face at full
+ * alpha, and `halo`'s frame of trapezoids round it reaching zero at the outer
+ * edge.
+ *
+ * It is `halo` plus two triangles, and those two triangles are the whole
+ * difference between light falling on a surface and a ring drawn on one —
+ * `halo` alone leaves its middle empty, which is right for a wall round a lit
+ * window and wrong for a pool on a floor.
+ *
+ * **Nothing in this layer has an edge, and that is the requirement rather than
+ * the technique.** Every boundary in the room's warm layer dissolves; a
+ * rectangle of light with a visible side is the defect the pass that built
+ * `halo` existed to remove, and it would be worse indoors than out, because
+ * indoors these lie across the exact area the cards are read on.
+ */
+function wash(
+  g: Glow,
+  p: Plane,
+  out: V,
+  cu: number,
+  cv: number,
+  hu: number,
+  hv: number,
+  spread: number,
+  alpha: number,
+) {
+  pushQuad(g, p(cu - hu, cv - hv), p(cu + hu, cv - hv), p(cu + hu, cv + hv), p(cu - hu, cv + hv), alpha, out)
+  halo(g, p, out, cu, cv, hu, hv, spread, alpha)
+}
+
+/** A halo lying flat, at height `y`. `u` runs in x and `v` in z. */
+const yPlane = (y: number): Plane => (u, v) => [u, y, v]
+
+/**
+ * What the fire DOES to the room: the static half of the fire buffer.
+ *
+ * "ONE LIGHT SOURCE, with somewhere for the light to fall: a glow on the air, a
+ * pool on the ground, a rim on whatever is nearest it." These are the places it
+ * falls, in the order the eye finds them, and every one of them is pointed at
+ * by the tone the same fire already baked into the geometry through `hearthAt`.
+ * The two have to be read together: that one raises a facet's VALUE, this one
+ * gives the light its COLOUR, and either alone is half a fire.
+ *
+ * The two lanterns are here rather than in a layer of their own because they
+ * are the same pigment and the same theme entry: "light theme turns the fire
+ * and the lamps down, not off" is one number, `ROLES.*.fire`, and it can only
+ * stay one number if they share a material.
+ *
+ * **The table's wash is the one number in here that is a legibility decision.**
+ * At 0.30, which is where the floor's sits, the paper picks up a visible
+ * gradient across exactly the area the project cards stand on — light, but a
+ * gradient, and a gradient under card text is the thing the paper exists to
+ * prevent. At 0.13, measured across the settled frame, the paper runs rgb
+ * (99, 101, 107) at its far corner to (108, 108, 109) at its warm one: a nine
+ * value lift over the whole width of the shot, which is a light source and not
+ * an edge.
+ */
+function buildFireStatic(): Glow {
+  const g: Glow = { pos: [], rgba: [] }
+  // The surround's face round the opening. A frame, not a wash: the middle of
+  // it is the firebox, which has the actual fire in it.
+  halo(
+    g,
+    zPlane(FP_FZ + 0.012),
+    [0, 0, 1],
+    FIRE_X,
+    (FP_OPEN_Y0 + FP_OPEN_Y1) / 2,
+    FP_OPEN_HW,
+    (FP_OPEN_Y1 - FP_OPEN_Y0) / 2,
+    0.52,
+    0.42,
+  )
+  /*
+   * The pool on the floor in front of the hearth. Wider than it is deep, the
+   * way the door's pool outside is, because a fire throws light sideways across
+   * a floor and not down a corridor.
+   *
+   * It lies at floor level, so the hearth slab — 7cm proud, standing in the
+   * middle of it — cuts it. That is left alone deliberately. The slab's top
+   * faces straight up 80cm from the flame, which is the largest `hearthAt`
+   * boost anywhere in the room, so it is already brighter than the pool rather
+   * than a hole in it: what the cut reads as is the light STARTING at the
+   * hearth, which is where it starts. Lifting the pool above the slab instead
+   * would have solved a problem that is not there and made a new one — the
+   * plane would then slice the woodpile beside it at 9cm and put a horizontal
+   * line across a solid object.
+   */
+  wash(g, yPlane(IN_Y + 0.014), [0, 1, 0], FIRE_X, FP_FZ + 0.95, 1.15, 1.05, 1.35, 0.5)
+  /*
+   * The west wall, north of the window and stopping exactly at its jamb.
+   *
+   * A wash on a wall is a quad floating a centimetre off it, and a wall with a
+   * HOLE in it is a wall a quad can float in the middle of. The first version
+   * of this ran from z = -5.50 to -2.80, which put its far end inside the west
+   * window's own opening (-3.86 to -2.20) with nothing behind it but the
+   * snowfield 20 metres away: a warm rectangle hanging in the air outside the
+   * cabin, in the one frame the whole last beat is composed on.
+   *
+   * So the inner edge stops at -4.10, 24cm north of the jamb, and `spread` is
+   * 0.24 rather than 1.1 — chosen so `halo`'s outer edge lands exactly ON the
+   * jamb rather than past it. That is why the falloff here is tighter than
+   * anything else in this layer: it is not a taste decision, it is the width of
+   * the wall that is left.
+   */
+  wash(g, xPlane(-IN_X + 0.014), [1, 0, 0], -5.0, 1.45, 0.9, 0.9, 0.24, 0.2)
+  // The table, at a fifth of the floor's alpha, and sized so `halo`'s outer
+  // edge lands on the table's own edges — see the note above for the alpha and
+  // the west wall for why an outer edge that overshoots is not a small thing.
+  wash(g, yPlane(TABLE_Y + 0.014), [0, 1, 0], -2.0, -1.5, 0.8, 0.9, 0.6, 0.13)
+  // The lantern on the desk: a small bright core facing the room, and a pool of
+  // its own on the desk under it. It is the only warm in the south-east corner
+  // and it is what the turn sweeps past on its way to the table.
+  const lx = DESK_X0 + (DESK_X1 - DESK_X0) / 2 - 0.42
+  const lz = DESK_Z1 + (DESK_Z0 - DESK_Z1) / 2 + 0.34
+  pushQuad(
+    g,
+    [lx - 0.06, DESK_Y + 0.06, lz + 0.09],
+    [lx + 0.06, DESK_Y + 0.06, lz + 0.09],
+    [lx + 0.06, DESK_Y + 0.24, lz + 0.09],
+    [lx - 0.06, DESK_Y + 0.24, lz + 0.09],
+    0.85,
+    [0, 0, 1],
+  )
+  wash(g, yPlane(DESK_Y + 0.008), [0, 1, 0], lx, lz, 0.2, 0.2, 0.46, 0.34)
+  // The candle on the mantel, and the light it throws up the breast. Small, and
+  // the only thing that keeps the north wall alive after the camera has turned
+  // away from the fire.
+  const cx = FIRE_X + 0.66
+  pushQuad(
+    g,
+    [cx - 0.05, MANTEL_Y + MANTEL_T + 0.04, FP_FZ - 0.22],
+    [cx + 0.05, MANTEL_Y + MANTEL_T + 0.04, FP_FZ - 0.22],
+    [cx + 0.05, MANTEL_Y + MANTEL_T + 0.2, FP_FZ - 0.22],
+    [cx - 0.05, MANTEL_Y + MANTEL_T + 0.2, FP_FZ - 0.22],
+    0.8,
+    [0, 0, 1],
+  )
+  wash(g, zPlane(FP_FZ + 0.02), [0, 0, 1], cx, MANTEL_Y + 0.5, 0.14, 0.3, 0.55, 0.16)
+  return g
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
-   Snow
+   The shot
+
+   Everything below is read at frame time and nothing at module init, which is
+   why it can sit under the geometry and refer to it by name. The stations are
+   `const` objects and DO initialise at import, so they must stay after the
+   constants they are solved against — `TABLE_*`, `SW_*`, `FIRE_*`, `IN_*`.
    ──────────────────────────────────────────────────────────────────────────*/
+
+/** Where the eye is, and what it is pointed at. */
+type Station = { readonly p: V; readonly l: V }
+
+/**
+ * The beats, as fractions of the marks `Walk.tsx` measures. `A` is the p at
+ * which #apps' top reaches the top of the viewport and `T` is #tools'.
+ *
+ * Stated as fractions rather than as literals so the two SETTLED beats land
+ * exactly as a heading arrives, whatever anybody does to a section's height
+ * later. That is the whole reason the progress object carries marks at all.
+ */
+const B_DOOR = 0.62
+const B_THRESH = 0.9
+const TABLE_HOLD = 0.8
+const WINDOW_HOLD = 0.8
+
+/**
+ * How much of the APPROACH is the existing orbit, before the final push to the
+ * door.
+ *
+ * The owner's note on the shipped exterior was "the zoom in to the cabin is
+ * really good!", so the orbit is not re-tuned: it runs unchanged from its own 0
+ * to its own 1 over the first 72% of the approach, ending at exactly the frame
+ * it ends at today, and the last 28% is a new move from there in to the door
+ * mouth. Compressing the orbit itself into a shorter run would have kept the
+ * same frames; extending its near end to reach the door would not, because
+ * `Z_NEAR` and `AZ_NEAR` ARE that frame.
+ *
+ * Both halves are smoothstepped and the orbit's own `e` curve is flat at its
+ * end, so the join has zero velocity on both sides of it and cannot read as a
+ * gear change.
+ */
+const APPROACH_ORBIT = 0.72
+
+/**
+ * Where the walk rests for a reduced-motion visitor, in the approach's own
+ * parameter. `WALK_REST` is 0.62 of the orbit and the orbit is `APPROACH_ORBIT`
+ * of the approach.
+ */
+const APPROACH_REST = WALK_REST * APPROACH_ORBIT
+
+/**
+ * What to assume before `Walk.tsx` has measured, and how far the marks are
+ * allowed to be believed.
+ *
+ * The marks come from live boxes and are refreshed on resize, so on the very
+ * first frame — and on any layout where a section is degenerate — they can be
+ * 0, out of order, or greater than 1. A knot list that is not increasing puts
+ * the camera in two beats at once, which is not a wobble, it is a jump.
+ *
+ * **None of them bites on the page as it stands, and that is worth recording
+ * because one of them very nearly did.** Measured live at 1440x900 with the
+ * walk built: `.walk` is 5349px tall on a 900px viewport, so the pin travels
+ * 4449px, and the marks come back as `apps` 0.3849 and `tools` 0.8152. Both are
+ * inside these bounds with room to spare, and the six beats land at
+ *
+ * ```
+ *   approach   0      -> 0.2386     1062px of scroll
+ *   threshold  0.2386 -> 0.3464      479px
+ *   turn       0.3464 -> 0.3849      171px
+ *   table      0.3849 -> 0.7291     1532px   held, the project cards
+ *   looking up 0.7291 -> 0.8152      383px
+ *   window     0.8152 -> 0.9630      657px   held, the small tools
+ *   push out   0.9630 -> 1           165px
+ * ```
+ *
+ * An EARLIER layout put #tools' top 3483px into a 3453px run — p = 1.009, past
+ * the release — where the window beat would have been zero long and `tools`
+ * would have clamped to 0.84. That is what these bounds are for, and they fail
+ * in the right direction: settled a sixth of the walk early beats still moving
+ * when the reader arrives.
+ *
+ * The turn is the shortest move at 171px, which is 0.19 of a viewport, and it
+ * is the one beat where the DAMPING is load-bearing rather than decorative:
+ * `WALK_RATE` takes about a second to converge, so a reader who flicks through
+ * that 171px still gets a second of camera rather than a cut.
+ */
+const MARK_FALLBACK_APPS = 0.5
+const MARK_FALLBACK_TOOLS = 0.8
+const MARK_APPS_MIN = 0.24
+const MARK_APPS_MAX = 0.62
+const MARK_GAP_MIN = 0.14
+const MARK_TOOLS_MAX = 0.84
+
+/**
+ * The six knots of the shot in walk progress, filled by `knotsOf` and read by
+ * `shotAt`, `insideness` and `restFor`.
+ *
+ * One module-level array rather than a returned object, because this is read
+ * two or three times per drawn frame inside the one frame loop and an object
+ * per read is garbage the collector has to come back for. It is only ever
+ * written by `knotsOf` and only ever read afterwards in the same synchronous
+ * tick, which is the same contract `motion.ts`'s single mutated `Frame` has.
+ */
+const KNOT = [0, 0, 0, 0, 0, 0]
+
+function knotsOf(marks: WalkProgress) {
+  const a = Math.min(MARK_APPS_MAX, Math.max(MARK_APPS_MIN, marks.apps || MARK_FALLBACK_APPS))
+  const t = Math.min(
+    MARK_TOOLS_MAX,
+    Math.max(a + MARK_GAP_MIN, marks.tools || MARK_FALLBACK_TOOLS),
+  )
+  KNOT[0] = B_DOOR * a
+  KNOT[1] = B_THRESH * a
+  KNOT[2] = a
+  KNOT[3] = a + TABLE_HOLD * (t - a)
+  KNOT[4] = t
+  KNOT[5] = t + WINDOW_HOLD * (1 - t)
+}
+
+/**
+ * How far the room has closed round the camera: 0 at the door mouth, 1 by the
+ * end of the threshold.
+ *
+ * It is keyed on the shot's own knots rather than on the camera's z, and that
+ * is deliberate: the gate that picks the frame rate needs this BEFORE the
+ * camera has been placed, and a term that means two different things depending
+ * on where in the tick it is asked is a term that will eventually disagree with
+ * itself. `knotsOf` has to have run.
+ */
+function insideness(t: number) {
+  return smooth((t - KNOT[0]) / Math.max(1e-4, KNOT[1] - KNOT[0]))
+}
+
+/**
+ * The window and door light's own ramp across the approach, unchanged from the
+ * shipped one: `smooth(smooth(w))` on the orbit's parameter, saturating at 1
+ * the moment the orbit does.
+ */
+function approachLit(t: number) {
+  const a = KNOT[0] > 0 ? clamp01(t / KNOT[0]) : 1
+  return smooth(smooth(clamp01(a / APPROACH_ORBIT)))
+}
+
+/**
+ * Where the shot rests for a visitor who asked for less motion.
+ *
+ * **Three composed frames, not one, and this is the one place this file departs
+ * from what "snaps to identity" used to mean here.** The old rest was a single
+ * pose, because the camera was decoration behind one section. It is now the
+ * BACKDROP for three, and two of those three have a legibility requirement
+ * riding on the camera being in a particular place: the project cards are read
+ * against the paper and the small tools against the window. A single frozen
+ * pose would satisfy at most one of them and leave the other two sections
+ * reading over whatever the frozen frame happened to be.
+ *
+ * So it snaps to the nearest SETTLED beat instead — the composed exterior, the
+ * table, or the window — switching at the midpoints between them. Every one of
+ * those is a frame the shot was designed to stop on, never a mid-move one,
+ * which is what the rule is actually protecting. There is no animation between
+ * them: crossing a midpoint is a cut, and a cut is not motion.
+ *
+ * `knotsOf` has to have run.
+ */
+function restFor(marks: WalkProgress) {
+  knotsOf(marks)
+  const out = APPROACH_REST * KNOT[0]
+  const p = clamp01(marks.p)
+  if (p < (out + KNOT[2]) / 2) return out
+  if (p < (KNOT[2] + KNOT[4]) / 2) return KNOT[2]
+  return KNOT[4]
+}
+
+/**
+ * ── the stations ─────────────────────────────────────────────────────────
+ *
+ * Six of them, and every number is measured against the room rather than
+ * chosen: the table's own centre, the window's own centre, the firebox's own
+ * opening. Each is quoted where it matters.
+ */
+
+/**
+ * THE DOOR. The end of the approach, on the open half of the doorway.
+ *
+ * `x = 0.34` is not the door's centre and must not be. The leaf is hinged at
+ * -DOOR_HW and swings OUT to (0.146, 0.940), so it covers the doorway from the
+ * hinge across to x = 0.146 and the light — and the camera — get out through
+ * the 45cm slot beside it. A camera on the door's axis would pass straight
+ * through the leaf at z = 0.756. At 0.34 it is in the middle of the slot,
+ * clear of the leaf by 19cm and of the jamb by 26cm, and what the reader gets
+ * is the jamb sweeping past on the right and the dark leaf on the left, which
+ * is the "doorway frame passes the lens" of the brief.
+ *
+ * `y = 1.98` is a standing eye on the second step, whose top is at 0.22.
+ */
+const ST_DOOR: Station = { p: [0.34, 1.98, 2.55], l: [-0.15, 1.78, -3.2] }
+
+/**
+ * THE THRESHOLD. Inside, a step past the wall, and the first thing lit is the
+ * fire — which is what the aim is on: the firebox's own opening, at
+ * (FIRE_X, 1.06, -5.7).
+ *
+ * `y = 2.05` is the same standing eye, now on a floor at 0.42.
+ */
+const ST_THRESH: Station = { p: [0.28, 2.05, -0.72], l: [-1.05, 1.5, -5.5] }
+
+/**
+ * THE TABLE. Settled, high, looking DOWN — and this is the frame the project
+ * cards are read against, so it is the one station in the file that was SOLVED
+ * rather than composed.
+ *
+ * The eye is 1.76 above a table top at 1.18 and 2.05 from the point it is aimed
+ * at, which is 59 degrees below horizontal. It was found by ray-casting the
+ * card area against the paper's own rectangle over a grid of 44,000 candidate
+ * stations and keeping the ones where NOT ONE ray misses: at 1440x900 this
+ * frames 0.0% non-paper across the middle 78% by 88% of the viewport — the
+ * `.shell` box — and 0.3% across the whole frame, corner to corner.
+ *
+ * The first version of this station stood out in the room at 46 degrees and
+ * came out at 6.3%, all of it in the top right, and what was in that 6.3% was
+ * the table's own far edge: a hard step from paper at rgb (109,109,110) to
+ * table at (37,44,55) running diagonally through where a card sits. Every
+ * later change on this beat — the table growing to 2.05 by 2.70, the props
+ * leaving its top, the beams moving north to -2.45 — came out of that one
+ * render. The measurement is the thing to re-run if any of them move again;
+ * `internal/checklists/` has the shot's own spec and this file has the numbers.
+ */
+const ST_TABLE: Station = { p: [-0.72, 2.94, -1.46], l: [-1.78, 1.18, -1.46] }
+
+/**
+ * The same beat, at the end of its hold. It drifts 12cm and turns 4 degrees
+ * across a fifth of the page, which is under a pixel a second at reading speed
+ * — enough that the frame is not frozen, far too little to be a move. "Nearly
+ * still" is the brief: this is a backdrop and the cards are the subject.
+ */
+const ST_TABLE_END: Station = { p: [-0.78, 2.9, -1.36], l: [-1.83, 1.18, -1.58] }
+
+/**
+ * THE WINDOW. Settled on the west window, which is 1.66 wide and 1.26 tall
+ * centred at (−3.14, 1.79, −3.03).
+ *
+ * The eye is level with the window's own centre and 1.9m off it, square to the
+ * wall to within 9 degrees. At that distance the opening is 47 degrees wide
+ * against a 54-degree frame, so it fills the middle of the shot with its own
+ * light and the wall carries the corners — which is the same job the paper
+ * does one beat earlier, done by the brightest field in the room instead of by
+ * the flattest one.
+ */
+const ST_WINDOW: Station = { p: [-0.85, 1.9, -2.6], l: [-3.14, 1.82, -3.1] }
+
+/**
+ * And the push, over the last fifth. It closes to 1.22m off the wall and the
+ * opening overflows the frame on all four sides — measured from this station,
+ * the window's south jamb is 31.6 degrees off the axis against a 23.7 degree
+ * frame edge, its north jamb 36.7 against 30.3, its head 23.9 up against 7.5
+ * and its sill 30.5 down against 27.9. Not one edge of the window is left in
+ * the picture: it stops being a thing in a wall and becomes the field the
+ * canvas fades out of, with nothing anywhere in frame for the section below to
+ * cut against.
+ *
+ * It also tilts 10 degrees DOWN, which is the "washes toward the outside light"
+ * of the brief taken literally. At night the brightest thing out there is the
+ * snow, not the sky: aimed level, the frame came out half dark treeline and
+ * half snowfield with the horizon straight across the middle of it, which is a
+ * cut edge by another name. Aimed down, the snow is the bottom three quarters.
+ */
+const ST_WINDOW_IN: Station = { p: [-1.92, 1.88, -2.95], l: [-3.14, 1.66, -3.02] }
+
+/**
+ * How the INTERIOR stations answer a narrow frame — and it is the OPPOSITE of
+ * how the exterior does, which is the whole reason it is its own number and
+ * carries a sign.
+ *
+ * Outside, a narrow frame stands FURTHER BACK so the cabin still fits: that is
+ * `pullFor`, and its exponent is positive. Inside, backing off is exactly wrong
+ * and the measurement is unambiguous. `fovFor` clamps the vertical angle at
+ * FOV_MAX, so a portrait frame does not get narrower, it gets TALLER: at a
+ * 390x780 slice the vertical field is 60 degrees against a desktop's 35, and a
+ * camera looking 59 degrees down at a table then sees the floor from its own
+ * feet out to 3.2m — the paper is 2.2m long and it cannot fill that whatever
+ * tone it is. Measured, at the settled table beat, as the fraction of the
+ * card area that is NOT paper:
+ *
+ * ```
+ *   scale about the aim   1.40  1.20  1.00  0.80  0.70  0.60  0.55  0.50
+ *   phone, card area      50%   41%   30%   14%   2.5%   0%    0%    0%
+ *   phone, whole frame    56%   49%   39%   24%   13%   3.8%  1.3%   0%
+ * ```
+ *
+ * So the interior moves IN, and it is keyed on the VERTICAL field rather than
+ * on `framePull`. That distinction was measured too, and it is the difference
+ * between working and not: `framePull` is derived from the HORIZONTAL half
+ * angle, and a 768x1024 tablet has the same 60-degree vertical field as a
+ * 390x780 phone while its `framePull` is 1.10 against the phone's 1.41. Keyed
+ * on `framePull` the tablet got a pull of 0.89 and framed 21.3% non-paper; on
+ * the vertical field both get 0.55 and both frame 0.0%.
+ *
+ * `V_REF / tan(vHalf)` is that rule, and what it means is "keep the same
+ * footprint on the table however tall the frame gets": the far edge of what a
+ * downward camera sees is `height / tan(pitch - vHalf)`, and scaling the
+ * station about its aim scales that height by exactly this factor.
+ *
+ * The floor at 0.5 is not decoration. The vertical field is clamped at FOV_MAX
+ * so this bottoms out at 0.55 today, but a future FOV_MAX would keep going, and
+ * unchecked it would take the table station's eye under the table top.
+ */
+const V_REF = Math.tan(((fovFor(16 / 10) * Math.PI) / 180) / 2)
+const IN_PULL_MIN = 0.5
+function inPullFor(fov: number) {
+  return Math.max(IN_PULL_MIN, Math.min(1, V_REF / Math.tan(((fov * Math.PI) / 180) / 2)))
+}
+
+/**
+ * Keep the eye off the surfaces. Every station is inside the room by
+ * construction, so this only ever bites after `inPullFor` has moved one, and it
+ * is a guard rather than a shaper: at 320x800, the narrowest slice this site
+ * supports, `inPullFor` returns 0.552 and the table station lands 1.13m off its
+ * aim, where every margin here is still slack. The margins are the near plane
+ * plus a hand's width.
+ *
+ * **It runs only from the TURN onward**, and the note at the call site has the
+ * render that proved that gate has to exist: applied to the threshold, its
+ * `IN_Z0 - 0.25` snapped the camera from the door mouth to inside the room on
+ * the first frame of the beat and the walk through the doorway never happened.
+ */
+function clampRoom(e: V) {
+  e[0] = Math.min(IN_X - 0.3, Math.max(-IN_X + 0.3, e[0]))
+  e[2] = Math.min(IN_Z0 - 0.25, Math.max(IN_Z1 + 0.35, e[2]))
+  e[1] = Math.min(ceilAt(e[0]) - 0.25, Math.max(IN_Y + 0.55, e[1]))
+}
+
+/** Blend two stations into the two scratch vectors, at eased `k`. */
+function lerpStation(a: Station, b: Station, k: number, e: V, l: V) {
+  for (let i = 0; i < 3; i++) {
+    e[i] = a.p[i] + (b.p[i] - a.p[i]) * k
+    l[i] = a.l[i] + (b.l[i] - a.l[i]) * k
+  }
+}
+
+/**
+ * The whole camera, as a function of walk progress.
+ *
+ * Every segment is smoothstepped, so each one arrives at its knot with zero
+ * velocity AND leaves it with zero velocity — which makes the whole spline C1
+ * without a spline library and is the "ease every move at BOTH ends" of the
+ * brief. A camera that arrives at a hold with velocity still on it reads as a
+ * stumble, and a six-beat shot has five chances to do it.
+ *
+ * `knotsOf` has to have run. The eye and the aim come back in the two arrays
+ * passed in; nothing here allocates.
+ *
+ * Two narrow-frame corrections, and they pull in OPPOSITE directions: the
+ * approach takes `framePull` (stand further back so the cabin fits) and the
+ * interior takes `inPull` (move closer so the paper fills). `IN_PULL_MIN`'s
+ * note is why that is not a contradiction.
+ */
+function shotAt(t: number, framePull: number, inPull: number, e: V, l: V) {
+  if (t < KNOT[0]) {
+    // THE APPROACH. The existing orbit, then in to the door.
+    const a = KNOT[0] > 0 ? clamp01(t / KNOT[0]) : 1
+    const w = clamp01(a / APPROACH_ORBIT)
+    // Apparent size, not distance, is what the eye reads on an approach, and
+    // apparent size goes as 1/d. Interpolating the RECIPROCAL of the distance
+    // means the cabin grows at an even rate across the scroll; interpolating
+    // the distance itself makes the last third of the walk lunge. The
+    // smoothstep on top is the "unhurried" part.
+    const ease = smooth(w)
+    const near = Z_NEAR * framePull
+    const dist = 1 / (1 / Z_FAR + (1 / near - 1 / Z_FAR) * ease)
+    // The orbit. See AZ_FAR: `u` is linear in DISTANCE rather than in apparent
+    // size, which is what puts the swing at the far end of the walk and leaves
+    // the last third a clean straight push-in.
+    const u = clamp01((Z_FAR - dist) / (Z_FAR - near))
+    const az = AZ_FAR + (AZ_NEAR - AZ_FAR) * u
+    e[0] = Math.sin(az) * dist
+    e[1] = Y_FAR + (Y_NEAR - Y_FAR) * u
+    e[2] = LOOK_Z + Math.cos(az) * dist
+    l[0] = 0
+    l[1] = LOOK_Y_FAR + (LOOK_Y_NEAR - LOOK_Y_FAR) * u
+    l[2] = LOOK_Z
+    if (a > APPROACH_ORBIT) {
+      const k = smooth((a - APPROACH_ORBIT) / (1 - APPROACH_ORBIT))
+      for (let i = 0; i < 3; i++) {
+        e[i] += (ST_DOOR.p[i] - e[i]) * k
+        l[i] += (ST_DOOR.l[i] - l[i]) * k
+      }
+    }
+    return
+  }
+  if (t < KNOT[1]) {
+    // THE THRESHOLD. Through the doorway; the room opens.
+    lerpStation(ST_DOOR, ST_THRESH, smooth((t - KNOT[0]) / (KNOT[1] - KNOT[0])), e, l)
+  } else if (t < KNOT[2]) {
+    // THE TURN. Left off the door axis, arriving settled exactly at #apps.
+    lerpStation(ST_THRESH, ST_TABLE, smooth((t - KNOT[1]) / (KNOT[2] - KNOT[1])), e, l)
+  } else if (t < KNOT[3]) {
+    // THE TABLE. Held.
+    lerpStation(ST_TABLE, ST_TABLE_END, smooth((t - KNOT[2]) / (KNOT[3] - KNOT[2])), e, l)
+  } else if (t < KNOT[4]) {
+    // LOOKING UP. Off the table and round to the window, settled at #tools.
+    lerpStation(ST_TABLE_END, ST_WINDOW, smooth((t - KNOT[3]) / (KNOT[4] - KNOT[3])), e, l)
+  } else if (t < KNOT[5]) {
+    // THE WINDOW, held.
+    lerpStation(ST_WINDOW, ST_WINDOW, 0, e, l)
+  } else {
+    // and the push out, over the last fifth.
+    lerpStation(ST_WINDOW, ST_WINDOW_IN, smooth((t - KNOT[5]) / Math.max(1e-4, 1 - KNOT[5])), e, l)
+  }
+  /*
+   * The narrow-frame pull, along the station's own sightline, and then back
+   * inside the walls. Both are no-ops on anything as wide as the shot was
+   * composed for: `pullFor` returns 1 there.
+   *
+   * It ramps in across the TURN rather than applying from the threshold, and
+   * that is not tidiness. The approach hands over at `ST_DOOR` un-pulled — it
+   * has to, because the exterior takes `framePull` at full strength and a step
+   * in the pull at that knot would be a jump in the middle of a move. Pulling
+   * the threshold would also compress the one part of this shot with no room to
+   * spare: the camera passes the door leaf's free edge with 15cm to spare on
+   * the line it is on, and a station shifted toward a fireplace 5m to the
+   * north-west is a station that clips it. So the door and the threshold are
+   * always as composed, and the pull arrives over the turn, where the camera is
+   * in open room.
+   */
+  if (t <= KNOT[1]) return
+  const ramp = smooth((t - KNOT[1]) / Math.max(1e-4, KNOT[2] - KNOT[1]))
+  if (inPull < 0.999) {
+    const pull = 1 + (inPull - 1) * ramp
+    for (let i = 0; i < 3; i++) e[i] = l[i] + (e[i] - l[i]) * pull
+  }
+  /*
+   * And back inside the walls — also only from the turn, and that gate is not
+   * optional. `clampRoom` pins z to `IN_Z0 - 0.25`, which is 25cm inside the
+   * south wall; run over the THRESHOLD segment it snaps the camera from the
+   * door mouth to just inside the room on the first frame of the beat, and the
+   * whole walk through the doorway never happens. It was written that way and
+   * the render caught it: at walk 0.34 the shot was already at the fireplace
+   * with `insideness` still reading 0.12, so the fire was at a tenth of its
+   * opacity in a frame that was entirely interior.
+   */
+  clampRoom(e)
+}
+
+/**
+ * Is a world point inside the room's own footprint? Used by the snow, which
+ * rides the camera in a 26m box and would otherwise fall indoors — see the tick.
+ *
+ * The margin is generous on purpose: a flake half a metre outside a wall is
+ * seen through a window at a glancing angle where it reads as a flake in the
+ * WALL, and a flake half a metre outside the south wall is standing in the
+ * doorway.
+ */
+function inRoom(x: number, z: number) {
+  return x > -IN_X - 0.5 && x < IN_X + 0.5 && z < IN_Z0 + 0.5 && z > IN_Z1 - 0.5
+}
 
 /* ────────────────────────────────────────────────────────────────────────────
    Smoke
@@ -3077,18 +5210,38 @@ function pool(g: Glow, cx: number, z0: number, z1: number, w0: number, w1: numbe
 const SMOKE_RATE = 0.085
 /**
  * It leans far more than it climbs, and that is framing rather than weather.
- *
- * Measured at the rest pose: the chimney's cap sits 9.7 degrees above the view
- * axis and the top of the frame is at 14.9, so there are five degrees of sky
- * over it — about 130px. A plume rising 7.6m straight up left the frame after
- * its first metre and a half and the rest of it was drawn for nobody. Leaning
- * it downwind keeps the whole life of a puff inside that band, and a plume
+ * A plume rising 7.6m straight up left the frame after its first metre and a
+ * half and the rest of it was drawn for nobody. Leaning it downwind keeps the
+ * whole life of a puff inside the band of sky over the roof, and a plume
  * bending off a chimney is what the reference paintings draw anyway; smoke
  * going straight up is smoke on a windless day, which this is visibly not.
+ *
+ * **Lowering the eye took a degree and a half of that band, so these moved.**
+ * They were 3.6 / 5.4 / 2.2, solved against a camera whose axis at the rest
+ * pose pointed 2.9 degrees DOWN; it now points 0.7 degrees up, which lifts
+ * everything above the horizon toward the top edge. Re-measured on a 1440x900
+ * slice, as the fraction of the frame's half-height each puff reaches (1.0 is
+ * the top edge):
+ *
+ * ```
+ *   puff age q        0.10  0.25  0.40  0.55  0.70  0.85
+ *   its own alpha     0.57  0.56  0.36  0.20  0.09  0.02
+ *   was, at rest      0.69  0.78  0.87  0.97  1.07  1.17
+ *   is, at rest       0.67  0.74  0.81  0.88  0.96  1.04
+ *   is, at the door   0.87  0.96  1.05  1.15  1.26  1.37
+ * ```
+ *
+ * At the rest pose — the frame a reduced-motion visitor gets, and the one this
+ * was solved for before — the whole plume is now inside the frame instead of
+ * losing its last third. At the door it climbs out of shot from about q 0.4,
+ * and that is correct rather than a failure: the reader is standing at the
+ * house looking up at it, and smoke going over your head is what that looks
+ * like. Every puff still leaves the chimney inside the frame, which is the
+ * part that has to read.
  */
-const SMOKE_RISE = 3.6
-const SMOKE_WIND_X = 5.4
-const SMOKE_WIND_Z = 2.2
+const SMOKE_RISE = 2.7
+const SMOKE_WIND_X = 6.6
+const SMOKE_WIND_Z = 2.6
 const SMOKE_R0 = 0.34
 const SMOKE_R1 = 3.1
 /** Rim points on a puff, which is also its triangle count. See `layoutSmoke`. */
@@ -3097,6 +5250,14 @@ const SMOKE_TRIS = 5
 const SNOW_HX = 13
 const SNOW_HY = 14
 const SNOW_HZ = 15
-/** The box sits ahead of the camera, which is looking down -z. */
-const SNOW_AHEAD = -7
+/**
+ * How far ahead of the camera the flake box sits, ALONG THE LOOK DIRECTION.
+ *
+ * It was -7 and it is 7, and nothing about the picture changed: the tick used
+ * to push the box with the orbit's own azimuth, where "ahead" came out with the
+ * opposite sign, and it now pushes it with the normalised forward vector, where
+ * a positive number means forward. The old form could not survive a camera that
+ * turns in a room; see the note where `fwdX` is computed.
+ */
+const SNOW_AHEAD = 7
 const SNOW_SIZE = 0.055

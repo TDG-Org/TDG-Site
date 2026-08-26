@@ -1,23 +1,26 @@
 import type { JSX } from 'react'
 import './Seam.css'
 
-type SeamShape = 'ridge' | 'dune' | 'peaks' | 'wave' | 'steps'
+type SeamShape = 'ridge' | 'dune' | 'peaks' | 'wave' | 'steps' | 'firs'
 
 /**
- * The five silhouettes, in the art kit's flat low-poly voice: broad facets,
+ * The six silhouettes, in the art kit's flat low-poly voice: broad facets,
  * no detail, nothing that reads as an illustration. They are the boundary
  * between two sections wearing a shape, not a picture of a place.
  *
- * All five are authored in the `edge="top"` orientation — the mass along the
+ * All six are authored in the `edge="top"` orientation — the mass along the
  * TOP of the band, the silhouette hanging down into the section below it —
  * because that is the case the flip is measured from. A seam at the bottom
  * edge is the same path mirrored, which is what `edge="bottom"` does, so
  * there is exactly one path per shape and the two edges cannot drift into two
  * slightly different mountains.
  *
- * They are deliberately shallow. A seam is read at 40–90px tall across a
- * whole viewport, so an amplitude that looks timid at this viewBox is already
- * the loudest thing on the boundary once it is stretched.
+ * They are deliberately shallow — with one exception. A seam is read at 40–90px
+ * tall across a whole viewport, so an amplitude that looks timid at this
+ * viewBox is already the loudest thing on the boundary once it is stretched.
+ * `steps` is the exception and it is deliberate: it spends 7.5% to 83.3% of
+ * the band on purpose, because that spread is what lets one mask draw its far
+ * end pale and its near end solid. Its own comment has the argument.
  */
 const SHAPES: Record<SeamShape, string> = {
   /* a low mountain profile: many facets, none of them tall */
@@ -30,8 +33,82 @@ const SHAPES: Record<SeamShape, string> = {
     'M0 0 L0 12 L150 74 L250 28 L420 106 L560 32 L700 86 L810 24 L980 98 L1120 36 L1260 80 L1360 30 L1440 62 L1440 0 Z',
   /* one long lazy S across the whole width */
   wave: 'M0 0 L0 30 C420 92 1020 4 1440 54 L1440 0 Z',
-  /* a blocky terrace: every edge orthogonal, no diagonals at all */
-  steps: 'M0 0 L0 16 H210 V40 H420 V24 H620 V64 H840 V44 H1040 V76 H1240 V52 H1440 V0 Z',
+  /* ── a stone stair in perspective, descending to the left ─────────────────
+     This was a blocky terrace — `H210 V40 H420 V24 H620 V64 …`, every edge
+     orthogonal, no diagonal in it at all, and the treads stepping up and down
+     around a mean. Rendered at the Outro boundary it did not read as ground.
+     It read as UI that had failed to load: a row of flat grey rectangles
+     stepping across the whole width.
+
+     Two things made it that, and both are fixed by the path rather than by
+     the fill.
+
+     **The old treads were level, and so is a mask.** Its silhouette ran y
+     16..76 of the 120 viewBox — the shallowest tread only 13% of the band down
+     — while the Outro's mask ramps from `transparent` at the join to opaque a
+     quarter of a band lower. A level tread under a level alpha ramp gives a
+     rectangle with a ruled top edge that every tread shares, and six of those
+     side by side is a skeleton loader. A shape whose edge is level everywhere
+     is the one shape a horizontal mask cannot dissolve.
+
+     **And a terrace that goes up and down again is not a stair.** These six
+     treads descend monotonically from y 100 at the left edge to y 9 at the
+     right, so the silhouette occupies 7.5% to 83.3% of the band instead of 13%
+     to 63%. Under the same mask that spread is worth more than the shape is:
+     the far end is drawn where the alpha is under a third and the near end
+     where it is full, so the run recedes into haze by itself with no second
+     layer and no second colour.
+
+     The perspective is in the proportions rather than in a vanishing point.
+     Treads widen toward the near end — 176, 156, 186, 222, 260, 300 units
+     reading right to left — and the risers deepen with them, 6, 8, 10, 12, 14.
+     Each tread also falls 1 to 6 units across its own run and turns down
+     through a chamfered nosing before its riser, 20 units wide at the far end
+     and 36 at the near, which is what makes it cut stone rather than a step in
+     a bar chart. The nosing is the narrowest feature: 20 units is 5.2px at
+     375px wide, and it is a corner rather than a spike, so the header's
+     warning about thin features does not apply to it. Do not add a narrower
+     one.
+
+     It descends to the LEFT because the Outro's threshold is on the left: the
+     `props/garden-arch` stands in that gutter, so the run comes down toward
+     the gate and the light hangs over the shallow end. The near tread is 300
+     units and is cut by the frame; the far one runs out at the right edge as a
+     landing.                                                                */
+  steps:
+    'M0 0 L0 100 L300 94 L336 88 L336 74 L596 69 L628 64 L628 52 L850 48 L878 44 L878 34 L1064 31 L1088 28 L1088 20 L1244 18 L1264 16 L1264 10 L1440 9 L1440 0 Z',
+  /* ── a conifer treeline: eleven firs of four depths on one baseline ───────
+     The sixth shape, and the first one added since the set was written. It
+     exists because #apps' beat is walking OUT of Origin's clearing INTO the
+     trees, and none of the five says "trees": `ridge` and `peaks` are rock,
+     `dune` and `wave` are soft ground and water, `steps` is worked stone. A
+     treeline drawn with `peaks` reads as a mountain range that happens to be
+     jagged — the give-away is that a mountain's facets are asymmetric and
+     continuous, while a treeline is a row of separate objects standing on one
+     line, with sky between them.
+
+     So: a flat baseline at y = 22, and eleven isosceles spikes hanging off it
+     at four depths (62 / 74 / 96 / 112 of the 120 viewBox), with a plain gap
+     of baseline between each pair. The gaps are what make them read as trees
+     rather than as one serrated edge, and the varied depth is what stops the
+     row reading as a comb.
+
+     **It is authored in `edge="top"` like the other five — mass along the top,
+     spikes hanging DOWN — and the two callers both draw it `edge="bottom"`.**
+     That is not a contradiction: `edge` is which way the shape POINTS, not
+     which end of the section it sits on (`scene/README.md` says so, and
+     `#faith`'s rising range is the precedent). A treeline at a section's TOP
+     boundary wants the mirrored path, mass at the bottom and the tips rising
+     into the section above.
+
+     The base of the widest fir is 104 viewBox units. Squeezed to the 375px
+     narrow end that is 27px of width against a 34px spike, which is a fir; the
+     header's warning about thin features becoming spikes is about features
+     that were never meant to be spikes, and these were. The narrowest base is
+     68 units — 17.7px at 375 — which is the floor this row was drawn to. Do
+     not add a narrower one.                                                 */
+  firs:
+    'M0 0 L0 22 L52 22 L92 96 L132 22 L206 22 L241 74 L276 22 L336 22 L388 112 L440 22 L496 22 L536 78 L576 22 L638 22 L686 104 L734 22 L790 22 L824 62 L858 22 L912 22 L962 100 L1012 22 L1062 22 L1098 74 L1134 22 L1182 22 L1234 108 L1286 22 L1332 22 L1366 66 L1400 22 L1440 22 L1440 0 Z',
 }
 
 /**

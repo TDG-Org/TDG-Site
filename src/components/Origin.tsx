@@ -1,48 +1,36 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clamp01, onFrame } from '../lib/motion'
 import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
 import { usePointer } from '../hooks/usePointer'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
-import { Snow } from './scene/Snow'
-import { Stage } from './scene/Stage'
-import { StillArt } from './scene/ThemedArt'
+import { StillArt, ThemedArt } from './scene/ThemedArt'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
 import { CHAPTERS, type Chapter } from '../data/content'
 import './Origin.css'
 
-/**
- * The cabin, in its own chunk, and NOT rendered until the reader is on the
- * way here.
+/*
+ * ── the cabin used to be mounted here, and is not any more ────────────────
+ * `CabinScene`, the `Stage` it hangs in, the near `Snow` layer and the
+ * IntersectionObserver that defers the three.js chunk all moved to
+ * `components/Walk.tsx` in this pass. CONTRACT W: the camera now goes on past
+ * this section, in through the cabin door and around to the window, so its pin
+ * has to hold for `#origin`, `#apps` and `#tools` together — and a `Stage`
+ * releases on the bottom edge of the section it is declared in, which is
+ * exactly the bound that made a shot across three sections impossible.
  *
- * `React.lazy` splits the chunk but fires its import the moment the component
- * renders, and Origin is in the home page's tree from the first paint — so a
- * plain lazy mount is a 134 kB gzipped download of three.js for every visitor
- * including one who reads the hero and leaves. Splitting the chunk is only
- * half the job; the other half is `mounted` below, which is why this constant
- * is never referenced except behind that flag.
- */
-const CabinScene = lazy(() =>
-  import('./origin/CabinScene').then((m) => ({ default: m.CabinScene })),
-)
-
-/**
- * How much of the viewport Origin has to have climbed before three.js is
- * asked for. 20% of a viewport past first contact.
+ * What is left in this file is the section's own art: the mist, the treeline
+ * and the snow bank at the hero boundary, the lamppost standing in that snow,
+ * and the grid and blob inside `.origin__clip`. All of them still paint OVER
+ * the walk's canvas, because `#origin` is `z-index: 4` and the stage is at 0.
  *
- * Origin's top edge is only 30svh below the fold at the top of the page (the
- * hero's runway — see Hero.tsx), so a plain `rootMargin: 0` fires on the
- * first wheel notch and the deferral buys nothing: scrolling through the
- * hero's own dissolve is exactly what a visitor who is only reading the hero
- * does. Requiring the section to be a fifth of a viewport ON screen means the
- * reader has scrolled past the beat and is watching Origin arrive, and it
- * still leaves 80svh of scrolling before Origin's top reaches the top of the
- * viewport — several seconds of network on a slow connection, and the cabin
- * is a backdrop rather than content, so arriving late costs nothing but the
- * fade it does not get.
+ * `stage-host` came off the section with the stage. It is `overflow: clip` and
+ * nothing else, and `.origin` has declared its own `overflow: clip` (with the
+ * 130svh margin the lamppost needs) since long before this pass — so the class
+ * was already saying something the section said better one line down, and with
+ * no `Stage` in here it is not even claiming the right thing any more.
  */
-const CABIN_MARGIN = '0px 0px -20% 0px'
 
 /** Pointer amplitude for the lamppost, px. See Origin.css: this number is
  *  spent out of the same budget that keeps the lamp's ink 30px clear of the
@@ -50,51 +38,62 @@ const CABIN_MARGIN = '0px 0px -20% 0px'
 const LAMP_POINT_X = 10
 
 /**
- * How much snow the NEAR layer is allowed to add, on top of the cabin's own.
+ * How far outside the viewport the lamppost's pointer tick stops writing, px.
  *
- * This section now has snow at two depths, which is not the same thing as
- * having it twice. `CabinScene` draws the far and middle layers inside the 3D
- * scene, where flakes have real parallax against the trees and the cabin and
- * pass behind geometry as well as in front of it; `Snow` is the near layer, a
- * few bigger, faster flakes crossing the frame close to the reader, in front of
- * everything the scene draws.
+ * 120, the number `scene/Stage.tsx` and `faith/Summit.tsx` already guard on,
+ * because this is the same question they answer: an `onFrame` subscriber
+ * cannot see `useOffscreenPause`'s attribute and has to check for itself.
  *
- * **Density is the whole risk, and it is a reading risk rather than a
- * performance one.** Two snowfalls at the wrong ratio is a blizzard, and behind
- * this one there are seven chapters of prose somebody is trying to read. So the
- * number is deliberately far below `Snow`'s own default of 1: at 1 the canvas
- * at a 1440px viewport gets 99 flakes, which is the density of weather you look
- * AT.
+ * It is worth a rect here even though the tick already suppresses a repeated
+ * string. `usePointer` holds the loop for the whole of a mouse gesture
+ * ANYWHERE on the page, so without this the lamppost took a style write and a
+ * style recalculation every time the reader moved the cursor six sections
+ * away. There is no stale state to be wrong about on the way back in: what
+ * this writes is a pure function of a damped pointer that is already correct
+ * on the frame it is read, and the read and its write happen inside one frame
+ * before the browser paints.
  *
- * Counted at 0.3 off the drawn canvas, not calculated — the flakes were
- * flood-filled out of the backing store — against the cabin's 200 / 420 / 640
- * in-scene flakes on the same three machine tiers. The canvas is the stage's
- * pin, so its box is the section's width by 100svh:
- *
- * | canvas | <=4 cores, or under 900px | 8 cores | more |
- * | --- | --- | --- | --- |
- * | 320 x 812 | 3 | 3 | 3 |
- * | 375 x 812 | 4 | 4 | 4 |
- * | 1430 x 900 | 16 | 24 | 29-30 |
- * | 1910 x 1080 | 26 | 38 | 48 |
- *
- * (29 and not 30 in one reading of the busiest cell, because two flakes
- * overlapped into one blob for the counter. The budget is 30.)
- *
- * The narrow column is the one that decides it. `flakeBudget` treats a viewport
- * under 900px as a weak machine, so a phone lands on the 0.55 multiplier
- * whatever its cores are, and at 0.3 that is three or four flakes on a phone —
- * sparse, and the direction to be wrong in for a layer meant to read as a few
- * flakes close to your face rather than as fog. Going high enough to make a
- * phone busy puts a 1920 desktop past 70, which is where the near layer starts
- * competing with the copy behind it. The weather this section HAS is the
- * cabin's; this is the pane of glass in front of it.
- *
- * It is a prop and not an edit to `Snow`'s defaults on purpose: the defaults
- * are that component's idea of ordinary snowfall, and this is one section
- * asking for less.
+ * 120 rather than `useParallax`'s 400 for the same reason those two differ:
+ * 400 buys the seventeen frames a lerp needs to settle out of sight, and there
+ * is no lerp on this element.
  */
-const NEAR_SNOW = 0.3
+const LAMP_MARGIN = 120
+
+/**
+ * ── the depth ladder ──────────────────────────────────────────────────────
+ *
+ * Sign first, because it is the half that carries the depth: `useParallax`
+ * writes `centreOffset * -factor`, so a POSITIVE factor lags the page and
+ * reads as distance, and a NEGATIVE one travels against it and reads as near.
+ * Four layers that only differ in magnitude is one layer with jitter; four
+ * that differ in SIGN is a place.
+ *
+ *   +0.18  the blob        the sky glow behind everything (unchanged)
+ *   +0.05  the valley mist the haze lying against the hero's ridges
+ *   +0.02  the far trees   the pine pair standing behind the boundary
+ *   -0.11  the near trees  the pine grove, cropped by the right frame edge
+ *
+ * Sixteen times between the fastest and the slowest, and the pair that
+ * actually builds the boundary — the far trees at +0.02 and the near ones at
+ * -0.11 — open and close by 0.13 of relative travel against each other, which
+ * is what makes a reader scrolling past find a second treeline behind the
+ * first rather than finding a line.
+ *
+ * **The ladder is one rung shorter than it was, and the rung that went is the
+ * -0.07 nightfall.** It was the moving half of `.origin__sink`, the fade this
+ * section used to paint into `#apps` at its own floor — and under CONTRACT W
+ * that floor is not a boundary at all, it is the middle of one continuous
+ * camera move. See the note where the sink used to be rendered. Every layer
+ * left on this ladder is at the section's TOP, which is the one edge of Origin
+ * that is still a join between two different pictures.
+ *
+ * The lamppost and its light are deliberately NOT on this ladder: they answer
+ * the pointer and nothing else, because the pole is a thing standing on the
+ * ground and ground does not drift. See the lamp effect below.
+ */
+const HAZE_FACTOR = 0.05
+const FAR_TREE_FACTOR = 0.02
+const NEAR_TREE_FACTOR = -0.11
 
 /**
  * One chapter of the timeline, as a disclosure.
@@ -207,50 +206,10 @@ export function Origin() {
   const rail = useRef<HTMLDivElement | null>(null)
   const lamp = useRef<HTMLDivElement | null>(null)
   const blob = useParallax<HTMLDivElement>(0.18)
+  const haze = useParallax<HTMLDivElement>(HAZE_FACTOR)
   const intro = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('wipe', 0)
-  const [cabin, setCabin] = useState(false)
   const pointer = usePointer()
-
-  /*
-   * Deferred mount for the three.js chunk. See CABIN_MARGIN above for the
-   * number and CabinScene's own header for what it draws.
-   *
-   * An IntersectionObserver rather than the frame loop, deliberately: the
-   * loop parks when nothing holds it, and a reader who scrolls with the
-   * keyboard, restores a session at a saved position or lands on `#origin`
-   * from another route can arrive here on a frame the loop never ran. The
-   * observer fires from the browser's own lifecycle either way, and it costs
-   * nothing per frame.
-   *
-   * It disconnects on the first hit and never observes again. Once three.js is
-   * in memory and a WebGL context is live, unmounting on scroll-up would throw
-   * both away and pay for them again on the way back down, which is strictly
-   * worse than leaving a parked canvas in the DOM — CabinScene already returns
-   * before drawing AND before holding once its section is off screen.
-   *
-   * No observer at all (a very old browser, or one where the constructor
-   * throws) mounts it immediately. A missing optimisation is not a reason to
-   * lose the section's centrepiece.
-   */
-  useEffect(() => {
-    const el = section.current
-    if (!el) return
-    if (typeof IntersectionObserver === 'undefined') {
-      setCabin(true)
-      return
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return
-        io.disconnect()
-        setCabin(true)
-      },
-      { rootMargin: CABIN_MARGIN },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
 
   /*
    * The lamppost answers the mouse, and only on one axis.
@@ -260,12 +219,26 @@ export function Origin() {
    * the ground — and a foot that bobs 5px off the snow every time the cursor
    * moves is the one way to lose the illusion this entire arrangement exists
    * to build. So there is no y term at all.
+   *
+   * **This wrapper now carries five layers, not one.** The lamp's warm light —
+   * its pool on the snow, the cone of lit air, the halo and the lantern's own
+   * core — are children of this element for exactly this reason: one writer of
+   * `translate`, on the box all five share, so the light cannot come off the
+   * lantern however far the pointer pulls it. Origin.css has the geometry they
+   * all read from.
+   *
+   * The rect guard is new; see LAMP_MARGIN for why a tick that already
+   * suppresses a repeated string still wanted one. `.origin__lamp-drift` is
+   * `inset: 0`, so its rect IS the section's rect — this is the section check
+   * the house rule asks for, not a second box.
    */
   useEffect(() => {
     const el = lamp.current
     if (!el) return
     let painted = ''
-    return onFrame(({ mi }) => {
+    return onFrame(({ vh, mi }) => {
+      const r = el.getBoundingClientRect()
+      if (r.bottom < -LAMP_MARGIN || r.top > vh + LAMP_MARGIN) return
       const next = mi === 0 ? '' : `${(pointer.x * LAMP_POINT_X).toFixed(1)}px 0`
       if (next === painted) return
       painted = next
@@ -295,79 +268,107 @@ export function Origin() {
   }, [])
 
   return (
-    <section id="origin" ref={section} className="section section--blend stage-host origin">
+    <section id="origin" ref={section} className="section origin">
       {/* ── everything that must NOT escape ─────────────────────────
           This section is `overflow: clip` with a 130svh clip margin, because
           the lamppost below has to rise out of the top of it and stand in the
           hero. A clip margin opens EVERY edge, though, and Origin has layers
           deliberately larger than it is: a blurred blob that drifts on
-          `useParallax`, a masked grid, a viewport-sized WebGL canvas. Left as
-          direct children they would leak into the hero and into Apps the
-          moment the margin was added, and so would every future layer added
-          to this section, silently.
+          `useParallax`, and a masked grid. Left as direct children they would
+          leak into the hero and into Apps the moment the margin was added, and
+          so would every future layer added to this section, silently.
 
           So the clip is stated once, HERE, as a box: this wrapper is the
           section's own padding box with `overflow: clip` and no margin, and
-          anything inside it is clipped exactly as it always was. Only the two
+          anything inside it is clipped exactly as it always was. Only the
           things that are SUPPOSED to cross the boundary sit outside it. That
           makes the invariant structural rather than remembered, which is the
           same move `.stage` makes for z-order.
 
-          `overflow: clip` is not a scroll container, so the sticky pin inside
-          still pins. `overflow: hidden` here would kill the cabin's stage
-          exactly the way it would kill the hero's; Stage.tsx's header has the
-          measurement. */}
+          The cabin and the near snow used to be the first thing in this box.
+          They are in `Walk.tsx` now — see the note at the top of this file —
+          and both of them paint UNDER this section rather than inside it, so
+          the grid and the blob below are drawn over the canvas exactly as they
+          were drawn over it here.
+
+          `overflow: clip` and not `hidden`, still: the walk's sticky pin is
+          not inside this section, so `hidden` would no longer break it, but
+          `overflow-clip-margin` is defined only for `clip` and the whole
+          purpose of this box is the margin on the section around it. */}
       <div className="origin__clip" aria-hidden="true">
-        {/* The cabin, far off across the snow, walked toward as the reader
-            moves through the chapters. It replaces `origin/OriginField.tsx`,
-            which was a 2D projected point field standing in for depth this
-            section can now have properly: one canvas in here, not two.
-
-            It is mounted in a `Stage` because that is the framing it was
-            composed for, a sticky viewport-sized box, so its camera composes
-            for a screen rather than for a 1700px-tall strip. Decorative four
-            ways: aria-hidden on the stage, pointer-events none from its own
-            inline style, no flow space, and the bottom layer of the section.
-
-            `Suspense fallback={null}` because there is nothing to show while
-            a backdrop loads, and a placeholder is a shape that appears and is
-            then replaced. `cabin` is the deferred mount; see the effect
-            above, and note that the lazy import does not fire until this
-            renders. */}
-        <Stage className="origin__stage">
-          {cabin ? (
-            <Suspense fallback={null}>
-              <CabinScene className="origin__cabin" />
-            </Suspense>
-          ) : null}
-
-          {/* The near layer of the snow, and the only snow that does not need
-              WebGL. See NEAR_SNOW above for the depth ladder and the density.
-
-              It sits INSIDE the stage rather than beside it, which buys three
-              things at once. It is one viewport of canvas instead of a
-              section's worth — the pin is 100svh, this section is nearly three
-              times that — so the fill is bounded by the screen and the flake
-              budget is spent where the reader is looking. It is pinned, so the
-              near snow is viewport-locked the way snow in front of your face
-              is, rather than scrolling away with the page. And it inherits the
-              stage's `pointer-events: none`, its `aria-hidden`, its
-              `data-covered` paint guard and its place at the floor of the
-              section's stacking order, which is what keeps it off the copy.
-
-              AFTER the cabin, which is the whole of the z-order between them:
-              neither canvas carries a `z-index`, so tree order decides, and
-              inventing one here would only escape into the section's stacking
-              context — see .stage's note in Stage.css.
-
-              It is unconditional where the cabin is deferred. It has no chunk
-              to download and no context to acquire, so there is nothing to
-              defer, and a visitor whose browser refuses WebGL gets this. */}
-          <Snow className="origin__flakes" density={NEAR_SNOW} />
-        </Stage>
-
         <div className="texture origin__grid" />
         <div ref={blob} className="blob origin__blob" />
+      </div>
+
+      {/* ── the valley's mist ─────────────────────────────────────────
+          Aerial perspective, and it is the cheapest depth cue there is: a
+          band of THIS section's own ink lying against the hero's ridges,
+          above the boundary, so the mountains pale into the air Origin
+          arrives in rather than being cut off by it.
+
+          It is `--band-origin` and not `--terrain-haze` even though the haze
+          token is what the hero draws under each ridge. That token is the
+          ridge's FOOT — the colour a ridge stops on — and Hero.css already
+          spends it there. What this band is doing is the other half of the
+          same idea from below: it is the arriving section's air, which is the
+          band, and tokens.css records that --band-origin was DERIVED from
+          exactly that foot ink at this band's own lightness. One ink, and it
+          is right in both themes for one reason: over a night sky it darkens
+          the ridge toward the valley floor, over a pale one it pales it toward
+          the mist, which is what aerial perspective does in each.
+
+          It drifts FASTER than the treeline standing in it (+0.05 against
+          +0.02), because it is further away, and a positive factor lags the
+          page. See the depth ladder above. */}
+      <div ref={haze} className="origin__haze" aria-hidden="true" />
+
+      {/* ── the treeline, and it is the thing that welds the two bands ──
+          The site owner's report: "have the trees overlap well with the hero
+          section, because right now the trees are being cut off past the
+          mountain height." The trees they mean are the cabin's, and those
+          genuinely cannot leave — they are geometry inside a WebGL canvas
+          inside `.origin__clip`, and moving that canvas up would put snow and
+          pines in the middle of the hero at scroll 0.
+
+          So this is a SECOND treeline, built the way the lamppost below is
+          built: a child of #origin that sits OUTSIDE `.origin__clip` and
+          escapes upward through the section's `overflow-clip-margin`. Crowns
+          in the hero's mountains, trunks in Origin's snow, one prop standing
+          on both sides of a boundary — which is a weld no gradient can make.
+
+          Two silhouettes at two depths and not one: `props/pine-grove` is the
+          NEAR plane, mirrored and pushed off the right edge so the frame CROPS
+          it, and `props/pine-pair` is the far one behind and left of it,
+          smaller and at --art-far.
+
+          **That assignment is the other way round from the obvious one, and it
+          was decided off a render rather than off the file names.** The pair is
+          drawn in flat facets, which is the hero's voice, so putting it near
+          looked like the right call — and on screen its -dark artwork is a mid
+          slate that composites LIGHTER than this section's near-black sky, so a
+          490px pine at the frame edge read as one more pale triangle among the
+          ridge's pale triangles. The grove is the darker, painterly file, and
+          near-black-on-near-black is what a foreground conifer is supposed to
+          be. Swapped, the near tree reads as a tree and the pair does the job
+          flat facets are actually good at, which is being far away.
+
+          The kit says the grove is "a richer edge anchor for one later
+          section" and says of both that they must never stand beside the
+          lamppost — so both are on the RIGHT, and the pole keeps the left edge
+          to itself.
+
+          Both are on the right for a second reason: Origin's reading column
+          ends at 994px inside a 1430px section, so a tree at the frame edge is
+          a tree nothing has to be read through.
+
+          Invisible at scroll 0 by arithmetic, not by luck. Origin's top edge
+          sits at 130svh and the fold at 100svh, so there are 30svh to spend;
+          the band's own top is 1.42 x --tl-rise above the boundary and
+          --tl-rise is capped at 17svh, which leaves better than 5svh of
+          clearance at every viewport height. Origin.css has the working. */}
+      <div className="origin__treeline" aria-hidden="true">
+        <ThemedArt art="props/pine-pair" className="origin__tree--far" factor={FAR_TREE_FACTOR} />
+        <ThemedArt art="props/pine-grove" className="origin__tree--near" factor={NEAR_TREE_FACTOR} />
       </div>
 
       {/* ── the ground, and it crosses the boundary ───────────────────
@@ -378,6 +379,10 @@ export function Origin() {
           of the two this is the one the lamppost can stand in, which is the
           whole point of the arrangement below: the pole's foot has to land on
           something rather than on a colour change.
+
+          It is drawn AFTER the treeline on purpose: the drift is what buries
+          the pines' trunks, so the row of trees has no bottom edge of its own
+          to show. The band's own mask finishes that join — see Origin.css.
 
           The wrapper is a band centred on the boundary with its own
           `overflow: clip`, so the drift's own width (it runs off both edges,
@@ -403,10 +408,57 @@ export function Origin() {
           inside Origin's snow.
 
           Origin.css has the sizing, the two clearances it is solved against,
-          and the measured table. */}
+          and the measured table.
+
+          ── and now it is lit ─────────────────────────────────────────
+          The artwork draws a lit lantern and nothing on the page ever answered
+          it. The site owner asked for "some colour, a bit transparent,
+          lighting to the pole where the light should come from, to have a bit
+          more warmth and glow", and this is the one warm source in a cold blue
+          valley, which is what makes the valley read as cold.
+
+          Four layers, because a lamp is four intensities at four distances,
+          and four compositable radial gradients rather than one box-shadow or
+          one filter: a shadow cannot be an ellipse on the ground and a filter
+          would repaint the whole pole every frame it breathed.
+
+          They are SIBLINGS of the pole inside the drift wrapper, so all five
+          boxes share one `left`/`top`/`width`/`aspect-ratio` and the light can
+          never come off the lantern however far the pointer pulls it. The pool
+          is drawn BEFORE the pole and the other three after, which is the
+          whole of the z-order between them: the snow is lit under the foot,
+          and the glass, the halo and the lit air are in front of the ironwork.
+
+          Origin.css carries where each gradient sits inside that shared box,
+          and the re-measured clearance table — three of the four are inside
+          the same ink budget the artwork already spends, so --lamp-fit did not
+          have to move. */}
       <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
+        <span className="origin__lamp-pool" />
         <StillArt art="hero/lamppost-left" className="origin__lamp" />
+        <span className="origin__lamp-spill" />
+        <span className="origin__lamp-glow" />
+        <span className="origin__lamp-core" />
       </div>
+
+      {/* ── the sink into #apps is GONE, and that is CONTRACT W ─────────────
+          A `.origin__sink` used to sit here: a dusk ramp into --band-apps plus
+          a crest of the same ink rising on `useParallax(-0.07)`, built to hide
+          the ruled line where the cabin's canvas stopped dead on this
+          section's bottom edge.
+
+          There is no such line any more. The canvas does not stop here — it
+          carries on behind `#apps` and `#tools` as one continuous camera move,
+          and this boundary is now the middle of an interior shot rather than a
+          join between two bands. A landscape transition drawn across it would
+          be worse than nothing: a fade to night painted over the inside of a
+          lit cabin, at the exact moment the camera is turning toward the
+          table. Deleted rather than softened, for the same reason Origin.css
+          gives for deleting the arrival shadow — an edge treatment on an edge
+          that does not exist has nothing to be right about.
+
+          `#apps`' treeline crossing up over the same boundary went with it,
+          and Apps.tsx says so from the other side. */}
 
       <div className="shell origin__shell">
         <div ref={intro} className="origin__intro">
@@ -437,13 +489,21 @@ export function Origin() {
         {/* The front page is deliberately the short version now, so the end of
             the timeline points at the long one. `rememberOrigin` is what brings
             a reader back to this section rather than to the top of the page. */}
-        <div ref={more} className="origin__more-wrap">
-          <a className="origin__more" href={ABOUT_HASH} onClick={() => rememberOrigin('Origin')}>
-            The longer version, and who is behind it
-            <span className="origin__more-arrow" aria-hidden="true">
-              →
-            </span>
-          </a>
+        {/* The plate is on the OUTER box and the reveal on the inner one.
+            `useReveal` writes a `clip-path` to whatever it reveals, and a
+            clip-path clips that element's pseudo-elements to its border box —
+            which would draw this link's soft-edged scrim as a hard rectangle
+            for the length of the wipe. Apps.tsx carries the render that caught
+            it on the same construction one section down. */}
+        <div className="origin__more-plate">
+          <div ref={more} className="origin__more-wrap">
+            <a className="origin__more" href={ABOUT_HASH} onClick={() => rememberOrigin('Origin')}>
+              The longer version, and who is behind it
+              <span className="origin__more-arrow" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </section>

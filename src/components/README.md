@@ -15,8 +15,9 @@ shared primitives every one of these builds on live in
 | | |
 | --- | --- |
 | `Hero.tsx` | The opening scene, and a **pinned** one: a 230svh section whose `scene/Stage` holds still for 130svh while the copy dissolves over it and Origin climbs up on a `margin-top: -100svh`. Its own header draws the three boxes and names the trap in each; read it before you touch the seam. Its canvases and its typed tagline are in `hero/`. (It used to own a `useHeroTakeover` hook that slid Origin with a JS translate. That hook is gone — the overlap is CSS now, so there is nothing left to time.) |
-| `Origin.tsx` | Seven chapters on a timeline that fills as you read, over `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read. |
-| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. |
+| `Walk.tsx` | **Not a section — a wrapper around three of them.** It owns the one 3D backdrop the whole cabin walk is read against, and the `margin-top: -100svh` that pulls this half of the page onto the pinned hero. See below. |
+| `Origin.tsx` | Seven chapters on a timeline that fills as you read, over the walk's `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read, and then goes inside. |
+| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. Both are read against the walk's camera — the projects over a table, the tools over a window — so neither paints a background of its own. |
 | `Building.tsx` | What is on our screens right now. |
 | `Faith.tsx` | A slow gradient field, one verse, and the summit below it — `faith/Summit.tsx`, where the page's moon finally arrives behind the cross. |
 | `Outro.tsx` | The makers note and the GitHub card that close the page. |
@@ -48,6 +49,45 @@ shared primitives every one of these builds on live in
 | `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the five drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
 | `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph — and painted through `<stop>`s rather than a flat `fill` so it rides the theme wave. Three of them render on the home page, so its gradient id is per instance from `useId`, the way `scene/Moon.tsx` and `KeyArt.tsx` do it. |
 
+### `Walk.tsx` — the one component here that is not a surface
+
+Everything else in this folder draws something. `Walk` draws almost nothing: it
+is a wrapper around `<Origin />`, `<Apps />` and `<Tools />` whose whole job is
+to be the box a `scene/Stage` can pin inside for all three at once.
+
+**Why it has to exist.** A `Stage` is a sticky pin inside an
+`absolute; inset: 0` box, so it holds for `section height − 100svh` and
+releases on that section's bottom edge. `CabinScene` lived in a stage inside
+`#origin`, which meant it could not paint one pixel behind `#apps` or `#tools`
+— and the shot the site owner asked for goes in through the cabin door during
+Origin, settles on a table while the project cards are read, and pans to a
+window while the tools are. One camera, three sections. The stage moves up a
+level; nothing else can buy that.
+
+`internal/checklists/cabin-interior-spec.md` is the authority for the shot and
+CONTRACT W in it is the architecture. Four things are worth knowing before you
+touch anything in this half of the page:
+
+- **It hands `CabinScene` a `WalkProgress`**, not a section progress: `p` is
+  the sticky pin's own travel, 0 when the wrapper's top reaches the viewport
+  top and 1 when the pin releases, plus `apps` and `tools` — the p at which
+  each of those sections' top edges arrive, measured from the live boxes so
+  the camera's settled beats stay on the headings when a section's height
+  changes. It is a frozen accessor over a ref, like `usePointer`, so nothing
+  re-renders sixty times a second.
+- **The three sections paint no background.** `#origin` is `z-index: 4` and the
+  other two are positioned siblings of the stage, so any band on them is a lid
+  on the canvas. The backdrop for all three is one gradient on `.walk`,
+  underneath it — transparent at the top for the hero dissolve, `--band-building`
+  at the floor so `#building` still meets an identical band.
+- **The copy is plated.** `.card` already had `--card-bg`; the headings, the
+  kickers, the ledes and the Origin chapter rows take soft-edged scrims of the
+  same ink, because a heading over a lit table is a heading nobody can read.
+- **`.walk` must not become a stacking context and must not be `overflow:
+  hidden`.** Either one breaks something silently — the first re-orders the
+  lamppost against the hero's wordmark, the second stops the pin sticking at
+  all. Walk.css states both where they can be broken.
+
 ### `hero/` and `origin/`
 
 `hero/` is hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx`
@@ -75,6 +115,10 @@ loader, ~540 triangles in four draw calls, in the flat faceted language of the
 art kit. Its header argues each of those and is the file to read first; it is
 also lazy, behind a `Suspense`, so the chunk does not reach a reader who never
 scrolls that far.
+
+The folder name is now the one thing about it that is out of date: the cabin is
+not `#origin`'s any more, it is the whole walk's. `Walk.tsx` mounts it, defers
+its chunk and hands it the camera's progress — see above.
 
 **What did not change is rule 9.** The cabin is one `onFrame` subscriber with
 no `THREE.Clock` and no `setAnimationLoop`, it holds the loop only while

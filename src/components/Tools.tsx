@@ -8,9 +8,29 @@ import { useTilt } from '../hooks/useTilt'
 import { TOOLS, type ToolCard } from '../data/content'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
-import { Seam } from './scene/Seam'
 import { ThemedArt } from './scene/ThemedArt'
 import './Tools.css'
+
+/*
+ * ── the top of this section is no longer a boundary ───────────────────────
+ * Two things used to be rendered at this section's top edge and neither is any
+ * more: a `wave` Seam with a --seam-lift backfill, the waterline that carried
+ * the `#apps` join, and a `pine-pair` on a crossing band that rose out of this
+ * section into `#apps`' floor.
+ *
+ * Under CONTRACT W that edge is inside one continuous camera move — the shot
+ * that started outside the cabin is at the top of the room here, panning from
+ * the table to the west window — so a waterline and a stand of pines drawn
+ * across it would be a landscape join in the middle of an interior. Deleted
+ * with `useParallax`'s seam subscriber, `--tools-cross`, `--tools-over-depth`,
+ * the two pine variables and this section's `overflow-clip-margin`.
+ *
+ * **This section's FLOOR is a different question and it gets a different
+ * answer.** The join into `#building` is real, it is the end of the walk, and
+ * it is where the 3D washes out into the outside light: the bridge, the water,
+ * the boulders and the neon band are what the reader steps out into. Every one
+ * of them stays.
+ */
 
 /** How far the nearest layer slides with the cursor, in px at full deflection. */
 const SWAY_X = 12
@@ -139,25 +159,52 @@ export function Tools() {
      look like noise; layers that disagree about which way to go look like
      depth.
 
-        +0.2   the blob      sky glow, the slowest thing on the page
-        +0.03  the seam      the far boundary, barely drifting
-        -0.035 the bridge    the structure across the water
-        -0.115 the boulders  the shore you are standing on, plus the cursor
+        +0.012 the blob      the room's light, the slowest thing in the section
+        -0.05  the bridge    the structure across the water
+        -0.15  the boulders  the shore you are standing on, plus the cursor
 
-     Between the seam and the boulders that is 0.145 of the travel, against
-     0.018 in the first pass — eight times the relative motion, which is the
-     whole of what "there is no parallax anywhere" was about. */
-  const blob = useParallax<HTMLDivElement>(0.2)
-  const seam = useParallax<HTMLDivElement>(0.03)
+     **Two rungs went with the boundary they were on**: the +0.03 waterline
+     seam and the -0.075 pine pair that rose out of this section into `#apps`'
+     floor. See the note at the top of this file. Slowest to fastest is still
+     0.012 to 0.15, twelve and a half times, because both of the rungs that
+     went were in the middle — and between the blob and the boulders the
+     relative travel is 0.162, the SUM rather than the difference, because the
+     two disagree about which way to go.
+
+     **The blob was +0.2 and it is +0.012.** 0.2 was the largest factor on the
+     page and it was spent on a blurred glow, which is the layer that has least
+     to say about depth and the one whose motion is hardest to see — while the
+     things a reader actually reads as objects were crowded into 0.035..0.115.
+     A sky that moves twice as fast as the ground it is behind is not a fast
+     sky, it is a broken one. The magnitude moved to the boulders, where it is
+     the near shore travelling against the page, and the page's largest factor
+     is still 0.2 in absolute terms only because #outro's arch is nowhere near
+     it: nothing here goes past `useParallax`'s stated ~0.25 ceiling, so
+     PARK_MARGIN is untouched. */
+  const blob = useParallax<HTMLDivElement>(0.012)
   const sway = useSway<HTMLDivElement>(SWAY_X, SWAY_Y)
   const head = useReveal<HTMLDivElement>('wipe', 0)
 
   return (
-    <section id="tools" className="section section--blend tools">
-      {/* ── the walk, beat four: crossing a stone footbridge ────────────────
-          Apps' treeline is behind you and #building is the far bank. The
-          `wave` is the water this bridge crosses — the only one on the page,
-          because it is the only boundary with water under it.
+    /* No `.section--blend`. It is a gradient from --tint-top to --tint-bot,
+       opaque edge to edge, and this section paints OVER the walk's canvas —
+       so its own band would be a lid on the last two beats of the shot. The
+       backdrop for the whole walk is one gradient on `.walk`, and it ends on
+       --band-building at the floor, which is the join this section still has
+       to make. Tools.css and Walk.css both carry the argument. */
+    <section id="tools" className="section tools">
+      {/* ── the end of the walk: stepping out of the cabin ──────────────────
+          The camera has settled on the west window and the small tools are
+          read against its light; then it pushes toward the glass and the frame
+          washes out into the outside. THIS is what is outside: a stone
+          footbridge over water, a near shore of boulders, and the retro-neon
+          band beyond them, handing the page to `#building`.
+
+          That is the whole reason this floor survived the pass that deleted
+          `#apps`' floor and both of this section's own boundary layers. It is
+          not a landscape drawn across an interior shot — it is the interior
+          shot ending, and the last thing the reader sees the camera looking at
+          is the thing they then scroll into.
 
           The bridge is drawn from a distance and in three-quarter view: you
           can see the whole arch and the water under it, so it is the structure
@@ -166,53 +213,69 @@ export function Tools() {
           that moves most and the only one that follows the cursor.
 
           Both pieces are drawn AFTER the neon band rather than before it,
-          which is the reverse of the first pass and deliberate. When the
-          bridge was 132px wide it belonged out past the road; at 46vw it is
-          nearer than a horizon grid, and a road painted over a bridge that
-          large reads as a scrim rather than as ground. DOM order alone does
-          it — everything here is z-index auto — so there is still not a single
-          z-index in this section, and `.shell`'s own z-index 1 still keeps the
-          whole scene layer under the cards. */}
-      {/* The boundary, and it is the QUIET one of the five on purpose — a
-          single unaccompanied shape between #apps' two-depth canopy above and
-          #building's mist below, because everything loud in this section is at
-          its own floor. Tools.css argues it, and carries what --seam-lift is
-          for. The colour and the drift are both on the wrapper now; the svg
-          needs no class of its own. */}
-      <div ref={seam} className="tools__seam-drift" aria-hidden="true">
-        <Seam shape="wave" edge="top" />
-      </div>
+          which is deliberate. When the bridge was 132px wide it belonged out
+          past the road; at 46vw it is nearer than a horizon grid, and a road
+          painted over a bridge that large reads as a scrim rather than as
+          ground. DOM order alone does it — everything here is z-index auto —
+          so there is still not a single z-index in this section, and
+          `.shell`'s own z-index 1 still keeps the whole scene layer under the
+          cards.
 
-      {/* retro-neon band, clipped to the bottom so it can never touch a card */}
-      <div className="tools__sun" aria-hidden="true" />
-      <div className="tools__sun-ring" aria-hidden="true" />
-      <div className="tools__road" aria-hidden="true">
-        <div className="tools__road-grid">
-          <div className="tools__road-run" />
+          The wrapper is the section's `aria-hidden` / `pointer-events: none`
+          box. It used to be what kept the boulders from hanging a whole rock
+          over `#building` through the section's clip MARGIN; the margin went
+          with the crossing band that needed it, so the section is back to
+          `.section`'s own `overflow: hidden` and this is a plain wrapper now.
+          `.origin__clip` and `.apps__clip` are the same box either side. */}
+      <div className="tools__clip" aria-hidden="true">
+        {/* retro-neon band, clipped to the bottom so it can never touch a card */}
+        <div className="tools__sun" />
+        <div className="tools__sun-ring" />
+        <div className="tools__road">
+          <div className="tools__road-grid">
+            <div className="tools__road-run" />
+          </div>
+          <div className="tools__horizon" />
+          <div className="tools__horizon-glow" />
         </div>
-        <div className="tools__horizon" />
-        <div className="tools__horizon-glow" />
-      </div>
-      <div ref={blob} className="blob tools__blob" aria-hidden="true" />
+        <div ref={blob} className="blob tools__blob" />
 
-      <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={-0.035} />
-      {/* The sway box is the boulders' own box, not the section: see useSway.
-          One writer per element — pointer here, scroll on the <img> inside. */}
-      <div ref={sway} className="tools__rocks-sway" aria-hidden="true">
-        <ThemedArt art="props/boulder-cluster" className="tools__rocks" factor={-0.115} />
+        <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={-0.05} />
+        {/* The haze BETWEEN the bridge and the boulders, and it is drawn
+            between them in the DOM for exactly that reason: it washes the
+            bridge's footings and the boulders are drawn over it crisp, which
+            is the whole of what makes one read as further away than the
+            other. Cheaper than another prop and worth more. */}
+        <div className="tools__spray" />
+        {/* The sway box is the boulders' own box, not the section: see useSway.
+            One writer per element — pointer here, scroll on the <img> inside. */}
+        <div ref={sway} className="tools__rocks-sway">
+          <ThemedArt art="props/boulder-cluster" className="tools__rocks" factor={-0.15} />
+        </div>
+        {/* The far bank's own colour coming across the water, last of all, so
+            every cut end at this section's bottom edge dissolves into the
+            band below instead of stopping on it. See Tools.css. */}
+        <div className="tools__shore" />
       </div>
 
       <div className="shell tools__shell">
-        <div ref={head} className="tools__head">
-          <div className="kicker">
-            <span className="kicker__num">03</span>
-            <span className="kicker__rule" />
-            <span className="kicker__label">Tools &amp; extensions</span>
+        {/* The plate is on THIS box and not on the head, because `useReveal`
+            writes a `clip-path` to whatever it reveals and a clip-path clips
+            that element's pseudo-elements to its border box — which drew the
+            head's soft-edged scrim as a hard rectangle for the length of the
+            wipe. Apps.tsx carries the render that caught it. */}
+        <div className="tools__head-plate">
+          <div ref={head} className="tools__head">
+            <div className="kicker">
+              <span className="kicker__num">03</span>
+              <span className="kicker__rule" />
+              <span className="kicker__label">Tools &amp; extensions</span>
+            </div>
+            <h2 className="h2 tools__heading">Small things, sharpened.</h2>
+            <p className="lede tools__lede">
+              Browser extensions and little utilities we actually use every day.
+            </p>
           </div>
-          <h2 className="h2 tools__heading">Small things, sharpened.</h2>
-          <p className="lede tools__lede">
-            Browser extensions and little utilities we actually use every day.
-          </p>
         </div>
 
         <div className="tools__grid">

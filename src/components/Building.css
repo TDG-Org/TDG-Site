@@ -1,48 +1,208 @@
+/* ── one colour this file needs and no token has ───────────────────────────
+   The lit bank the far bank's trees stand on. #building is the page's one WARM
+   band and its only light is the blob in the upper right; a light source with
+   nowhere to fall is a smudge, and a floor that two stands of trees are cropped
+   by has to be a floor rather than an absence.
+
+   **One declaration and no `[data-theme='light']` twin, deliberately.** Both
+   operands already carry the theme — --band-building and --text are each
+   stated per theme in tokens.css — so the mix flips with them and a second
+   declaration would be the same string written twice, which is the drift rule
+   2 exists to prevent. base.css declares every --seam-fill exactly once for
+   exactly this reason.
+
+   11% and not --seam-step's 6%: a seam is a hard-edged shape read against a
+   band, and this is a soft gradient with no edge at either end, which needs
+   more separation before it is seen at all. It cannot become a stripe, because
+   it has no edge to make one out of.                                        */
+:root {
+  --building-bank-ink: color-mix(in srgb, var(--band-building) 89%, var(--text));
+  /* The pool the blob's light makes where it reaches the bank. Same mix, one
+     step further from the band — 16% against the bank's 11% — so it reads as
+     the bank being LIT rather than as a second band lying on it. Under the
+     blob and behind the near stand, which is what turns a cropped tree into a
+     tree with something bright behind it.
+
+     Toward --text and not toward a literal light, for the reason --seam-fill
+     is: the ink is near-white in dark, so the pool lifts out of the band the
+     way moonlight on snow does; near-black in light, so it reads as the ground
+     shading under a bright sky. One declaration, correct twice, because both
+     operands already carry the theme. */
+  --building-pool-ink: color-mix(in srgb, var(--band-building) 84%, var(--text));
+}
+
 /* ── the floor: the band of section under the pills ────────────────────────
    Named here AND applied here so the two cannot drift apart. The whole scene
    layer is positioned FROM this number, so a padding that quietly moved
    somewhere else would put art through the pills with nothing to catch it.
 
    It used to be `.section`'s own `clamp(72px, 9vw, 130px)`, and that is why
-   the pines were 78–132px wide. The band is the only place a layer can be:
-   `.card` and `.building__pill` both paint `var(--surface)`, which in the dark
-   theme is `rgba(255,255,255,0.045)` — 95% transparent — so art parked behind
-   them is read THROUGH them rather than hidden by them. (In light `--surface`
-   is `#ffffff` and it would be hidden; the rule has to hold in both themes, so
-   the dark one sets it.) A bigger floor is what buys scale, and this section is
-   the page's quiet contrast anchor so it takes the smallest of the four. */
+   the pines were 78–132px wide. The band is the only place a layer can be —
+   `.card` is a plate now (--card-bg) and `.building__pill` is still a 4.5%
+   white wash in dark, so art parked behind them is either not seen at all or
+   read straight through the copy. A bigger floor is what buys scale, and this
+   section carries TWO stands of trees now rather than one, so it takes 23vw
+   where it took 20 and 18 before that.
+
+   The last step from 20 to 23 is 43px at 1440 and it is all crown: the visible
+   height of a stand is `floor - clearance` and nothing else, so widening a
+   tree buys width and never height. 288px of floor showed 157px of the near
+   stand and 86px of the far one; 331px shows 202px and 134px, which is a
+   treeline rather than a row of tips.                                       */
 .section.building {
-  --building-floor: clamp(180px, 18vw, 300px);
-  --building-pine-w: clamp(160px, 19vw, 340px);
-  /* The distance from the pills' bottom edge to the TOP of the pines' ink,
-     which is what the `bottom` below is written to produce. Drift comes out of
-     it, and the worst case is not the widest window: -0.06 is worth 39px at
-     1440x900 but 50px on a 900x1400 one, where the clamp is at its floor. 70px
-     left 20px there once it was measured, so the floor is 84px. */
-  --building-pine-clear: clamp(84px, 8vw, 130px);
+  --building-floor: clamp(220px, 23vw, 380px);
+
+  /* The near stand. The distance is from the pills' bottom edge to the TOP of
+     the pines' ink, which is what the `bottom` below is written to produce.
+     Drift comes out of it, and the worst case is not the widest window: -0.10
+     is worth 74px at 1440x900 but 88px on a 900x1400 one, where both clamps
+     are at their floor. 116px leaves 28px there and 64px at 1440.
+
+     27vw where it was 24: a foreground prop is meant to be big and cut by the
+     frame, and at 24vw the near stand was 346px against a 331px floor — the
+     same order as the thing it is standing behind. At 27vw it is 389px wide
+     and 583px tall with 202px of it above the floor, so two thirds of the tree
+     is below the frame. */
+  --building-pine-w: clamp(220px, 27vw, 480px);
+  --building-pine-clear: clamp(116px, 9.6vw, 168px);
+  /* The far stand: the same file at 52% of the width, a much bigger clearance
+     so it shows 134px of crown against the near stand's 202px, and --art-far
+     rather than --art-mid. Size, opacity and the fog band drawn between them
+     are the three things doing the distance; nothing here is a second piece of
+     art. +0.03 is worth 18px of drift against 202px of clearance. */
+  --building-far-pine-w: clamp(120px, 14vw, 250px);
+  --building-far-pine-clear: clamp(150px, 14vw, 250px);
+
+  /* ── the ground haze ────────────────────────────────────────────────────
+     How deep the band of this section's own ink rises out of the floor. It has
+     to clear the pills, which stop exactly at the top of the floor, and it has
+     to be deep enough that a 583px tree's feet dissolve rather than dim:
+
+         width   floor   haze   headroom under the pills
+          641     220     84      136
+         1024     235     102     133
+         1440     331     144     187
+         1920     380     168     212
+
+     Every row is a floor with room to spare, and the haze is transparent for
+     its own first third besides. The ≤640 block below re-states it, because
+     there the floor is 72px and a 84px band would be painting over them.    */
+  --building-haze-h: clamp(84px, 10vw, 168px);
+
+  /* ── the crossing ───────────────────────────────────────────────────────
+     How far the mist and the wayfinder rise out of this section's top edge
+     into #tools' floor, and how far the band carrying them dissolves back down
+     into this one. Both are proved against a neighbouring clamp rather than a
+     screenshot:
+
+       above  --building-cross must stay inside #tools' own floor, the empty
+              band under its last card row, `clamp(220px, 23vw, 400px)`
+              (and `clamp(130px, 15vw, 190px)` below 640px):
+                  320   220 vs  60      1440   331 vs 108
+                  640   130 vs  60      1920   400 vs 130
+       below  --building-over-depth must stay above this section's first line
+              of copy, which starts at its own `padding-top`,
+              `clamp(72px, 9vw, 130px)`:
+                  320    72 vs  52      1440   130 vs  92
+                 1024    92 vs  66      1920   130 vs  96
+
+     Every row is a floor twice over, because the band's mask has reached zero
+     alpha before either edge. Do not raise either without redoing this. */
+  --building-cross: clamp(60px, 7.5vw, 130px);
+  --building-over-depth: clamp(52px, 6.4vw, 96px);
+  --building-post-w: clamp(150px, 15vw, 270px);
+  --building-post-rise: clamp(46px, 5.4vw, 92px);
+  --building-mist-rise: clamp(34px, 4.2vw, 70px);
+  --building-mist-h: clamp(64px, 8vw, 128px);
+
   padding-bottom: var(--building-floor);
+  /* `hidden` cannot be given a margin — `overflow-clip-margin` is defined only
+     for `clip` — and a margin is the only way a layer leaves its own section.
+     #origin made the same change for its lamppost and its header carries the
+     browser envelope; the fallback everywhere else is `.section`'s own
+     `overflow: hidden`, where the crossing band is cut at the join.
+
+     ## 131px, and why it is a literal
+
+     **Chrome does not accept a math function here.** This line read
+     `calc(var(--building-cross) + 1px)` and computed to `0px`, so the crossing
+     band never crossed anything: the wayfinder and the mist were cut dead on
+     the #tools join, and that join measured a step of +5.9 to +16.4 L* across
+     fifteen columns in dark — a ruled line at the top of this section, made by
+     the very layers written to remove one.
+
+     Probed rather than guessed, on Chrome 152, `getComputedStyle` after
+     setting each form on a live `overflow: clip` box:
+
+         109px               -> 109px
+         7.5vw               -> 57.89px
+         content-box 109px   -> content-box 109px
+         calc(100px)         -> 0px
+         calc(108px + 1px)   -> 0px
+         var(--building-cross) -> 0px
+         calc(var(--x) + 1px)  -> 0px
+
+     Plain lengths and `<visual-box> <length>` are honoured and every math
+     function is dropped, so `clamp()` is out too and the value has to be a
+     literal. 131px is `--building-cross`'s own ceiling plus the pixel that
+     stops subpixel rounding shaving the band's top row — i.e. the widest this
+     ever needs to be, spent at every width.
+
+     **Being larger than the band at narrow widths costs nothing**, and that is
+     structural rather than lucky: `.building__clip` is `inset: 0` with no
+     margin of its own and holds everything that must be cut, `.building__over`
+     is `left: 0; right: 0` and clips itself, and neither can reach a side or
+     the bottom however far this opens them. The one layer allowed out is the
+     crossing band, and its own box is exactly `--building-cross` tall.
+
+     `#origin` and `Walk.css` were never bitten by this because both write
+     `130svh`, a plain length. `#tools` has deleted its margin outright, which
+     is why `props/pine-pair` is cut off on a ruled line at the #apps join —
+     that one is the walk builder's and is in this pass's report as a request. */
+  overflow: clip;
+  overflow-clip-margin: 131px;
+}
+
+/* The box the section's own `overflow: hidden` used to be. `clip` rather than
+   `hidden` so it is not a scroll container — making a box a scrollport by
+   accident is the trap Stage.tsx's header measures — and `inset: 0` is the
+   section's PADDING box, which is what every percentage in here was already
+   resolving against. */
+.building__clip {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
 }
 
 /* Same wrapper trick as Tools.css: useParallax is typed to HTMLElement and
    Seam takes no ref, and the height stays in Seam.css so the clamp is written
    once. See Tools.css for the long version.
 
-   --seam-lift is the strip of solid ink this wrapper paints ABOVE its own top
-   edge. A `Seam` path is solid from y = 0 down to its silhouette, so it has a
-   straight horizontal top edge, and +0.022 slides that edge 9.9px clear of the
-   boundary on a 900px viewport — a line drawn across the page at exactly the
-   join this pass exists to hide. The lift means the section's overflow cuts
-   the band instead of the path cutting it. Apps.css has the artefact; the
-   number is `--seam-lift` in tokens.css, which has why 4vh is right in every
-   window. This rule declared it, and so did three others, for one decision.
+   **This wrapper used to carry a `--seam-lift` backfill and does not any
+   more.** A `Seam` path is solid from y = 0 down to its silhouette, so it has
+   a straight horizontal top edge, and +0.022 slides that edge 9.9px clear of
+   the boundary on a 900px viewport; `--seam-lift` was a strip of the band's
+   own ink painted above the wrapper so the section's overflow cut the band
+   instead of the path cutting it. It fixed the drift and it left the real
+   defect in place: a solid edge sitting ON the join at every scroll position.
 
-   The colour moved here from the <svg> in the same edit, and that is a second
+   Measured at the #tools boundary, fifteen columns across 1440px, one pixel
+   either side of the join: the seam alone stepped +5.9 L* in dark and -4.5 in
+   light, at every column, in both themes. A step that is the same at all
+   fifteen columns is the definition of a ruled line — it is what the previous
+   Faith builder found when a veil over-corrected a ragged join, one section
+   down. The mask below dissolves the band's top instead, and with a
+   `transparent` first stop there is no edge left for the drift to expose in
+   either direction, which is what makes the backfill unnecessary rather than
+   merely removed. The Outro's seam has argued exactly this since it was
+   written; this is the same argument applied to the other two.
+
+   The colour is on the wrapper rather than the <svg>, and that is a second
    fix: base.css's `transition: var(--t-theme)` list covers `div` and not `svg`
    or `path`, so this seam used to SNAP to the new theme while the page around
    it crossed on the wave. On a div, `color` transitions; the svg inherits the
-   animated value and `currentColor` resolves against it in both the path and
-   the ::before. The mask stays on the <svg>, which is right — the ::before is
-   above the boundary, where the mask's own top stop is opaque anyway. */
+   animated value and `currentColor` resolves against it. */
 .building__seam-drift {
   position: absolute;
   top: 0;
@@ -52,15 +212,6 @@
   color: var(--seam-fill);
   pointer-events: none;
   will-change: translate;
-}
-.building__seam-drift::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: var(--seam-lift);
-  background-color: currentColor;
 }
 /* --seam-fill: this section's own --band-building, stepped --seam-step toward
    --text by base.css. A band worn flat would be invisible here — a boundary is
@@ -75,116 +226,225 @@
    vanish in dark. And #building is the page's one WARM band; a cool blue
    band across its top edge works against the single thing that makes it the
    contrast anchor. The shape carries the beat instead — `dune` is the far
-   bank — and the fog and the pine crowns under it say the rest.
+   bank — and the mist, the wayfinder and the pine crowns under it say the
+   rest.
 
-   It dissolves rather than stopping at a line, and that is a decision about
-   this section rather than about its colour: a hard silhouette band across
-   the top of the quietest section on the page announces itself. --seam-fade
-   is the alpha the mask is still at halfway down, per theme, so every
-   dissolving seam dissolves at the same rate — and a masked seam is the case
-   --seam-step was calibrated against, since it paints most of its band at
-   part opacity. A mask is an alpha channel, not a colour: the #000 here
-   paints nothing, exactly as in .tools__road-grid.
+   It dissolves at BOTH ends now, and the top end is the pass's fix rather than
+   a preference. `dune`'s silhouette runs y 18..80 of the 120 viewBox, so its
+   ink occupies 15% to 67% of the band and the whole of the band ABOVE 15% is
+   the path's flat mass — a solid bar of --seam-fill laid across the join,
+   measured at a uniform +5.9 L* dark and -4.5 light. The stops are placed
+   against those two numbers:
 
-   (The `color` this rule used to carry now sits on the wrapper above, where it
-   rides the theme wave instead of snapping. See the note there.) */
+       transparent 0     the join itself, so the boundary carries no ink at all
+       0.50        16%   the shallowest swell, which therefore reads at half
+       #000        34%   below every part of the silhouette's upper reach
+       --seam-fade 62%   the page's own dissolve rate, through the deep swells
+       transparent 96%   closed before the band's own bottom edge
+
+   Read across the width that is a bank whose crests are solid and whose
+   shallows recede into haze, which is what a far bank does, and there is no
+   value at the join to make a line out of. --seam-fade is per theme, so every
+   dissolving band on the page dissolves at one rate — and a masked seam is the
+   case --seam-step was calibrated against, since it paints most of its band at
+   part opacity. A mask is an alpha channel, not a colour: the #000 here paints
+   nothing, exactly as in .tools__road-grid.                                  */
 .building__seam {
   -webkit-mask-image: linear-gradient(
     180deg,
-    #000 0,
-    rgba(0, 0, 0, var(--seam-fade)) 50%,
-    transparent 100%
+    transparent 0,
+    rgba(0, 0, 0, 0.5) 16%,
+    #000 34%,
+    rgba(0, 0, 0, var(--seam-fade)) 62%,
+    transparent 96%
   );
   mask-image: linear-gradient(
     180deg,
-    #000 0,
-    rgba(0, 0, 0, var(--seam-fade)) 50%,
-    transparent 100%
+    transparent 0,
+    rgba(0, 0, 0, 0.5) 16%,
+    #000 34%,
+    rgba(0, 0, 0, var(--seam-fade)) 62%,
+    transparent 96%
   );
 }
 
-/* ── the mist at the boundary ──────────────────────────────────────────────
-   The same `atmosphere/fog-veil` file the floor fog below uses — same URL,
-   same request, no extra bytes — cropped to a shallow band at the top of the
-   section and softened at BOTH ends, so this boundary has no hard edge in it
-   anywhere. Building.tsx has the beat: the water you crossed in #tools coming
-   off the surface as you reach the far bank.
+/* ── the lit bank, and where the light lands ───────────────────────────────
+   A band of this section's own ink with no edge at either end: it fades in
+   under the pills, is fully itself 54% of the way down the floor, and is gone
+   again before the section's bottom edge, so it cannot draw a line at the
+   #faith join. See --building-bank-ink at the top of this file for why it is a
+   colour and why it has no light twin.
 
-   ## Which slice of the file is shown, and why nothing can cut
+   ## The pool
 
-   The file is 1600x533 and its ink runs y 0.3884..0.9081 in dark and
-   0.4634..0.9850 in light — a faint speckle along the top and a HARD, straight
-   bottom edge. Both have to be kept out of the box, and `object-fit: cover`
-   into a box far wider than 3:1 is what does it: the image is scaled to the
-   box's WIDTH, and `object-position`'s second value then chooses which slice
-   of the much taller scaled image the box shows. At 50% 62%, computed:
+   The blob in the upper right is this section's only light source, and until
+   this pass it had nowhere to fall: a 420px glow floating in the top corner of
+   a flat band, with a floor underneath it that was the same value from edge to
+   edge. The radial layer is the light reaching the ground — an ellipse of
+   --building-pool-ink centred at 80% of the width, which is within four per
+   cent of where the blob's core now sits, and at 46% of the band's height,
+   which is where the bank's own linear layer is strongest.
 
-       width   scaled H   box H   slice of the file
-        320     106.6      54     0.306 .. 0.813
-        768     256.0      54     0.492 .. 0.703
-       1440     475.0      97.9   0.492 .. 0.698
-       1920     634.6     104     0.518 .. 0.682
+   It is drawn BEFORE the linear band in the shorthand, i.e. on top of it, so
+   the pool lifts the bank rather than being flattened by it. The near stand
+   stands in front of the pool and the far stand stands well outside it, which
+   is the whole reason the pool is off-centre: one light, a bright patch of
+   ground under it, and the nearest tree read as a silhouette against that
+   patch.
 
-   Every row's lower bound is below 0.908, so the file's hard bottom edge is
-   never in the box at any width. The 320 row reaches above the dark ink's own
-   top, which paints nothing rather than painting an edge, and the mask has
-   that end at zero alpha regardless.
+   ## Nothing here may draw a line at the join
 
-   ## The mask, and why it needs no --seam-lift
+   Both layers are gone before the section's bottom edge and the arithmetic is
+   in the geometry rather than in a hope. The linear layer states `transparent
+   100%`. The radial's vertical radius is 62% of the band, centred at 46%, so
+   its own last stop — `transparent 74%` — is reached at 46% + 0.74 x 62% =
+   92% of the band, eight per cent of the floor above the edge. At the bottom
+   edge itself the radius fraction is (100 - 46)/62 = 0.87, past 0.74, so the
+   radial paints exactly nothing there. Re-do that sum before moving either
+   number.
 
-   `transparent 0 -> #000 42% -> transparent 100%`: the mist fades IN below the
-   boundary and OUT above the copy, so it has no top edge for a drift to expose
-   and no bottom edge to cut. That is what makes it immune to the artefact
-   --seam-lift exists to fix on the seam above it, and it is why the two layers
-   at this boundary are softened by two different mechanisms.
-
-   ## It stops before the copy, and that is arithmetic
-
-   The lowest painted pixel is `height + downward drift` below the boundary,
-   against this section's own `padding-top`, `clamp(72px, 9vw, 130px)`. -0.02
-   drifts DOWN by `0.02 * vh/2` = 1.0vh, and that excursion is at its largest
-   while the boundary is low on the screen — which is when a reader can see
-   both this and the heading. `height` is `clamp(48px, 6.4vw, 100px)` below.
-   Computed, with the worst viewport height in brackets:
-
-       width   height  drift        bottom   padding-top   clear
-        320     48.0   10.0 (1000)   58.0      72.0        14.0
-        375     48.0   10.0 (1000)   58.0      72.0        14.0
-        768     49.2   16.0 (1600)   65.2      72.0         6.8
-       1024     65.5   14.0 (1400)   79.5      92.2        12.6
-       1440     92.2   14.0 (1400)  106.2     129.6        23.4
-       1920    100.0   16.0 (1600)  116.0     130.0        14.0
-
-   768 is the binding row and only against a 768x1600 window no device has; at
-   a real 768-wide viewport (vh <= 1024) the drift is 10.2 and the clearance
-   12.6. Both readings are conservative anyway, because the mask is at zero
-   alpha for the last stop, so the ink stops well above `bottom`.
-
-   **The `height` column shipped once derived from `clamp(54px, 6.8vw, 104px)`,
-   which was never the code** — the `drift` column was right, so the table
-   looked internally consistent and every real clearance was LARGER than it
-   claimed, which is why nothing looked wrong for several passes. Re-derived
-   from the shipped clamp above. The slice table further up this comment still
-   carries `box H` from that same never-shipped clamp; its conclusion survives
-   untouched, because a SHORTER box takes a narrower slice about the same 62%
-   centre and so moves both bounds further inside the file's ink (320px goes
-   0.306..0.813 -> 0.341..0.791, still clear of the hard bottom edge at 0.908),
-   but re-derive it too if you touch the height again.
-
-   Full width and no overhang — `left: 0; width: 100%` — because a layer that
-   ran off the edges here would have to be caught by something, and the fog's
-   own art is already full-bleed in x. Nothing recolours a pixel; the -dark and
-   -light files are separate drawings.                                        */
-.building__mist {
+   It takes NO parallax hook, and that is deliberate. It is the ground this
+   section stands on rather than an object on it, and a floor that slides
+   against the things standing on it is a rug. One fewer frame subscriber.  */
+.building__bank {
+  position: absolute;
   left: 0;
-  top: 0;
-  width: 100%;
-  height: clamp(48px, 6.4vw, 100px);
-  object-fit: cover;
-  object-position: 50% 62%;
+  right: 0;
+  bottom: 0;
+  height: var(--building-floor);
+  background:
+    radial-gradient(
+      54% 62% at 80% 46%,
+      var(--building-pool-ink) 0%,
+      color-mix(in srgb, var(--building-pool-ink) 62%, transparent) 34%,
+      color-mix(in srgb, var(--building-pool-ink) 22%, transparent) 56%,
+      transparent 74%
+    ),
+    linear-gradient(180deg, transparent 0%, var(--building-bank-ink) 54%, transparent 100%);
+}
+
+/* ── the ground haze ───────────────────────────────────────────────────────
+   The band that ends this section, and the fix for the ruled line the previous
+   Faith builder measured at the #building -> #faith join. Building.tsx has the
+   beat; this is the arithmetic and the argument.
+
+   ## What the defect was
+
+   `atmosphere/fog-veil` is a pale raster and `.building__fog` masks it opaque
+   from 58% of its box down, while the box hangs 44px BELOW the section and is
+   cut there by `.building__clip`. So the brightest part of the fog met the
+   boundary at full alpha and stopped on a line. Measured from the other side
+   at fifteen columns, dark stepped by up to 10.1 units of luminance across one
+   pixel row and light stepped by nothing at all — which is the signature of a
+   pale raster cut over a near-black sky, and it is written up in Faith.css.
+
+   ## Why a band and not a mask on the fog
+
+   The obvious fix is a bottom fade on `.building__fog`, and it is not enough:
+   the fog is not the only thing cut on that line. Both stands of pines are
+   drawn at a tree's full height and cropped by the same edge, and in the LIGHT
+   theme they are the only thing that steps there — Faith's fifteen columns
+   read flat in light except where a silhouette crossed the join. A mask on the
+   fog leaves two cut trees; a mask on each of the three is three maskings of
+   one defect, each with its own arithmetic to keep true when a clamp moves.
+
+   One band in front of all of them ends every cut at once, and it is a depth
+   cue in its own right rather than a patch: distant things are paler, lower in
+   contrast and hazier, and the near stand's feet dissolving into the floor is
+   what makes it a stand of trees on ground instead of a cutout on a colour.
+
+   ## Why it cannot over-correct
+
+   Faith tried a veil from ITS side and measured it WORSE — a uniform bright
+   line where a ragged one had been — because that veil was Faith's own ink
+   lifted 16% toward --text and capped at 0.55 alpha, so it painted something
+   that was not either neighbour's colour. This one ends at exactly
+   `var(--band-building)` at alpha 1. #building paints `background-color:
+   var(--tint-mid)`, which base.css resolves to that same token, and #faith's
+   --tint-top is that token too. So the last row of this section, the first row
+   of the next, and this band's last stop are one value written once. There is
+   no number here to tune and nothing for it to be wrong by.
+
+   Five stops rather than two. A two-stop gradient over a 144px box on a
+   near-black band is exactly the case that banded in `.building__scan`, and a
+   band whose job is to be invisible cannot afford steps in it.
+
+   No parallax hook: it is the air standing in this section's floor, not an
+   object in it, and one fewer frame subscriber. Under reduced motion it is
+   already still.                                                            */
+.building__haze {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--building-haze-h);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--band-building) 18%, transparent) 30%,
+    color-mix(in srgb, var(--band-building) 52%, transparent) 56%,
+    color-mix(in srgb, var(--band-building) 84%, transparent) 80%,
+    var(--band-building) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── the two stands of pines ───────────────────────────────────────────────
+   The faceted pair, not pine-grove: the grove is the painterly variation and
+   it now has a place two sections up, at #apps' treeline, where a near mass is
+   wanted. Here the trees are meant to be across the water.
+
+   Drawn at a tree's full height and cropped by the section's own bottom edge,
+   so what you see is crowns rising from behind the bank. The file is
+   1000x1500 in the .webp the site loads and its ink runs y 1.47%..98.47% in
+   dark and 2.27%..97.93% in light — measured off the real alpha at 24/255, not
+   eyeballed — so for a box `w` wide:
+
+       element height = 1.5w
+       ink top above the element's bottom = 0.9853 x 1.5w = 1.4780w  (dark)
+                                            0.9773 x 1.5w = 1.4660w  (light)
+
+   The DARK figure is written because it is the larger: it beds the box lower,
+   so the stated clearance is a floor in dark and 0.012w more than stated in
+   light. `bottom: floor - clear - 1.478w` then puts the crowns exactly `clear`
+   below the pills at every width, whether the pills wrap to one row or three.
+
+   ## Why the same file is drawn twice
+
+   The render of this section showed one faint pine at the right edge and
+   nothing else in 300px of floor. The fix is not a second piece of art — the
+   kit's guardrail 8 allows one structural anchor plus foliage and fog, the
+   anchor here is the wayfinder, and a third family of tree would be building a
+   scene. It is the SAME file at 52% of the width, at --art-far instead of
+   --art-mid, with the fog band drawn between the two: size, opacity and haze
+   are the three things that make distance, and none of them costs a byte.
+   `atmosphere/fog-veil` has been drawn twice in this section since it was
+   written, for the same reason and at the same price — one URL, one request.
+
+   At 1440 the near stand shows 202px of crown at 389px wide and the far stand
+   shows 134px at 202px, with the fog between them — and `.building__haze`
+   drawn in front of both, so what used to be two trees cut off on the section's
+   bottom edge is two trees whose feet go into the ground. */
+.building__pines,
+.building__pines-far {
+  /* 1000x1500 is the .webp, not the 1024x1536 PNG source. Stated so the box is
+     the right size before a lazy image arrives; re-measure after any art swap,
+     because a ratio that disagrees with the file letterboxes it. */
+  aspect-ratio: 1000 / 1500;
+}
+.building__pines {
+  right: clamp(-40px, -1vw, 6px);
+  width: var(--building-pine-w);
+  bottom: calc(var(--building-floor) - var(--building-pine-clear) - var(--building-pine-w) * 1.478);
+  opacity: var(--art-mid);
+}
+.building__pines-far {
+  left: clamp(-10px, 6vw, 140px);
+  width: var(--building-far-pine-w);
+  bottom: calc(
+    var(--building-floor) - var(--building-far-pine-clear) - var(--building-far-pine-w) * 1.478
+  );
   opacity: var(--art-far);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
 }
 
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its
@@ -193,20 +453,31 @@
 
    - object-fit crops a band out of the MIDDLE of the file instead of squashing
      a 3:1 image into a 6:1 box. At 55% the file's own bottom edge lands below
-     the box at every width the site supports — re-measured against the taller
-     floor, it is 106px under it at 1440px, 198px at 1920px and still 18px
-     under it at 320px — and the box itself sits 44px below the section, so
-     `overflow: hidden` takes the cut away entirely.
+     the box at every width the site supports, and the box itself sits 44px
+     below the section, so `overflow: clip` takes the cut away entirely.
    - the mask dissolves the top, which is where the speckle is.
 
    Height is the floor exactly, pushed down by 44px, so the top of the box is
-   44px clear of where the pills stop at every width — and 34px of that is left
-   after the 10px of drift +0.018 can carry at 1440x900. It was 30px, which
-   measured 15px of clearance once the pills' own ink box was the thing being
-   measured against rather than their row. The mask means the first 58% of the
-   box paints almost nothing anyway, so the real mist starts far below that
-   edge. Nothing here recolours a pixel; the -dark and -light files are
-   separate artwork.                                                         */
+   44px clear of where the pills stop at every width — and 35px of that is left
+   after the 9px of drift +0.015 can carry at 1440x900. The mask means the
+   first 58% of the box paints almost nothing anyway, so the real fog starts
+   far below that edge.
+
+   It is drawn BETWEEN the two stands of pines, which is the whole reason the
+   far one reads as far. Nothing here recolours a pixel; the -dark and -light
+   files are separate artwork.
+
+   ## Its own bottom edge, and why the fade is not here
+
+   The mask above is opaque from 58% down, and the box hangs 44px below the
+   section where `.building__clip` cuts it — so this layer's brightest row met
+   the #faith boundary at full alpha and stopped on a line. That was the ruled
+   join Faith measured. The fade that closes it is `.building__haze`, a band in
+   front of everything at the floor, and the long argument for why it is one
+   band rather than a bottom stop on this mask and two more on the pines is at
+   that rule. Do not add a second one here: two mechanisms for one edge is how
+   a boundary ends up over-corrected, which is the exact failure Faith recorded
+   from the other side.                                                      */
 .building__fog {
   left: -2%;
   width: 104%;
@@ -219,35 +490,162 @@
   mask-image: linear-gradient(180deg, transparent 0, #000 58%);
 }
 
-/* The faceted pair, not pine-grove: the grove is painterly green and brown and
-   does not speak this site's flat graphic language. Not `tall-pine` either —
-   the kit says to use that one alone, and it is used alone two sections up in
-   #apps, where a tree cropped by the frame is the point. Here the trees are
-   meant to be across the water.
+/* ── the far bank, standing in two sections ────────────────────────────────
+   Building.tsx has the beat and the paint order; the geometry is here.
 
-   Drawn at a tree's full height and cropped by the section's own bottom edge,
-   so what you see is crowns rising from behind the bank. The file is
-   1000x1500 in the .webp the site loads and its ink runs y 1.6%..98.3% —
-   measured off the source PNG's alpha, not eyeballed — so for a box `w` wide:
+   `overflow: clip` with NO margin of its own — the section's margin is what
+   lets this box escape upward, and this box is what keeps everything else in.
+
+   The mask is what makes it a dissolve rather than a window:
+
+       transparent 0%     the top of the band, inside #tools' floor
+       #000        8%     where the wayfinder becomes fully itself
+       #000        55%    the join
+       transparent 100%   the bottom of the band, above this section's copy
+
+   8% is the same number the other two crossing bands take and it is picked the
+   same way: the top fade exists so nothing meets the band's own clip edge, and
+   what has to stay OUT of it is the tallest ink in the band — here the
+   wayfinder's finial, which rests 30px below the band top at 1440 and 14px at
+   320, against a fade of 16px and 9px.
+
+   At 1440 the band is 200px tall with the join at 53.9% of it, so the crisp
+   window runs from 92px above the join down to the join itself, and everything
+   below it is a fade. A layer that drifts past either end fades out instead of
+   meeting the clip — which matters most for the mist, whose -0.12 is the
+   largest factor in the section and moves it 61px on a 900px viewport.      */
+.building__over {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1 * var(--building-cross));
+  height: calc(var(--building-cross) + var(--building-over-depth));
+  overflow: clip;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 8%,
+    #000 55%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 55%, transparent 100%);
+}
+
+/* ── the wayfinder ─────────────────────────────────────────────────────────
+   `props/wayfinding-post` — in the kit from the beginning, drawn by nothing
+   until now, and the one piece in it whose boards are deliberately blank. It
+   is this section's structural anchor under guardrail 8, which #building did
+   not previously have: it had fog and a pine pair, which is what the guardrail
+   allows BESIDE an anchor rather than instead of one.
+
+   The kit's own note puts it at "Origin's far edge". It is here instead, and
+   the reason is the walk rather than a preference: a signpost belongs where a
+   path arrives at somewhere, and Origin's far edge is a clearing with a cabin
+   in it while this is the bank you step onto after crossing the water. The
+   section is also called "Building now" and lists what is queued, which is a
+   signpost's job written in words.
+
+   1000x1500 in the .webp, ink y 1.33%..98.07% in dark and 0.67%..97.87% in
+   light, so for a box `w` wide:
 
        element height = 1.5w
-       ink top above the element's bottom = 0.984 x 1.5w = 1.476w
+       ink top below the element's TOP = 0.0133 x 1.5w = 0.0200w  (dark)
+                                         0.0067 x 1.5w = 0.0101w  (light)
 
-   and `bottom: floor - clear - 1.476w` puts the crowns exactly `clear` below
-   the pills at every width, whether the pills wrap to one row or three. At
-   1440 that is 158px of visible tree, 199px of ink wide — where the first pass
-   showed a 132px-wide box 24px clear of the pills, and measured 132x0 in the
-   live DOM because a lazy image with `height: auto` has no height until it
-   arrives. Hence the `aspect-ratio`. */
-.building__pines {
-  right: clamp(-40px, -2vw, 6px);
-  width: var(--building-pine-w);
-  /* 1000x1500 is the .webp, not the 1024x1536 PNG source. Stated so the box is
-     the right size before a lazy image arrives; re-measure after any art swap,
-     because a ratio that disagrees with the file letterboxes it. */
+   The DARK figure is written because it is the larger: `top` is solved from
+   the band's own top edge, so the larger offset makes --building-post-rise a
+   floor and light simply stands 0.010w taller, which the band's mask absorbs.
+   Solved at the clamp stops the expression comes out 11.0px at 320, 11.0px at
+   760, 25.9px at 1440 and 32.6px at 1920 — inside the band at every width,
+   which is the check it has to pass. It is 15vw with a 150px floor rather than
+   14vw with a 120px one because the first render of it came out 120x180 at
+   760px wide, which is a sign you would have to walk up to.
+
+   Its lower half is well past the band's bottom and is meant to be: the mask
+   takes it, and the mist drawn after it takes what is left, so the post stands
+   in weather rather than ending anywhere. That is also why it is only the
+   second-fastest layer here at -0.05 — a post planted in the ground does not
+   move like the air in front of it.                                        */
+.building__post {
+  left: clamp(-10px, 4vw, 90px);
+  width: var(--building-post-w);
   aspect-ratio: 1000 / 1500;
-  bottom: calc(var(--building-floor) - var(--building-pine-clear) - var(--building-pine-w) * 1.476);
+  top: calc(var(--building-cross) - var(--building-post-rise) - var(--building-post-w) * 0.02);
   opacity: var(--art-mid);
+}
+
+/* ── the mist at the boundary ──────────────────────────────────────────────
+   The same `atmosphere/fog-veil` file the floor fog uses — same URL, same
+   request, no extra bytes — cropped to a band that STRADDLES the join now
+   rather than sitting under it, and softened at both ends so this boundary has
+   no hard edge in it anywhere. Building.tsx has the beat: the water you
+   crossed in #tools coming off the surface as you reach the far bank.
+
+   Crossing is what changed. The render of the #tools floor showed the bridge,
+   the boulders and the near end of the neon grid all terminating on one ruled
+   horizontal line, and a band of weather lying ACROSS that line is the
+   cheapest thing that can dissolve it — cheaper than the shore gradient
+   #tools draws from its own side, and the two meet in the middle.
+
+   ## Which slice of the file is shown, and why nothing can cut
+
+   The file is 1600x533 and its ink runs y 0.3884..0.9081 in dark and
+   0.4634..0.9850 in light — a faint speckle along the top and a HARD, straight
+   bottom edge. Both have to be kept out of the box, and `object-fit: cover`
+   into a box far wider than 3:1 is what does it: the image is scaled to the
+   box's WIDTH, and `object-position`'s second value then chooses which slice
+   of the much taller scaled image the box shows. At 50% 62%, computed against
+   the band's own `--building-mist-h`:
+
+       width   scaled H   box H    slice of the file
+        320     106.6      64.0    0.248 .. 0.848
+        768     255.8      64.0    0.465 .. 0.715
+       1024     341.1      81.9    0.471 .. 0.711
+       1440     479.7     115.2    0.471 .. 0.711
+       1920     639.6     128.0    0.496 .. 0.696
+
+   Every row's lower bound is below 0.9081, so the file's hard bottom edge is
+   never in the box at any width. The 320 row reaches above the dark ink's own
+   top, which paints nothing rather than painting an edge, and the mask has
+   that end at zero alpha regardless.
+
+   ## The mask, and the pattern the seam above has now adopted
+
+   `transparent 0 -> #000 42% -> transparent 100%`: the mist fades in and out
+   with no edge at either end, so there is nothing for a drift to expose and
+   nothing sitting on the join. That was the one layer at this boundary built
+   that way; the seam above it used a `--seam-lift` backfill instead, which
+   answered the drift and left a solid edge on the join at every scroll
+   position — measured at a uniform +5.9 L* dark, -4.5 light. It has been
+   rebuilt on this rule since, so both layers at this boundary are now softened
+   by the same mechanism rather than two.
+
+   It matters most for this one, which lives in `.building__over` and is the
+   only thing on the page that crosses UP into #tools: a solid backfill here
+   would be a bar of #building ink standing over the section above.
+
+   ## Where it sits
+
+   `top: cross - rise`, so the box straddles the join — 60px above it and 55px
+   below at 1440. -0.12 is the largest factor in the section and moves it 61px
+   on a 900px viewport, which is why it is inside a band with a fade at both
+   ends rather than positioned against a clearance.
+
+   Full width and no overhang — `left: 0; width: 100%` — because a layer that
+   ran off the edges here would have to be caught by something, and the fog's
+   own art is already full-bleed in x. Nothing recolours a pixel; the -dark and
+   -light files are separate drawings.                                        */
+.building__mist {
+  left: 0;
+  width: 100%;
+  height: var(--building-mist-h);
+  top: calc(var(--building-cross) - var(--building-mist-rise));
+  object-fit: cover;
+  object-position: 50% 62%;
+  opacity: var(--art-far);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
 }
 
 /* Guardrail 7 of the kit, and the width has a reason: 640 is where this
@@ -255,28 +653,48 @@
    which is where it is tallest and its bottom band is the only air left in it.
    Measured cost of keeping them: at 375px the visible crowns would be 110px of
    a 240px tree with 70px of clearance and 43px of drift, which is a spike
-   rather than a treeline. The fog stays — it is full width, it has no
-   neighbour to collide with, and a bank of mist at 375px is still a bank of
-   mist. The floor goes back to `.section`'s own value in the same breath, so
-   the page is not holding 180px open for art it is not drawing. */
+   rather than a treeline. The floor goes back to `.section`'s own value in the
+   same breath, so the page is not holding 200px open for art it is not
+   drawing.
+
+   The fog stays — it is full width, it has no neighbour to collide with, and a
+   bank of mist at 375px is still a bank of mist. So does the lit bank, which
+   is a gradient and costs nothing.
+
+   The CROSSING band stays too, and only the wayfinder inside it goes. The mist
+   is the half of it that dissolves the #tools floor, the join a phone reader
+   sees most of is exactly the one the site owner has reported three times, and
+   a band of weather does not care how wide the page is. A 120px signpost does:
+   at its floor it is 120px wide and 180px tall against a band 112px deep, so
+   there would be more of it faded than drawn. */
 @media (max-width: 640px) {
   .section.building {
     --building-floor: clamp(72px, 9vw, 130px);
+    /* The floor is a flat 72px anywhere this block applies — 9vw does not
+       reach 72 until 800px wide — so the desktop clamp's 84px minimum would be
+       MORE than the whole floor and the haze would be washing the pills. 32px
+       is 44% of it, the same proportion the wide layout runs (144 of 331), so
+       the two are one decision rather than two guesses. It is still needed at
+       375px: the pines come off at this width but the fog does not, and the
+       fog is the layer that was cut on the section's bottom edge. */
+    --building-haze-h: 32px;
   }
-  .building__pines {
+  .building__pines,
+  .building__pines-far,
+  .building__post {
     display: none;
   }
-  /* The push-down is a fixed 44px and the band here is only 72px, so the mist
+  /* The push-down is a fixed 44px and the band here is only 72px, so the fog
      would be a 28px strip. 26px is the same trade one size down: the mask still
-     hides the file's speckled top edge, and +0.018 is worth 8px of drift at
-     375x812, so 18px of the clearance survives. */
+     hides the file's speckled top edge, and +0.015 is worth 7px of drift at
+     375x812, so 19px of the clearance survives. */
   .building__fog {
     bottom: -26px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Both hooks resolve to a zero translate at motionIntensity 0, so all three
+  /* Every hook resolves to a zero translate at motionIntensity 0, so all seven
      layers rest exactly where they composed. The hint would be a promoted
      layer paid for and never used. */
   .building__seam-drift {
@@ -284,19 +702,94 @@
   }
 }
 
+/* ── the air catching the light ────────────────────────────────────────────
+   It was a HORIZONTAL scanline texture — `0deg`, a 1px rule every 9px, at 0.5
+   opacity — and at the bottom of this section, where the band is near-black
+   and the fog behind it is pale, twenty of those rules read as banding across
+   the left third of the frame rather than as texture. The fresh render of the
+   #building -> #faith join is unambiguous about it: parallel lines, evenly
+   spaced, exactly the artefact a gradient produces when it has run out of
+   steps. A ruled horizontal line across the viewport is the one thing this
+   section is not allowed to have.
+
+   Three things changed together and each is load-bearing:
+
+   - **135deg, so no line in it is horizontal.** A repeating gradient's bands
+     run PERPENDICULAR to its angle, so 135deg gives bands falling from the
+     top right to the bottom left — which is the direction light leaves the
+     blob, now anchored in that corner. The texture stopped being a scanline
+     and became the air in front of a light source, which is what this section
+     wanted from it in the first place.
+   - **14px rather than 9px, and 0.3 rather than 0.5.** Wider and fainter, so
+     a single ray is at the edge of visible on its own and the set of them
+     reads as a wash. Sparser is right for a diagonal where denser would be
+     right for a tone: a 9px diagonal at this contrast reads as hatching.
+   - **A RADIAL mask around the light, and it may not touch an edge.** The old
+     one was `linear-gradient(104deg, ...)`, strongest at the top LEFT — the
+     corner furthest from the only lamp in the section, and the corner the fog
+     band fills. A linear mask cannot be moved under the light without a cost
+     that was measured: at 225deg the wash is opaque along the top-right, which
+     is the #tools join, and the join stepped a uniform +2.4 L* in dark from
+     this layer alone. A 1-in-14 diagonal at this contrast antialiases into a
+     flat 7% wash, so it steps like a solid band even though no line in it is
+     horizontal — a diagonal mask cannot clear a horizontal edge at every x,
+     because its own iso-lines are diagonal too.
+
+     So the mask is an ellipse around the blob, sized so that it reaches zero
+     before ANY edge of the section. Centred at 84% 44% with radii 60% 44%: at
+     the top edge the vertical distance is exactly one radius, and at the
+     bottom edge it is 1.27 of one, both past the `transparent 74%` stop, so
+     this layer paints nothing at either join. At the left edge the horizontal
+     distance is 1.4 radii — also nothing. The only edge it reaches is the
+     viewport's own right-hand side, which is a frame and not a boundary.
+
+   `var(--border)` and no literal: it is per theme already, 10% white in dark
+   and 10% of a near-black violet in light, so one declaration is a pale ray in
+   one theme and a grey one in the other.                                   */
 .building__scan {
-  opacity: 0.5;
-  background-image: repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 9px);
-  -webkit-mask-image: linear-gradient(104deg, #000 4%, transparent 58%);
-  mask-image: linear-gradient(104deg, #000 4%, transparent 58%);
+  opacity: 0.3;
+  background-image: repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 14px);
+  -webkit-mask-image: radial-gradient(
+    60% 44% at 84% 44%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 40%,
+    transparent 74%
+  );
+  mask-image: radial-gradient(
+    60% 44% at 84% 44%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 40%,
+    transparent 74%
+  );
 }
 
+/* ── the one light in the section ──────────────────────────────────────────
+   It was a 420px circle at `top: 18%; right: 4%` and at that size, behind a
+   1180px card, it was a smudge with nothing to show for itself: the render has
+   a faint warmth in the top right corner and no reader would call it a light.
+   It is the only light source #building has and every other change in this
+   file hangs off it — the rays above fall away from it, the pool on the bank
+   is where it lands, and the near stand is read against that pool.
+
+   So it is 42vw, 620px at its ceiling, and pushed 2% off the right edge so the
+   core is cropped by the frame rather than floating inside it. What a reader
+   sees is the spill: the full height of the right-hand gutter beside the card,
+   and the corner above it.
+
+   **`top: 0` is a limit, not a round number.** `.blob` in base.css is a
+   `radial-gradient(circle, ...)`, which sizes to the farthest corner, so in a
+   square box the top edge's midpoint sits at 0.707 of the radius against a
+   `transparent 72%` stop — 4% of the accent's alpha, which is nothing. Hang
+   the box any further above the section and there is real ink where
+   `.building__clip` cuts it, which is a lit edge drawn along the #tools join:
+   the exact defect the rest of this pass is removing. Negative `top` is not
+   available here.                                                          */
 .building__blob {
-  top: 18%;
-  right: 4%;
-  width: 420px;
-  height: 420px;
-  filter: blur(30px);
+  top: 0;
+  right: -2%;
+  width: clamp(340px, 42vw, 620px);
+  height: clamp(340px, 42vw, 620px);
+  filter: blur(34px);
 }
 
 .shell.building__shell {
@@ -472,13 +965,16 @@
 }
 
 @media print {
-  /* The seam itself is dropped by Seam.css's own print block, but --seam-lift
-     is painted by a ::before on a plain <div> that no selector there reaches —
-     and the print block in base.css does not neutralise the --band-* tokens,
-     so the strip would come out as a near-black bar across the top of the
-     section on white paper. Decorative, so it goes, like everything else that
-     block drops. */
-  .building__seam-drift {
+  /* The seam itself is dropped by Seam.css's own print block, and this wrapper
+     no longer paints anything of its own — the --seam-lift backfill came off
+     this pass. The lit bank, the ground haze and the crossing band are plain
+     <div>s that no selector in Seam.css reaches, and the print block in
+     base.css does not neutralise the --band-* tokens, so all three would come
+     out as grey slabs on white paper. Decorative, so they go, like everything
+     else that block drops. */
+  .building__bank,
+  .building__haze,
+  .building__over {
     display: none !important;
   }
 }

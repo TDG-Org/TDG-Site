@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
+import { Walk } from './components/Walk'
 import { Origin } from './components/Origin'
 import { Apps } from './components/Apps'
 import { Tools } from './components/Tools'
@@ -171,9 +172,22 @@ export default function App() {
       ) : (
         <main>
           <Hero />
-          <Origin />
-          <Apps />
-          <Tools />
+          {/* Three sections, ONE backdrop. `Walk` is a wrapper rather than a
+              section of its own: it owns the sticky 3D stage that has to paint
+              behind all three, and the `margin-top: -100svh` that pulls this
+              half of the page up onto the pinned hero. Both of those used to
+              be `#origin`'s, and a `Stage` cannot outlive the section it is
+              declared in — see Walk.tsx and CONTRACT W in
+              internal/checklists/cabin-interior-spec.md.
+
+              The three children keep their own ids, their own copy and their
+              own place in the nav. Nothing about `#origin`'s document position
+              changed, so `takeOrigin` and the section anchors are untouched. */}
+          <Walk>
+            <Origin />
+            <Apps />
+            <Tools />
+          </Walk>
           <Building />
           <Faith />
           <Outro />

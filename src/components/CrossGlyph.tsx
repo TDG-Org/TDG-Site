@@ -3,8 +3,13 @@ import { useId } from 'react'
 const PATH = 'M16.6 0H25.4V26.5H42V35.3H25.4V100H16.6V35.3H0V26.5H16.6Z'
 
 type Props = {
-  /** hero uses a four-stop ramp, the faith centrepiece a softer three-stop one */
-  variant?: 'hero' | 'faith'
+  /**
+   * `hero` uses a four-stop ramp, `faith` the softer three-stop one above the
+   * verse, and `summit` a SILHOUETTE for the one standing on the Faith ridge
+   * in front of the moon. See the `stops` table below for why the third one
+   * had to exist.
+   */
+  variant?: 'hero' | 'faith' | 'summit'
   className?: string
 }
 
@@ -42,6 +47,27 @@ export function CrossGlyph({ variant = 'hero', className }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const id = `${variant}CrossGrad${uid}`
 
+  /*
+   * ── why there are three ramps and not two ────────────────────────────────
+   *
+   * `hero` and `faith` are both LIT glyphs: the light falls across the mark
+   * from the top left, so both ramps open on the theme's brightest ink and
+   * darken downward. That is right wherever the cross is the subject.
+   *
+   * `summit` is the same path doing the opposite job. On the Faith ridge the
+   * cross stands directly in front of the moon, so it is BACKLIT — and painted
+   * with `faith`'s ramp it opened on `#ffffff` against a white disc. The
+   * crossbar sits in the top third of the path, which is exactly the third
+   * inside the disc, so the crossbar was white on white and the only part of
+   * the glyph with anything to contrast against was the stem below the disc's
+   * lower edge. The site owner reported that as "the cross is not finished,
+   * you just have one line going up". It was finished. It was invisible.
+   *
+   * So this ramp runs the other way — the ridge's own ink, barely lifting
+   * toward the sky at the foot — and it is dark in BOTH themes, because a
+   * silhouette in front of a light source does not change sign when the
+   * palette does. tokens.css carries the two sets of values.
+   */
   const stops =
     variant === 'hero'
       ? [
@@ -50,11 +76,17 @@ export function CrossGlyph({ variant = 'hero', className }: Props) {
           { offset: 0.78, token: '--cross-stop-2' },
           { offset: 1, token: '--cross-stop-3' },
         ]
-      : [
-          { offset: 0, token: '--faith-stop-0' },
-          { offset: 0.42, token: '--faith-stop-1' },
-          { offset: 1, token: '--faith-stop-2' },
-        ]
+      : variant === 'summit'
+        ? [
+            { offset: 0, token: '--summit-stop-0' },
+            { offset: 0.5, token: '--summit-stop-1' },
+            { offset: 1, token: '--summit-stop-2' },
+          ]
+        : [
+            { offset: 0, token: '--faith-stop-0' },
+            { offset: 0.42, token: '--faith-stop-1' },
+            { offset: 1, token: '--faith-stop-2' },
+          ]
 
   return (
     <svg
