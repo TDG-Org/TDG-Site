@@ -21,21 +21,31 @@
   pointer-events: none;
   will-change: translate;
 }
-/* NOT --seam-fill, and that is not an oversight. #building is .section--flat,
-   so its whole background is --tint-mid, which is --band-building — and
-   base.css sets this section's --seam-fill to --band-building too. A seam
-   wearing it would be the section painted on itself: rendered, correct, and
-   invisible. --band-tools is the middle of the section above, so the band
-   reads as the water's far edge reaching this bank, which is this section's
-   beat. It is still one token from tokens.css, so both themes come free.
+/* --seam-fill: this section's own --band-building, stepped --seam-step toward
+   --text by base.css. A band worn flat would be invisible here — a boundary is
+   exactly where two bands are equal — and that step is what fixes it.
 
-   And because it is borrowing a neighbour's colour rather than stating its
-   own, it dissolves rather than stopping at a line: --seam-fade is the alpha
-   the mask is still at halfway down, per theme, so every dissolving seam on
-   the page dissolves at the same rate. A mask is an alpha channel, not a
-   colour — the #000 here paints nothing, exactly as in .tools__road-grid. */
+   This was var(--band-tools) for a while, and borrowing the section above is
+   sanctioned by scene/README.md: a band of Tools' colour does read as the
+   water's far edge reaching this bank, which is this section's beat. Two
+   things say don't. --band-tools is not calibrated to sit at a seam's
+   distance from anything — against this band it is roughly a third of the
+   step --seam-step gives, and under the mask below it would very likely
+   vanish in dark. And #building is the page's one WARM band; a cool blue
+   band across its top edge works against the single thing that makes it the
+   contrast anchor. The shape carries the beat instead — `dune` is the far
+   bank — and the fog and the pine crowns under it say the rest.
+
+   It dissolves rather than stopping at a line, and that is a decision about
+   this section rather than about its colour: a hard silhouette band across
+   the top of the quietest section on the page announces itself. --seam-fade
+   is the alpha the mask is still at halfway down, per theme, so every
+   dissolving seam dissolves at the same rate — and a masked seam is the case
+   --seam-step was calibrated against, since it paints most of its band at
+   part opacity. A mask is an alpha channel, not a colour: the #000 here
+   paints nothing, exactly as in .tools__road-grid. */
 .building__seam {
-  color: var(--band-tools);
+  color: var(--seam-fill);
   -webkit-mask-image: linear-gradient(
     180deg,
     #000 0,

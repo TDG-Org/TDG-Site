@@ -236,8 +236,14 @@
   pointer-events: none;
   will-change: translate;
 }
-/* Its own band, so it reads as this section rising into Apps. Both themes come
-   free: --seam-fill is per section in base.css and the bands are per theme. */
+/* Its own band stepped --seam-step toward the page's ink, which is what
+   --seam-fill resolves to — worn flat a band would be invisible, because a
+   boundary is exactly where two bands are equal. So it reads as this section
+   rising into Apps. Hard-edged rather than dissolved, unlike the two flat
+   sections further down: this one is blended, so its own gradient is already
+   softening the top, and a `wave` at a water boundary wants to be a
+   silhouette. Both themes come free — the bands and --text are both per
+   theme, so one declaration is right in each. */
 .tools__seam {
   color: var(--seam-fill);
 }

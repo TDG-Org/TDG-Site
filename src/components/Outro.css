@@ -22,22 +22,31 @@
   pointer-events: none;
   will-change: translate;
 }
-/* NOT --seam-fill. This section paints --bg flat and base.css sets its
-   --seam-fill to --band-outro, which IS --bg: the seam would be the section
-   painted on itself and would render, correctly, as nothing.
+/* --seam-fill: this section's own --band-outro, stepped --seam-step toward
+   --text by base.css. A band worn flat would be invisible here — a boundary
+   is exactly where two bands are equal — and that step is what fixes it.
 
-   --band-foot is the colour immediately above this boundary — it is Faith's
-   own --tint-bot — so the terrace reads as Faith's floor stepping down into
-   the Outro. And this is the one boundary on the page whose two sides
-   genuinely do not meet: base.css says so in as many words, a step of 4
-   values in dark and 10 in light. A silhouette is exactly what that wants,
-   which is why this seam earns its place more than any other one here.
+   This was var(--band-foot) for a while, on two arguments that have both
+   since been closed and so are not worth keeping as history: that a band worn
+   flat painted the section on itself, and that this particular boundary did
+   not meet. Faith's floor used to reach past a whole section to the footer's
+   band; it is --band-outro now, and the two sides meet like every other pair.
+   --band-foot today is just the footer's colour, borrowed from two sections
+   down for no reason at all.
 
-   Borrowing a neighbour's colour, so it dissolves rather than stopping at a
-   line, at --seam-fade — the same rate every dissolving seam on the page
-   uses, per theme. The #000 in a mask is an alpha channel, not a colour. */
+   So this seam is here for the beat, which was always the better reason. It
+   is where the walk ends — Faith's hillside above it, the arch below it, and
+   a flat closing block that would otherwise simply start. `steps` is the path
+   climbing out, and a silhouette is what turns "Faith stopped" into "you
+   stepped through".
+
+   It dissolves rather than stopping at a line, for the same reason
+   .building__seam does: this is a flat section, and `steps` is the most graphic
+   of the five shapes — every edge orthogonal, not a diagonal anywhere — so it
+   is the one that most needs softening. --seam-fade is the alpha the mask is
+   still at halfway down, per theme. A mask is an alpha channel, not a colour. */
 .outro__seam {
-  color: var(--band-foot);
+  color: var(--seam-fill);
   -webkit-mask-image: linear-gradient(
     180deg,
     #000 0,

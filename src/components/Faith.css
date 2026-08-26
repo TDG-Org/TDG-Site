@@ -17,6 +17,11 @@
   pointer-events: none;
   will-change: translate;
 }
+/* Its own band stepped toward the page's ink — see Tools.css for why a band
+   worn flat would be invisible. Hard-edged for the same reason Tools' is:
+   blended section, gradient already softening the top, and `peaks` is the one
+   boundary where the land actually rises, which wants a silhouette and not a
+   suggestion of one. */
 .faith__seam {
   color: var(--seam-fill);
 }
