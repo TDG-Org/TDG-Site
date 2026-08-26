@@ -563,6 +563,9 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   // server says does not exist has no holdings to report, and saying so twice
   // buries the one line that matters.
   const holdingsMissing = !absent && !app.holdingsKnown
+  const subscriptionPacks = app.packs.filter(
+    (pack) => pack.owned && pack.supportsSubscriptionStates,
+  )
 
   const what = absent
     ? `The site sells ${app.title}'s packs, but TDG Core has no table to record them in, so nothing here can be granted and a real payment would land nowhere.`
@@ -573,7 +576,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         : !app.inShop
           ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
           : app.hasGrants
-            ? 'Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does. This app also records HOW each pack is held, so a pack that is on can be put into any state a real subscription passes through.'
+            ? 'Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does. Packs sold on a recurring plan also show how that subscription is held; one-time packs stay one-time.'
             : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
 
   return (
@@ -695,11 +698,12 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
           project, so without this nobody can look at the half of the Store that
           renews, ends, lapses or fails to take a payment.
       */}
-      {app.hasGrants && app.holdingsKnown && !absent && app.packs.some((p) => p.owned) && (
-        <div className="dev__grid">
-          {app.packs
-            .filter((pack) => pack.owned)
-            .map((pack) => {
+      {app.hasGrants && app.holdingsKnown && !absent && subscriptionPacks.length > 0 && (
+        // `dev__grid` is the page's masked, 45%-opacity BACKGROUND texture.
+        // Reusing it here made these real controls faded and clipped into a
+        // near-zero-height strip. Form fields use the existing `dev__grid2`.
+        <div className="dev__grid2">
+          {subscriptionPacks.map((pack) => {
               const current = shapeOfGrant(pack.grant, pack.owned)
               return (
                 <Field
@@ -738,7 +742,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         </div>
       )}
 
-      {app.hasGrants && app.holdingsKnown && !absent && app.packs.some((p) => p.owned) && (
+      {app.hasGrants && app.holdingsKnown && !absent && subscriptionPacks.length > 0 && (
         <p className="dev__panel-quiet">
           A shape written here carries no Stripe subscription id, because the server refuses to
           invent one — that id is the only handle the Store's Cancel button has, and a made-up one

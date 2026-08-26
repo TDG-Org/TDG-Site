@@ -1,4 +1,4 @@
-import { STORE_APPS, formatUsd, type StorePack } from '../data/store'
+import { STORE_APPS, formatUsd, isSubscription, type StorePack } from '../data/store'
 import type { DevAccount, DevCatalog, DevCatalogApp, DevGrant, DevStoreEntry } from './api'
 import { prettyId } from './format'
 
@@ -82,6 +82,16 @@ export type DevStorePack = {
   inShop: boolean
   /** Does the account on screen hold it right now? */
   owned: boolean
+  /**
+   * May this pack truthfully be put into a recurring-plan state?
+   *
+   * A `grants` column belongs to the APP, not to every item in it. TDG
+   * Veditor needs one because Pro Export can recur, but the Theme Pack beside
+   * it is still bought once. Treating the column as a property of every pack
+   * offered Ended and Subscribed for Theme Pack and let the console write an
+   * impossible shape. The shop's own plans are the item-level answer.
+   */
+  supportsSubscriptionStates: boolean
   /** How it is held, for an app that records that. */
   grant: DevGrant | null
 }
@@ -224,6 +234,13 @@ export function storeApps(
         onServer: srv?.packs.includes(packId) ?? false,
         inShop: sold != null,
         owned: ownedPacks.includes(packId),
+        // For a pack the site sells, its checkout plans are authoritative even
+        // when a broken old grant claims otherwise. That is what keeps an
+        // accidentally-ended Theme Pack from continuing to offer subscription
+        // controls. A server-only pack has no catalogue answer, so an existing
+        // subscription grant is the honest fallback and still gets a face.
+        supportsSubscriptionStates:
+          sold != null ? isSubscription(sold) : grants[packId]?.kind === 'subscription',
         grant: grants[packId] ?? null,
       }
     })

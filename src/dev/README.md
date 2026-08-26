@@ -186,10 +186,11 @@ Search by name, `@username`, email or user id, then for the account you pick:
 - **Every pack Store:** each pack on or off, for anybody, in every app that has
   one — one panel per app, discovered rather than listed. (The existing
   `veditor_admin_set_pack` only ever touched your own account.)
-- **How a pack is HELD**, for an app whose entitlements table records that:
-  bought outright, renewing, cancelled and running out, in a trial, behind on a
-  payment, or ended. One dropdown per held pack, named the way the Store's own
-  card names the state — see below for why this is not decoration.
+- **How a recurring pack is HELD**, when its app records that: bought outright,
+  renewing, cancelled and running out, in a trial, behind on a payment, or
+  ended. One dropdown per held subscription-capable pack, named the way the
+  Store's own card names the state. A one-time item in the same app remains a
+  plain on/off grant — see below for why the distinction is structural.
 - **Standing:** suspend (locks sign-in across every TDG app and ends every live
   session), hide from Bible Educator's public surfaces, sign out everywhere (see
   below for what that does and does not reach), soft delete, restore, and
@@ -214,10 +215,22 @@ live Stripe subscription on this project — both apps are pre-release and every
 `stripe_customer_id` is null — so the entire half of the Store that renews,
 ends and lapses had never been seen outside a screenshot.
 
-So a held pack in an app that records grants gets a **Held As** dropdown, whose
-options are the Store card's own state names. One press puts the account into
-that state, the card on `#/store` draws it, and `src/dev/grantShapes.ts` is the
-single list both ends read — if the Store can draw it, the console can reach it.
+So a held pack that the Store actually sells on a recurring plan gets a **Held
+As** dropdown, whose options are the Store card's own state names. One press
+puts the account into that state, the card on `#/store` draws it, and
+`src/dev/grantShapes.ts` is the single list both ends read — if the Store can
+draw it, the console can reach it. The answer is asked of the pack's `plans`,
+not merely of the app having a `grants` column: TDG Veditor's Pro Export Pack
+can recur, while its Theme Pack beside it is a one-time payment and may never
+be offered Subscribed or Ended.
+
+The on/off switch follows the same boundary on the server. For an app with a
+`grants` column, `tdg_admin_set_pack` writes a perpetual grant on ON and removes
+that grant on OFF; the app's trigger derives the legacy `owned_packs` mirror.
+Writing the mirror directly made the checkbox look checked while TDG Veditor
+continued reading an ended grant, so the UI and the app contradicted each
+other. Apps without `grants` keep writing `owned_packs`, which is authoritative
+for their simpler table.
 
 **It never writes a Stripe subscription id.** `tdg_admin_set_pack_grant` carries
 over whatever was already on the grant and refuses to invent one, in both

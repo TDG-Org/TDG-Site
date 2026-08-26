@@ -100,6 +100,14 @@ Same for the completeness promise: the block says what a card lists is
 everything you get, which makes every pack's `unlocks` in `store.ts` a claim
 rather than a summary.
 
+TDG Veditor's Pro Export limits are part of that completeness promise. The
+card states both sides of every numeric gate: 12,000 kbps remains free; the pack
+raises the target ceiling to 400,000 kbps and the manual spike ceiling to
+800,000 kbps, while project and export frames may use the editor's full
+16,384 × 16,384 range. Keep those numbers aligned with
+`src/shared/store/catalog.ts`, `ProjectPresetFields.tsx` and
+`SettingsFields.tsx` in the TDG Veditor repo.
+
 ## Adding an app, end to end
 
 1. Card in `APPS` or `TOOLS` in `content.ts`, with a `page:` slug and its icon.
