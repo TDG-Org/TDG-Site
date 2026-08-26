@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { onFrame } from '../lib/motion'
 import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '../auth/AuthProvider'
+import { useMyBadges } from '../badges/useBadges'
 import { NAV_LINKS } from '../data/content'
 import { useRoute, ABOUT_HASH, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
 import { setDevMode, useDevMode } from '../dev/devMode'
@@ -18,6 +19,32 @@ import './Nav.css'
  * functions that refuse them. See src/dev/README.md.
  */
 const DEV_LINK = { href: DEV_HASH, label: 'Developer' } as const
+
+/** What both the bar and the panel render, whichever list an entry came from. */
+type NavLink = { href: string; label: string }
+
+/**
+ * Which side of the divider a link belongs on, read off the link itself.
+ *
+ * Seven items in one undifferentiated row is what "too many tabs" actually
+ * feels like, and the count is not the problem: five of them scroll you down
+ * THIS page and two of them replace it, which are two different promises being
+ * made in one voice. The bar says so now, and the footer says the same thing
+ * the same way.
+ *
+ * Derived from the shape of the href, never from a second list. `NAV_LINKS` in
+ * src/data/content.ts is the single public navigation and belongs to the data
+ * folder; a hardcoded copy of "which of these are pages" here would be exactly
+ * the kind of list AGENTS.md rule 17 is about — it would not fail loudly when
+ * it went stale, it would just quietly put a new link on the wrong side. This
+ * cannot: every route on this site carries a leading slash (rule 8, and
+ * `src/lib/route.ts` explains what that slash buys), so a bare `#` is an anchor
+ * and `#/` is a page, and a link added tomorrow sorts itself.
+ *
+ * It is also what puts the Developer tab in the right group for free: `#/dev`
+ * is a route, so it joins About and Store without being named here.
+ */
+const isRouteLink = (href: string) => href.startsWith('#/')
 
 function ThemeToggle() {
   const { theme, toggle } = useTheme()
@@ -52,6 +79,95 @@ function ThemeToggle() {
         </span>
       </span>
     </button>
+  )
+}
+
+/**
+ * The signed-in account's badges, under their name, handle and email.
+ *
+ * ## Every arm is drawn, and "could not read" is not "none"
+ *
+ * `useMyBadges()` has four states and they are four different facts. `ok` with
+ * an empty list is the ordinary answer for most accounts and gets a line that
+ * says so plainly; `error` is the different fact that **we do not know**, and
+ * drawing it as an empty shelf would tell somebody they have nothing when they
+ * may have something. That is the rule `src/store/useOwnedPacks.ts` settled
+ * first, for the same reason, and `src/badges/README.md` restates for these.
+ *
+ * ## No badge id is written down here
+ *
+ * The catalogue lives in `tdg_badge_catalog()` in Postgres, so the chip below
+ * draws `label` and `blurb` as they arrive. A badge added by a migration
+ * tomorrow renders here today, and a badge id this site has never heard of
+ * renders too — there is no map of ids to names that could fail to contain it
+ * (AGENTS.md rule 17, and src/badges/README.md).
+ *
+ * ## The menu does not resize as the answer lands
+ *
+ * `.nav__badges-body` carries a `min-height` for the same reason
+ * `.store__action` does: a panel that grows under the pointer as a read
+ * completes reads as a page still loading. The reservation holds a two-line
+ * note and two rows of chips, which covers every state this can actually be in.
+ */
+function AccountBadges() {
+  const state = useMyBadges()
+
+  /*
+   * Handled, not asserted away — but there is honestly nothing to draw.
+   *
+   * It cannot be reached from a menu that only exists for a signed-in account,
+   * except for the single tick between pressing Sign out and this component
+   * unmounting, and what a reader must not see in that tick is "no badges yet"
+   * flashing at them on the way out. An account that is not signed in has no
+   * badges to be missing, and a sign-in prompt inside the account menu would be
+   * a nonsense, so the whole block goes rather than the block staying with an
+   * empty body under a heading.
+   */
+  if (state.kind === 'signedOut') return null
+
+  return (
+    <div className="nav__badges">
+      <div className="nav__badges-title">Badges</div>
+      <div className="nav__badges-body">
+        {state.kind === 'checking' && <p className="nav__badges-note">Checking your badges…</p>}
+
+        {state.kind === 'error' && (
+          /* Kept to one sentence on purpose: it has to fit the reserved 46px
+             at the panel's narrowest, and what makes it not-"none" is that it
+             says we could not READ them — plus the warm the Store uses for
+             exactly this. A second reassuring line would push the menu the few
+             pixels the reservation exists to prevent. */
+          <p className="nav__badges-note nav__badges-note--warn">
+            We couldn't read your badges just now.
+          </p>
+        )}
+
+        {state.kind === 'ok' && state.badges.length === 0 && (
+          <p className="nav__badges-note">No badges yet. We hand them out one at a time.</p>
+        )}
+
+        {state.kind === 'ok' && state.badges.length > 0 && (
+          <div className="chips nav__badge-row">
+            {state.badges.map((badge) => (
+              /*
+                The site's own `.chip`, with the tracking relaxed: 0.12em is
+                designed for the shouted one-word tags the rest of the site
+                uses, and a badge's label is a Title Case NAME (rule 7), which
+                comes apart at that spacing.
+
+                `blurb` is the one line the catalogue writes about the badge. It
+                is the `title` for a pointer and `.sr-only` for a screen reader,
+                because a tooltip alone is a fact only some readers get.
+              */
+              <span key={badge.id} className="chip nav__badge" title={badge.blurb}>
+                {badge.label}
+                <span className="sr-only"> — {badge.blurb}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -108,6 +224,7 @@ function AccountMenu({
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
+        <AccountBadges />
         {/* Feedback needs the account (a reply has to reach its sender), so
             its door lives with the account things. See src/feedback/. */}
         <button
@@ -157,7 +274,11 @@ function AccountMenu({
   )
 }
 
-/** Only a ROUTE can be the current page; the rest are anchors on this one. */
+/**
+ * Only a ROUTE can be the current page; the rest are anchors on this one.
+ * All three routes answer here — About, Store, and the Developer tab when it is
+ * drawn — which is the same split `isRouteLink` above reads off the href.
+ */
 function isCurrent(href: string, route: Route): boolean {
   if (href === ABOUT_HASH) return route.kind === 'about'
   if (href === STORE_HASH) return route.kind === 'store'
@@ -267,16 +388,60 @@ export function Nav({
 
   // One list, so the desktop bar and the mobile panel can never disagree about
   // whether the Developer tab is there.
-  const links = isAdmin && devMode ? [...NAV_LINKS, DEV_LINK] : NAV_LINKS
+  const links: readonly NavLink[] = isAdmin && devMode ? [...NAV_LINKS, DEV_LINK] : NAV_LINKS
+
+  // ...and ONE split of that list, for the same reason. The bar and the panel
+  // both render these two arrays in this order, so they cannot end up
+  // disagreeing about which side of the divider a link is on either. Partitioned
+  // rather than sorted in place: an anchor added below a route in NAV_LINKS
+  // still lands with the anchors, which is the whole point of deriving it.
+  const anchors = links.filter((link) => !isRouteLink(link.href))
+  const routes = links.filter((link) => isRouteLink(link.href))
+  // Drawn only when there is something on both sides of it. A divider with
+  // nothing after it is a hairline that means nothing.
+  const split = anchors.length > 0 && routes.length > 0
 
   const lightIndicator = (event: React.PointerEvent<HTMLAnchorElement>) => {
     const bar = indicator.current
     if (!bar) return
     const link = event.currentTarget
+    // offsetLeft is measured against .nav__links, which is the offsetParent
+    // because it is the nearest positioned ancestor. The divider between the
+    // two groups is deliberately UNpositioned for that reason: a `position:
+    // relative` on it would not change its own look and would silently become
+    // the offsetParent of every link after it, sliding the indicator to the
+    // wrong half of the bar.
     bar.style.left = `${link.offsetLeft}px`
     bar.style.width = `${link.offsetWidth}px`
     bar.style.opacity = '1'
   }
+
+  /** One renderer per surface, so the two groups cannot drift from each other. */
+  const barLink = (link: NavLink) => (
+    <a
+      key={link.href}
+      className="nav__link"
+      data-dev={link.href === DEV_HASH || undefined}
+      href={link.href}
+      aria-current={isCurrent(link.href, route) ? 'page' : undefined}
+      onPointerEnter={lightIndicator}
+    >
+      {link.label}
+    </a>
+  )
+
+  const panelLink = (link: NavLink) => (
+    <a
+      key={link.href}
+      className="nav__panel-link"
+      data-dev={link.href === DEV_HASH || undefined}
+      href={link.href}
+      aria-current={isCurrent(link.href, route) ? 'page' : undefined}
+      onClick={() => setMenuOpen(false)}
+    >
+      {link.label}
+    </a>
+  )
 
   return (
     <>
@@ -291,18 +456,12 @@ export function Nav({
 
         <div className="nav__links" onPointerLeave={() => indicator.current?.style.setProperty('opacity', '0')}>
           <span ref={indicator} className="nav__indicator" aria-hidden="true" />
-          {links.map((link) => (
-            <a
-              key={link.href}
-              className="nav__link"
-              data-dev={link.href === DEV_HASH || undefined}
-              href={link.href}
-              aria-current={isCurrent(link.href, route) ? 'page' : undefined}
-              onPointerEnter={lightIndicator}
-            >
-              {link.label}
-            </a>
-          ))}
+          {anchors.map(barLink)}
+          {/* Five places on this page, then two pages. Decorative and
+              aria-hidden: the split is a reading aid, and a screen reader gets
+              the same seven links in the same order it always did. */}
+          {split && <span className="nav__split" aria-hidden="true" />}
+          {routes.map(barLink)}
         </div>
 
         <div className="nav__actions">
@@ -347,18 +506,13 @@ export function Nav({
           inert={!menuOpen}
         >
           <div className="nav__panel-inner">
-            {links.map((link) => (
-              <a
-                key={link.href}
-                className="nav__panel-link"
-                data-dev={link.href === DEV_HASH || undefined}
-                href={link.href}
-                aria-current={isCurrent(link.href, route) ? 'page' : undefined}
-                onClick={() => setMenuOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {anchors.map(panelLink)}
+            {/* The same five-plus-two the bar draws, from the same two arrays,
+                said in the panel's own idiom: a stacked list already has a rule
+                under every link, so this is the air below the last anchor
+                rather than a second line beside it. */}
+            {split && <span className="nav__panel-split" aria-hidden="true" />}
+            {routes.map(panelLink)}
           </div>
         </div>
 

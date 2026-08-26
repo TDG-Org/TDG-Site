@@ -5,9 +5,39 @@ import './Cursor.css'
 /** What the pointer is currently over. It drives the ring's shape. */
 type Kind = 'default' | 'link' | 'grab' | 'wide'
 
+/*
+ * The three things the ring can be over, in the order they are tested. The
+ * order IS the rule: the most specific thing under the pointer wins, so a
+ * button inside a card is a button.
+ *
+ * ## Why `.origin__row` is in WIDE even though it has never won
+ *
+ * It had not, and the reason was not this ordering being wrong. Every timeline
+ * row carried a stray `tabIndex={0}`, which matches
+ * `[tabindex]:not([tabindex="-1"])` in LINK, so the whole row answered LINK
+ * before WIDE was ever consulted and the entry below did nothing at all. The
+ * rows are being rebuilt as real `<button>` disclosures and that attribute is
+ * going with them, which is what finally lets this line do its job.
+ *
+ * ## What that leaves, and why it is the intended feel
+ *
+ * A rebuilt row is a wide surface with a control inside it, so the ring will
+ * read 38px over the row and open to 44px over the button — the SAME step this
+ * site has always given a `.card` with a control in it. A Store pack card is
+ * the shipped example: its body is `wide` and its Buy button is `link`, and
+ * that step is how the cursor says "this whole thing is one object, and THIS is
+ * the part that does something". A row is exactly that shape, so it gets
+ * exactly that answer.
+ *
+ * The alternative was dropping `.origin__row` from WIDE, and it is worse rather
+ * than quieter: with the row no longer focusable the prose beside the button
+ * would fall all the way to `default`, and the pointer would cross 26px → 44px
+ * instead of 38px → 44px. Removing the entry to avoid a step makes the step
+ * nearly three times bigger.
+ */
 const LINK = 'a,button,[role="button"],summary,label,input,select,textarea,[tabindex]:not([tabindex="-1"])'
 const GRAB = '.hero__model'
-const WIDE = '.card,.story__row'
+const WIDE = '.card,.origin__row'
 
 /**
  * A two-part cursor: a dot that tracks the pointer exactly and a ring that

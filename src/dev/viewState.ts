@@ -174,6 +174,28 @@ export function holdAnchor(a: Anchor | null, opts: HoldOptions = {}): () => void
     }
     requestAnimationFrame(tick)
   }
+  /*
+   * Rule 9 sends animation through the shared frame loop. This is not
+   * animation: it is a correction applied AFTER somebody else's layout, for
+   * at most 900ms, and it scrolls INSTANTLY on purpose (see applyAnchor). It
+   * wants a frame for the same reason a measurement does — the rect it reads
+   * has to be the one React just committed.
+   *
+   * The alternative was tried on paper and loses on cost. `onFrame` calls
+   * `wireWakeSources()` the first time anything subscribes, and that attaches
+   * eight capture-phase listeners to the window — scroll, wheel, pointermove,
+   * the lot — permanently, with no way to take them off again. The console
+   * subscribes to nothing else: it has no parallax, no reveal and no tilt, so
+   * on `#/dev` that loop is parked with an empty subscriber set and those
+   * listeners do not exist. Waking all of it, for good, to run six hundred
+   * milliseconds of scroll arithmetic would install exactly the always-on
+   * scroll cost rule 9 was written to remove, on the one page that had none.
+   *
+   * There is a second reason it does not fit even if the cost were free: this
+   * loop must SURRENDER on wheel, touchmove, keydown and pointerdown, which
+   * are four of the events that wake the shared loop. Handing it a subscriber
+   * that dies on the loop's own wake sources is a strange thing to own.
+   */
   requestAnimationFrame(tick)
 
   return end
@@ -253,7 +275,7 @@ function writeView(view: Omit<DevView, 'v' | 'at' | 'anchor'>) {
  * Restore the remembered place, once, on boot.
  *
  * Slow on purpose. The element being aimed at usually does not exist yet: the
- * roster has to arrive, the account has to be selected from it, its nine panels
+ * roster has to arrive, the account has to be selected from it, its ten panels
  * have to mount and the right one has to be open. So this keeps trying for a
  * few seconds and stops as soon as it has landed and the page has gone quiet.
  *
@@ -332,6 +354,26 @@ export function useRememberView(
       window.clearTimeout(timer)
       timer = window.setTimeout(save, 250)
     }
+    /*
+     * Rule 9 says never add a scroll listener, and means it about MOTION:
+     * anything that moves reads element rects on the shared frame loop, so the
+     * page's choreography never depends on who owns the scroll. Nothing moves
+     * here. This listener drives one `JSON.stringify` into `sessionStorage`,
+     * 250ms after the page has stopped, and paints nothing at all.
+     *
+     * Routing it through `onFrame` would invert the cost rather than pay it.
+     * The shared loop only notices a scroll because `wireWakeSources()`
+     * attaches its own capture-phase scroll listener — so the rule-abiding
+     * version is this listener, plus a second one underneath it, plus a frame
+     * loop held awake to poll a number that changes about four times a minute.
+     * `passive: true` and a debounce is the cheap end of that trade.
+     *
+     * It is also not the only saver, and deliberately: `pagehide` below is
+     * what catches the reload this whole file exists for. This one is the belt
+     * to that brace — a tab discarded or crashed never fires `pagehide`, and
+     * then the remembered place is at most a quarter of a second stale instead
+     * of as old as the last time a section was opened.
+     */
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('pagehide', save)
     return () => {

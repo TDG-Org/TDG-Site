@@ -124,9 +124,58 @@
   color: rgba(255, 255, 255, 0.74);
 }
 
-/* The Store is a page rather than a place on this one, so it is the only link
-   that can be the CURRENT one, marked in the text rather than with a second
-   underline, which the hover indicator already owns. */
+/* ── five places, then two pages ───────────────────────────────────────────
+   The bar reads Origin · Apps · Tools · Building · Faith · About · Store, and
+   it used to read as one undifferentiated row of seven single nouns. The count
+   was never the problem: five of those scroll you down THIS page and two
+   replace it, which are two different promises made in one voice, and that is
+   what "we have many tabs on top" actually feels like.
+
+   One hairline and a little air is the whole intervention — no link removed,
+   nothing hidden behind a menu, and no weight change, because `aria-current`
+   below already owns weight and a second use of it would blunt the first.
+   Nav.tsx derives which side a link is on from its href, so a link added to
+   NAV_LINKS tomorrow lands on the right side by itself.                       */
+
+.nav__split {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 15px;
+  /* .nav__link already carries 14px of its own padding each side, so 5px here
+     reads as ~19px of air around the hairline while costing the row 11px. The
+     row has to stay ONE row at every width it is drawn at — .nav is
+     `flex-wrap: wrap`, so overrunning does not clip, it folds the bar in two —
+     and this is the number that buys the split most cheaply. */
+  margin: 0 5px;
+  background-color: var(--border);
+  transition: var(--t-theme);
+}
+/* Where the bar is at its tightest — just above the burger's own breakpoint,
+   and with the Developer tab appended for a developer — the divider gives its
+   margins back rather than the row wrapping. The hairline still sits 16px clear
+   of the text on both sides, because the links' own padding is doing most of
+   the work. */
+@media (max-width: 1040px) {
+  .nav__split {
+    margin: 0 2px;
+  }
+}
+/* Not a token, for the reason the four rules above already give: over the dark
+   hero the chrome stays light in BOTH themes, so this tracks .nav__link's own
+   0.74 white rather than a --border that would vanish into the scene in light
+   mode. Nothing here is a theme colour. */
+.nav[data-over-dark='true'] .nav__split {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+/* A ROUTE is a page rather than a place on this one, so a route is the only
+   kind of link that can be the CURRENT one — About, Store, and the Developer
+   tab when it is drawn. `isCurrent()` in Nav.tsx answers for all three and all
+   three take the styling below; this comment named only the Store for a while
+   after About and #/dev grew the same behaviour (AGENTS.md rule 13). Marked in
+   the text rather than with a second underline, which the hover indicator
+   already owns. */
 .nav__link[aria-current='page'],
 .nav[data-over-dark='true'] .nav__link[aria-current='page'] {
   color: var(--text);
@@ -214,6 +263,55 @@
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+/* ── badges ────────────────────────────────────────────────────────────────
+   The signed-in account's badges, under their identity. Four states share this
+   box and it must be one size in all of them: a menu that grows under the
+   pointer as a read lands reads as a page still loading, which is the same
+   floor `.store__action` keeps for the same reason (AGENTS.md rule 5).
+
+   46px is two rows of chips, and it is also two lines of the note, which are
+   the tallest each arm can honestly be. Reserved rather than measured, because
+   the answer arrives after the menu is already open.                          */
+
+.nav__badges {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  transition: var(--t-theme);
+}
+.nav__badges-title {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 8px;
+}
+.nav__badges-body {
+  min-height: 46px;
+}
+.nav__badges-note {
+  margin: 0;
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--muted);
+}
+/* A failed read is not "no badges", so it does not look like the empty line. */
+.nav__badges-note--warn {
+  color: var(--warm);
+}
+.chips.nav__badge-row {
+  /* .chips already flexes and wraps; this only stops a long label forcing the
+     right-anchored panel wider than its own cap. */
+  max-width: 100%;
+}
+/* The site's own .chip. Only the tracking changes: 0.12em is drawn for the
+   shouted one-word tags everywhere else, and a badge's label is a Title Case
+   name, which comes apart at that spacing. */
+.chip.nav__badge {
+  letter-spacing: 0.05em;
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
 .nav__account-feedback,
 .nav__account-signout {
   margin-top: 12px;
@@ -454,6 +552,14 @@
    width, so there is nothing after the last link to rule off from. */
 .nav__panel-link:last-child {
   border-bottom: none;
+}
+/* The bar's hairline, in the panel's own idiom. A stacked list already draws a
+   rule under every link, so a second line here would be two rules 12px apart;
+   what the panel is short of is air, and this is the air. Same two groups, same
+   order, same derivation as the bar — see Nav.tsx. */
+.nav__panel-split {
+  height: 12px;
+  flex: none;
 }
 
 /* ── progress ──────────────────────────────────────────────────────────── */

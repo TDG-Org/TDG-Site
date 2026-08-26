@@ -39,6 +39,11 @@
  * somebody finds out, which is what "sign out everywhere" is expected to
  * mean.
  *
+ * The online check is the only one of the four **not** gated on the tab being
+ * visible, and that is on purpose: coming back online is the one of them that
+ * routinely happens to a tab nobody is looking at. Gating it on visibility read
+ * as three moments, not four.
+ *
  * ## Why a failed check is not a sign-out
  *
  * A request that never landed says nothing about the session, and treating it
@@ -128,21 +133,42 @@ export function watchRevokedSession(client: SupabaseClient): () => void {
     }
   }
 
-  const onVisible = () => {
+  /**
+   * `visibilitychange` fires for BOTH directions, so the guard is what stops a
+   * tab being sent to the background from spending a request on its way out.
+   * `focus` is guarded by the same function only because it costs nothing to:
+   * a focused tab is a visible one.
+   */
+  const onForeground = () => {
     if (document.visibilityState === 'visible') void check()
   }
 
+  /**
+   * Deliberately NOT `onForeground`. It was, and that quietly cancelled the
+   * event: `online` is the one moment of the four that can arrive while the tab
+   * is hidden, which is the ordinary case — a laptop lid closed on this tab,
+   * opened somewhere with a network. The visibility guard threw exactly that
+   * away and left the file's own promise of a check "when the machine comes
+   * back online" describing something the code did not do.
+   *
+   * A hidden tab is allowed to spend the request. It is one `getUser()` after
+   * a state change a person caused, `check()` makes none at all with nobody
+   * signed in, and the `checking` flag folds this into the foreground check
+   * that usually follows a second later rather than doubling it.
+   */
+  const onOnline = () => void check()
+
   void check()
   const timer = window.setInterval(() => void check(), RECHECK_MS)
-  document.addEventListener('visibilitychange', onVisible)
-  window.addEventListener('focus', onVisible)
-  window.addEventListener('online', onVisible)
+  document.addEventListener('visibilitychange', onForeground)
+  window.addEventListener('focus', onForeground)
+  window.addEventListener('online', onOnline)
 
   return () => {
     stopped = true
     window.clearInterval(timer)
-    document.removeEventListener('visibilitychange', onVisible)
-    window.removeEventListener('focus', onVisible)
-    window.removeEventListener('online', onVisible)
+    document.removeEventListener('visibilitychange', onForeground)
+    window.removeEventListener('focus', onForeground)
+    window.removeEventListener('online', onOnline)
   }
 }
