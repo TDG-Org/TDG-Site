@@ -1,8 +1,9 @@
 # `src/components/scene/` · the shared vocabulary for the art layer
 
-Two primitives and their stylesheets. Between them they are the only way art
-from [`public/assets/parallax/`](../../../public/assets/parallax/README.md) and
-the shaped boundaries between sections get onto this page.
+Five primitives and their stylesheets. Between them they are the only way art
+from [`public/assets/parallax/`](../../../public/assets/parallax/README.md), the
+shaped boundaries between sections, and anything drawn rather than photographed
+get onto this page.
 
 **This folder was written before anything used it, and that is deliberate.** It
 came first, on its own, so that the sections about to grow scenery would all
@@ -10,9 +11,9 @@ reach for the same three components rather than each inventing an `<img>`
 wrapper with its own idea of what "decorative" means. They now do — `Hero`,
 `Origin`, `Apps`, `Tools`, `Building`, `Faith` and `Outro` all import from here,
 and none of them builds its own. Keep it that way: a section that needs a piece
-of the art kit imports one of these three, and does not write an `<img>` or a
-path of its own. That is what makes a change like the `.webp` swap below one
-string instead of a hunt.
+of the art kit imports one of `ThemedArt.tsx`'s three exports, and does not
+write an `<img>` or a path of its own. That is what makes a change like the
+`.webp` swap below one string instead of a hunt.
 
 | | |
 | --- | --- |
@@ -20,6 +21,17 @@ string instead of a hunt.
 | `Scene.css` | The one base class all three share. |
 | `Seam.tsx` | `Seam` — a flat silhouette band on one edge of a section. |
 | `Seam.css` | Where a seam sits and how tall it is. |
+| `Stage.tsx` | `Stage` — a backdrop that holds still while its section's content scrolls over it. |
+| `Stage.css` | The two boxes a stage is, and the one line the section needs. |
+| `Moon.tsx` | `Moon` — the disc, its bloom and three quiet patches of surface, as inline SVG. |
+| `Snow.tsx` | `Snow` — falling snow on a 2D canvas, at about the cost of a gradient. |
+
+**`Stage`, `Moon` and `Snow` are not used by any section yet.** They were
+written the same way and for the same reason the two above them were: ahead of
+the sections that will hang scenery in them, so that several sections growing a
+pinned backdrop at once all reach for one implementation rather than each
+arriving at a slightly different `position: sticky`. The first caller should
+read the contracts below rather than re-derive them.
 
 ---
 
@@ -245,6 +257,304 @@ smear across the boundary.
 The mask is the caller's, because whether a seam is a hard silhouette or a
 dissolve is a decision about that boundary. `Seam.css` deliberately does not
 make it for you.
+
+---
+
+## `Stage.tsx`
+
+```tsx
+Stage({
+  /** Layers to draw. Positioned by the caller's own CSS. */
+  children: React.ReactNode
+  className?: string
+})
+```
+
+A backdrop that stays put while its section's content scrolls over it. It is
+`pointer-events: none`, `aria-hidden`, and it goes **beside** a section's
+`.shell`, never around it.
+
+```tsx
+<section id="faith" className="section section--blend stage-host faith">
+  <Stage className="faith__stage">
+    <Moon className="faith__moon" />
+    <ThemedArt art="landscapes/mountain-ridge" className="faith__ridge" factor={0.04} />
+  </Stage>
+  <div className="shell"> … </div>
+</section>
+```
+
+This is the one architectural idea taken from the reference the site owner
+named: a fixed backdrop with ordinary sections scrolling over it, which is what
+makes a hero look pinned while its copy fades away. That page does it with one
+`position: fixed` full-viewport WebGL canvas behind the whole document. This
+does it **per section**, because here each section owns its own scenery and a
+single page-wide layer would need to be told which section's art to be showing,
+which is a router for pictures. The price is that a stage is clipped at its
+section's edges: scenery cannot bleed from one section into the next, so the
+moon is handed over rather than carried across.
+
+### Put `stage-host` on the section, or nothing sticks
+
+`base.css` gives every `.section` `overflow: hidden`, and **an ancestor with
+`overflow: hidden` is a scroll container** — so it becomes the sticky box's
+scrollport, and since it never scrolls, the box never sticks. This is not a
+theory. Measured on `#origin` with the section left as it is, the stage tracked
+the page down instead of holding: `top` 72 → −228 → −1449 → −1863.
+
+`overflow: clip` clips exactly the same content and is explicitly **not** a
+scroll container, so sticky keeps the viewport as its scrollport. `Stage.css`
+ships that one line as `.stage-host`. Same measurement with it in place: the
+stage held a **constant** offset through 1521px of scroll and released at
+1935px with its bottom sitting exactly on the section's bottom. (The constant
+was 120 rather than 0, because `useHeroTakeover` translates `#origin` by up to
+`TAKEOVER_LAG` px while it arrives and a translate carries the whole section
+with it. Constant is the part that matters.)
+
+It is a class rather than an edit to `.section` because only sections that hang
+scenery in a stage need it, and because `clip` also removes a section's ability
+to be scrolled programmatically — harmless here, and not a change worth making
+page-wide without a reason.
+
+(`body { overflow-x: hidden }` in `base.css` is **not** a problem for any of
+this. `html`'s overflow is `visible`, so the body's value propagates to the
+viewport and the body itself is treated as `visible`. Verified alongside the
+above: a control sticky element with no overflow ancestor pinned correctly.)
+
+### How long it stays pinned, and what decides that
+
+`Stage` renders two boxes. The outer is `position: absolute; inset: 0`, so it
+covers the section's padding box and adds **nothing** to the flow — measured,
+`#origin` is 1935px tall with a stage and 1935px without one. That matters: a
+sticky box is in normal flow, so a bare `height: 100svh` sticky element dropped
+straight into a section would have pushed that section's copy down by a whole
+viewport.
+
+The inner box is the sticky one, and **a sticky box is confined to its
+containing block** — here, the outer box, which is the section's padding box.
+So the stage is pinned for `section height − 100svh` of scrolling, engaging as
+the section's top edge reaches the viewport top and releasing exactly at its
+bottom edge.
+
+**In a section shorter than the viewport it never pins at all.** The sticky box
+is taller than its containing block, so there is no travel: it is then a
+viewport-tall backdrop clipped to the section, which is a perfectly good thing
+to be, but do not tune an effect against it and call it pinning.
+
+### It stops costing anything once it is covered
+
+A full-viewport layer that stopped being visible near the top of the page goes
+on being painted and composited all the way to the footer. That is exactly the
+waste `motion.ts` and `useOffscreenPause` exist to remove, at viewport scale.
+
+So the stage measures its own section's rect on the frame loop and stamps
+`data-covered` on itself once the section is more than 120px outside the
+viewport; `Stage.css` turns that into `visibility: hidden`, which costs no
+paint and no compositing for the whole subtree.
+
+`visibility`, and not the two bigger hammers, on purpose:
+
+- `display: none` skips layout too, and it takes the measurements with it.
+  Measured: it took a child canvas's `clientWidth` from 276 to 0 — and `Snow`
+  sizes its backing store from exactly that, so every trip past the section
+  would blank and re-seed the field, which is a visible re-randomisation of
+  every flake.
+- `content-visibility: hidden` left the same canvas measuring 276×414 here, but
+  it applies size containment to the subtree, and a `ResizeObserver` on skipped
+  content is specified to report a zero box — the same failure through the
+  other door. **That half was not verified in this session** (ResizeObserver
+  delivery needs a rendering lifecycle this browser was not running), so the
+  guard uses the tool whose cost was actually measured. `visibility: hidden`
+  left the pin's rect and the child canvas's client box byte-identical.
+- An `IntersectionObserver` would be cheaper per frame and `useOffscreenPause`
+  already runs one, but its callback is asynchronous: a backdrop that reappears
+  a frame or more after the reader scrolled back to it pops in at viewport
+  size. The rect read costs one measurement per frame **only while the loop is
+  awake**, and this subscriber never calls `hold()`, so a parked reader pays
+  nothing for it at all.
+
+The guard reads `mi` nowhere, which is what makes it right under reduced
+motion: it is a paint saving rather than an animation, so it behaves
+identically at `motionIntensity() === 0` and the stage is visible whenever its
+section is. It starts visible — the attribute is only ever added by a frame
+that measured the section away — and it comes off in the frame the section
+returns.
+
+**It is a paint guard, not a work guard.** It cannot reach an `onFrame`
+subscriber inside the stage, for the same reason `data-live` cannot: a tick
+knows nothing about an attribute. Anything in a stage that draws from
+JavaScript still does its own rect check. `Snow` does.
+
+### One stacking context, at the section's floor
+
+`.stage` carries `z-index: 0`, which is deliberate and is not the same as
+having no `z-index`. It makes the stage a single stacking context under
+`.shell`'s `z-index: 1`, so **nothing a caller puts inside a stage can paint
+over the copy however it numbers itself** — guardrail 2 of the art kit made
+structural instead of remembered. Leave it off and a layer with its own
+`z-index` escapes into the section's stacking order and lands on the words.
+
+It can never trap the content above it either, because it never contains it: it
+is a sibling that takes no flow space, not a wrapper.
+
+No `filter`, no `opacity` below 1 and no `will-change` on either box. A caller
+wants those on its own layers, one at a time; here they would promote a
+full-viewport compositor layer for every section that has a stage.
+
+---
+
+## `Moon.tsx`
+
+```tsx
+Moon({ className?: string })
+```
+
+The disc, a soft bloom around it, and three quiet patches of surface, as inline
+SVG. `aria-hidden`, every colour from a token, no `filter`, nothing to load.
+
+**The caller animates it.** There is no scroll behaviour in the file and there
+should not be: the moon's job on this page is to be in a different place in
+each section it appears in, and where it goes is a fact about that section.
+Drive it from `useSectionProgress` and `usePointer` in the section that draws
+it.
+
+### Inline SVG, not an image
+
+A raster moon is a raster halo. Scale it up for the "much bigger" the site
+owner asked for and the bloom bands, and the whole point of a bloom is that it
+has no edge. Vector also means one file rather than the two the `-dark` /
+`-light` art kit needs, because everything here paints from tokens and the
+tokens already flip.
+
+### Sizing it
+
+A 100×100 viewBox with `preserveAspectRatio` left at its default, so a
+non-square box gets a centred circle rather than an ellipse. **The visible disc
+is exactly half the box's width** — verified: a 400px box measured a 200px
+disc. The remaining quarter on each side is bloom, and it is allowed to hang
+off the section's edge; that is what the stage's clip is for.
+
+An `<svg>` is an inline box, so it carries a descender gap under it if it is
+ever laid out in flow — position it absolutely, or set `display: block` in your
+class. `Seam.css` records the same lesson. `Moon` deliberately writes no inline
+`display`, because an inline style would beat the `display: none` a caller
+needs at 640px to take a prop off the page (art-kit rule 3).
+
+### It is a moon in both themes, and in light it is a pale daytime one
+
+`--glow` for the bloom, `--cross-glow` for the disc, `--invert-fg` for the
+shading. No new token, no literal.
+
+**It does not become a sun in the light theme**, and both halves of that were a
+decision:
+
+- The light theme here is the same scene in a different palette, not a
+  different time of day. The art kit ships one set of mountains in two inks —
+  midnight blue, and paler mist and silver with a narrow graphite line — and
+  nothing on this page changes *what it is* when the theme flips. A moon that
+  turned into a sun would be the only object that did, and it would do it
+  behind the cross on the Faith ridge, where a sun is a different and much
+  louder symbol than the one this page is telling.
+- A sun also wants `--warm`, which in light is `#b8763a`: a burnt orange that
+  would instantly be the loudest thing on a page whose light palette is greys.
+
+A pale daytime moon in light is necessarily **darker** than the sky it sits in,
+because that sky is near-white and nothing lighter than it can be seen. That is
+the same conclusion `--seam-fill` reaches for the same reason, and
+`--cross-glow` already carries the flip built in — measured in both themes:
+`rgba(255,255,255,0.82)` dark, `rgba(20,20,26,0.45)` light. So the moon and the
+seams agree by construction rather than by two people making the same judgement
+twice.
+
+### Why every paint goes through a gradient
+
+`base.css` transitions `stop { stop-color }` on the theme wave, and
+`ThemeProvider`'s `THEMED` selector includes `svg`, so the element gets its own
+`--wave-delay` and every stop inside inherits it. A flat `fill: var(--token)`
+would not: `svg`, `circle` and `path` are **not** in `base.css`'s
+`transition: var(--t-theme)` list, so a filled shape snaps to the new theme
+while the page around it crosses. Verified on a copy of this markup in the live
+page: the stops resolve through `var()` and compute
+`transition: stop-color 0.55s`. `CrossGlyph` paints through stops for exactly
+this reason.
+
+The soft shapes want gradients anyway. A moon with a hard rim is a sticker.
+
+Gradient ids are per instance, from `useId`. SVG ids are document-global and
+`url(#id)` resolves against the whole document, so a second `Moon` on one page
+would otherwise paint itself with the first one's gradients.
+
+---
+
+## `Snow.tsx`
+
+```tsx
+Snow({ className?: string; density?: number })
+```
+
+Falling snow on a 2D canvas. `hero/Starfield.tsx` is the pattern and the
+budget, and everything expensive about a particle field is already answered
+there: the Hz cap, `devicePixelRatio` capped at 1.5, and the draw done inside
+the `onFrame` tick rather than in a returned write closure — a canvas draw
+forces no layout, so it does not need the write phase and putting it there
+would only delay it by a pass.
+
+**The canvas takes its size from CSS and nothing else**, so the caller has to
+give it one: a canvas with no CSS size is 300×150, and this will faithfully put
+four flakes in it. `density` scales the count around 1 and is clamped to 0..3;
+the count itself comes from the canvas area, `navigator.hardwareConcurrency`
+and the viewport width, and is capped at 170. `Starfield` caps at 190 motes;
+snow is bigger and more opaque per particle, so fewer.
+
+30Hz, where `Starfield` uses 24. Same argument, different answer, because the
+number is a property of the motion and not a house style: dust there crawls at
+4–17 px/s, snow here falls at 14–60, and at 30Hz the fastest flake moves 2px
+between frames — under its own diameter.
+
+### It checks its own visibility, because nothing else can
+
+`useOffscreenPause` stamps `data-live` and `base.css` turns that into
+`animation-play-state: paused`; an `onFrame` subscriber never sees an
+attribute. `Stage`'s `data-covered` cannot reach it either, for the same
+reason. So `Snow` measures the section it lives in every frame and returns
+before it draws **or** holds when the section is off screen. It is the same box
+`Stage` guards on, so the two flip together.
+
+Nothing catches up when it comes back. Time is only accumulated *after* the
+visibility check, so a field left mid-fall resumes exactly where it stopped
+rather than jumping forward by however long the reader spent elsewhere.
+
+### "Still snow" under reduced motion
+
+At `motionIntensity() === 0` the field is drawn **once**, with every
+time-varying term evaluated at zero — no fall, no sway — and then the
+subscriber returns without holding and the loop parks. The flakes rest at their
+seeded positions, which are spread evenly through the box, so it reads as snow
+suspended in the air. The section keeps its weather, which is what guardrail 5
+below asks for.
+
+What it is **not** is "stop drawing and leave whatever is on the canvas". That
+is a claim about a canvas, and three things falsify it silently: a resize and a
+DPR change both write `cv.width`, which blanks the canvas, and a theme swap
+re-reads the colours and paints with none of them. A reduced-motion visitor who
+resized the window would have lost the snow for the rest of the visit with no
+code path left that could bring it back. So each of the three clears the
+`settled` flag and calls `wake()` for one more frame.
+`origin/OriginField.tsx` carries the long version of that bug; it is the same
+one.
+
+### The colour is read, not written
+
+`--glow`, through the same `readRGB` helper `OriginField` uses, because only
+the hue is wanted — the token carries this theme's own alpha (0.2 dark, 0.16
+light) and each flake needs its own. Measured in both themes: the token
+resolves to `rgba(255,255,255,0.2)` and `rgba(20,20,26,0.16)`, and the regex
+takes the triple out of both. Writing `rgb(214,232,255)` instead would be right
+in exactly one theme — rule 2.
+
+A `MutationObserver` on `data-theme` re-reads it and wakes the loop for one
+frame, which is what makes a theme swap land on a reduced-motion visitor's
+still field.
 
 ---
 

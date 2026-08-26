@@ -1,0 +1,111 @@
+/* ── the pinned backdrop ───────────────────────────────────────────────────
+   Two elements, and each one is doing a job the other cannot. Stage.tsx's
+   header carries the full reasoning and the measurements; this file carries
+   the declarations and the traps that live in CSS.                         */
+
+/* The frame. Absolutely positioned, so it covers the section's padding box
+   and contributes NOTHING to the flow — measured on #origin, 1935px tall with
+   a stage and 1935px without one. A sticky element is in normal flow, so a
+   bare 100svh sticky box dropped into a section would have pushed that
+   section's copy down by a whole viewport.
+
+   z-index: 0 is deliberate and it is not "no z-index". It makes the stage ONE
+   stacking context sitting under .shell's z-index: 1, so nothing a caller puts
+   inside a stage can paint over the copy however it numbers itself — guardrail
+   2 of public/assets/parallax/README.md ("never over the copy") made
+   structural instead of remembered. Leave it off and a layer with its own
+   z-index escapes into the section's stacking order and lands on the words.
+
+   No `filter`, no `opacity` below 1 and no `will-change` here. A caller wants
+   those on its own layers, one at a time; on this element they would promote a
+   full-viewport compositor layer for every section that has a stage.        */
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The pin. This is the element that actually holds still.
+
+   Its containing block is .stage above, which is the section's padding box, so
+   it stays pinned for (section height − 100svh) of scrolling and releases
+   exactly at the section's bottom edge. In a section shorter than the viewport
+   it is taller than its containing block and never pins at all — it is then a
+   viewport-tall backdrop clipped to the section, which is fine, but it is not
+   pinning and an effect must not be tuned against it.
+
+   100svh and not 100vh: on a phone, 100vh is the tallest the viewport ever
+   gets, so a vh-sized backdrop is cropped by the browser chrome for as long as
+   the chrome is showing. The 100vh line above it is the fallback for a browser
+   that has never heard of svh; .page in base.css states the pair the same way.
+
+   Nothing here promotes a layer either. The sticky offset is the browser's own
+   scroll-linked machinery, not one of ours — it needs no hint, and it costs
+   nothing on a frame the page did not move.                                 */
+.stage__pin {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+}
+
+/* ── covered ───────────────────────────────────────────────────────────────
+   Stamped by Stage.tsx from the frame loop once the section is more than
+   120px outside the viewport, and removed again in the frame it comes back.
+
+   visibility, and not display: none or content-visibility: hidden, because
+   both of those take the layout with them — measured, display: none took a
+   child canvas's clientWidth from 276 to 0, and Snow sizes its backing store
+   from exactly that, so every trip past the section would re-seed and
+   re-randomise the whole field. visibility left the pin's rect and that
+   canvas's client box byte-identical while still costing no paint.
+
+   It carries no transition on purpose. A backdrop fading out as it leaves the
+   screen is motion nobody asked for that plays where nobody can see it, and it
+   would keep the layer painting for the length of the fade — which is the cost
+   this attribute exists to remove.                                          */
+.stage[data-covered] {
+  visibility: hidden;
+}
+
+/* ── the one line the SECTION needs ────────────────────────────────────────
+   Put `stage-host` on the section that holds a Stage, beside `.section`.
+
+   base.css gives every `.section` `overflow: hidden`, and an ancestor with
+   overflow: hidden is a SCROLL CONTAINER — so it becomes the sticky box's
+   scrollport, and since it never scrolls, the box never sticks. Measured on
+   #origin with the section left as it is: the stage tracked the page down
+   (top 72 → −228 → −1449 → −1863) instead of holding steady.
+
+   overflow: clip clips exactly the same content and is explicitly not a scroll
+   container, so sticky keeps the viewport as its scrollport. Same measurement
+   with clip in place: a CONSTANT offset held through 1521px of scroll, then
+   released at 1935px with the stage's bottom exactly on the section's bottom.
+   (The constant was 120 and not 0 because useHeroTakeover translates #origin
+   while it arrives, and a translate carries the whole section with it.
+   Constant is the part that matters.)
+
+   It is a separate class rather than an edit to `.section` because only the
+   sections that hang scenery in a stage need it, and because `clip` also takes
+   away the section's ability to be scrolled programmatically — harmless here,
+   where nothing scrolls a section, and not a change worth making page-wide
+   without a reason.
+
+   (body { overflow-x: hidden } in base.css is not a problem for any of this:
+   html's overflow is visible, so the body's value propagates to the viewport
+   and the body itself is treated as visible. Verified — a control sticky
+   element with no overflow ancestor pinned correctly on this page.)         */
+.stage-host {
+  overflow: clip;
+}
+
+@media print {
+  /* Decorative, like everything else the print block in base.css drops. */
+  .stage {
+    display: none !important;
+  }
+}

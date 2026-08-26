@@ -1,6 +1,6 @@
 # `src/hooks/` · the motion hooks
 
-Five hooks, in four files. Between them they do all the movement on this site,
+Seven hooks, in six files. Between them they do all the movement on this site,
 and every one of them runs on the single frame loop in
 [`../lib/motion.ts`](../lib/README.md).
 
@@ -15,7 +15,16 @@ per second on a page nobody is even scrolling.
 | `useTilt(soft?)` | Tilts a card toward the cursor and feeds the spotlight. |
 | `useParallax(factor)` | Drifts a decorative layer against its own distance from centre. **Stops painting 400px outside the viewport.** |
 | `useHeroParallax(factor)` | Drifts a layer with the **hero's** displacement instead of its own. Same file as `useParallax`, and the two must never share an element. |
+| `usePointer()` | Damped pointer position, −1..1 per axis. **Returns without rendering.** One listener for the whole page. |
+| `useSectionProgress()` | 0 as a section's top reaches the viewport bottom, 1 as its bottom reaches the top. **Returns without rendering.** |
 | `useOffscreenPause()` | Parks decorative animation in sections nobody can see. |
+
+**Two of the seven write nothing.** Every other hook here takes a ref and moves
+that element for you. `usePointer` and `useSectionProgress` hand back a
+*number* and stop: they touch no DOM at all, and the caller decides what the
+number means inside its own `onFrame` tick. They are the two you reach for when
+the thing being driven is not one element's transform — a canvas, an SVG
+attribute, three layers at once.
 
 ---
 
@@ -124,6 +133,101 @@ with a `mode` prop — hooks cannot be called conditionally, so a single compone
 would have to call both. Its header comment is the long version, and it is
 worth reading before you "simplify" anything here.
 
+## `usePointer`
+
+```tsx
+const pointer = usePointer()   // { readonly x: number; readonly y: number }
+```
+
+−1..1 on each axis, 0 at the viewport centre, damped so a layer following it
+has weight instead of twitch.
+
+**It never causes a React render, and that is the contract.** Returning state
+would re-render a whole section on every mouse move — several times a frame,
+for a decorative offset. What comes back is a frozen accessor over module
+state: the same object on every call and for every consumer. **Read it inside
+your own `onFrame` tick**, never during render, where it gives you the value at
+render time and nothing afterwards.
+
+```tsx
+const pointer = usePointer()
+const layer = useRef<HTMLDivElement | null>(null)
+useEffect(
+  () =>
+    onFrame(() => {
+      const el = layer.current
+      if (!el) return
+      const next = `${(pointer.x * 26).toFixed(2)}px ${(pointer.y * 14).toFixed(2)}px`
+      return () => {
+        el.style.translate = next
+      }
+    }),
+  [pointer],
+)
+```
+
+**One `pointermove` listener and one lerp for the whole page**, reference
+counted inside the module, so six consumers cost what one does. The listener
+stores two integers and writes nothing — rule 9 forbids a listener that
+*animates*, and `motion.ts` already listens to `pointermove` as a wake source,
+so the loop is awake for the whole gesture. The lerp lives in the tick, which
+is the only place it can keep converging after the last event.
+
+**Zero on a coarse pointer.** It tests `(pointer: fine)`, the same query
+`Cursor.tsx` uses, and on a phone it never attaches a listener at all — so a
+touch drag cannot shove the scenery sideways.
+
+**Zero under reduced motion**, and it snaps there rather than easing, because
+an eased return is itself motion and the one moment it would play is the moment
+somebody asked for less.
+
+**It holds the loop only while converging.** Once the lerp lands on the target
+it snaps and stops holding, so a reader who has stopped moving the mouse lets
+the loop park. That is not a nicety: a lerp that never quite arrives is a page
+that never parks.
+
+## `useSectionProgress`
+
+```tsx
+const [section, progress] = useSectionProgress<HTMLElement>()
+// ...
+<section ref={section} className="section">
+```
+
+0 as the section's top reaches the viewport bottom, 1 as its bottom reaches the
+viewport top, clamped. Same no-render contract as `usePointer`: `progress.p` is
+a frozen accessor over a ref, read inside your own tick.
+
+`origin/OriginField.tsx` computes exactly this expression inline and has since
+it was written. This is that line with the reasoning attached — anything new
+that wants scroll progress through a section calls this instead of writing the
+arithmetic a second time.
+
+**What p actually means.** The travel is `vh + height`, so the run starts and
+ends with the section completely out of view. That is what makes it safe to
+drive an entrance *and* an exit from: there is no first frame at which
+something has to appear already half-done.
+
+- **p = 0.5 is always the section's centre crossing the viewport's centre**,
+  whatever the two heights are. It is the one landmark that does not move, so
+  anything meant to peak "in the middle of the section" peaks there.
+- **The section is at its most visible between `height / (vh + height)` and
+  `vh / (vh + height)`.** A section *taller* than the viewport fills the screen
+  across that band; a section *shorter* than it is fully on screen across the
+  same band with page visible above and below. Either way it brackets 0.5, and
+  it shrinks to the single instant p = 0.5 when the two heights are equal.
+
+What p is **not** is "how much of this section have I read". For a section
+three screens tall, p has already spent a quarter of its run before the first
+line of copy reaches the middle of the screen. Map a sub-range of p rather than
+reaching for a second measurement.
+
+**It never calls `hold()`**, so it can never keep the loop awake, and it never
+writes. One rect per frame per consumer while the page is moving, nothing at
+all while it is parked — which is also why it has no off-screen guard: outside
+the viewport the clamp has already pinned p to 0 or 1, and a guard would cost
+the rect it was trying to save.
+
 ## `useOffscreenPause`
 
 Called once, from `App.tsx`. Sets `data-live="true"` / `"false"` on every
@@ -136,3 +240,20 @@ cheap to look at, expensive to keep compositing when nobody can see it.
 **Anything decorative you add should be a CSS animation on an element inside a
 section, so this reaches it for free.** Something driven from JavaScript needs to
 check for itself.
+
+`components/scene/Stage.tsx` adds a third member to that family: it stamps
+`data-covered` on itself when its section is off screen and `Stage.css` turns
+that into `visibility: hidden`. Same limitation, for the same reason — an
+`onFrame` subscriber inside a stage does not see the attribute, so a canvas in
+there still does its own rect check. `scene/Snow.tsx` does.
+
+---
+
+## Nothing new here is wired into a section yet
+
+`usePointer` and `useSectionProgress` were written ahead of the sections that
+will use them, the way `components/scene/` was, so that the several sections
+about to grow scroll and pointer choreography all reach for one implementation
+rather than each inlining its own. Neither is called from anywhere in `src/`
+today, and that is deliberate rather than an oversight — the first caller
+should read the contracts above, not re-derive them.
