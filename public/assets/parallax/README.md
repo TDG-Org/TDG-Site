@@ -85,7 +85,7 @@ go in.
 | `hero/` | Theme-paired lampposts | A small left-edge hero detail. |
 | `landscapes/` | Theme-paired mountain ridge and stone footbridge cutouts | The hero floor or a quiet lower section seam. |
 | `props/` | Theme-paired trees, bench, foliage/reeds, wayfinding post, garden arch, and pine grove | Sparse section-edge decoration. |
-| `transitions/` | Theme-paired stepping-stone paths | A quiet cue between Story beats. |
+| `transitions/` | Theme-paired stepping-stone paths | A quiet cue between Origin beats. |
 | `faith/` | Theme-paired hillside crosses | A small, reverent Faith-section detail. |
 | `atmosphere/` | Theme-paired fog veils | A slow, quiet layer behind a landscape or prop. |
 | `implementation-brief.md` | Implementation brief | The exact handoff prompt for Claude Code. |
@@ -111,10 +111,10 @@ file at a smaller size, and it never touches which of the two artworks is drawn.
 | Park bench | `props/park-bench-dark.webp` | `props/park-bench-light.webp` | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds-dark.webp` | `props/bushes-reeds-light.webp` | A low foreground cover or section seam. |
 | Fog veil | `atmosphere/fog-veil-dark.webp` | `atmosphere/fog-veil-light.webp` | Far backdrop; place behind mountains and props. |
-| Wayfinding post | `props/wayfinding-post-dark.webp` | `props/wayfinding-post-light.webp` | Story's far edge; its boards must stay blank. |
-| Stone footbridge | `landscapes/stone-footbridge-dark.webp` | `landscapes/stone-footbridge-light.webp` | A low Story seam, used instead of—not with—the stepping stones. |
+| Wayfinding post | `props/wayfinding-post-dark.webp` | `props/wayfinding-post-light.webp` | Origin's far edge; its boards must stay blank. |
+| Stone footbridge | `landscapes/stone-footbridge-dark.webp` | `landscapes/stone-footbridge-light.webp` | A low Origin seam, used instead of—not with—the stepping stones. |
 | Garden arch | `props/garden-arch-dark.webp` | `props/garden-arch-light.webp` | A far-edge Outro threshold, never a content container. |
-| Stepping stones | `transitions/stepping-stones-dark.webp` | `transitions/stepping-stones-light.webp` | A subtle Story transition, behind the timeline. |
+| Stepping stones | `transitions/stepping-stones-dark.webp` | `transitions/stepping-stones-light.webp` | A subtle Origin transition, behind the timeline. |
 | Hillside cross | `faith/hillside-cross-dark.webp` | `faith/hillside-cross-light.webp` | A small Faith-only lower-corner detail, below the verse. |
 | Pine grove | `props/pine-grove-dark.webp` | `props/pine-grove-light.webp` | A richer edge anchor for one later section; never beside the lamppost. |
 

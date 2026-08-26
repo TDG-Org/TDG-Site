@@ -103,7 +103,40 @@ export default function App() {
     }
     const id = hash.replace(/^#/, '')
     if (!id || id.startsWith('/')) return
-    document.getElementById(id)?.scrollIntoView()
+    /*
+     * ONE legacy alias, and this is it.
+     *
+     * The Origin section was `#story` until the rename in 1.5.0 (August 2026).
+     * Bookmarks, shared links and anything linking in from off this site still
+     * carry the old fragment, and without this line they land at the top of the
+     * hero with a hash in the address bar that means nothing — the worst answer
+     * to "is there something here?", because it looks like the page simply
+     * failed to move.
+     *
+     * **The hash is deliberately NOT rewritten.** Rule 8 of AGENTS.md is that
+     * an unrecognised route renders home with the hash untouched, and the same
+     * instinct holds one level down: silently editing the address bar of
+     * somebody who followed their own bookmark is its own kind of surprise, and
+     * it would also quietly rewrite the link they are about to copy back out.
+     *
+     * Not a table. `story` is the only id this site has ever renamed, and a
+     * lookup map for one entry invites the next person to add a second without
+     * asking whether the old link was ever real. If a second id is ever
+     * renamed, write it here beside this one and say when.
+     *
+     * What it does NOT cover, deliberately: a hash edited to `#story` while
+     * this tab is ALREADY showing home. That is a hashchange and not a route
+     * change, so `same()` in lib/route.ts keeps the route object and nothing
+     * re-runs this — the same reason clicking `#apps` from `#origin` is the
+     * browser's scroll and not ours. Every way an old link actually arrives —
+     * a bookmark, a shared URL, an external link, a `#story` reached from the
+     * Store or an app page — is a document load or a real route change, and
+     * all of those come through here. Closing the last case would mean a
+     * hashchange listener of our own for one alias, which is more machinery
+     * than the alias is worth.
+     */
+    const target = id === 'story' ? 'origin' : id
+    document.getElementById(target)?.scrollIntoView()
   }, [route, showDev])
 
   return (

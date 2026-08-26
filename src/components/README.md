@@ -14,7 +14,7 @@ shared primitives every one of these builds on live in
 
 | | |
 | --- | --- |
-| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Origin up over it. Its canvases are in `hero/`. |
+| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Origin up over it. Its canvases and its typed tagline are in `hero/`. |
 | `Origin.tsx` | Seven chapters on a timeline that fills as you read. Backed by `origin/OriginField.tsx`. |
 | `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. |
 | `Building.tsx` | What is on our screens right now. |
@@ -44,7 +44,8 @@ shared primitives every one of these builds on live in
 | --- | --- |
 | `Folded.tsx` | The folding, and the blocks inside it. Shared by the app pages and About so the two cannot drift into different ideas of what a section looks like. Runs on the same state as the Developer console, via `lib/sections.tsx`. Its stylesheet is `AppPage.css`. |
 | `AppIcon.tsx` | One app's icon, drawn the same way in all four places it appears. One component rather than four copies, because the alignment is the whole difficulty and four copies is four chances to get it wrong differently. |
-| `ImageSlot.tsx` | A screenshot slot. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
+| `ImageSlot.tsx` | A picture slot: key art, else a real screenshot. `art` wins over `shot` and over a local drop, because the two are for different places — the card wants the cover, the app's own page wants the software. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
+| `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the five drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
 | `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph. |
 
 ### `hero/` and `origin/`
@@ -58,14 +59,22 @@ This is the site's own proven approach. Point counts scale to what the device ca
 comfortably paint, and the dust runs at 24 Hz on a capped DPR because nobody can
 tell and it is 2.5× less canvas work for an identical result.
 
+`hero/Tagline.tsx` is the one file in there that draws no canvas: it types the
+lines of `HERO_TAGLINES` out under the wordmark and swaps them from a shuffle
+bag, so no line repeats until every line has had its turn. It is also the
+worked example of a state machine living **inside** `onFrame` rather than on a
+timer — it accumulates `dt`, holds the loop only while a character is actually
+pending, and lets it park through the five-second rest. Under reduced motion
+the first line renders whole, immediately, with no caret.
+
 ### `scene/`
 
 `ThemedArt` / `ThemedHeroArt` / `StillArt` and `Seam`: the shared vocabulary for
-the transparent-PNG art kit in `public/assets/parallax/` and for the shaped
-boundaries between sections. It was written **before** the sections that use it,
-so that five of them would reach for the same primitives instead of each
-wrapping an `<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools` and
-`Building` draw from it today. Read
+the parallax art kit in `public/assets/parallax/` and for the shaped boundaries
+between sections. It was written **before** the sections that use it, so that
+seven of them would reach for the same primitives instead of each wrapping an
+`<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith` and
+`Outro` draw from it today — every section on the home page. Read
 [`scene/README.md`](scene/README.md) before you decorate anything: it has the
 reason there are three art components rather than one with a mode prop, and the
 reason a seam cannot read `--tint-top`.

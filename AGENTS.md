@@ -444,6 +444,10 @@ deliberately and the reasoning is in the file:
 - Folded pages that open as an index, shared by app pages, About and `#/dev`.
 - `#/dev` behaving exactly like an unknown hash for everybody else.
 - The always-dark auth modal, which deliberately does not reskin with the page.
+- `KeyArt.tsx`'s five drawn app covers, whose palette is fixed in both themes:
+  they share a grid with Bible Educator's dark raster, which cannot flip, so a
+  cover that went pale in light would read as broken art. The colours declared
+  on `.keyart` in `KeyArt.css` are that decision, not tokens somebody forgot.
 
 If a change genuinely requires breaking one of these, say so explicitly and
 explain why before you do it. Do not do it quietly as part of something else.

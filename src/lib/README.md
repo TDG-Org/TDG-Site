@@ -33,6 +33,12 @@ and the rule is unchanged regardless: what it buys is that no section anchor
 added in future collides with a route added today. `#/app/<slug>` also puts the
 slug behind a segment, so no future app name can collide with a section either.
 
+**Old `#story` links still land on Origin.** It is a fragment and not a route,
+so it falls through this file to home like anything else unrecognised; what
+resolves it is one named alias in `App.tsx`'s hash effect, which scrolls it to
+`#origin` and **does not rewrite the hash**. It is the only legacy anchor alias
+on the site and the comment at that line says when the rename happened.
+
 ```ts
 type Route =
   | { kind: 'home' }

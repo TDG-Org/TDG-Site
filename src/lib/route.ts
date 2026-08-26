@@ -17,6 +17,13 @@ import { STORE_APPS } from '../data/store'
  * `#/app/<slug>` also puts the slug behind a segment, so no future app name can
  * collide with a section either.
  *
+ * `#story` is not a route and never was, so it falls through to home here like
+ * any other unknown fragment. Old links to it still work all the same: the hash
+ * effect in App.tsx resolves that one fragment to `#origin`, without touching
+ * the hash. That alias is written down at the line that does it — this is only
+ * a signpost, so somebody who greps for `story` and lands here does not
+ * conclude the old anchor died in the rename.
+ *
  * A route may also name a PLACE on the page it opens, which is what
  * `#/store/<app>` is: the Store, landed at that app's shelf rather than at its
  * top. A link that has already said which shelf it means should not make the

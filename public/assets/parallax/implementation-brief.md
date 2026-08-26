@@ -19,8 +19,8 @@ Implement the following intentionally small composition:
    heading, eyebrow, CTA group, or strip.  Do not add the bench/trees to the
    hero by default; reserve them for future sections so the scene stays quiet.
    For the later sections, use the richer story anchors one at a time: the
-   wayfinding post or stepping stones for Story, the footbridge as an alternate
-   Story seam, the garden arch near Outro, and the small hillside cross only in
+   wayfinding post or stepping stones for Origin, the footbridge as an alternate
+   Origin seam, the garden arch near Outro, and the small hillside cross only in
    Faith.  Use the faceted pine pair as the default tree prop; it is the
    intended graphic-art treatment.  The richer pine grove is an optional
    one-section edge anchor only and must never sit beside the hero lamppost.

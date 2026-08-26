@@ -185,12 +185,33 @@ pale one. That is exactly how the kit's `-dark` and `-light` ridges are drawn
 against their skies, so the seam and the art sitting beside it finally agree
 with each other instead of being two unrelated decisions.
 
-`--seam-step` is 94%, and `tokens.css` shows the working: it puts the eight
-seams at ΔL\* 4.3–6.2 in dark and 4.6–4.9 in light, against a `.card` face —
-the site's quietest deliberately-visible plane — at 3.6 and 2.4. Above a card,
-because a masked seam paints most of its band at part opacity; nowhere near the
-ΔL\* 8–11 that a 90% step gives, which would be eight grey stripes across the
-page.
+`--seam-step` is 94%, and `tokens.css` shows the working. Over the six seams the
+page actually draws it puts a seam's fill at ΔL\* 5.0–6.1 in dark and 4.6–4.8 in
+light — nowhere near the 9.6–10.6 dark and 7.7–8.0 light a 90% step gives, which
+would be a grey stripe at every boundary that carries one. The plane it was
+calibrated against is `.card`'s own face, the quietest thing on this site that is
+still deliberately visible, because a masked seam paints most of its band at part
+opacity and ought to read at least as clearly as a card does. **Take the card's
+own figures from `tokens.css`, not from here** — clearing a card is a floor in
+DARK only. In light `--surface` is opaque, so a card face is only as far from its
+band as that band is from white, and the light seams on `#origin`, `#tools` and
+`#faith` sit UNDER it. That is a property of an opaque light surface, not of the
+step, and 94% stands either way.
+
+**Six boundaries carry one today** — `#origin`, `#apps`, `#tools`, `#building`,
+`#faith` and the Outro, every one of them `edge="top"`. The hero and the footer
+draw no seam, and that is a placement decision, not a gap in the palette:
+`base.css` declares a `--seam-fill` for both of them alongside the other six, so
+adding one there is a `<Seam>` and a `color:` line and nothing else.
+
+**One catch if you take the hero up on that.** `#top` is not the hero's id alone:
+`About.tsx`, `AppPage.tsx`, `Store.tsx` and `DevConsole.tsx` all put `id="top"` on
+their outer section, so on those four pages `--seam-fill` resolves to the HERO's
+band — measured on `#/store` as `color-mix(in srgb, #030304 94%, #f2f2f5)`, a sky
+belonging to a page the reader is not on. Harmless while none of them draws a
+seam, and wrong the moment one does. `base.css` records it at the declaration; a
+seam on any of those four pages should mix its own band by name rather than
+trust `--seam-fill`.
 
 **The other trap:** `color: var(--tint-top)` on a seam gets you nothing at all,
 for a second and unrelated reason. `--tint-top`, `--tint-mid` and `--tint-bot`
