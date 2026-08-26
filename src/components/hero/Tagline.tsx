@@ -58,6 +58,51 @@ function fullBag(last: number): number[] {
 }
 
 /**
+ * The one Text node the typing run writes into, derived fresh every write.
+ *
+ * ── why not `node.textContent = shown` ────────────────────────────────────
+ * Assigning `textContent` REPLACES an element's child nodes, so every typed
+ * character is a `childList` mutation. `useOffscreenPause` watches
+ * `document.body` with `{ childList: true, subtree: true }` and answers every
+ * batch with a `document.querySelectorAll('section, footer')` — so the old
+ * write turned one character into one full-document selector scan, in the
+ * component that produces the most characters per second on the page.
+ *
+ * Measured here, 40 characters written one per task the way the frame loop
+ * writes them: **40 observer callbacks, 40 mutation records, 40 scans** —
+ * one full-document `querySelectorAll` per character. A scan costs
+ * 0.016–0.051 ms on this page (9 sections), and this component writes ~136
+ * characters per nine-second cycle at 29 chars/s typing and 62 erasing, so
+ * it was spending 0.2–0.7 ms of main thread per second re-listing the
+ * document — on a page whose headline measurement is 0.1 ms/s for a parked
+ * reader (motion.ts).
+ *
+ * Mutating an existing Text node's `data` is a `characterData` mutation,
+ * which that observer does not ask for. The same 40 characters: **0
+ * callbacks, 0 records, 0 scans.** `useOffscreenPause` now also ignores a
+ * batch that added and removed no elements, so neither file depends on the
+ * other getting this right — but this is still the write that belongs here.
+ *
+ * ── why it re-derives instead of closing over the node ────────────────────
+ * React owns this element. It renders `<span ref={text} />` with no children
+ * of its own and re-renders it once per line to swap the `.sr-only`
+ * sentence. React leaves imperatively added children alone today, but a
+ * stale reference to a detached Text node would fail *silently* — the
+ * sentence would simply stop moving, with no error anywhere — so nothing
+ * holds one. Two property reads per character is not a cost worth that risk.
+ */
+function inkOf(node: HTMLElement): Text {
+  const first = node.firstChild
+  if (first !== null && first === node.lastChild && first.nodeType === Node.TEXT_NODE) {
+    return first as Text
+  }
+  // Only reached on the first write and if something ever replaces our node:
+  // one childList mutation to build it, and none afterwards.
+  node.textContent = ''
+  return node.appendChild(document.createTextNode(''))
+}
+
+/**
  * The hero's tagline, typed out and then swapped for another one.
  *
  * ── why it is not a `setInterval` ────────────────────────────────────────
@@ -91,16 +136,31 @@ function fullBag(last: number): number[] {
  * every nine seconds would talk over the page instead of describing it. The
  * reading order is unchanged: eyebrow, wordmark, this sentence, the CTAs.
  *
+ * The sentence and the typing run are two paints of ONE index, and `pick()`
+ * inside the effect is the only thing that may move it. That is structural
+ * rather than careful: the version before it kept the frame loop's index in a
+ * local and the spoken index in state, and the reduced-motion branch reset
+ * the local without telling the state — so a visitor who watched the hero
+ * reach line 3 and then switched "Reduce motion" on SAW line 0 while a screen
+ * reader still announced line 3. A second `setSpoken` call would have fixed
+ * that instance; one writer is what stops the next one.
+ *
  * ── reduced motion ───────────────────────────────────────────────────────
  * At `motionIntensity() === 0` there is no typing and no cycling at all:
- * HERO_TAGLINES[0] renders whole, immediately, with no caret. It is read off
- * `frame.mi` rather than once at mount, so a visitor who changes the setting
- * with the page open gets the right answer without a reload.
+ * HERO_TAGLINES[0] renders whole, immediately, with no caret — and the
+ * spoken sentence goes back to line 0 with it, through `pick`. It is read
+ * off `frame.mi` rather than once at mount, so a visitor who changes the
+ * setting with the page open gets the right answer without a reload.
  */
 export function Tagline() {
   const box = useRef<HTMLParagraphElement | null>(null)
   const text = useRef<HTMLSpanElement | null>(null)
-  /** The line a screen reader is currently being offered, in full. */
+  /* Which line is current, in the two shapes the two consumers need: a ref
+     the frame subscriber can read without re-subscribing, and a state the
+     `.sr-only` span renders from. They are never assigned from anywhere but
+     `pick()` below — see the accessibility note above for what happened the
+     one time they were two facts instead of two views of one. */
+  const lineNo = useRef(0)
   const [spoken, setSpoken] = useState(0)
 
   /* Before the first paint, not after it. The React tree renders the typing
@@ -113,7 +173,7 @@ export function Tagline() {
     const node = text.current
     const el = box.current
     if (!node || !el || motionIntensity() > 0) return
-    node.textContent = HERO_TAGLINES[0]
+    inkOf(node).data = HERO_TAGLINES[0]
     el.dataset.phase = 'static'
   }, [])
 
@@ -122,11 +182,20 @@ export function Tagline() {
     const node = text.current
     if (!el || !node) return
 
+    /** The only writer of the current line, in either of its two shapes. A
+     *  transition that moves one and forgets the other is then not something
+     *  a reviewer has to notice — it is not expressible. */
+    const pick = (i: number) => {
+      if (lineNo.current === i) return
+      lineNo.current = i
+      setSpoken(i)
+    }
+
     /* HERO_TAGLINES[0] is what the page opens on, always: it is the line the
        site is known by, and a visitor must never land on anything else. The
        first bag is therefore the OTHER four, so the opening pass shows all
        five exactly once before anything repeats. */
-    let current = 0
+    pick(0)
     let bag = HERO_TAGLINES.map((_, i) => i).slice(1)
     shuffle(bag)
 
@@ -145,7 +214,8 @@ export function Tagline() {
     const write = (shown: string, nextPhase: Phase) => {
       if (shown !== paintedText) {
         paintedText = shown
-        node.textContent = shown
+        // character data, never a new child list — see inkOf above
+        inkOf(node).data = shown
       }
       if (nextPhase !== paintedPhase) {
         paintedPhase = nextPhase
@@ -154,13 +224,21 @@ export function Tagline() {
     }
 
     return onFrame(({ vh, mi, dt, hold }) => {
-      const line = HERO_TAGLINES[current]
+      const line = HERO_TAGLINES[lineNo.current]
 
       // Reduced motion: the whole first line, still, and nothing else ever.
+      // `pick` and not an assignment, so the sentence a screen reader is
+      // offered comes back to line 0 with the visible one.
       if (mi === 0) {
         if (phase === 'static') return
         phase = 'static'
-        current = 0
+        pick(0)
+        // The bag in hand was dealt around whichever line was showing, so it
+        // may still hold 0 — and coming back from reduced motion would then
+        // type the line already on screen a second time, which is the one
+        // thing fullBag() exists to prevent. Empty it, and the next draw is a
+        // fresh bag that knows 0 is what the visitor is looking at.
+        bag = []
         chars = HERO_TAGLINES[0].length
         acc = 0
         return () => write(HERO_TAGLINES[0], 'static')
@@ -216,10 +294,9 @@ export function Tagline() {
             step = TYPE_S
             // draw the next line now, so the hidden sentence a screen reader
             // is offered changes on the empty beat rather than mid-word
-            if (bag.length === 0) bag = fullBag(current)
-            current = bag.pop() as number
-            next = HERO_TAGLINES[current]
-            setSpoken(current)
+            if (bag.length === 0) bag = fullBag(lineNo.current)
+            pick(bag.pop() as number)
+            next = HERO_TAGLINES[lineNo.current]
           }
           break
         }

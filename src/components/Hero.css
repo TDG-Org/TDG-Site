@@ -254,39 +254,111 @@
    It is placed against the CONTENT COLUMN's left gutter rather than against
    the viewport edge, because the thing it must never come near is the
    wordmark, and the wordmark starts at the content column. The gutter is
-   everything left of that column — (hero width - 1240) / 2 plus the column's
-   own padding, which above 1244px has already clamped to 56px — and the lamp
-   is centred in it.
+   everything left of that column: the page's own centring margin,
+   max(0, (hero width - 1240) / 2), plus the column's padding, which is
+   clamp(18px, 4.5vw, 56px). Both halves are written here exactly as
+   .hero__content writes them, so this number cannot drift from where the
+   wordmark actually is. The max() is not decoration — under 1240px there is
+   no centring margin at all, and an earlier version of this rule assumed one,
+   which is half of why the lamp used to sit at left: -27px.
 
-   The file is 1024x1536 with the lamp painted down the middle: only x 37.7%
-   to 62.2% of the box is ever ink, the rest is transparent margin and the
-   glow that is painted into the PNG's own alpha (which is why there is no
-   CSS glow here). Centring the box in the gutter therefore leaves
-   gutter/2 - 0.122 * width of clearance, and the 1400px floor below is
-   chosen so that number stays above 30px at every viewport HEIGHT this can
-   be drawn at as well. Measured, lamp ink to the wordmark's left edge:
-     1400x1200 +36.9 (the tightest, and the one the 1400px floor is set by,
-     because --lamp-h has reached its 330px cap there) · 1400x800 +42 ·
-     1440x900 +49 · 1920x1080 +167.
-   And to the strip's top edge: +33 to +35 at every one of them. The lamp's
-   ink also never comes within reach of the point cloud — 40px in from the
-   left at its worst, against a model that starts 702px in.                 */
+   ── what the art actually occupies ────────────────────────────────────────
+   The file is 1024x1536 (1000x1500 in the .webp that is painted) with the
+   lamp down the middle, the glow baked into its own alpha — which is why
+   there is no CSS glow here. Measured off both themes' alpha channels: the
+   DARK art is a hard-edged 37.7% to 62.3% of the box — alpha steps 0 to 255
+   in one column — and the LIGHT art is 40.0% to 59.4% solid inside a halo
+   whose alpha never exceeds 8/255 and which fades out by 34.8% / 64.1%.
+   Dark is therefore what binds, and this rule budgets 37.5% to 62.5%: a hair
+   wider than dark's real edges on both sides, so every clearance below is a
+   floor and not a target that rounding can undercut. The light halo's last
+   1.5% is deliberately outside the budget — 8/255 under --art-mid's 0.44 is
+   1.4% opacity, which is not ink. Vertically the alpha stops at 98% (dark)
+   and 96% (light), which is what `bottom` below is set against.
+
+   ── the three things that pull against each other ─────────────────────────
+   1. the ink stays at least 30px clear of the wordmark (the art kit's own
+      floor: public/assets/parallax/README.md),
+   2. the box never crosses x = 0, so .hero's overflow: hidden has nothing to
+      cut — the old rule failed this by 27px at 1440 and the lamp was drawn
+      with 13% of its left side sawn off,
+   3. it is actually there on an ordinary laptop.
+   As the window narrows the first two close on each other, so the answer is
+   that the lamp gets SMALLER rather than moving or vanishing: --lamp-fit is
+   the widest box whose ink still clears the wordmark by 30px with the box
+   hard against x = 0, and the width is the smaller of that and the size a
+   roomy window would give it. The box's right-hand 37.5% is transparent, so
+   it may overlap the copy column's left edge; nothing is painted there, and
+   .hero__content sits a whole z-index above it in any case.
+
+   ── the floor, and why it is 1268px ───────────────────────────────────────
+   Below some width --lamp-fit stops describing a lamppost and starts
+   describing a smudge, and the previous rule was right about that even
+   though it drew the line at 1400. The line is drawn at a 64px box — 16px of
+   ink, 96px tall — which needs a gutter of 30 + 0.625*64 = 70px, which needs
+   a hero 1240 + 2*(70 - 56) = 1268px wide. Below it the lamp is not drawn at
+   all: art is what disappears first when space runs out, the same rule
+   --art-band applies to the terrain.
+
+   The media query is on the WINDOW and the hero is up to a scrollbar
+   narrower, so in the few pixels just above the breakpoint the box can come
+   out around 52px instead of 64. That is deliberate slack in the cheaper
+   direction: which widths are worth drawing at is a judgement, and the two
+   clearances are not — they are enforced by `width` and `left` below at
+   every width, whatever the media query lets through.
+
+   Measured (dark and light identically; geometry carries no colour),
+   window / hero / box / box left / ink-to-wordmark / ink-to-strip:
+     1024x768   1014  hidden
+     1100x768   1090  hidden
+     1200x800   1190  hidden
+     1278x800   1268   64.0x96.0   +0    +30.13  +30.0   ← the breakpoint
+     1280x800   1270   65.6x98.4   +0    +30.14  +30.0
+     1366x768   1356  134.4x201.6  +0    +30.27  +32.0
+     1400x1200  1390  161.6x242.4  +0    +30.33  +32.9   ← old worst case
+     1440x900   1430  193.6x290.4  +0    +30.39  +33.8
+     1536x864   1526  195.8x293.7  +1.6  +75.42  +33.9
+     1920x1080  1910  220.0x330.0  +85.5 +168.44 +34.6
+   Clearance sits just over the 30px floor wherever the gutter is what binds
+   — the 0.625 budget is a shade wider than the 0.623 the art actually uses,
+   which is where the tenths come from — and opens up once the height cap
+   takes over instead. The ink never comes near the point cloud either: the
+   lamp's whole BOX ends 305px in at worst, against a .hero__model drag box
+   that starts 604.6px in at 1280 and 1211.8px in at 1920.                  */
 .hero__lamp {
-  /* below 1400px the gutter cannot hold it 30px clear of the wordmark, and
-     art is what disappears first when space runs out */
+  /* below 1268px the gutter cannot hold a lamp worth drawing 30px clear of
+     the wordmark, and art is what disappears first when space runs out */
   display: none;
 }
-@media (min-width: 1400px) {
+@media (min-width: 1268px) {
   .hero__lamp {
-    /* capped in px as well as vh so a tall window does not grow it into the
-       copy: the clearance above is computed against this cap */
-    --lamp-h: min(34vh, 330px);
-    --lamp-w: calc(var(--lamp-h) * 2 / 3);
-    --gutter: calc((100% - 1240px) / 2 + 56px);
+    --gutter: calc(max(0px, (100% - 1240px) / 2) + clamp(18px, 4.5vw, 56px));
+    /* widest box whose ink clears the wordmark by 30px from a standing start
+       at x = 0. 0.625 is the ink's right edge as a fraction of the box. */
+    --lamp-fit: calc((var(--gutter) - 30px) / 0.625);
+    /* Width, and height only through aspect-ratio. --gutter carries a
+       percentage, and a percentage substituted into `height` would resolve
+       against the containing block's HEIGHT rather than its width — so the
+       height is never allowed to be an expression that contains one. The vh
+       term is the old 34vh cap restated as a width (34vh * 2/3), and 220px
+       is the old 330px one, both still here so a tall window does not grow
+       the lamp into the copy. */
+    --lamp-w: min(calc(34vh * 2 / 3), 220px, var(--lamp-fit));
     display: block;
     width: var(--lamp-w);
-    height: var(--lamp-h);
-    left: calc(var(--gutter) / 2 - var(--lamp-w) / 2);
+    aspect-ratio: 2 / 3;
+    height: auto;
+    /* Centred in the gutter while there is room to centre it; slid left as
+       the gutter tightens, and stopped dead at the viewport edge. The min()
+       is the 30px clearance and the max() is the no-clipping rule, so
+       whichever is binding at this width is the one that wins. */
+    left: max(
+      0px,
+      min(
+        calc((var(--gutter) - var(--lamp-w)) / 2),
+        calc(var(--gutter) - 30px - var(--lamp-w) * 0.625)
+      )
+    );
     /* clear of the bottom strip: the art's own alpha stops at 98% of the box,
        and the strip is 56px tall at every width this is drawn at */
     bottom: 84px;

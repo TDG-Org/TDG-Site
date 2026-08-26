@@ -47,6 +47,15 @@ const SECTIONS = 'section, footer'
  * trade the bug for. So removals are handled as deliberately as arrivals, and
  * `watched` is what keeps the two in step.
  *
+ * ## What it ignores, and why that is not a debounce
+ *
+ * A batch in which no Element was added or removed cannot have changed which
+ * sections exist, so it is skipped without a scan. Nothing is *deferred* —
+ * this observer has to stay eager or `data-live` lands after the frames it
+ * was meant to govern — and the full scan still runs the moment anything
+ * structural happens. The comment on the callback has the measurement that
+ * made the guard necessary and the caller that produced it.
+ *
  * ## And it does not fight the frame loop
  *
  * Both observers are callback-driven. Neither asks for an animation frame,
@@ -89,8 +98,15 @@ export function useOffscreenPause() {
     scan()
 
     const mo = new MutationObserver((records) => {
+      /** Did any ELEMENT enter or leave? See below — this is the whole guard. */
+      let structural = false
       for (const record of records) {
         for (const node of record.removedNodes) {
+          // Any Element counts as structural — the SVG ones too, so the guard
+          // below stays lossless — but only an HTMLElement can be searched
+          // for the sections it took with it.
+          if (node.nodeType !== Node.ELEMENT_NODE) continue
+          structural = true
           if (!(node instanceof HTMLElement)) continue
           // The section itself, and the sections inside it: a route change
           // removes one `<main>`, and every section it held goes with it
@@ -98,13 +114,45 @@ export function useOffscreenPause() {
           if (node.matches(SECTIONS)) forget(node)
           for (const el of node.querySelectorAll<HTMLElement>(SECTIONS)) forget(el)
         }
+        if (structural) continue
+        for (const node of record.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            structural = true
+            break
+          }
+        }
       }
-      // Cheaper than walking `addedNodes` and correct in the case that walk
-      // gets wrong: a batch that removed one page and added another has to
-      // look at the whole document anyway, and a section nested inside an
-      // added wrapper is found without descending it by hand. `watch` is a
-      // set lookup per section, and this page has ten of them.
-      scan()
+      // ── the guard, and why it is a type test and not a debounce ──────────
+      // A `section` or a `footer` is an Element. For one to enter or leave
+      // the document through a childList record, an Element has to be in
+      // `addedNodes` or `removedNodes` — itself, or an ancestor carrying it.
+      // A batch that moved only Text nodes therefore cannot have changed the
+      // answer, and there is nothing to look for.
+      //
+      // That is not hypothetical. `hero/Tagline.tsx` used to type by assigning
+      // `node.textContent`, which replaces an element's children — one
+      // childList record per character, at 29 characters a second typing and
+      // 62 erasing. Measured: 40 characters produced 40 callbacks here and 40
+      // full-document scans — 0.2–0.7 ms of main thread per second at
+      // 0.016–0.051 ms a scan, on a page whose parked cost is 0.1 ms/s.
+      // Re-measured with this guard in place: the same 40 characters produce
+      // 40 records and **0** scans. That file writes character data now,
+      // and this guard means the next component that appends a Text node in a
+      // loop does not have to know this hook exists.
+      //
+      // A debounce would have hidden the same cost and cost something real:
+      // this observer is deliberately EAGER, because `data-live` has to be on
+      // a section before it paints. Delay it and a route change or a lazy
+      // chunk gets frames with the gradients parked — the exact failure the
+      // long note above describes. So: nothing is deferred, only skipped, and
+      // only when skipping is provably lossless.
+      //
+      // When something structural did happen, it is still a whole-document
+      // scan and not a walk of `addedNodes`: a batch that removed one page and
+      // added another has to look at everything anyway, and a section nested
+      // inside an added wrapper is found without descending it by hand.
+      // `watch` is a set lookup per section, and this page has ten of them.
+      if (structural) scan()
     })
     // childList only. Attributes change every frame on this site — the frame
     // loop writes inline transforms — and asking for those would run this
