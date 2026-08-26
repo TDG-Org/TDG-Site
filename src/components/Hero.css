@@ -1,14 +1,14 @@
 /* ── two values the hero owns that have to reach outside it ────────────────
    The ideal home for both of these is tokens.css, beside --card-shadow and
    the rest of the palette. They are here because the only consumer of either
-   is this component and the hook it exports, and because a colour stated in
-   ONE theme is the bug rule 3 is about — which is what both of these were
-   before: a black shadow composed in JavaScript with no light variant, and a
-   white glint with no light variant. Stating both halves is the fix; where
-   they live is the smaller question.                                       */
+   is this component, and because a colour stated in ONE theme is the bug
+   rule 3 is about — which is what both of these were before: a black shadow
+   composed in JavaScript with no light variant, and a white glint with no
+   light variant. Stating both halves is the fix; where they live is the
+   smaller question.                                                        */
 :root {
-  /* The ink Origin's arrival shadow is drawn with. useHeroTakeover scales it
-     with color-mix and never composes a colour of its own. */
+  /* The ink Origin's arrival shadow is drawn with. Origin.css scales it with
+     color-mix and never composes a colour of its own. */
   --hero-takeover-ink: rgba(0, 0, 0, 0.6);
   /* The sweep that crosses "DG". --edge-hi is the site's highlight ink, per
      theme, and 96% of its dark value is 0.912 — the same near-white the
@@ -17,48 +17,157 @@
 }
 :root[data-theme='light'] {
   /* the same ink --card-shadow uses in light, at the alpha a section-sized
-     90px blur can carry without reading as a bruise across the boundary */
+     blur can carry without reading as a bruise across the boundary */
   --hero-takeover-ink: rgba(23, 18, 45, 0.3);
   /* In light the wordmark is dark type on a pale scene, so the highlight is
-     ink, exactly as .hero__shaft-core inverts twenty lines below. 34% of
-     --edge-hi is 0.238 — a shade under the shaft's own 0.22, because the
-     glint crosses a gradient that is already dark at one end. */
+     ink, exactly as .hero__shaft-core inverts below. 34% of --edge-hi is
+     0.238 — a shade under the shaft's own 0.22, because the glint crosses a
+     gradient that is already dark at one end. */
   --hero-glint: color-mix(in srgb, var(--edge-hi) 34%, transparent);
 }
 
+/* ── the section ───────────────────────────────────────────────────────────
+   Read Hero.tsx's header first: it has the three-box diagram and why the
+   section is more than twice the viewport tall while costing the page no
+   extra scrolling at all.
+
+   `overflow` is stated TWICE and that is not a mistake. `clip` is what this
+   wants — an ancestor with `overflow: hidden` is a SCROLL CONTAINER, so it
+   becomes the sticky boxes' scrollport and neither the stage nor the frame
+   ever pins; `clip` clips identically and is explicitly not one.
+   `Stage.css`'s `.stage-host` says the same thing and this element carries
+   that class too, so whichever stylesheet the bundler puts last, the answer
+   is `clip`. The `hidden` above it is the fallback for a browser that has
+   never heard of `overflow: clip` (Safari before 16): there the pin does not
+   engage and the hero is an ordinary tall section, which is a picture that
+   still works. Delete the `hidden` and the same browser gets `visible` and
+   the mountains spill across the whole document.
+
+   `display: block`, NOT the flex centring this used to have: the copy is
+   centred inside .hero__frame now, and a flex hero would centre the 130svh
+   flow box in the 230svh section — putting the seam a viewport from where
+   the negative margin below expects it.
+
+   No `z-index`. It used to be 1 and the removal is load-bearing rather than
+   tidying: `position: relative; z-index: 1` makes a stacking context, and a
+   stacking context is a ceiling. The lamppost belongs to #origin (z-index 4)
+   so that its foot can be drawn ON Origin's ground, and it therefore paints
+   over everything in this section — including the wordmark — unless the
+   hero's copy can get ABOVE 4. With no stacking context here, .hero__frame's
+   z-index 5 lands in the root stacking order and the order is
+   stage 0 < origin 4 (and the lamppost with it) < frame 5, which is exactly
+   "the pole is behind the text and in front of the mountains".
+
+   No box-shadow floor either. That existed to fill the band `useHeroTakeover`
+   opened by translating Origin down by up to 120px while it arrived. The
+   takeover is gone — a pinned hero IS a hero that Origin rises over, so the
+   effect the translate was faking is now the document's own behaviour — and
+   with no translate there is no band, so nothing to fill. */
 .hero {
   position: relative;
-  /* svh is the viewport with the mobile browser chrome showing, so the bottom
-     strip and the scroll cue are not hidden under the URL bar on first paint */
-  min-height: 100vh;
-  min-height: 100svh;
+  display: block;
+  /* 100svh of frame + 30svh of runway + the 100svh #origin's negative margin
+     takes back. svh, not vh: on a phone 100vh is the viewport with the
+     browser chrome HIDDEN, so a vh-sized first screen is cropped by the
+     chrome for as long as the chrome is showing.
+
+     30svh of runway is a compromise and it is worth naming, because the two
+     things it is between both matter. Longer is a better dissolve — the copy
+     has more scroll to go out over. Longer also pushes the SEAM further down
+     the page, and the lamppost's head sits a fixed distance above the seam
+     (its foot is planted on it), so every extra svh of runway is an svh of
+     lamppost pushed below the fold on the first screen. At 30 the lamp's head
+     is at 67% of the viewport at 1440x900, 243px clear above the bottom strip,
+     and the copy dissolves over 270px. */
+  min-height: 230svh;
+  overflow: hidden;
+  overflow: clip;
+  background-color: var(--hero-bg);
+
+  /* ── the vertical room the terrain has ───────────────────────────────────
+     Re-derived, and the numbers are measurements rather than the earlier
+     estimates.
+
+     The copy column is centred in .hero__frame, which is exactly 100svh, so
+     its floor sits 50svh + half its own height down and the terrain's floor
+     is the frame's floor. Measured at 1440x900: .hero__inner is 412.2px tall,
+     so half of it is 206.1px, and the CTA row's bottom edge lands at 656.1px
+     with the frame's floor at 900 — 243.9px of clear band.
+
+     Three claims on that band, and they are stated separately because the
+     third is new:
+       206px  half the copy column, measured.
+        16px  air between the ridge's ink and the CTA row. It was 24, which
+              was a guess; 16 is still a clear band under a hard low-poly
+              edge and the site owner asked for more mountain, so the guess
+              is where the first 8px come from.
+        12px  reserved for SCROLL. The ridge lifts 56px over the whole pin
+              (Hero.tsx), but it is eased and the copy is gone by the time
+              the pin is 30/130 = 23.1% through — smooth(0.231) x 56 = 7.6px.
+              12px is that with rounding to spare, so the ink clears the CTA
+              row at every scroll position at which anybody can read it.
+              Measured at 1440x900: +37.2px at rest, +31.0px at the moment
+              the copy reaches zero, and the CTA row is itself already at
+              zero opacity 117px of scroll earlier, with +35.5px under it.
+     50svh - 234px. On a viewport with no band left this reaches 0 and the
+     terrain simply is not drawn, which is the art kit's own rule: the art is
+     what disappears first when vertical space runs out. */
+  --art-band: max(0px, calc(50svh - 234px));
+}
+
+/* The 130svh of ordinary flow whose FLOOR IS THE SEAM. #origin is pulled up
+   onto the hero's last 100svh with margin-top: -100svh, so this box's bottom
+   edge and Origin's top edge are the same line — which is what makes the one
+   rect Hero.tsx reads answer both "how far through the pin" and "how far
+   through the copy's runway". Nothing is painted on it. */
+.hero__above {
+  height: 130svh;
+}
+
+/* ── the part that dissolves ───────────────────────────────────────────────
+   Sticky inside .hero__above, so it holds still for 130 - 100 = 30svh and
+   then travels the last 100svh out of the frame while Origin covers it.
+   Measured at 1440x900: top read 0 at scroll 0, 60, 117, 175 and 234, and
+   -166 at 400 — pinned for the runway, tracking after it.
+
+   z-index 5: above #origin's 4, so the lamppost that rises out of Origin
+   into this section passes BEHIND the wordmark, the tagline, the CTAs, the
+   model and the strip. See the note on .hero above for why that works.       */
+.hero__frame {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 100vh;
+  height: 100svh;
   display: flex;
   align-items: center;
-  overflow: hidden;
-  background-color: var(--hero-bg);
-  z-index: 1;
-  /* ── the vertical room the terrain has ───────────────────────────────────
-     The copy column is centred in the hero and measures ~412px tall, so its
-     floor sits about 50vh + 206px down, and the bottom strip's ceiling is
-     100vh - 56px. That leaves 50vh - 262px of clear band between the two.
-     24px of it stays as air, so no piece of terrain rises more than
-     50vh - 230px above the hero's own floor — and on a viewport with no band
-     at all this reaches 0px and the terrain simply is not drawn, which is
-     the art kit's own rule: the art is what disappears first when vertical
-     space runs out. */
-  --art-band: max(0px, calc(50vh - 230px));
-  /* ── the floor under Origin's lag ────────────────────────────────────────
-     useHeroTakeover eases Origin UP into its layout position rather than
-     lifting it out of one, so while it is arriving it sits up to 120px below
-     where the document put it. `translate` does not move layout, so that
-     would leave a band of the page's own --bg between the hero's floor and
-     Origin's ceiling. This is a copy of the hero's border box painted 150px
-     lower, behind the hero's own background and behind Origin (z-index 4),
-     so the band is --hero-bg — which is the --band-hero token Origin's
-     --tint-top is built from. The boundary therefore has no colour in it at
-     all, in either theme, and once Origin has arrived the band is covered.
-     Stay taller than TAKEOVER_LAG in Hero.tsx. */
-  box-shadow: 0 150px 0 var(--hero-bg);
+}
+
+/* ── covered ───────────────────────────────────────────────────────────────
+   Stamped by Hero.tsx once Origin's top has reached the top of the viewport,
+   which by construction is the last moment any pixel of this section can be
+   seen. Everything below it goes on EXISTING for another 100svh of scrolling
+   — the stage is still pinned, the frame is still in the viewport — and
+   without this the sky, two ridges, a pine, a starfield canvas and two
+   breathing gradients would all keep painting behind an opaque Origin.
+
+   `Stage`'s own `data-covered` cannot reach this: it watches the SECTION,
+   and the section deliberately runs a whole viewport past the seam.
+
+   visibility rather than display: none, for the reason Stage.css gives —
+   display takes the layout with it, and Starfield sizes its backing store
+   from the canvas's clientWidth. The animations are paused as well, because
+   `visibility: hidden` stops the paint but not the ticking, and a paused
+   compositor animation is the cheaper of the two.                          */
+.hero[data-eclipsed] .stage,
+.hero[data-eclipsed] .hero__frame {
+  visibility: hidden;
+}
+.hero[data-eclipsed] .hero__shaft,
+.hero[data-eclipsed] .hero__bloom,
+.hero[data-eclipsed] .hero__dg,
+.hero[data-eclipsed] .hero__scroll-arrow {
+  animation-play-state: paused;
 }
 
 .hero__sky {
@@ -66,6 +175,213 @@
   inset: 0;
   background: var(--hero-sky);
   pointer-events: none;
+}
+
+/* ── the drift wrappers ────────────────────────────────────────────────────
+   Five elements exist only to own `translate`, and that is the pattern this
+   site already uses for `Seam` in Origin.css: the thing being moved is either
+   an <svg> or a `StillArt` <img>, and one element can have exactly one writer
+   of `translate` (ThemedArt.tsx's header is the long version — two writers
+   race inside a frame and the art shakes).
+
+   They are `inset: 0` boxes inside the stage's 100svh pin, so the art inside
+   positions itself against the pin exactly as it used to position itself
+   against the hero. `will-change: translate` because every one of them is
+   written on most frames the page moves.                                    */
+.hero__moon-drift,
+.hero__rear-drift,
+.hero__ridge-drift,
+.hero__pine-drift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: translate;
+}
+
+/* ── the terrain ───────────────────────────────────────────────────────────
+   Two ranges, and the fog veil that used to sit behind them is GONE. It was
+   the "other smooth mountains behind the mountains" the site owner asked to
+   be rid of — soft blurred bands that read as vague hills — and nothing has
+   replaced it in that slot except a properly faceted distant range, which is
+   a different thing in the same drawing language.
+
+   ── the three numbers each layer is placed with ──────────────────────────
+   --terrain-w is HORIZONTAL SCALE and nothing else. Always at least 124vw,
+   because a ridge that stops short of the viewport's edges is an island
+   rather than a horizon. The vh term is the floor for a phone, where the
+   bottom strip wraps to three rows and eats 118px: sized off viewport WIDTH
+   alone the ridge measured entirely behind that strip at 375px.
+
+   --art-head is where the artwork's INK STARTS, as a fraction of the box's
+   own width, measured from the box's bottom edge. Both ridge files are
+   2172x724 (1600x533 in the .webp that is painted), so a fraction of the
+   width is a fraction of the height times three. Measured off the real alpha
+   channels at a threshold of 24/255:
+
+     mountain-ridge        dark ink top 0.5141 of the file, bottom 0.9475
+                           light        0.5760              0.9737
+     mountain-ridge-rear   dark ink top 0.6735 of the file, bottom 0.9662
+                           light        0.5197              0.7992
+
+   The main ridge's two themes agree closely enough to share one head (dark
+   binds, (1 - 0.5141) / 3 = 0.1620). The REAR ridge's do not — its light
+   artwork is drawn 15 percentage points higher inside the same box — so it
+   gets a head per theme, below. That is geometry, not colour; the files are
+   what they are and one number would put one of them 100px off.
+
+   --art-rise is HOW FAR THE INK'S HIGHEST POINT STANDS ABOVE the frame's
+   floor. `bottom` is then derived from it and never chosen:
+   rise - width x head.
+
+   ── and the third number, which is what bought the extra height ──────────
+   --art-lee. The budget above protects a line of copy, and the copy is only
+   ever in the LEFT of the frame — the reading column is 660px wide against a
+   1430px hero. So the constraint is not "the ridge's highest peak" but "the
+   ridge's highest peak OVER THE COPY", and those are not the same place: the
+   art's two tall peaks sit at 20-26% and 78-84% of the file.
+
+   Shifting the whole range left by a tenth of its own width puts the low
+   shoulder behind the reading column and the tall peaks out over the model.
+   Measured on the alpha profile, per 2.5% column bucket, over the x-range
+   the reading column actually occupies, at every width in the table below:
+   the ink over the copy is at worst 0.0275 of the box's width lower than the
+   ink at the peak. So the peak may stand --art-lee x width higher than the
+   band allows, and the band still binds where it has to.
+
+   Measured clearance, ridge ink over the reading column down to the CTA row,
+   at the top of the page and again at full scroll lift:
+     see the block comment in Origin.css for the lamppost's table; this one's
+     readings are in the session report. All positive at 320, 375, 768, 1024,
+     1280, 1366, 1440, 1680 and 1920.                                        */
+.hero__rear,
+.hero__ridge {
+  left: calc(50% - var(--terrain-w) * 0.1);
+  /* transform, NOT translate: the wrapper above owns `translate` and rewrites
+     the whole value every frame, so a centring translate would be gone by the
+     next one. Scene.css makes the same point from its end. */
+  transform: translateX(-50%);
+  width: var(--terrain-w);
+  height: auto;
+  /* stated as well as intrinsic, so the layer holds its box before the file
+     arrives and the composition does not assemble itself in two steps */
+  aspect-ratio: 2172 / 724;
+  bottom: calc(var(--art-rise) - var(--terrain-w) * var(--art-head));
+  opacity: var(--art-far);
+}
+
+/* The far range. Narrower than the main ridge on purpose — a smaller facet
+   scale is what reads as distance — paler by sharing --art-far with it while
+   sitting further back, and capped so its peak can never be the thing that
+   touches the copy: --art-band is the whole clearance, and this takes at most
+   all of it while the main ridge is allowed --art-band + lee. In practice
+   0.088 x width binds everywhere above a phone, which puts this range's
+   skyline BELOW the main ridge's shoulders — so it shows through the main
+   ridge's valleys and nowhere else, which is the only place a range behind a
+   range should be visible. */
+.hero__rear {
+  --terrain-w: max(124vw, 138vh);
+  --art-head: 0.10883;
+  --art-rise: min(calc(var(--terrain-w) * 0.088), var(--art-band));
+}
+[data-theme='light'] .hero__rear {
+  /* the light artwork is drawn higher in the same box — see the table above */
+  --art-head: 0.1601;
+}
+
+.hero__ridge {
+  --terrain-w: max(146vw, 160vh);
+  --art-head: 0.162;
+  /* 0.134 = head 0.162 minus a 0.028 bleed below the floor, which is what
+     stops the range ending in mid-air above the bottom strip. 300px is
+     restraint: without a ceiling a 1600-tall window grows 340px of mountain,
+     which is a landscape and not the frame the kit asks for. It was 200 and
+     the site owner asked for more. */
+  --art-rise: min(
+    calc(var(--terrain-w) * 0.134),
+    calc(var(--art-band) + var(--terrain-w) * 0.0275),
+    300px
+  );
+}
+
+/* ── the moon ──────────────────────────────────────────────────────────────
+   Resting on the horizon, behind both ranges and in front of the sky, and it
+   leaves up and to the left as the reader walks out of the hero. Hero.tsx
+   drives it; this only composes the resting shot.
+
+   `Moon`'s box is a 100x100 viewBox whose visible disc is exactly half the
+   box's width — the other quarter each side is bloom with no edge — so a
+   moon meant to read as 130px across wants a 260px box and the bloom is
+   allowed to hang off the frame.
+
+   --moon-sit is what makes "on the horizon" hold at every window instead of
+   at the one it was eyeballed on: the disc's CENTRE is placed at a fixed
+   fraction of the main ridge's own peak height, so it tracks the ridgeline
+   as --art-rise moves. Measured against the ridge's alpha profile at the x
+   this sits at, the skyline is 0.640 of the peak height at 1440x900 and
+   0.655 at 1920x1080 — the disc's centre lands within 6px of the ridgeline
+   at both, so the mountains cut its lower limb and it reads as sitting on
+   them rather than floating over them.
+
+   62% across, which is right of the reading column at every width this is
+   drawn at and left of the model. The light shafts rake down from above it,
+   which is what a moon and a beam should do to each other.                  */
+.hero__moon {
+  --moon-w: clamp(240px, 26vw, 430px);
+  --moon-sit: 0.64;
+  position: absolute;
+  display: block;
+  width: var(--moon-w);
+  height: var(--moon-w);
+  left: calc(62% - var(--moon-w) / 2);
+  bottom: calc(var(--art-rise) * var(--moon-sit) - var(--moon-w) / 2);
+  /* the ridge's --art-rise is declared on .hero__ridge, so this needs its own
+     copy of the same expression; both read the same --art-band and the same
+     constants, which is rule 6's "one set of variables on the common parent"
+     as close as a value that depends on --terrain-w can get */
+  --terrain-w: max(146vw, 160vh);
+  --art-rise: min(
+    calc(var(--terrain-w) * 0.134),
+    calc(var(--art-band) + var(--terrain-w) * 0.0275),
+    300px
+  );
+  pointer-events: none;
+}
+
+/* ── the near foreground ───────────────────────────────────────────────────
+   One oversized pine at the right edge, cropped by the frame, alone — the
+   art kit is explicit that this piece is used instead of a pine family and
+   never alongside one, and there is no other tree anywhere in this section.
+
+   It is the layer that answers the MOUSE most (26px against the moon's 7 and
+   the ridge's none), which is what makes it read as near; its scroll drift is
+   deliberately modest, because a near layer in a pinned stage travels far
+   enough to leave the frame and a tree whose cut base rises into view is
+   worse than a tree that barely moves. The lamppost is the layer that really
+   moves at page rate, and it is in Origin.
+
+   Measured off the alpha: ink x 0.110-0.946 of the box in dark and
+   0.149-0.971 in light, tip at 0.0033 of the height, and the trunk runs off
+   the bottom edge at 0.9993 — which is why it is cropped rather than stood
+   on anything. The right 42% of the box is pushed off screen, so what is
+   drawn is the tip and the left flank.                                     */
+.hero__pine {
+  --pine-w: min(26vw, 360px);
+  position: absolute;
+  width: var(--pine-w);
+  aspect-ratio: 2 / 3;
+  height: auto;
+  right: calc(-0.42 * var(--pine-w));
+  /* far enough below the floor that the 0.12svh scroll lift can never bring
+     the cut base above it */
+  bottom: calc(-0.26 * var(--pine-w) * 1.5 - 12svh);
+  opacity: var(--art-near);
+}
+@media (max-width: 1099px) {
+  /* the reading column has the whole frame here and the model is already
+     dimmed; the art is what goes, as it always is */
+  .hero__pine-drift {
+    display: none;
+  }
 }
 
 /* ── light shaft ───────────────────────────────────────────────────────── */
@@ -130,6 +446,11 @@
   pointer-events: none;
 }
 
+/* The sky's own glow. It sits where the moon sits and now TRAVELS with it, at
+   0.72 of the moon's rate — a bloom that stayed put while the moon left it
+   behind would be the one thing in the section admitting the moon is a
+   sprite. `translate` and not `transform`, because bloombreathe animates
+   `transform` and the two would fight. */
 .hero__bloom {
   position: absolute;
   top: -16%;
@@ -137,6 +458,7 @@
   width: 760px;
   height: 620px;
   transform: translateX(-50%);
+  will-change: translate;
   border-radius: 50%;
   background: var(--hero-bloom);
   filter: blur(30px);
@@ -159,212 +481,6 @@
   inset: 0;
   pointer-events: none;
   background: var(--hero-vignette);
-}
-
-/* ── the valley ────────────────────────────────────────────────────────────
-   Two layers of terrain from public/assets/parallax/, drawn by ThemedHeroArt
-   so both ride the hero's own displacement. The stack, back to front, is
-   guardrail 5 of that folder's implementation brief:
-
-     sky · fog · ridge (z-index 0)  →  point cloud (2)  →  lamppost (2, later
-     in the DOM)  →  hero content and strip (3)  →  nav (its own layer)
-
-   z-index 0 rather than 1 on purpose: 1 would also lift the terrain over the
-   light shafts, the dust, the grain and the vignette, all of which sit at
-   auto. Atmosphere belongs OVER scenery — the shafts should rake across the
-   ridge, and the vignette should darken its corners with everything else's.
-   Painting order inside the 0/auto group is DOM order, and these two are
-   declared immediately after .hero__sky.
-
-   Nothing here filters, tints or recolours: the -dark and -light files are
-   separate artwork for two different contrast ranges, and the opacity is
-   --art-far from tokens.css, per theme. See scene/README.md.
-
-   ── the two numbers each layer is placed with ────────────────────────────
-   --terrain-w is HORIZONTAL SCALE and nothing else. It is always at least
-   132vw / 160vw, because a ridge that stops short of the viewport's edges is
-   an island rather than a horizon — an earlier version capped it at 1560px
-   and measured 175px of empty sky either side of it at 1920. The vh term is
-   the floor for a phone, where the bottom strip wraps to three rows and eats
-   118px: sized off viewport WIDTH alone the ridge measured entirely behind
-   that strip at 375px.
-
-   --art-rise is HOW FAR THE LAYER STANDS ABOVE the hero's floor, and it is
-   what keeps the art off the copy. Each layer's natural rise is a fixed
-   fraction of its own width, because both files are 2172x724 and the feature
-   that matters is at a known place in them: the ridge's ink starts at 51.5%
-   of the file height, the fog's mask opens at 44%. Bleed the box 4% of its
-   width below the hero's floor — the cut that makes the ridge continue
-   behind Origin rather than end in mid-air — and those become 0.12167 * w
-   and 0.14667 * w. --art-band on .hero caps both; whatever is left over goes
-   into the bleed, so a crowded viewport lowers the ridgeline instead of
-   shrinking the mountains. `bottom` is therefore derived, not chosen:
-   rise - head * width, where head is the same fraction measured from the
-   box's own bottom edge.
-
-   The third term in each --art-rise, 250px and 200px, is restraint rather
-   than geometry: without it a 1440-tall window grew 308px of mountain, which
-   is a landscape and not the quiet frame the kit asks for. It also puts the
-   fog's edge 20-50px above the ridgeline on any roomy viewport, which is the
-   only depth cue the two have when --art-band is what is binding.
-
-   Measured clearance, ridge silhouette down to the CTA row, all positive:
-     1920x1080 +129 · 1400x1200 +196 · 1440x900 +44 · 640x900 +122
-     1400x800   +26 · 1280x700   +34 · 1280x600 +34 · 375x812 +62
-     375x667  (the ridge sits entirely behind the strip) · 320x720 +17
-   Before the cap existed the same run measured +6.6px at 1400x800 and a
-   46px overlap at 1280x700.                                               */
-.hero__fog,
-.hero__ridge {
-  left: 50%;
-  /* transform, NOT translate: useHeroParallax owns `translate` outright and
-     rewrites the whole value every frame, so a centring translate would be
-     gone by the next one. Scene.css makes the same point from its end. */
-  transform: translateX(-50%);
-  width: var(--terrain-w);
-  height: auto;
-  /* stated as well as intrinsic, so the layer holds its box before the PNG
-     arrives and the composition does not assemble itself in two steps */
-  aspect-ratio: 2172 / 724;
-  bottom: calc(var(--art-rise) - var(--terrain-w) * var(--art-head));
-  z-index: 0;
-  opacity: var(--art-far);
-}
-.hero__fog {
-  --terrain-w: max(160vw, 176vh);
-  --art-head: 0.18667;
-  --art-rise: min(calc(var(--terrain-w) * 0.14667), var(--art-band), 250px);
-  /* The veil's top edge carries a faint speckle in the artwork. Fade it into
-     the sky rather than let it read as noise; the bottom is bled past the
-     hero's floor instead, because a straight cut across the hero is worse
-     than no fog at all. */
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 44%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 44%);
-}
-.hero__ridge {
-  --terrain-w: max(132vw, 148vh);
-  --art-head: 0.16167;
-  --art-rise: min(calc(var(--terrain-w) * 0.12167), var(--art-band), 200px);
-}
-
-/* ── the lamppost ──────────────────────────────────────────────────────────
-   The one peripheral prop the hero gets. No bench, no trees: the brief keeps
-   those for the sections below so the establishing shot stays quiet.
-
-   It is placed against the CONTENT COLUMN's left gutter rather than against
-   the viewport edge, because the thing it must never come near is the
-   wordmark, and the wordmark starts at the content column. The gutter is
-   everything left of that column: the page's own centring margin,
-   max(0, (hero width - 1240) / 2), plus the column's padding, which is
-   clamp(18px, 4.5vw, 56px). Both halves are written here exactly as
-   .hero__content writes them, so this number cannot drift from where the
-   wordmark actually is. The max() is not decoration — under 1240px there is
-   no centring margin at all, and an earlier version of this rule assumed one,
-   which is half of why the lamp used to sit at left: -27px.
-
-   ── what the art actually occupies ────────────────────────────────────────
-   The file is 1024x1536 (1000x1500 in the .webp that is painted) with the
-   lamp down the middle, the glow baked into its own alpha — which is why
-   there is no CSS glow here. Measured off both themes' alpha channels: the
-   DARK art is a hard-edged 37.7% to 62.3% of the box — alpha steps 0 to 255
-   in one column — and the LIGHT art is 40.0% to 59.4% solid inside a halo
-   whose alpha never exceeds 8/255 and which fades out by 34.8% / 64.1%.
-   Dark is therefore what binds, and this rule budgets 37.5% to 62.5%: a hair
-   wider than dark's real edges on both sides, so every clearance below is a
-   floor and not a target that rounding can undercut. The light halo's last
-   1.5% is deliberately outside the budget — 8/255 under --art-mid's 0.44 is
-   1.4% opacity, which is not ink. Vertically the alpha stops at 98% (dark)
-   and 96% (light), which is what `bottom` below is set against.
-
-   ── the three things that pull against each other ─────────────────────────
-   1. the ink stays at least 30px clear of the wordmark (the art kit's own
-      floor: public/assets/parallax/README.md),
-   2. the box never crosses x = 0, so .hero's overflow: hidden has nothing to
-      cut — the old rule failed this by 27px at 1440 and the lamp was drawn
-      with 13% of its left side sawn off,
-   3. it is actually there on an ordinary laptop.
-   As the window narrows the first two close on each other, so the answer is
-   that the lamp gets SMALLER rather than moving or vanishing: --lamp-fit is
-   the widest box whose ink still clears the wordmark by 30px with the box
-   hard against x = 0, and the width is the smaller of that and the size a
-   roomy window would give it. The box's right-hand 37.5% is transparent, so
-   it may overlap the copy column's left edge; nothing is painted there, and
-   .hero__content sits a whole z-index above it in any case.
-
-   ── the floor, and why it is 1268px ───────────────────────────────────────
-   Below some width --lamp-fit stops describing a lamppost and starts
-   describing a smudge, and the previous rule was right about that even
-   though it drew the line at 1400. The line is drawn at a 64px box — 16px of
-   ink, 96px tall — which needs a gutter of 30 + 0.625*64 = 70px, which needs
-   a hero 1240 + 2*(70 - 56) = 1268px wide. Below it the lamp is not drawn at
-   all: art is what disappears first when space runs out, the same rule
-   --art-band applies to the terrain.
-
-   The media query is on the WINDOW and the hero is up to a scrollbar
-   narrower, so in the few pixels just above the breakpoint the box can come
-   out around 52px instead of 64. That is deliberate slack in the cheaper
-   direction: which widths are worth drawing at is a judgement, and the two
-   clearances are not — they are enforced by `width` and `left` below at
-   every width, whatever the media query lets through.
-
-   Measured (dark and light identically; geometry carries no colour),
-   window / hero / box / box left / ink-to-wordmark / ink-to-strip:
-     1024x768   1014  hidden
-     1100x768   1090  hidden
-     1200x800   1190  hidden
-     1278x800   1268   64.0x96.0   +0    +30.13  +30.0   ← the breakpoint
-     1280x800   1270   65.6x98.4   +0    +30.14  +30.0
-     1366x768   1356  134.4x201.6  +0    +30.27  +32.0
-     1400x1200  1390  161.6x242.4  +0    +30.33  +32.9   ← old worst case
-     1440x900   1430  193.6x290.4  +0    +30.39  +33.8
-     1536x864   1526  195.8x293.7  +1.6  +75.42  +33.9
-     1920x1080  1910  220.0x330.0  +85.5 +168.44 +34.6
-   Clearance sits just over the 30px floor wherever the gutter is what binds
-   — the 0.625 budget is a shade wider than the 0.623 the art actually uses,
-   which is where the tenths come from — and opens up once the height cap
-   takes over instead. The ink never comes near the point cloud either: the
-   lamp's whole BOX ends 305px in at worst, against a .hero__model drag box
-   that starts 604.6px in at 1280 and 1211.8px in at 1920.                  */
-.hero__lamp {
-  /* below 1268px the gutter cannot hold a lamp worth drawing 30px clear of
-     the wordmark, and art is what disappears first when space runs out */
-  display: none;
-}
-@media (min-width: 1268px) {
-  .hero__lamp {
-    --gutter: calc(max(0px, (100% - 1240px) / 2) + clamp(18px, 4.5vw, 56px));
-    /* widest box whose ink clears the wordmark by 30px from a standing start
-       at x = 0. 0.625 is the ink's right edge as a fraction of the box. */
-    --lamp-fit: calc((var(--gutter) - 30px) / 0.625);
-    /* Width, and height only through aspect-ratio. --gutter carries a
-       percentage, and a percentage substituted into `height` would resolve
-       against the containing block's HEIGHT rather than its width — so the
-       height is never allowed to be an expression that contains one. The vh
-       term is the old 34vh cap restated as a width (34vh * 2/3), and 220px
-       is the old 330px one, both still here so a tall window does not grow
-       the lamp into the copy. */
-    --lamp-w: min(calc(34vh * 2 / 3), 220px, var(--lamp-fit));
-    display: block;
-    width: var(--lamp-w);
-    aspect-ratio: 2 / 3;
-    height: auto;
-    /* Centred in the gutter while there is room to centre it; slid left as
-       the gutter tightens, and stopped dead at the viewport edge. The min()
-       is the 30px clearance and the max() is the no-clipping rule, so
-       whichever is binding at this width is the one that wins. */
-    left: max(
-      0px,
-      min(
-        calc((var(--gutter) - var(--lamp-w)) / 2),
-        calc(var(--gutter) - 30px - var(--lamp-w) * 0.625)
-      )
-    );
-    /* clear of the bottom strip: the art's own alpha stops at 98% of the box,
-       and the strip is 56px tall at every width this is drawn at */
-    bottom: 84px;
-    z-index: 2;
-    opacity: var(--art-mid);
-  }
 }
 
 /* ── point cloud ───────────────────────────────────────────────────────── */
@@ -423,8 +539,33 @@
   opacity: 0.5;
 }
 
-/* ── content ───────────────────────────────────────────────────────────── */
+/* ── content, and the dissolve ─────────────────────────────────────────────
+   The site owner's note about the reference was that scrolling "makes the
+   hero section look like it's staying the same position but fading away from
+   the bottom". Both halves of that sentence are load-bearing and the previous
+   pass only had one of them: the copy rode `useHeroParallax(0.14)`, so it
+   SLID up as it faded, which is the opposite of staying in the same position.
+   That hook is gone from this section entirely.
 
+   "From the bottom" is four different fade rates rather than a mask. Hero.tsx
+   writes ONE custom property, --hero-out, 0 to 1 over the 30svh runway on an
+   ease-IN curve (`dissolve` in Hero.tsx), and
+   these four rules turn it into a dissolve that starts at the strip and ends
+   at the wordmark:
+
+     strip    gone at out 0.42
+     CTAs     gone at out 0.48   (its own rate, times the column's)
+     tagline  gone at out 0.67
+     column   gone at out 1
+
+   Nested opacities multiply, which is what makes the last three compose
+   without any of them having to know the others' numbers.
+
+   The blur is written as a whole filter value rather than a length, so at
+   rest the declaration is `filter: none` and there is no filter at all —
+   `blur(0px)` is still a filter, and a filter on a 660px column promotes a
+   compositor layer and gives it a containing block for the whole time nobody
+   is scrolling.                                                             */
 .hero__content {
   position: relative;
   z-index: 3;
@@ -432,7 +573,9 @@
   margin: 0 auto;
   padding: 0 clamp(18px, 4.5vw, 56px);
   width: 100%;
-  will-change: translate, opacity;
+  opacity: calc(1 - var(--hero-out, 0));
+  filter: var(--hero-blur, none);
+  will-change: opacity, filter;
   /* the copy column sits above the model but must not steal its drag area */
   pointer-events: none;
 }
@@ -537,6 +680,8 @@
   font: 300 19px/1.62 var(--font-body);
   color: var(--hero-tag);
   text-wrap: pretty;
+  /* third out of four in the dissolve — see the block comment above */
+  opacity: calc(1 - var(--hero-out, 0) * 1.5);
   /* ── the box is reserved, not measured every nine seconds ────────────────
      The five lines in HERO_TAGLINES are different lengths and wrap to
      different heights. Let the paragraph size to whichever one is showing
@@ -623,6 +768,8 @@
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 40px;
+  /* second out of four in the dissolve */
+  opacity: calc(1 - var(--hero-out, 0) * 2.1);
 }
 .hero__cta {
   display: inline-flex;
@@ -660,8 +807,12 @@
   box-shadow: none;
 }
 
-/* ── bottom strip ──────────────────────────────────────────────────────── */
-
+/* ── bottom strip ──────────────────────────────────────────────────────────
+   Anchored to .hero__frame rather than to the section, so it sits on the
+   floor of the first screen and stays there while the frame is pinned. Its
+   bottom edge and Origin's top edge are the same line the moment the frame
+   releases, which is why the strip reads as the horizon as it leaves.
+   First out of four in the dissolve.                                       */
 .hero__strip {
   position: absolute;
   left: 0;
@@ -670,6 +821,7 @@
   z-index: 3;
   border-top: 1px solid var(--hero-strip-border);
   background: var(--hero-strip-bg);
+  opacity: calc(1 - var(--hero-out, 0) * 2.4);
 }
 .hero__strip-inner {
   max-width: 1240px;
@@ -721,5 +873,47 @@
   .hero__meta {
     gap: 12px;
     font-size: 9px;
+  }
+}
+
+/* ── reduced motion ────────────────────────────────────────────────────────
+   The runway is scroll that exists only so something can happen during it.
+   At motionIntensity 0 nothing does — Hero.tsx writes --hero-out: 0 and every
+   layer's resting translate — so 130svh of frozen hero would be 30svh of dead
+   scrolling followed by a viewport of an opaque section climbing over a
+   picture that never changes. The section goes back to being exactly one
+   screen tall, the pin never engages (a sticky box the height of its
+   containing block has nowhere to stick, which Stage.tsx's header calls out),
+   and #origin drops its negative margin in Origin.css to match. The scenery
+   stays where it composed: visible, still, which is guardrail 5 of the art
+   kit rather than a hidden section.
+
+   The drift wrappers give their promotion back for the same reason
+   Scene.css's does: nothing writes to them, so the compositor layer would be
+   paid for and never used.                                                 */
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    min-height: 100svh;
+  }
+  .hero__above {
+    height: 100svh;
+  }
+  .hero__moon-drift,
+  .hero__rear-drift,
+  .hero__ridge-drift,
+  .hero__pine-drift,
+  .hero__shafts,
+  .hero__bloom {
+    will-change: auto;
+  }
+  .hero__content {
+    will-change: auto;
+    filter: none;
+    opacity: 1;
+  }
+  .hero__tagline,
+  .hero__ctas,
+  .hero__strip {
+    opacity: 1;
   }
 }

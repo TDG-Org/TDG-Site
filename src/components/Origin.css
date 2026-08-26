@@ -1,6 +1,61 @@
+/* ── the section ───────────────────────────────────────────────────
+   Read Hero.tsx's header before this file: the hero is pinned, and the two
+   sections now overlap by a viewport on purpose.
+
+   `margin-top: -100svh` pulls this section up onto the hero's last 100svh.
+   That is what makes Origin climb over a backdrop that has NOT moved: a
+   `Stage` releases its pin at its own section's bottom edge, so without the
+   overlap the hero's scenery would start scrolling away the instant Origin
+   appeared, at exactly the speed Origin arrived, which is an ordinary page.
+   The hero is 226svh and 126svh of it is flow, so this margin takes back
+   precisely the 100svh the hero added: **the document is not one pixel
+   longer than it would be with a plain 126svh hero.** #origin's border-box
+   top is still where `scrollIntoView` and `rememberOrigin` expect it.
+
+   `z-index: 4` is what paints this over the hero, and it is now doing two
+   jobs. The second is the lamppost: it is a child of this section, so it
+   inherits this stacking level and is drawn over the hero's stage while
+   staying under .hero__frame's z-index 5. Hero.css's note on `.hero` has the
+   other half of that arrangement.
+
+   `overflow: clip` with a margin, replacing `.section`'s own
+   `overflow: hidden`, and it is doing two jobs as well:
+     1. `hidden` is a scroll container, so it would stop the cabin's sticky
+        stage from pinning — the exact trap Stage.tsx's header measures.
+     2. `overflow-clip-margin` is what lets the lamppost rise out of the top
+        of this section into the hero. `hidden` cannot do this at all; the
+        property is only defined for `clip`.
+   The margin opens every edge equally, which is why `.origin__clip` below
+   exists. 130svh is the tallest the pole can ever be (--pole-h is capped at
+   78svh x 1.5 = 117svh, plus its 30px plant) with room to spare.
+
+   **The fallback is `.section`'s own `overflow: hidden`**, which is what a
+   browser with no `overflow: clip` (Safari before 16) keeps. There the pole
+   is cut off at the seam and the pinning does not engage, so the hero is a
+   tall ordinary section with a lamppost standing on the boundary line rather
+   than 30px inside it. That is a picture that still reads; it is not a broken
+   layout, and it is the same envelope `overflow: clip` and
+   `overflow-clip-margin` share (Chrome 90 / Firefox 102 / Safari 16), so
+   there is no browser that gets one and not the other.
+
+   The one dropped declaration is `will-change: translate, scale`, which was
+   here for `useHeroTakeover`. Nothing writes a transform to this element any
+   more, so the promotion would be a full-section compositor layer paid for
+   and never used.
+
+   The shadow is what the takeover's JavaScript used to ramp: a soft dark edge
+   above this section, so it reads as a sheet lifting over the valley rather
+   than as a colour boundary. It is a constant now because the section
+   genuinely does climb over a still hero — there is no lag left to disguise,
+   so there is nothing for JavaScript to time. Its ink is --hero-takeover-ink,
+   declared per theme in Hero.css; nothing here composes a colour.           */
 .origin {
   z-index: 4;
-  will-change: translate, scale;
+  margin-top: -100svh;
+  box-shadow: 0 -30px 78px -26px var(--hero-takeover-ink);
+  overflow: clip;
+  overflow-clip-margin: 130svh;
+
 
   /* ── the row's one set of measurements ───────────────────────────────────
      A chapter's prose now sits in a panel BELOW the heading rather than in the
@@ -53,12 +108,28 @@
     --origin-glow-warm 0.6s ease var(--wave-delay, 0ms);
 }
 
-.origin__field {
+/* The section's own clip box. See Origin.tsx's comment above it: the section
+   itself has a 130svh clip margin so the lamppost can escape, and this is
+   what stops everything ELSE escaping with it. Same box the section's own
+   overflow used to clip to, no margin, and it is not a scroll container, so
+   the sticky pin inside still pins. */
+.origin__clip {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+}
+
+/* The cabin's canvas fills its stage's pin, which is one viewport tall and
+   sticky — the framing CabinScene.tsx says it was composed for. It sizes its
+   own backing store from this box's client size, so the box has to have one
+   before the first frame; `inset: 0` on a pin that is already 100svh does. */
+.origin__cabin {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  display: block;
 }
 
 .origin__grid {
@@ -79,98 +150,197 @@
   filter: blur(24px);
 }
 
-/* ── the path, and the seam it arrives over ───────────────────────────────
-   One structural anchor plus one far layer, and nothing else — the art kit's
-   guardrail 8. See public/assets/parallax/README.md and scene/README.md.
+/* ── the ground at the boundary ───────────────────────────────────
+   A snow drift standing on the seam, and the thing the lamppost is planted
+   in. Two layers of art in this section rather than the three that were here
+   (a fog veil and stepping stones behind the timeline, plus a `Seam`) — the
+   cabin is the structural anchor now, and guardrail 8 of the art kit is one
+   anchor plus low foliage or floor, not a scene. The fog went for the same
+   reason it went from the hero: it is what the site owner called "other
+   smooth mountains behind the mountains".
 
-   Both are placed by `right` and `width` in vw so their LEFT edge tracks the
-   viewport rather than a breakpoint: it lands at 102vw − min(24vw, 500px) for
-   the stones and 105vw − min(26vw, 560px) for the fog, which is right of the
-   reading column's own right edge at every width this rule applies at. The
-   parallax on them is vertical only (useParallax writes `translate: 0 Npx`),
-   so no amount of drift can carry either across the copy.
+   The wrapper is a BAND CENTRED ON THE BOUNDARY, with its own `overflow:
+   clip`. The section's 130svh clip margin opens every edge, and this drift is
+   deliberately wider than the viewport (a floor that stops short of the edges
+   is a rug), so without a clip of its own it would hang off the right-hand
+   side of the document and put a horizontal scrollbar on every page. The
+   band is 34svh either side of the seam, which clears the drift's own height
+   at every viewport in the table below.
 
-   Opacity is a token, never a number: --art-far for the fog, --art-mid for
-   the stones. Nothing here filters or recolours — the -dark and -light files
-   are separate artwork and the kit is explicit that a filter must not stand
-   in for the swap. */
-@media (min-width: 1120px) {
-  .origin__fog {
-    right: -5vw;
-    bottom: 60px;
-    width: min(26vw, 560px);
-    /* fog-veil-{dark,light}.webp are both 1600x533, and the same reasoning as
-       the stones below: loading="lazy" means naturalHeight is 0 until the file
-       lands, and this measured 374x0 at 1440px until then. It is a `ThemedArt`
-       like the stones, so `useParallax` reads `r.top + r.height / 2` on it and
-       a flat box puts the drift target 62px off where the loaded layer wants
-       it — the smaller of the two errors on this section, the stones being
-       97px — and the clearances the comment above calls structural are only
-       true once the file has arrived. Bare ratio, not `auto <ratio>`. */
-    aspect-ratio: 1600 / 533;
-    opacity: var(--art-far);
-  }
-  .origin__stones {
-    right: -2vw;
-    bottom: -30px;
-    width: min(24vw, 500px);
-    /* stepping-stones-{dark,light}.webp are both 1000x563. Stated so the box
-       has a HEIGHT before the file arrives: these are loading="lazy", so
-       naturalHeight is 0 until then and the element measured 346x0 at 1440px.
-       Nothing shifts on screen when it lands — the art is absolutely
-       positioned — but `useParallax` takes its drift target from
-       `r.top + r.height / 2`, so it aims at a flat box and then re-aims when
-       the image loads, which also makes the clearances the comment above
-       calls invariants briefly untrue. Not `aspect-ratio: auto <ratio>`: the
-       bare ratio is what holds before there is an intrinsic one to prefer.
-       Re-measure after any art swap; a ratio that disagrees with the file
-       would letterbox it silently. */
-    aspect-ratio: 1000 / 563;
-    opacity: var(--art-mid);
-  }
-}
-/* Below that the reading column has the whole shell and there is no empty
-   edge left to stand a prop in, so the art is what goes — it always is. */
-@media (max-width: 1119px) {
-  .origin__fog,
-  .origin__stones {
-    display: none;
-  }
-}
+   left/right are 0 and that is worth saying out loud, because the obvious
+   version of this rule cancels the section's horizontal padding and is 40px
+   wrong on each side: an absolutely positioned box's containing block is the
+   ancestor's PADDING box, which INCLUDES the padding, not the content box.
+   Measured before the correction — 1510px wide inside a 1430px section, and
+   `document.documentElement.scrollWidth` 1470 against a clientWidth of 1430.
+   So `100%` in here is already the section's full width, which is the hero's
+   width, which is what the lamppost's gutter below is a fraction of.
 
-/* The wrapper exists because `Seam` renders the <svg> itself and `useParallax`
-   has to own `translate` on an element of its own. Zero height: the seam
-   inside it is absolutely positioned and takes its own height from Seam.css. */
-.origin__seam-drift {
+   --snow-head is where the artwork's ink starts as a fraction of the box's
+   own WIDTH, measured from the box's top edge, off the real alpha at 24/255:
+   the dark file's ink begins at 0.6679 of its height and the light file's at
+   0.6454, and the files are 3:1, so those are 0.2226 and 0.2151 of the width.
+   A head per theme, because one number would put one of them 13px out. Both
+   files run to 0.998 of their height, so the drift has no bottom edge to
+   show; it simply fills down into the section.
+
+   --snow-rise is how far the crest stands ABOVE Origin's top edge, which is
+   how far up into the hero the ground reaches.                             */
+.origin__ground {
+  --band: 34svh;
+  --snow-w: max(126vw, 132vh);
+  --snow-head: 0.22263;
+  --snow-rise: clamp(52px, 6.4vw, 112px);
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100%;
-  height: 0;
+  right: 0;
+  top: calc(-1 * var(--band));
+  height: calc(var(--band) * 2);
+  overflow: clip;
+  pointer-events: none;
+}
+[data-theme='light'] .origin__ground {
+  --snow-head: 0.21513;
+}
+.origin__snow {
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--snow-w);
+  height: auto;
+  aspect-ratio: 2172 / 724;
+  top: calc(var(--band) - var(--snow-rise) - var(--snow-w) * var(--snow-head));
+  opacity: var(--art-mid);
+}
+
+/* ── the lamppost ─────────────────────────────────────────────
+   Much bigger, much closer, hard against the left edge, standing IN the snow
+   above rather than ending at the boundary — all four of those are the site
+   owner's words. Origin.tsx's comment says why it lives in this section.
+
+   ── the wrapper ──────────────────────────────────────────────
+   It exists to own `translate` for the pointer parallax, the same reason
+   Hero.css has four of them. `inset: 0` gives it the section's PADDING box,
+   which includes the padding, so `100%` inside it is the section's full
+   width — which is the hero's width, which is what every number below is a
+   fraction of. 100vw would have been the near-miss: it includes the
+   scrollbar, and over-stating the width by 10px spends a third of the 30px
+   clearance this rule is solved against.
+
+   ── what the art actually occupies ───────────────────────────────
+   The file is 1000x1500 in the .webp that is painted, lamp down the middle,
+   the glow baked into its own alpha — which is why there is no CSS glow here.
+   Re-measured off both themes' alpha channels at 24/255:
+     dark   x 0.377-0.622   y 0.0133-0.980
+     light  x 0.380-0.610   y 0.0107-0.960   (a halo out to 0.350-0.638 whose
+            alpha never exceeds 8/255, which under --art-near's 0.52 is 1.6%
+            opacity and is not ink)
+   The base plate is only x 0.419-0.581; the widest ink is the lamp head. This
+   rule budgets 0.377 on the left and 0.625 on the right, a hair outside the
+   real edges, so every clearance below is a floor and not a target rounding
+   can undercut.
+
+   ── how it got 2.1x bigger ──────────────────────────────────────
+   The old rule solved three constraints and one of them was wrong: it held
+   the BOX at x >= 0, "so .hero's overflow has nothing to cut". But the box's
+   left 37.7% is transparent. Letting the box hang off the left edge cuts
+   nothing at all until the overhang passes 0.377 of its width, and that one
+   correction is where most of the extra size comes from. The three that
+   actually bind:
+
+     1. the ink stays 30px clear of the wordmark, wherever the pointer is
+        (the art kit's own floor: public/assets/parallax/README.md),
+     2. no INK is ever clipped by the viewport's left edge, wherever the
+        pointer is,
+     3. the lamp head never rises behind the nav.
+
+   Writing A for the pointer amplitude, W for the box width and g for the
+   gutter, and remembering `left` is negative:
+     left      = max(A - 0.377W, -0.355W)   -- (2), and the overhang cap, which
+                 keeps 2.2% of transparent margin outside the ink
+     ink right = left + 0.625W <= g - 30 - A -- (1)
+   Those two give a different bound depending on which arm of the max() is
+   live, so --lamp-fit takes the min of both; the min is always safe.
+
+   (3) is the height cap. The lamp's head is at seam + 30 + 0.02H - H down
+   the page, the seam is at 130svh (Hero.css), and the nav is 70px tall — so
+   holding the head below 14% of the viewport gives H <= (1.16 x svh + 30) /
+   0.98, i.e. 117svh + 30px, stated here as a WIDTH, 78svh + 20px. It has to
+   be a width: --gutter carries a percentage, and a percentage substituted
+   into a vertical property resolves against the containing block's HEIGHT.
+   That trap is not hypothetical here; see the plant note below, where it cost
+   a 400px error before it was measured.
+
+   ── and where it stops being worth drawing ───────────────────────
+   Bigger costs coverage, because a bigger box needs a bigger gutter and the
+   gutter is zero at 1240px. The line is drawn at a 240 x 360 box, which needs
+   g >= 50 + 0.248 x 240 = 109.5, which needs a section 1240 + 2 x (109.5 -
+   56) = 1347px wide, so a window of about 1357. The query is at 1366, which
+   is the first real laptop width above that. Below it there is no lamppost at
+   all, where the old, much smaller rule reached 1268: a genuine loss of
+   coverage between 1268 and 1365, and it is the price of "much bigger". Art
+   is what disappears first when space runs out.
+
+   One caveat the query cannot express, because it is about HEIGHT. The seam
+   sits at 130svh, so it moves 1.3px for every 1px of viewport height while
+   the bottom strip moves 1px — which means a taller window pushes the lamp's
+   head DOWN relative to the strip unless the gutter lets the lamp grow to
+   match, and at the narrow end of this query it cannot. Measured: 1366x768
+   puts the head 63px clear above the strip; a 1366-wide window taller than
+   about 780px starts the lantern behind the strip, and it rises into frame on
+   the first scroll instead of being there at rest. Everything from 1400 up is
+   clear at every height in the table.
+
+   ── the plant, and the percentage that nearly broke it ────────────
+   The ink's bottom edge is at 0.98 of the box, so putting the ink 30px inside
+   Origin means the box's own bottom sits at 30px + 2% of its height below the
+   boundary. Written the obvious way — `top: calc(30px - 1.47 * var(--pole-w))`
+   — that is WRONG, and wrong in a way that measures rather than looks it:
+   --pole-w carries --gutter, --gutter carries `100%`, and **a percentage
+   substituted into `top` resolves against the containing block's HEIGHT.**
+   Origin is 1712px tall and 1430px wide here, so the gutter came out 292px
+   instead of 151, --pole-w hit its 704px ceiling, and the lamp was drawn
+   1005px above the seam instead of 599 — measured, lamp top 129.1 where 565.3
+   was wanted. `left` is fine, because a percentage in `left` resolves against
+   the width, which is what it is.
+
+   `translateY(-98%)` has no such trap: a percentage in a transform resolves
+   against the ELEMENT'S OWN border box, which is the box this offset is a
+   fraction of in the first place. So `top` is a plain 30px — the plant depth,
+   readable as itself — and the shift is the artwork's own alpha geometry.
+   The wrapper owns `translate` for the pointer, which is a separate property,
+   so the two never touch.                                                    */
+.origin__lamp-drift {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
   will-change: translate;
 }
-/* The colour is declared beside this section's tints in base.css, which is
-   where it has to agree with them (rule 2: no component stylesheet writes a
-   colour). The fallback is `transparent` rather than nothing, because an
-   unresolved var() here would leave `color` to inherit --text and paint a
-   bright slab across the top of the section. --seam-fade is the alpha the
-   dissolve is still at halfway down, so every seam on the page fades at one
-   rate. */
-.origin__seam {
-  color: var(--seam-fill, transparent);
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    #000 0%,
-    rgba(0, 0, 0, var(--seam-fade)) 50%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    180deg,
-    #000 0%,
-    rgba(0, 0, 0, var(--seam-fade)) 50%,
-    transparent 100%
-  );
+
+.origin__lamp {
+  display: none;
+}
+@media (min-width: 1366px) {
+  .origin__lamp {
+    /* the hero's copy column, written exactly as .hero__content writes it, so
+       this number cannot drift from where the wordmark actually is */
+    --gutter: calc(max(0px, (100% - 1240px) / 2) + clamp(18px, 4.5vw, 56px));
+    /* pointer amplitude, and it is spent twice: once at each clearance */
+    --lamp-a: 10px;
+    --lamp-fit: min(
+      calc((var(--gutter) - 30px - 2 * var(--lamp-a)) / 0.248),
+      calc((var(--gutter) - 30px - var(--lamp-a)) / 0.27)
+    );
+    --pole-w: min(var(--lamp-fit), calc(78svh + 20px));
+    display: block;
+    width: var(--pole-w);
+    aspect-ratio: 2 / 3;
+    height: auto;
+    left: max(calc(var(--lamp-a) - 0.377 * var(--pole-w)), calc(-0.355 * var(--pole-w)));
+    /* how deep the ink's foot is planted inside Origin — see the note above */
+    top: 30px;
+    transform: translateY(-98%);
+    opacity: var(--art-near);
+  }
 }
 
 .shell.origin__shell {
@@ -572,9 +742,18 @@
     opacity: 1;
     translate: none;
   }
-  /* Both parallax hooks resolve to a zero translate at motionIntensity 0, so
-     the promotion would be a compositor layer paid for and never used. */
-  .origin__seam-drift {
+  /* The overlap is scroll that exists only so the hero can be climbed over
+     while it holds still, and at motionIntensity 0 the hero is one screen
+     tall again (Hero.css) with nothing to hold. Give the 100svh back rather
+     than pulling this section up over a hero that is no longer there.
+     Stated in the same edit as the hero's, because the two are one number. */
+  .origin {
+    margin-top: 0;
+  }
+  /* Nothing writes to this at motionIntensity 0 — usePointer snaps to the
+     identity and stops — so the promotion would be a compositor layer paid
+     for and never used. Scene.css gives its own back for the same reason. */
+  .origin__lamp-drift {
     will-change: auto;
   }
 }

@@ -210,6 +210,21 @@ export function PointCloud() {
     window.addEventListener('blur', up)
 
     // ── frame ─────────────────────────────────────────────────────────────
+    /*
+     * The model fades on the COPY's clock, not the section's.
+     *
+     * `#top` is 226svh tall now and pinned (Hero.tsx), so `-#top.top / vh`
+     * would take more than two viewports of scrolling to reach 1 and the
+     * model would still be at two-thirds opacity when Origin had already
+     * covered it — which is both wrong to look at and 100svh of 3D projection
+     * painted behind an opaque section. `.hero__above` is the box whose
+     * height is the pin's travel and whose bottom edge is the seam, and
+     * `height - vh` is the runway the copy dissolves over. Fading on that
+     * puts the model out at the same moment the wordmark goes, and the
+     * `opacity <= 0` return below then stops every point of the work.
+     *
+     * `?? #top` is the fallback for a PointCloud mounted outside that box.
+     */
     let hero: HTMLElement | null = null
     const focal = 1 / Math.tan(((FOV * Math.PI) / 180) / 2)
     let lastFade = -1
@@ -220,10 +235,12 @@ export function PointCloud() {
       if (!W || !H || !holder.offsetParent) return
 
       // the model fades out as the hero sinks; stop grabbing once it is faint
-      hero ??= document.getElementById('top')
+      hero ??= holder.closest('.hero__above') ?? document.getElementById('top')
       let opacity = 1
       if (hero) {
-        const p = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / (vh || 800)))
+        const r = hero.getBoundingClientRect()
+        const runway = Math.max(1, r.height - vh) || vh || 800
+        const p = Math.max(0, Math.min(1, -r.top / runway))
         opacity = Math.max(0, 1 - p * 1.35)
       }
       const grabbable = opacity > 0.2 ? 1 : 0

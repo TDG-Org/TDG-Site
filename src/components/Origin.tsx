@@ -1,16 +1,52 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { clamp01, onFrame } from '../lib/motion'
 import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
+import { usePointer } from '../hooks/usePointer'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
-import { useHeroTakeover } from './Hero'
-import { OriginField } from './origin/OriginField'
-import { Seam } from './scene/Seam'
-import { ThemedArt } from './scene/ThemedArt'
+import { Stage } from './scene/Stage'
+import { StillArt } from './scene/ThemedArt'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
 import { CHAPTERS, type Chapter } from '../data/content'
 import './Origin.css'
+
+/**
+ * The cabin, in its own chunk, and NOT rendered until the reader is on the
+ * way here.
+ *
+ * `React.lazy` splits the chunk but fires its import the moment the component
+ * renders, and Origin is in the home page's tree from the first paint — so a
+ * plain lazy mount is a 134 kB gzipped download of three.js for every visitor
+ * including one who reads the hero and leaves. Splitting the chunk is only
+ * half the job; the other half is `mounted` below, which is why this constant
+ * is never referenced except behind that flag.
+ */
+const CabinScene = lazy(() =>
+  import('./origin/CabinScene').then((m) => ({ default: m.CabinScene })),
+)
+
+/**
+ * How much of the viewport Origin has to have climbed before three.js is
+ * asked for. 20% of a viewport past first contact.
+ *
+ * Origin's top edge is only 26svh below the fold at the top of the page (the
+ * hero's runway — see Hero.tsx), so a plain `rootMargin: 0` fires on the
+ * first wheel notch and the deferral buys nothing: scrolling through the
+ * hero's own dissolve is exactly what a visitor who is only reading the hero
+ * does. Requiring the section to be a fifth of a viewport ON screen means the
+ * reader has scrolled past the beat and is watching Origin arrive, and it
+ * still leaves 80svh of scrolling before Origin's top reaches the top of the
+ * viewport — several seconds of network on a slow connection, and the cabin
+ * is a backdrop rather than content, so arriving late costs nothing but the
+ * fade it does not get.
+ */
+const CABIN_MARGIN = '0px 0px -20% 0px'
+
+/** Pointer amplitude for the lamppost, px. See Origin.css: this number is
+ *  spent out of the same budget that keeps the lamp's ink 30px clear of the
+ *  wordmark, so it cannot be raised here alone. */
+const LAMP_POINT_X = 10
 
 /**
  * One chapter of the timeline, as a disclosure.
@@ -121,12 +157,75 @@ function OriginRow({ chapter, index }: { chapter: Chapter; index: number }) {
 export function Origin() {
   const section = useRef<HTMLElement | null>(null)
   const rail = useRef<HTMLDivElement | null>(null)
+  const lamp = useRef<HTMLDivElement | null>(null)
   const blob = useParallax<HTMLDivElement>(0.18)
-  const seam = useParallax<HTMLDivElement>(0.04)
   const intro = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('wipe', 0)
+  const [cabin, setCabin] = useState(false)
+  const pointer = usePointer()
 
-  useHeroTakeover(section)
+  /*
+   * Deferred mount for the three.js chunk. See CABIN_MARGIN above for the
+   * number and CabinScene's own header for what it draws.
+   *
+   * An IntersectionObserver rather than the frame loop, deliberately: the
+   * loop parks when nothing holds it, and a reader who scrolls with the
+   * keyboard, restores a session at a saved position or lands on `#origin`
+   * from another route can arrive here on a frame the loop never ran. The
+   * observer fires from the browser's own lifecycle either way, and it costs
+   * nothing per frame.
+   *
+   * It disconnects on the first hit and never observes again. Once three.js is
+   * in memory and a WebGL context is live, unmounting on scroll-up would throw
+   * both away and pay for them again on the way back down, which is strictly
+   * worse than leaving a parked canvas in the DOM — CabinScene already returns
+   * before drawing AND before holding once its section is off screen.
+   *
+   * No observer at all (a very old browser, or one where the constructor
+   * throws) mounts it immediately. A missing optimisation is not a reason to
+   * lose the section's centrepiece.
+   */
+  useEffect(() => {
+    const el = section.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setCabin(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return
+        io.disconnect()
+        setCabin(true)
+      },
+      { rootMargin: CABIN_MARGIN },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  /*
+   * The lamppost answers the mouse, and only on one axis.
+   *
+   * Horizontally it is a near object sliding against a far horizon, which is
+   * the whole point of a mouse parallax. VERTICALLY it is a thing standing on
+   * the ground — and a foot that bobs 5px off the snow every time the cursor
+   * moves is the one way to lose the illusion this entire arrangement exists
+   * to build. So there is no y term at all.
+   */
+  useEffect(() => {
+    const el = lamp.current
+    if (!el) return
+    let painted = ''
+    return onFrame(({ mi }) => {
+      const next = mi === 0 ? '' : `${(pointer.x * LAMP_POINT_X).toFixed(1)}px 0`
+      if (next === painted) return
+      painted = next
+      return () => {
+        el.style.translate = next
+      }
+    })
+  }, [pointer])
 
   // A second spine grows over the static one, mapped across the middle
   // two-thirds of the section, so the path visibly fills as you read.
@@ -148,35 +247,93 @@ export function Origin() {
   }, [])
 
   return (
-    <section id="origin" ref={section} className="section section--blend origin">
-      <OriginField />
-      <div className="texture origin__grid" aria-hidden="true" />
-      <div ref={blob} className="blob origin__blob" aria-hidden="true" />
+    <section id="origin" ref={section} className="section section--blend stage-host origin">
+      {/* ── everything that must NOT escape ─────────────────────────
+          This section is `overflow: clip` with a 130svh clip margin, because
+          the lamppost below has to rise out of the top of it and stand in the
+          hero. A clip margin opens EVERY edge, though, and Origin has layers
+          deliberately larger than it is: a blurred blob that drifts on
+          `useParallax`, a masked grid, a viewport-sized WebGL canvas. Left as
+          direct children they would leak into the hero and into Apps the
+          moment the margin was added, and so would every future layer added
+          to this section, silently.
 
-      {/* ── the path ────────────────────────────────────────────────────────
-          This section is the second beat of one walk: the hero is a valley
-          under a lamppost, and this is the path leading away from it. One
-          structural anchor — the stepping stones, receding up and to the
-          right, which is the shape of a timeline you read downward — with a
-          fog veil behind it and nothing else. The art kit's guardrail 8 is
-          binding here: a section that becomes an illustration has stopped
-          being a section.
+          So the clip is stated once, HERE, as a box: this wrapper is the
+          section's own padding box with `overflow: clip` and no margin, and
+          anything inside it is clipped exactly as it always was. Only the two
+          things that are SUPPOSED to cross the boundary sit outside it. That
+          makes the invariant structural rather than remembered, which is the
+          same move `.stage` makes for z-order.
 
-          Both sit in the empty column to the RIGHT of the reading column and
-          only above 1120px, where that column is genuinely empty. Their
-          parallax is vertical only, so no drift can ever carry them across
-          the copy. Opacity comes from the --art-* tokens, never a number, and
-          neither is recoloured: the -dark and -light files are separate
-          artwork. See scene/README.md. */}
-      <ThemedArt art="atmosphere/fog-veil" className="origin__fog" factor={0.025} />
-      <ThemedArt art="transitions/stepping-stones" className="origin__stones" factor={0.05} />
+          `overflow: clip` is not a scroll container, so the sticky pin inside
+          still pins. `overflow: hidden` here would kill the cabin's stage
+          exactly the way it would kill the hero's; Stage.tsx's header has the
+          measurement. */}
+      <div className="origin__clip" aria-hidden="true">
+        {/* The cabin, far off across the snow, walked toward as the reader
+            moves through the chapters. It replaces `origin/OriginField.tsx`,
+            which was a 2D projected point field standing in for depth this
+            section can now have properly: one canvas in here, not two.
 
-      {/* The boundary the hero's takeover slides into. A terrace rather than a
-          ridge, because what arrives here is a path. The drift is a wrapper
-          rather than the seam itself: `Seam` renders an <svg> and `useParallax`
-          needs an element of its own to own `translate` on. */}
-      <div ref={seam} className="origin__seam-drift" aria-hidden="true">
-        <Seam shape="steps" edge="top" className="origin__seam" />
+            It is mounted in a `Stage` because that is the framing it was
+            composed for, a sticky viewport-sized box, so its camera composes
+            for a screen rather than for a 1700px-tall strip. Decorative four
+            ways: aria-hidden on the stage, pointer-events none from its own
+            inline style, no flow space, and the bottom layer of the section.
+
+            `Suspense fallback={null}` because there is nothing to show while
+            a backdrop loads, and a placeholder is a shape that appears and is
+            then replaced. `cabin` is the deferred mount; see the effect
+            above, and note that the lazy import does not fire until this
+            renders. */}
+        <Stage className="origin__stage">
+          {cabin ? (
+            <Suspense fallback={null}>
+              <CabinScene className="origin__cabin" />
+            </Suspense>
+          ) : null}
+        </Stage>
+
+        <div className="texture origin__grid" />
+        <div ref={blob} className="blob origin__blob" />
+      </div>
+
+      {/* ── the ground, and it crosses the boundary ───────────────────
+          A snow drift sitting ON the seam: its crest stands above Origin's
+          top edge, in the hero, and its body fills down into Origin. This is
+          the section's boundary treatment and it replaces the `Seam` terrace
+          that used to be here. Two silhouettes on one boundary is mush, and
+          of the two this is the one the lamppost can stand in, which is the
+          whole point of the arrangement below: the pole's foot has to land on
+          something rather than on a colour change.
+
+          The wrapper is a band centred on the boundary with its own
+          `overflow: clip`, so the drift's own width (it runs off both edges,
+          the way the art kit asks a floor to) cannot leak through the
+          section's clip margin and put a horizontal scrollbar on the page. */}
+      <div className="origin__ground" aria-hidden="true">
+        <StillArt art="landscapes/snow-bank" className="origin__snow" />
+      </div>
+
+      {/* ── the lamppost ─────────────────────────────────────
+          It is drawn by THIS section and not by the hero, and that is the
+          whole trick. The site owner asked for the foot of the pole to be on
+          the ground of the story section rather than cut off at the seam, and
+          a pole living in a pinned hero is covered by Origin the instant
+          Origin rises over it: there is no z-order inside the hero that can
+          survive being painted over by the next section.
+
+          Here it is a child of #origin, so it paints with Origin (z-index 4)
+          and over the hero's stage (0), while Hero.css gives up the hero's own
+          stacking context so .hero__frame's z-index 5 can still be above BOTH.
+          That is what keeps the pole behind the wordmark, the tagline, the
+          CTAs, the model and the bottom strip while its foot is planted 30px
+          inside Origin's snow.
+
+          Origin.css has the sizing, the two clearances it is solved against,
+          and the measured table. */}
+      <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
+        <StillArt art="hero/lamppost-left" className="origin__lamp" />
       </div>
 
       <div className="shell origin__shell">

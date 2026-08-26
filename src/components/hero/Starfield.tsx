@@ -65,7 +65,17 @@ export function Starfield() {
 
     let pending = 0
     let settled = false
+    // The hero is pinned, so this canvas's own rect stays in the viewport for
+    // as long as the section is anywhere near it — which is a poor guard, and
+    // by construction the section runs a whole viewport PAST the point where
+    // Origin has covered everything in it. `data-eclipsed` is Hero.tsx's
+    // answer to exactly that, and an onFrame subscriber cannot see the
+    // `visibility: hidden` Hero.css turns it into. An attribute read forces no
+    // layout, so this is cheaper than the rect below it.
+    const host = cv.closest('.hero')
+
     const stop = onFrame(({ now, mi, dt, hold }) => {
+      if (host?.hasAttribute('data-eclipsed')) return
       // the hero is the only place these are visible, so stop once it scrolls away
       if (cv.getBoundingClientRect().bottom <= 0) return
       // Reduced motion: paint the field once and let the loop park. The motes
