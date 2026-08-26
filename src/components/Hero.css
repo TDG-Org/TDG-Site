@@ -1,24 +1,32 @@
-/* ── two values the hero owns that have to reach outside it ────────────────
-   The ideal home for both of these is tokens.css, beside --card-shadow and
-   the rest of the palette. They are here because the only consumer of either
-   is this component, and because a colour stated in ONE theme is the bug
-   rule 3 is about — which is what both of these were before: a black shadow
-   composed in JavaScript with no light variant, and a white glint with no
-   light variant. Stating both halves is the fix; where they live is the
-   smaller question.                                                        */
+/* ── the one value the hero declares on :root, and why it stays here ───────
+   There used to be two. The other was --hero-takeover-ink, named for a
+   `useHeroTakeover` hook that composed Origin's arrival shadow in JavaScript
+   and ramped it with scroll. **That hook has been deleted** — the hero pins
+   and Origin climbs over it on a negative margin, so there is nothing left to
+   time — and by then this file did not read the token at all: its only
+   consumer was Origin.css. A colour one component declares and another
+   component's stylesheet reads is palette, not a private value, so it moved
+   to tokens.css beside --card-shadow and was renamed for what it now is:
+   --origin-arrival-ink. See tokens.css, and Origin.css for the geometry.
+
+   --hero-glint is the opposite case and that is why it did not go with it.
+   `grep -rn 'var(--hero-glint)' src/` returns exactly one line, and it is
+   .hero__dg's second background layer further down this same file.
+   Nothing outside this file can want it, so tokens.css would gain a name it
+   can never be asked about. It is on :root only because :root is where a
+   theme is switched — a token declared on .hero itself cannot be restated
+   per theme without repeating the selector.
+
+   Both halves are stated because a colour written in ONE theme is the bug
+   rule 3 is about, and that is exactly what this was: a white glint with no
+   light variant.                                                           */
 :root {
-  /* The ink Origin's arrival shadow is drawn with. Origin.css scales it with
-     color-mix and never composes a colour of its own. */
-  --hero-takeover-ink: rgba(0, 0, 0, 0.6);
   /* The sweep that crosses "DG". --edge-hi is the site's highlight ink, per
      theme, and 96% of its dark value is 0.912 — the same near-white the
      glint has always been, to within 0.008 of alpha. */
   --hero-glint: color-mix(in srgb, var(--edge-hi) 96%, transparent);
 }
 :root[data-theme='light'] {
-  /* the same ink --card-shadow uses in light, at the alpha a section-sized
-     blur can carry without reading as a bruise across the boundary */
-  --hero-takeover-ink: rgba(23, 18, 45, 0.3);
   /* In light the wordmark is dark type on a pale scene, so the highlight is
      ink, exactly as .hero__shaft-core inverts below. 34% of --edge-hi is
      0.238 — a shade under the shaft's own 0.22, because the glint crosses a

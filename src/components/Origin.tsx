@@ -30,7 +30,7 @@ const CabinScene = lazy(() =>
  * How much of the viewport Origin has to have climbed before three.js is
  * asked for. 20% of a viewport past first contact.
  *
- * Origin's top edge is only 26svh below the fold at the top of the page (the
+ * Origin's top edge is only 30svh below the fold at the top of the page (the
  * hero's runway — see Hero.tsx), so a plain `rootMargin: 0` fires on the
  * first wheel notch and the deferral buys nothing: scrolling through the
  * hero's own dissolve is exactly what a visitor who is only reading the hero

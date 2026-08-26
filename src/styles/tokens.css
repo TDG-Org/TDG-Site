@@ -42,6 +42,25 @@
   --warm: #f5c98a;
   --nav-scrolled: rgba(9, 7, 17, 0.72);
   --card-shadow: 0 22px 54px -26px rgba(0, 0, 0, 0.72);
+  /* ── the ink #origin's arrival shadow is drawn with ─────────────────────
+     The soft dark edge above #origin, so the section reads as a sheet
+     lifting over the hero's valley rather than as a colour boundary.
+     Origin.css states the geometry and composes no colour of its own, so
+     this is the only place that colour is written. Beside --card-shadow
+     because it is the site's only other shadow ink and because the light
+     value below is that one's, restated at the alpha a section-sized blur
+     can carry.
+
+     It lived in Hero.css as --hero-takeover-ink until this pass. Both
+     halves of the name had stopped being true: the `useHeroTakeover` hook
+     it was named for — which composed this shadow in JavaScript and ramped
+     it with scroll — has been deleted, and the hero pins now, so the shadow
+     is a constant with nothing left to time; and Hero.css itself no longer
+     reads it, which left a token declared in one component's stylesheet and
+     consumed only by another's. A colour that crosses that line is palette.
+     Verified before the move: `grep -rn 'hero-takeover-ink' src/` returned
+     the two declarations and one consumer, Origin.css.                    */
+  --origin-arrival-ink: rgba(0, 0, 0, 0.6);
   --cross-glow: rgba(255, 255, 255, 0.82);
   --sb: rgba(255, 255, 255, 0.2);
   --edge-hi: rgba(255, 255, 255, 0.95);
@@ -213,13 +232,13 @@
      Outro's and the low end of a tight 3.6-4.6, and 2.4 in light, which is
      the Apps band's and the low end of a much wider 2.4-5.6.
 
-     94% puts the SIX seams this page actually draws — origin, apps, tools,
+     94% puts the FIVE seams this page actually draws — apps, tools,
      building, faith, outro — at dL* 5.0-6.1 dark and 4.6-4.8 light: above
      that anchor in both themes, because a seam is usually masked by
      --seam-fade below and so paints most of its band at part opacity, and
-     nowhere near the dL* 7.7-10.6 that 90% gives, which would be six grey
-     stripes across the page. Dark runs 0.4 to 1.3 higher than light across
-     the six, so neither reads louder.
+     nowhere near the dL* 7.7-10.6 that 90% gives, which would be five grey
+     stripes across the page. Dark runs higher than light on every one of
+     them, so neither theme reads louder.
 
      But "above a card face" is a floor in DARK ONLY, and this used to claim
      it flatly. --surface is a 4.5% white wash in dark, so a card sits a
@@ -227,17 +246,32 @@
      every one of them. In light --surface is OPAQUE, so the distance is only
      how far the band happens to be from white — 2.4 on apps, 5.6 on tools —
      and the light seams clear apps, building and the Outro while sitting
-     UNDER the card face on origin, tools and faith. That is a property of an
-     opaque light surface, not of the step, and 94% stands. It is spelled out
+     UNDER the card face on tools and faith. That is a property of an opaque
+     light surface, not of the step, and 94% stands. It is spelled out
      because a number offered as a calibration has to be re-derivable from
      what is written beside it, and the flat version was not.
 
-     Six and not eight. base.css declares --seam-fill for #top and .footer
-     too, and this line used to count them; neither renders a `Seam` — the
-     live DOM has exactly six svg.scene__seam — so neither was ever in these
-     numbers, and the hero's band was what dragged the dark range down to 4.3.
-     Recomputed for the six that exist. 94% is unchanged; only the population
-     it is quoted over is. Verified as numbers, NOT yet on a screen.         */
+     ── the population these numbers are quoted over ────────────────────────
+     Five, not six, and not eight. base.css declares --seam-fill for all
+     eight bands. #top and .footer have never drawn a seam, so they were
+     never in these numbers. **#origin drew one and stopped** — it traded the
+     seam for the snow bank this pass — so it has left them, and this line
+     counted it until now.
+
+     Re-measured for the five that are left, on the live page in both themes:
+     resolve each band and its own color-mix(in srgb, band 94%, --text)
+     through getComputedStyle, take L* of each, subtract. Dark — outro 4.95,
+     apps 5.14, tools 5.70, faith 6.06, building 6.07. Light — tools 4.60,
+     faith 4.63, building 4.72, outro 4.73, apps 4.76. Both ranges above are
+     unchanged: #origin's own were 5.72 and 4.62, inside each range and at
+     neither end, so dropping it moved the population and not the numbers.
+
+     One older line did not reproduce and has been softened rather than
+     restated: "dark runs 0.4 to 1.3 higher than light" comes out 0.2 (outro)
+     to 1.4 (faith) from the readings above. The conclusion it supported —
+     that neither theme reads louder — survives, but do not quote 0.4-1.3 as
+     a measurement. 94% is unchanged either way, and the whole calibration is
+     still numbers only, NOT yet checked on a screen.                        */
   --seam-step: 94%;
 
   /* A seam that wants to dissolve rather than stop at a line masks itself
@@ -271,6 +305,10 @@
   --warm: #b8763a;
   --nav-scrolled: rgba(245, 243, 251, 0.82);
   --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
+  /* the same ink --card-shadow above uses in light, at the alpha a
+     section-sized blur can carry without reading as a bruise across the
+     boundary */
+  --origin-arrival-ink: rgba(23, 18, 45, 0.3);
   --cross-glow: rgba(20, 20, 26, 0.45);
   --sb: rgba(20, 20, 26, 0.15);
   --edge-hi: rgba(20, 20, 26, 0.7);

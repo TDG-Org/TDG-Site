@@ -256,13 +256,40 @@ stop {
    and the fix is to state the hexes per theme again rather than to unpick the
    bands.                                                                   */
 
-/* ── two of these eight have no Seam, deliberately ────────────────────────
-   #top and .footer are the ends of the page, and NEITHER draws a `Seam`
-   today: Hero.tsx and Footer.tsx render none, and the live DOM has exactly
-   six `svg.scene__seam` — origin, apps, tools, building, faith, outro. These
-   two are kept so the table has an entry per band for the day one is added,
-   and because .footer's is the only consumer --band-foot has. They are NOT
-   part of the 94% working in tokens.css, which measured the six that exist.
+/* ── three of these eight have no Seam, and all three are kept ────────────
+   #top, #origin and .footer. Measured this pass: the live DOM has exactly
+   FIVE `svg.scene__seam` — apps, tools, building, faith, outro — and
+   `grep -rn 'var(--seam-fill)' src/components/` returns five `color:`
+   declarations, one per those five stylesheets, plus three prose mentions in
+   Apps.tsx, Seam.tsx and scene/README.md. No sixth consumer.
+
+   #top and .footer are the ends of the page and have carried no seam since
+   they were written: Hero.tsx and Footer.tsx render none. They are kept so
+   the table has an entry per band for the day one is added, and because
+   .footer's is the only consumer --band-foot has.
+
+   **#origin is the different case, and the difference is the half a future
+   reader needs: it drew one and stopped.** Origin traded its seam for the
+   snow bank, a drawn boundary in the art kit's own language rather than a
+   flat silhouette band. So this line is a declaration whose consumer was
+   REMOVED, not one written ahead of a consumer that never arrived — and the
+   two look identical from here. A reader who cannot tell them apart assumes
+   nobody got round to it and deletes it; the next builder who wants a seam
+   back on this boundary then re-mixes the band by hand in a component
+   stylesheet, which is rule 2's bug.
+
+   Kept rather than deleted under the rule scene/README.md states for an
+   export with no caller: kept only where its absence would push the next
+   builder toward something worse, and only if the file says out loud that it
+   has no consumer and why. That paragraph is this one. Deleting it would
+   also leave #origin the only one of the five blocks below that declares
+   tints to declare no --seam-fill beside them — the other four, #apps,
+   #tools, #building and #faith, declare both — which is an asymmetry a
+   reader has to go and investigate before they can trust the rest.
+
+   None of the three are part of the 94% working in tokens.css. That figure
+   used to be quoted over six sections, #origin among them; re-measured over
+   the five actually drawn, neither range moves. See --seam-step there.
 
    #top also carries a trap, so read this before you use it. It is not only
    the hero: About, AppPage, Store and #/dev all give their outer section
@@ -278,6 +305,8 @@ stop {
   --tint-top: var(--band-hero);
   --tint-mid: var(--band-origin);
   --tint-bot: var(--band-apps);
+  /* No consumer: Origin's seam became the snow bank. Kept, and it is the one
+     of the three with a history — see the note above #top. */
   --seam-fill: color-mix(in srgb, var(--band-origin) var(--seam-step), var(--text));
   --origin-glow-warm: rgba(245, 201, 138, 0.16);
 }

@@ -85,9 +85,14 @@
    container, so sticky keeps the viewport as its scrollport. Same measurement
    with clip in place: a CONSTANT offset held through 1521px of scroll, then
    released at 1935px with the stage's bottom exactly on the section's bottom.
-   (The constant was 120 and not 0 because useHeroTakeover translates #origin
-   while it arrives, and a translate carries the whole section with it.
-   Constant is the part that matters.)
+   (The constant was 120 and not 0 because the useHeroTakeover hook that was
+   live when this was measured translated #origin while the section arrived,
+   and a translate carries the whole section with it. That hook has since been
+   deleted — the hero pins and Origin climbs over it on a negative margin, so
+   nothing writes a transform to #origin any more — so a fresh reading lands
+   on a different number. CONSTANT is the claim, not 120, and it is the half
+   that did not change. Nothing to do with COVER_MARGIN's 120 in Stage.tsx,
+   which is a number that file chose.)
 
    It is a separate class rather than an edit to `.section` because only the
    sections that hang scenery in a stage need it, and because `clip` also takes

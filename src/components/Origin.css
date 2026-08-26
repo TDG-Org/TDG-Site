@@ -7,9 +7,13 @@
    `Stage` releases its pin at its own section's bottom edge, so without the
    overlap the hero's scenery would start scrolling away the instant Origin
    appeared, at exactly the speed Origin arrived, which is an ordinary page.
-   The hero is 226svh and 126svh of it is flow, so this margin takes back
+   The hero is 230svh and 130svh of it is flow, so this margin takes back
    precisely the 100svh the hero added: **the document is not one pixel
-   longer than it would be with a plain 126svh hero.** #origin's border-box
+   longer than it would be with a plain 130svh hero.** (Measured at a 414px
+   viewport: #top 952px = 230.0svh, .hero__above 538px = 130.0svh, this
+   margin −414px = −100svh. This line carried 226/126 until that measurement;
+   Hero.css is where the 230 is actually declared, so read it there rather
+   than trusting this restatement of it.) #origin's border-box
    top is still where `scrollIntoView` and `rememberOrigin` expect it.
 
    `z-index: 4` is what paints this over the hero, and it is now doing two
@@ -39,20 +43,26 @@
    there is no browser that gets one and not the other.
 
    The one dropped declaration is `will-change: translate, scale`, which was
-   here for `useHeroTakeover`. Nothing writes a transform to this element any
-   more, so the promotion would be a full-section compositor layer paid for
-   and never used.
+   here for `useHeroTakeover` — a deleted hook, the last thing that wrote a
+   transform to this element. Nothing writes one any more, so the promotion
+   would be a full-section compositor layer paid for and never used.
 
-   The shadow is what the takeover's JavaScript used to ramp: a soft dark edge
+   The shadow is what that hook's JavaScript used to ramp: a soft dark edge
    above this section, so it reads as a sheet lifting over the valley rather
    than as a colour boundary. It is a constant now because the section
    genuinely does climb over a still hero — there is no lag left to disguise,
-   so there is nothing for JavaScript to time. Its ink is --hero-takeover-ink,
-   declared per theme in Hero.css; nothing here composes a colour.           */
+   so there is nothing for JavaScript to time. Its ink is
+   --origin-arrival-ink, declared per theme in tokens.css beside
+   --card-shadow; nothing here composes a colour. (It was --hero-takeover-ink
+   on :root in Hero.css until this pass, which is where the old name came
+   from: a token named after the hook, kept in the file that had stopped
+   reading it. Resolved shadow measured before and after the move, both
+   themes: rgba(0, 0, 0, 0.6) 0px -30px 78px -26px dark, rgba(23, 18, 45, 0.3)
+   0px -30px 78px -26px light, unchanged.)                                   */
 .origin {
   z-index: 4;
   margin-top: -100svh;
-  box-shadow: 0 -30px 78px -26px var(--hero-takeover-ink);
+  box-shadow: 0 -30px 78px -26px var(--origin-arrival-ink);
   overflow: clip;
   overflow-clip-margin: 130svh;
 

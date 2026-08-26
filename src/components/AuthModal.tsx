@@ -126,6 +126,32 @@ function IconGoogle() {
 
 /* ── small stateful pieces ─────────────────────────────────────────────── */
 
+/**
+ * The last fixed SVG def id in `src/`, and it is kept on a precondition rather
+ * than by oversight.
+ *
+ * SVG ids are document-global: two elements sharing a gradient id and every
+ * `url(#...)` in the document resolves to the FIRST of them. That is the bug
+ * `CrossGlyph.tsx`, `scene/Moon.tsx` and `KeyArt.tsx` each fixed this pass by
+ * taking their def ids from `useId`, and all three had to — three crosses, two
+ * moons and five covers render on the home page at once.
+ *
+ * **This one cannot collide, and the reason is structural rather than lucky.**
+ * `grep -rn '<AuthModal' src/` returns one line, `App.tsx`, beside
+ * `FeedbackDialog` and `ReplyInbox`; the component returns `null` while closed;
+ * and `TdgMark` is drawn once inside it. So the document holds at most one
+ * `#authModalCrossGrad` and usually none.
+ *
+ * Left as it is rather than converted, deliberately. AGENTS.md §4 names this
+ * modal as not up for redesign, and a change that fixes no bug and moves no
+ * pixel is still a change to it. But "only one modal can exist" is a
+ * precondition, not a property of SVG, and an unwritten precondition is one
+ * somebody breaks without noticing — so it is written here instead. **The day
+ * a second instance renders** — a re-auth prompt over the page, a harness that
+ * mounts two — **this must become `useId`**, the way `CrossGlyph.tsx` and
+ * `scene/Moon.tsx` do it: `useId().replace(/[^a-zA-Z0-9_-]/g, '')`, one uid
+ * interpolated into both the `id` and the `url(#...)`.
+ */
 function TdgMark() {
   return (
     <span className="authmodal__mark">

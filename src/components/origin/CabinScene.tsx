@@ -438,9 +438,9 @@ export function CabinScene({ className }: { className?: string }) {
       const rect = section.getBoundingClientRect()
 
       // 0 as the section's top reaches the viewport bottom, 1 as its bottom
-      // reaches the viewport top — the same measure OriginField takes, and for
-      // the same reason: it is a rect, not a scroll offset, so it does not care
-      // which element owns the scroll.
+      // reaches the viewport top — the same measure `useSectionProgress` makes
+      // a hook of, and for the same reason: it is a rect, not a scroll offset,
+      // so it does not care which element owns the scroll.
       //
       // The walk itself is mapped onto a SUB-RANGE of that. At progress 1 the
       // section is entirely above the viewport, so a walk that finished there

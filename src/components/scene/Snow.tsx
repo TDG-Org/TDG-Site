@@ -57,9 +57,19 @@ function flakeBudget(w: number, h: number, density: number) {
 
 /**
  * Pull an `r,g,b` triple out of a token so a per-particle alpha can be applied
- * to it. Lifted from `origin/OriginField.tsx`, which does the same thing for
- * the same reason: the alternative is a literal colour in a component, which
- * is right in exactly one theme.
+ * to it. The alternative is a literal colour in a component, which is right in
+ * exactly one theme — rule 2.
+ *
+ * Lifted from `origin/OriginField.tsx`, which is gone: it was deleted this
+ * pass and this helper outlived it. The live example of the same move is
+ * `origin/CabinScene.tsx`'s `parseColor`/`readPalette` pair, which reads its
+ * whole palette off the section the same way and for the same reason. It is
+ * the one to copy if you need a third, and it is stricter than this: it
+ * returns null rather than a fallback colour, on the grounds that a scene
+ * that declines to draw beats a scene drawn in colours this site never chose.
+ * This one takes a fallback instead, because a canvas that declines to draw
+ * is a blank rectangle rather than an absence. What that fallback is and why
+ * it is not a design colour is stated at the call site, not here.
  */
 function readRGB(el: Element, varName: string, fallback: string): string {
   const v = getComputedStyle(el).getPropertyValue(varName).trim()
@@ -120,8 +130,14 @@ function readRGB(el: Element, varName: string, fallback: string): string {
  * swap re-reads the colours and paints with none of them. A reduced-motion
  * visitor who resized the window would have lost the snow for the rest of the
  * visit with no code path left that could bring it back. So each of the three
- * clears `settled` and calls `wake()` for one more frame. `OriginField.tsx`
- * carries the long version of this bug; it is the same one.
+ * clears `settled` and calls `wake()` for one more frame.
+ *
+ * `origin/OriginField.tsx` used to carry the long version of this bug and was
+ * deleted this pass, so the paragraph above is now where it lives — this file
+ * is the record, not a pointer at one. `origin/CabinScene.tsx`, the three.js
+ * scene that replaced that file, had to answer the same bug again from
+ * scratch, which is the argument for writing it down here rather than in a
+ * commit message.
  */
 export function Snow({
   className,

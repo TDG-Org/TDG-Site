@@ -20,10 +20,13 @@ export type SectionProgress = { readonly p: number }
  * layer. Read during render it gives the value at render time and nothing
  * afterwards.
  *
- * `OriginField.tsx` computes exactly this expression inline and has since it
- * was written. This is that line with the reasoning attached; anything new
- * that wants scroll progress through a section should call this instead of
- * writing the arithmetic a second time.
+ * `origin/CabinScene.tsx:450` computes exactly this expression inline —
+ * `(vh - rect.top) / (vh + rect.height)`, inside its own tick — and inherited
+ * it from `origin/OriginField.tsx`, the file it replaced this pass. This is
+ * that line with the reasoning attached; anything new that wants scroll
+ * progress through a section should call this instead of writing the
+ * arithmetic a third time. `grep -rn 'useSectionProgress<' src/` says
+ * `components/Faith.tsx` is the only thing that does today.
  *
  * ## What "progress" actually means
  *

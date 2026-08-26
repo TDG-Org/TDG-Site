@@ -11,8 +11,13 @@ const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)
  * `base.css` turns that into `animation-play-state: paused` on everything
  * inside — but an `onFrame` subscriber knows nothing about an attribute.
  * Anything driven from JS instead of CSS keyframes has to check for itself,
- * which is what `Starfield` and `OriginField` already do and what this had been
- * missing.
+ * which is what every JS-driven scene on this page already does and what this
+ * had been missing. Four of them, and each reads a rect inside its own tick
+ * and returns before it draws: `hero/Starfield.tsx`, `origin/CabinScene.tsx`,
+ * `components/faith/Summit.tsx` and `components/scene/Snow.tsx`. (That list
+ * named `origin/OriginField.tsx` until this pass, which was deleted;
+ * `CabinScene.tsx` is the three.js scene that replaced it and had to answer
+ * the same question again.)
  *
  * **400px, and deliberately not the 120px `useOffscreenPause` uses**, because
  * the two are answering different questions. That hook decides WHETHER a CSS
@@ -42,8 +47,10 @@ const PARK_MARGIN = 400
  * Uses the standalone `translate` property so any `transform` the element
  * already carries (centring, rotation) survives untouched.
  *
- * Eighteen of these run on the home page alone. Off screen they now cost the
- * rect and nothing else — see `PARK_MARGIN`.
+ * Seventeen of these run on the home page alone — counted in the live DOM, not
+ * from the call sites, because seven of the seventeen are `scene/ThemedArt`'s
+ * own subscriber rather than a `useParallax(` a section wrote. Off screen they
+ * now cost the rect and nothing else — see `PARK_MARGIN`.
  */
 export function useParallax<T extends HTMLElement>(factor: number) {
   const ref = useRef<T | null>(null)
@@ -117,6 +124,19 @@ export function useParallax<T extends HTMLElement>(factor: number) {
  * Layers that ride the hero's own displacement rather than their own. The
  * hero sinks as you scroll and these follow it at their own rate.
  *
+ * ## How many things ride this
+ *
+ * **`grep -rn 'useHeroParallax<' src/` returns two call sites, and one of them
+ * is live.** `components/Faith.tsx` puts it on the rays; `scene/ThemedArt.tsx`
+ * puts it on `ThemedHeroArt`, which has no caller of its own and is kept on
+ * purpose (`scene/README.md` says why). So the home page carries exactly ONE
+ * subscriber — counted in the live DOM, one `.faith__rays`. **Neither call
+ * site is in the hero.** The hero is a pinned `scene/Stage` now and drives its
+ * six layers off one shared rect per frame in `Hero.tsx`.
+ *
+ * `src/hooks/README.md` points here for that count and deliberately does not
+ * repeat it, so it has to be right in this header and nowhere else.
+ *
  * ## Why this one has no off-screen guard when `useParallax` does
  *
  * **There is no stale state here to be wrong about.** This writes a pure
@@ -128,27 +148,39 @@ export function useParallax<T extends HTMLElement>(factor: number) {
  * **And the guard would not be free here, where next door it is.**
  * `useParallax` already has the element's own rect in hand, so its guard is two
  * comparisons on a number it had to measure anyway. This hook reads the HERO's
- * rect — one element, shared by all six of its subscribers — and never touches
- * the element it writes to. Guarding it means a second `getBoundingClientRect`
- * per subscriber per frame, plus a number shadowing the string it already keeps
- * so it can tell where the frozen drift has actually left the element: a
+ * rect — one element, shared by every subscriber — and never touches the
+ * element it writes to. Guarding it means a second `getBoundingClientRect` per
+ * subscriber per frame, plus a number shadowing the string it already keeps so
+ * it can tell where the frozen drift has actually left the element: a
  * measurement added to every live frame, and two measurements left on every
- * parked one, to save one style write. Six subscribers do not pay for that.
- * Eighteen did.
+ * parked one, to save one style write.
+ *
+ * **At one subscriber that is not a close call, and the argument got stronger
+ * rather than weaker as the count fell.** This note used to argue it at six
+ * subscribers and it held there; a guard whose only saving is one style write
+ * cannot pay for a per-frame measurement at any count where the measurement is
+ * the larger half, and one is where that is most obvious. Next door the same trade
+ * is worth taking because the rect is already paid for AND because seventeen
+ * layers take it. Do not read the falling number as a reason to revisit this:
+ * it is the same conclusion with less doubt in it.
  *
  * It also never calls `hold()`, so unlike `useParallax` it has never kept the
  * loop from parking. A reader sitting still pays nothing for it at all; its
  * cost exists only while the page is already moving.
  *
- * **The version that looked free, and why it was not taken.** Five of the six
- * subscribers live inside `.hero`, and `.hero` is `overflow: hidden` — so the
- * hero's own rect, already read on the line below, would settle all five at no
- * cost. It works. It also makes this hook's behaviour depend on where in the
- * DOM its element sits and on an `overflow` declared in `Hero.css`, a file this
- * hook otherwise has no reason to know about, where deleting one line would
- * silently hide a layer. Six subscribers are not worth that coupling.
+ * **The version that used to look free, and no longer exists.** When most
+ * subscribers lived inside `.hero`, the hero's own rect — already read on the
+ * line below — would have settled them at no cost, since anything clipped out
+ * of the hero is off screen when the hero is. That shortcut is gone twice
+ * over: nothing rides this hook inside `.hero` any more, and `.hero` is
+ * `overflow: clip` rather than `hidden`. It was not taken while it was
+ * available either, and that half is the part to keep: it makes this hook's
+ * behaviour depend on where in the DOM its element sits and on an `overflow`
+ * declared in `Hero.css`, a file this hook otherwise has no reason to know
+ * about, where deleting one line would silently hide a layer. Rebuild it only
+ * with that cost stated.
  *
- * If this ever grows a lerp, or grows to `useParallax`'s numbers, guard it on
+ * If this ever grows a lerp, or grows to `useParallax`'s seventeen, guard it on
  * the LIVE box — the element's rect corrected by the drift about to be written
  * — and never on the frozen one. The drift here scales with total scroll rather
  * than with the viewport, so no fixed margin can absorb it.

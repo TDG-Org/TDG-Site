@@ -432,8 +432,8 @@ arrived, and a translate carries the whole section with it. **That hook has
 since been deleted** — the hero pins and Origin climbs over it on a negative
 margin, with nothing writing a transform to the section any more — so a fresh
 reading will land on a different constant. Constant is the part that mattered
-and it is the part that did not change. `Stage.tsx` and `Stage.css` still name
-the hook at their own copies of this note.)
+and it is the part that did not change. `Stage.tsx` and `Stage.css` carry the
+same note, and both now say the hook is gone.)
 
 It is a class rather than an edit to `.section` because only sections that hang
 scenery in a stage need it, and because `clip` also removes a section's ability

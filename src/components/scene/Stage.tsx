@@ -58,15 +58,25 @@ const COVER_MARGIN = 120
  * reaches the viewport top and releasing exactly at its BOTTOM edge. Measured
  * on `#origin`, 1935px tall in a 414px-tall viewport: the stage held a constant
  * offset for 1521px of scroll and then released at 1935px with its bottom
- * sitting exactly on the section's bottom. (The constant it held was 120 and
- * not 0, because `useHeroTakeover` translates `#origin` by up to
- * TAKEOVER_LAG px while it arrives and a translate carries the whole section
- * with it. Constant is the part that matters: unpinned, the same readings ran
- * 72 -> -228 -> -1449.) In a section SHORTER than the viewport the
- * sticky box is taller than its containing block and never pins at all: it is
- * then just a viewport-tall backdrop clipped to the section, which is a
- * perfectly good thing to be but is not pinning, so do not tune an effect
- * against it.
+ * sitting exactly on the section's bottom.
+ *
+ * (The constant it held was 120 and not 0, and that offset was an artefact of
+ * the session it was read in rather than anything this file chose:
+ * `useHeroTakeover` was live then and translated `#origin` down by up to
+ * TAKEOVER_LAG px while the section arrived, and a translate carries the whole
+ * section with it. **That hook has since been deleted** -- the hero pins and
+ * Origin climbs over it on a `margin-top: -100svh`, so nothing writes a
+ * transform to `#origin` any more -- so a fresh reading lands on a different
+ * number, and re-measuring against 120 would be checking against a value that
+ * described a deleted mechanism. CONSTANT is the claim, and it is also the
+ * half that did not change. Unpinned, the same readings ran 72 -> -228 ->
+ * -1449. This 120 has nothing to do with `COVER_MARGIN`'s 120 above: that one
+ * is a number this file picked, this one is a number a browser reported once.)
+ *
+ * In a section SHORTER than the viewport the sticky box is taller than its
+ * containing block and never pins at all: it is then just a viewport-tall
+ * backdrop clipped to the section, which is a perfectly good thing to be but
+ * is not pinning, so do not tune an effect against it.
  *
  * **`.section` is `overflow: hidden`, and that stops sticky dead.** An
  * ancestor with `overflow: hidden` is a scroll container, so it becomes the
