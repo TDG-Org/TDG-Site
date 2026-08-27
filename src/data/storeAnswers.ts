@@ -173,7 +173,7 @@ export const STORE_ANSWERS: PageSection[] = [
         items: [
           {
             name: 'Everything is on the card itself',
-            text: 'Once a plan is yours, the same card grows a Manage Plan button where the Buy button was. Changing it, stopping it, starting it again, changing the card you pay with and reading what you have been charged are all behind that one button. There is nowhere else to go and nobody to email.',
+            text: 'Once a plan is yours, the same card grows a Manage or Cancel Plan button where the Buy button was. Press it, choose Cancel Subscription, and confirm that you want the renewals stopped. Changing the plan, starting it again, changing the card you pay with and reading what you have been charged are in that same panel. There is nowhere else to go and nobody to email.',
           },
           {
             name: 'The card says where you stand',
@@ -189,7 +189,7 @@ export const STORE_ANSWERS: PageSection[] = [
           },
           {
             name: 'And you can change your mind',
-            text: 'While a cancelled plan is still running, the same button offers Resume Plan. That puts the renewals back on the plan you were already on, and nothing is charged on the day you press it.',
+            text: 'While a cancelled plan is still running, the same button offers Resume Subscription. That puts the renewals back on the plan you were already on, and nothing is charged on the day you press it.',
           },
           {
             name: 'Buying it outright instead',
@@ -270,8 +270,8 @@ export const STORE_ANSWERS: PageSection[] = [
             text: 'There is no way to own a pack twice, so the second payment bought nothing at all. That is not a refund and the no-refunds line does not cover it: it is money we should not have taken, and we send it back. Write to us with both receipts.',
           },
           {
-            name: 'Manage Plan is not on the card',
-            text: 'That button only appears when there is a live plan behind it to change. A pack bought outright has nothing to renew, and a pack we put on your account by hand has no payment attached to it at all — both of those say so on the card instead. If you are being charged for something and cannot see the button, that is worth telling us, and we can stop the payment ourselves the day you write.',
+            name: 'Manage or Cancel Plan is not on the card',
+            text: 'That button only appears when there is a live Stripe subscription behind it. A pack bought outright has nothing to renew, and a pack we put on your account by hand has no payment attached to it at all — both of those say so on the card instead. If you are being charged for something and cannot see the button, that is worth telling us, and we can stop the payment ourselves the day you write.',
           },
           {
             name: 'Cancelling would not go through',

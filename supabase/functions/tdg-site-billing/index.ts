@@ -5,7 +5,7 @@
  * The Store sells the Pro Export Pack monthly and yearly. A shop that can take
  * a recurring payment and cannot stop one is not a shop somebody should give a
  * card to, and "email us to cancel" is that shop wearing a politer sentence.
- * So the card carries Change Plan and Cancel Plan, and this is what they reach.
+ * So the card carries Change Plan and Cancel Subscription, and this is what they reach.
  *
  * Every one of those verbs needs the Stripe secret key, and a static site
  * served from GitHub Pages may never hold one. Same division of labour the buy

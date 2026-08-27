@@ -269,12 +269,12 @@ not optional and it is not a later feature. A shop that can take a recurring
 payment and cannot stop one is a shop nobody should give a card to, and "email
 us to cancel" is that shop wearing a politer sentence.
 
-So an owned subscription's card carries **one button**, `Manage Plan`, in the
-same place and at exactly the same size as the Buy button its neighbour has —
-measured, not assumed. It opens the SAME panel component as the chooser, which
-is how rule 11's promise is kept mechanically rather than by two blocks of JSX
-agreeing with each other. Behind it: change the plan, buy it outright where that
-is sold, cancel, resume, and reach the card on file.
+So an owned subscription's card carries **one button**, `Manage or Cancel Plan`,
+in the same place and at exactly the same size as the Buy button its neighbour
+has — measured, not assumed. It opens the SAME panel component as the chooser,
+which is how rule 11's promise is kept mechanically rather than by two blocks of
+JSX agreeing with each other. Behind it: change the plan, buy it outright where
+that is sold, cancel, resume, and reach the card on file.
 
 **Cancelling means the renewals stop. It never means access stops.** The
 entitlement runs to the end of the period already paid for, in the app as much
@@ -294,9 +294,9 @@ padding, and the site's ghost and buy paddings made them 241px and 249px.
 
 **Every standing gets a face**, including the awkward ones: renewing, ending on
 a date, in a free trial, behind on a payment, lapsed, and a `kind` this site has
-not been taught to read. And `Manage Plan` is drawn only when there is a live
-Stripe subscription behind it — a pack granted by hand from `#/dev` has none —
-because a button that can only ever fail is worse than no button, and
+not been taught to read. And `Manage or Cancel Plan` is drawn only when there is
+a live Stripe subscription behind it — a pack granted by hand from `#/dev` has
+none — because a button that can only ever fail is worse than no button, and
 `storeAnswers.ts` says out loud why it is missing.
 
 ### 12. The security boundary is in Postgres, and only in Postgres.

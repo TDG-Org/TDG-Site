@@ -374,10 +374,10 @@
 
 /* Two variants, and both keep the button's SIZE exactly.
 
-   `--quiet` is the Manage Plan button on an owned card. It must not shout the
-   way a Buy button does — nothing here is for sale to this reader — but it sits
-   in the same place on the same shelf as its neighbour's Buy button, so a
-   smaller one would be the misaligned action row rule 11 exists to prevent,
+   `--quiet` is the Manage or Cancel Plan button on an owned card. It must not
+   shout the way a Buy button does — nothing here is for sale to this reader —
+   but it sits in the same place on the same shelf as its neighbour's Buy button,
+   so a smaller one would be the misaligned action row rule 11 exists to prevent,
    arriving through the back door.
 
    `--leave` is the confirm on the way out of a plan. Warm rather than inverted,

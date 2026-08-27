@@ -129,7 +129,7 @@ function planNote(plan: StorePlan): string {
  * siblings to the tallest of them, and an expansion in the flow would grow
  * BOTH cards and leave a hole under the other one's button.
  *
- * `step` re-runs the focus. The manage panel replaces its own rows with a
+ * `step` re-runs the focus. The subscription panel replaces its own rows with a
  * confirm question in place, and focus that stayed on a button which no longer
  * exists is a keyboard reader stranded on the page behind the panel.
  */
@@ -156,7 +156,9 @@ function PlanPanel({
   // on Close would make the keyboard route to the thing the panel exists for
   // the longest one on the card.
   useEffect(() => {
-    panel.current?.querySelector<HTMLButtonElement>('.store__plan')?.focus({ preventScroll: true })
+    panel.current
+      ?.querySelector<HTMLButtonElement>('.store__plan, .store__ask-row button')
+      ?.focus({ preventScroll: true })
   }, [step])
 
   // Escape backs out of it the way it backs out of every other thing that
@@ -231,7 +233,7 @@ function PlanRow({
 }
 
 /**
- * Where the manage panel is, once it is open.
+ * Where the subscription panel is, once it is open.
  *
  * A state machine rather than four booleans, because two of these are mutually
  * exclusive in a way booleans do not enforce: a panel that is both `busy` and
@@ -269,11 +271,11 @@ function PackCard({
   /**
    * Is a TDG developer looking at this, with Developer Mode switched on?
    *
-   * It reveals one thing and grants nothing — the Manage Plan panel over a
+   * It reveals one thing and grants nothing — the subscription panel over a
    * grant that has no Stripe subscription behind it, which is what every
    * hand-made grant is and what every grant on this project is today. Without
-   * it the whole manage surface is unreachable until the first real subscriber
-   * exists, which is a state nobody has looked at on the money path.
+   * it the whole subscription surface is unreachable until the first real
+   * subscriber exists, which is a state nobody has looked at on the money path.
    */
   devView: boolean
   onBuy: (plan?: StorePlan) => void
@@ -327,7 +329,7 @@ function PackCard({
   const shown = justChanged ?? standing
 
   /**
-   * Is Manage Plan drawn ONLY because a developer asked to see it?
+   * Is Manage or Cancel Plan drawn ONLY because a developer asked to see it?
    *
    * `standing.manageable` stays honest and needs a real Stripe subscription
    * id, because a customer offered a button that can only ever fail is worse
@@ -350,7 +352,7 @@ function PackCard({
   // and a card whose wait times out must not find one still open underneath.
   //
   // `manageable` is in here for the same reason one level down: a re-read that
-  // lands a lapsed or hand-granted standing takes the Manage Plan button away,
+  // lands a lapsed or hand-granted standing takes the subscription button away,
   // and a panel left open with nothing behind it would be a dialog the reader
   // cannot get back to and cannot act in.
   useEffect(() => {
@@ -411,7 +413,7 @@ function PackCard({
    * the subscription id, so nothing on this page could find the subscription to
    * stop afterwards. Cancelling first cannot lose anything: the days already
    * paid for are kept either way, and somebody who then abandons the checkout
-   * is left in a state the card SAYS out loud, with Resume Plan on it.
+   * is left in a state the card SAYS out loud, with Resume Subscription on it.
    *
    * The row says all of that before it is pressed, and the confirm says it
    * again. A shop may surprise nobody about money.
@@ -557,7 +559,7 @@ function PackCard({
                 aria-expanded={choosing}
                 onClick={() => (choosing ? closeChooser() : setChoosing(true))}
               >
-                Manage Plan
+                Manage or Cancel Plan
                 <span className="store__buy-caret">
                   <Caret />
                 </span>
@@ -566,8 +568,8 @@ function PackCard({
 
             {choosing && canManage && (
               <PlanPanel
-                label={`Manage your ${pack.name} plan`}
-                title="Manage Plan"
+                label={`Manage or cancel your ${pack.name} subscription`}
+                title="Manage Subscription"
                 step={step.at === 'confirm' ? `confirm-${step.what}` : step.at}
                 onClose={() => closeChooser()}
               >
@@ -614,13 +616,13 @@ function PackCard({
                     )}
                     {shown.ending ? (
                       <PlanRow
-                        label="Resume Plan"
+                        label="Resume Subscription"
                         note="Renewals start again, on the same plan. Nothing is charged today."
                         onClick={() => void changeRenewal(true)}
                       />
                     ) : (
                       <PlanRow
-                        label="Cancel Plan"
+                        label="Cancel Subscription"
                         note={
                           shown.endsAt
                             ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}.`
@@ -641,7 +643,7 @@ function PackCard({
                 {step.at === 'confirm' && (
                   <div className="store__ask">
                     <p className="store__ask-q">
-                      {step.what === 'cancel' ? 'Stop the renewals?' : 'Buy it outright?'}
+                      {step.what === 'cancel' ? 'Cancel this subscription?' : 'Buy it outright?'}
                     </p>
                     <p className="store__ask-what">
                       {step.what === 'cancel'
