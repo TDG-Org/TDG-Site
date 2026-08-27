@@ -40,7 +40,7 @@ export const HERO_TAGLINES = [
   'Brothers building software, games, and tools for the glory of Jesus.',
   'Two brothers, nights and weekends, building what we wish existed.',
   'Apps, tools, and games, made to be useful and to point back to Him.',
-  'Building together since 2016, and still going.',
+  'Two brothers, one name, and everything we build with it.',
   'Everything we make, we make for the glory of Jesus.',
 ] as const
 
