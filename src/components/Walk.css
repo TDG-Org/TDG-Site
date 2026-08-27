@@ -724,37 +724,49 @@
   z-index: 3;
 }
 
-/* Clear in the middle, heavy in the corners — which is how the artwork is drawn
-   and now also how it is masked, because the two have different jobs. The file
-   thins toward its centre so the WINDOW reads through it; the mask below opens
-   a wider, softer hole so the CARDS do, and it is stated in vw/vh rather than
-   percentages so the clear zone tracks the reading column rather than the
-   image's own proportions. 62% is where the card grid's own box ends at 1440
-   and it only grows on narrower screens, which is the direction that helps. */
+/* ── BOLD, and the first attempt at this was the opposite ──────────────────
+   The owner asked for the frost to "cover some of the cards when scrolling, to
+   make things more poppy and fun", and what shipped was a wide soft hole cut
+   through its middle plus the kit's `--art-near` on top of it — a piece made
+   fainter in the exact place it was asked to be stronger. Their reply was
+   unambiguous: "YOU MADE IT MORE TRANSPARENT AND FAINT, I TOLD YOU TO MAKE IT
+   MORE BOLD".
+
+   So the hole is nearly gone and what is left of it is a small keep-clear at
+   the very centre rather than a 44% void: the artwork is already drawn clear
+   through its middle 60%, which is what lets the window read, and the mask's
+   only remaining job is to stop the two clear zones from stacking into a
+   rectangle of nothing. Full alpha from 30% out, so the corners land on the
+   cards at the piece's own strength.
+
+   The cards stay readable because they carry `--card-bg` plates at 0.74/0.88
+   and because the crystal is heaviest in the corners, where a card has margin
+   rather than text. That is a claim to re-measure if the artwork is ever
+   re-rendered, not a permanent property of the layer. */
 .walk__frost {
   position: absolute;
   inset: 0;
   opacity: 0;
   pointer-events: none;
   -webkit-mask-image: radial-gradient(
-    118% 92% at 50% 52%,
-    transparent 0 44%,
-    rgba(0, 0, 0, 0.55) 62%,
-    #000 88%
+    96% 78% at 50% 52%,
+    rgba(0, 0, 0, 0.28) 0 12%,
+    #000 30%
   );
-  mask-image: radial-gradient(
-    118% 92% at 50% 52%,
-    transparent 0 44%,
-    rgba(0, 0, 0, 0.55) 62%,
-    #000 88%
-  );
+  mask-image: radial-gradient(96% 78% at 50% 52%, rgba(0, 0, 0, 0.28) 0 12%, #000 30%);
 }
 .walk__frost-art {
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: var(--art-near);
+  /* NOT `--art-near`. That token is the kit's opacity for a prop sitting in a
+     landscape at the near depth plane, and this is not one — it is glass
+     between the reader and the shot, and the owner asked for it bold. Stated
+     here rather than promoted to tokens.css because exactly one layer on the
+     site is a foreground overlay of this kind; a second would be the moment to
+     move it. */
+  opacity: 0.92;
 }
 
 @media (prefers-reduced-motion: reduce) {

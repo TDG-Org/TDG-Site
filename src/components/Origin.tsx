@@ -603,6 +603,14 @@ export function Origin() {
       <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
         <span className="origin__lamp-pool" />
         <StillArt art="hero/lamppost-left" className="origin__lamp" />
+        {/* Two haloes, not one. The owner asked for "a 2nd layer bigger glow
+            for the light pole, but more faint/transparent" — which is what a
+            lantern in cold air actually does: a tight bright halo on the glass
+            and a much wider, much weaker bloom in the air around it. One
+            radial cannot be both, because a single falloff wide enough to
+            reach is too weak at the centre to read as a source. The wide one
+            is drawn FIRST so the tight one sits on top of it. */}
+        <span className="origin__lamp-halo" />
         <span className="origin__lamp-glow" />
         <span className="origin__lamp-core" />
       </div>

@@ -270,10 +270,14 @@ const FAR_RISE = 44
    drifted down behind a cross that was almost still. That already closed a
    little, and "a little" is what the owner is asking to be more of.
 
-   At -24 the crest and the cross actually CLIMB 24px across the section while
-   the moon sinks 88, so the hill closes 112px over the disc rather than 77 —
-   half again as much, and in the direction a hill rises rather than the disc
-   merely falling. The composed frame is untouched: `lag` is (p - 0.5), so every
+   -24 was not enough and the owner said so: "I feel like it's not moving at
+   all". 24px across a section that is 1141px of scroll is two per cent of the
+   travel — arithmetically a climb and visually a still frame. At -96 the crest
+   and its cross climb 96px while the moon sinks 88, so the hill closes 184px
+   over the disc across the beat against 77 before it. The disc's own radius is
+   0.98 cross-heights, which is 125px at 1440 — so the close is now worth more
+   than a diameter and a half, and it reads as the hill taking the moon rather
+   than as the moon settling. The composed frame is untouched: `lag` is (p - 0.5), so every
    layer is at zero translate at p = 0.5 and the settled shot is the same
    picture it was.
 
@@ -284,7 +288,7 @@ const FAR_RISE = 44
    rim when centred, so it stays inside at 1440 and breaks the rim at 375 —
    which is the point of the beat, not a defect: at p = 1 the reader has left
    the section and the hill is meant to have taken the moon. */
-const CREST_RISE = -24
+const CREST_RISE = -96
 
 /**
  * Pointer amplitudes, in px. Still two layers only.

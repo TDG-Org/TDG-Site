@@ -177,7 +177,12 @@
      and 96 of clearance. (It used to be measured from the grid's bottom edge,
      which was the same line while one variable was both the wash and the
      scene. Same number, same picture, one honest name.) */
-  --tools-bridge-w: clamp(240px, 46vw, 760px);
+  /* 46vw -> 78vw on the owner's note ("make the bridge prop much bigger"). It
+     is the section's one structural anchor and the thing the beat is named for,
+     and at 46vw it was reading as a model of a bridge rather than as a crossing
+     the path goes over. The ceiling grows with it so a 1920 reader gets the
+     same shot a 1440 one does. */
+  --tools-bridge-w: clamp(360px, 78vw, 1240px);
   --tools-bridge-clear: clamp(96px, 10.5vw, 180px);
   /* The boulders sit lower and nearer, so they clear by more: they carry the
      biggest factor in the section and the only pointer sway, and both of those
@@ -251,7 +256,15 @@
      handover. At 8vw the box is a fifth narrower, which drops the rail's
      apparent height with it (the art is one aspect ratio, so width IS scale),
      and the cap comes down so the whole run sits lower against the water. */
-  --tools-fence-bleed: clamp(24px, 8vw, 150px);
+  /* The fence is a right-hand accent now, not a rail across the frame. The
+     owner: "move the fence more to the right, and smaller". It used to be
+     100vw + 2 x bleed anchored to the LEFT, so its top rail crossed the whole
+     viewport at one height; it is a bounded box anchored to the RIGHT edge and
+     running off it, so what a reader sees is a fence coming in from the right
+     and leaving the frame — which is what the artwork's own perspective was
+     drawn for. `--tools-fence-bleed` is how far past the right edge it runs. */
+  --tools-fence-bleed: clamp(20px, 5vw, 96px);
+  --tools-fence-w: clamp(300px, 46vw, 740px);
   --tools-fence-cap: clamp(52px, 7.6vw, 196px);
 
   padding-top: var(--tools-lead);
@@ -721,29 +734,6 @@
    the far bank and the rocks are underfoot. `--art-mid` is the third, and it is
    the bridge's own opacity, because the bench is standing in the bridge's
    plane.                                                                     */
-.tools__bench {
-  /* 40vw, moved this pass from 29vw, and it is the fence that moved it. The
-     fence's second post stands at x 0.65 of its own box, which resolves to
-     x 996 at 1440x900 — the exact 158px the bench used to occupy, and in the
-     render the post covered the bench completely. Both numbers are fractions
-     of the viewport, so one value clears the post at every width: read off the
-     live boxes at 700 / 900 / 1024 / 1440 / 1920, the bench's right edge lands
-     84 / 83 / 95 / 132 / 109px short of that post.
-
-     At 700px it does overlap the reeds' box by 44px on its left, and that is
-     the right way round rather than a clash: the reeds are drawn after it, so
-     the clump passes in FRONT of the bench, which is a near cover over a far
-     one. It has not changed depth or height — every number in the table below
-     is vertical and none of them moved. */
-  right: clamp(300px, 40vw, 700px);
-  width: var(--tools-bench-w);
-  /* Stated rather than inherited, for the reason the bridge states it: these
-     are lazy images, and until one arrives `naturalWidth` is 0 and a
-     height:auto box measures 0. 1000x667 is the .webp the site loads. */
-  aspect-ratio: 1000 / 667;
-  bottom: calc(var(--tools-scene) - var(--tools-bench-clear) - var(--tools-bench-w) * 0.579);
-  opacity: var(--art-mid);
-}
 
 /* ── the spray: the air between the bridge and the boulders ────────────────
    Craft, not decoration: distant things are paler and lower in contrast, not
@@ -971,9 +961,8 @@
      section has no clip margin any more and `.tools__clip` is `overflow:
      clip`, so the classic-scrollbar overshoot is trimmed and only ever makes
      the crop deeper. */
-  --tools-fence-w: calc(100vw + 2 * var(--tools-fence-bleed));
-
-  left: calc(-1 * var(--tools-fence-bleed));
+  right: calc(-1 * var(--tools-fence-bleed));
+  left: auto;
   width: var(--tools-fence-w);
   /* 1000x439 is the .webp the site loads; stated rather than measured off the
      image for the reason the bridge states it — these are lazy, and until one
@@ -1085,7 +1074,6 @@
     --tools-bridge-clear: 56px;
   }
   .tools__rocks-sway,
-  .tools__bench,
   .tools__reeds,
   .tools__fence {
     display: none;

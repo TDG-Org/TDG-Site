@@ -257,24 +257,6 @@ export function Tools() {
         <div ref={blob} className="blob tools__blob" />
 
         <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={-0.05} />
-        {/* The bench, on the far bank beside the bridge. It is the piece the
-            site owner asked for by name — "maybe instead of a tree in that
-            section and in that corner, have the fence! or the park seat!" — and
-            it was placed on `#apps`' floor once and deleted with that floor
-            when the shot moved indoors. Right deletion, wrong prop: a bench on
-            the floorboards of a room is a mistake and a bench on the bank you
-            step out onto is what was asked for.
-
-            `StillArt`, so it does not drift. A bench is a thing standing on the
-            ground and ground does not drift — the identical argument Origin
-            makes about the lamppost's y axis — and at the bridge's -0.05 it
-            would swing 25px against 77px of visible bench, which is a bench
-            floating off its own bank. Tools.css has the ink arithmetic that
-            plants its feet in `.tools__shore`'s first rows at every width.
-
-            Drawn BEFORE the spray, which is what puts it on the far side of the
-            haze. */}
-        <StillArt art="props/park-bench" className="tools__bench" />
         {/* The haze BETWEEN the bridge and the boulders, and it is drawn
             between them in the DOM for exactly that reason: it washes the
             bridge's footings and the boulders are drawn over it crisp, which

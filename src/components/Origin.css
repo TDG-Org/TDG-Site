@@ -1026,6 +1026,7 @@
   }
 
   .origin__lamp,
+  .origin__lamp-halo,
   .origin__lamp-glow,
   .origin__lamp-core {
     display: block;
@@ -1243,6 +1244,34 @@
     background-image: radial-gradient(
       13% 8.667% at 50% 19%,
       var(--lamp-glow),
+      transparent 100%
+    );
+  }
+
+  /* ── the wide bloom, and it is what --lamp-spill became ────────────────────
+     `--lamp-spill` was written for a CONE of lit air falling down the pole,
+     which was removed when the owner pointed out that a lantern is a point
+     source and its glow is a disc. The token was left with no consumer. This
+     is the right home for it: same warmth, same low alpha, spent on a halo
+     three times the tight one's radius instead of on a smear down a pole.
+
+     It can be this wide where `--lamp-glow` cannot because alpha is the
+     constraint, not radius. The tight halo is capped at 0.13 W so its INK
+     stays inside the pole's own footprint and the 30px clearance from the
+     hero's copy column holds; at --lamp-spill's 0.16/0.13 the ink dies far
+     sooner as a fraction of the geometric radius, so 0.40 W of gradient
+     carries about 0.11 W of anything a pixel can see — inside the same
+     footprint the tight one is solved against. Both haloes hang on the same
+     rectangle as the pole, so neither can come off the lantern.
+
+     No breath on it. `lampBreath` is on the tight halo and the core; a second
+     layer pulsing at the same rate reads as the whole lamp swelling rather
+     than as a flame moving inside glass, and at this alpha nobody would see
+     it anyway. */
+  .origin__lamp-halo {
+    background-image: radial-gradient(
+      40% 26.667% at 50% 19%,
+      var(--lamp-spill),
       transparent 100%
     );
   }

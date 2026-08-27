@@ -54,7 +54,14 @@
   /* The crest line, above the section's floor. 11vw between a phone floor and
      a 168px ceiling: the hill has to be tall enough to read as a summit and
      short enough that the sky above it stays the subject. */
-  --summit-crest: clamp(78px, 11vw, 168px);
+  /* MUCH lower, on the owner's note: "when the user is on the faith section,
+     the cross and mountain should be much lower". This is how far the crest
+     LINE sits above the section's floor, so a smaller number sinks the whole
+     welded group — hill, cross and the moon that is sized off it — toward the
+     bottom of the frame, which is where the beat wants it: the verse owns the
+     upper half and the summit rises into the lower one as the reader comes
+     over it. Was clamp(78px, 11vw, 168px); this is 44% of it at every stop. */
+  --summit-crest: clamp(34px, 4.8vw, 74px);
 
   /* The cross, and the unit everything above the crest is measured in.
      Every ratio below is quoted in cross-heights, so this one clamp scales

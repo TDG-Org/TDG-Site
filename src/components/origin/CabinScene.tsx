@@ -6511,7 +6511,22 @@ const ST_THRESH: Station = { p: [0.28, 2.05, -0.72], l: [-1.05, 1.5, -5.5] }
  */
 const ST_ROOM: Station = { p: [-0.1, 1.74, -0.8], l: [-1.05, 1.66, -5.9] }
 const ST_ROOM_SET: Station = { p: [-0.38, 1.78, -1.3], l: [-1.2, 1.66, -5.95] }
-const ST_ROOM_END: Station = { p: [-0.75, 1.84, -2.05], l: [-1.5, 1.68, -6] }
+/* ── the aim is ALREADY turning when this station is reached ───────────────
+ * It used to end aimed at [-1.5, 1.68, -6], due north at the hearth, and the
+ * next station is [-3.14, 1.82, -3.1], due west at the window. Interpolating a
+ * look-AT point in a straight line between those two swings it through the
+ * middle of the room — the aim tracks the chord rather than the arc, so the
+ * frame kicks right before it comes back left. The owner saw exactly that:
+ * "the camera jolts a little bit to the right then moves to the left quickly,
+ * it should just smoothly focus and turn to the left cleanly to the window".
+ *
+ * Ending part-way round removes the kick without needing a slerp: from
+ * [-2.42, 1.74, -4.55] the rest of the path to the window is a short arc a
+ * straight line already approximates well, and the leg BEFORE it turns
+ * gradually across the whole Apps beat instead of holding north and then
+ * snapping. The eye barely moves, which is what keeps the room steady behind
+ * the cards while the aim does the work. */
+const ST_ROOM_END: Station = { p: [-0.78, 1.86, -2.2], l: [-2.42, 1.74, -4.55] }
 
 /**
  * THE WINDOW. The west window is 1.66 wide and 1.26 tall centred at
