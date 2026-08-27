@@ -230,7 +230,16 @@
      hang off --tl-rise too — the whole point of that layer is that its crown
      line is a fraction of this one — and two bands reading one number is rule
      6's own case. `.origin__treeline` carries the reasoning for both values. */
-  --tl-rise: clamp(96px, 17svh, 230px);
+  /* How far the row's crowns stand ABOVE Origin's top edge, up into the hero's
+     valley. Raised from clamp(96px, 17svh, 230px) on the owner's note — "the
+     far tree images in the hero, move them up a little bit higher, just a bit
+     to see just a little more of it". A fifth more at every clamp stop, which
+     at 900svh is 189px of crown against 153. It cannot go much past this: the
+     mask that dissolves the tops runs over the same variable, so a taller rise
+     is also a longer fade, and beyond about a quarter of the viewport the row
+     stops reading as trees standing in the hero and starts reading as a haze
+     with points in it. */
+  --tl-rise: clamp(118px, 21svh, 282px);
   --tl-drop: clamp(80px, 14svh, 190px);
 }
 
@@ -1027,7 +1036,12 @@
     left: var(--lamp-left);
     /* how deep the ink's foot is planted inside Origin — see the note above */
     top: var(--lamp-plant);
-    transform: translateY(-98%);
+    /* -104%, not -98%: the owner asked for the pole "a bit higher, just a
+       bit". Six per cent of its own height is 47px at a 780px pole, which
+       lifts the lantern clear of the nav's lower edge at 1440x900 without
+       taking the foot off the snow it is planted in — `--lamp-plant` still
+       decides where that foot lands and has not moved. */
+    transform: translateY(-104%);
     pointer-events: none;
   }
 

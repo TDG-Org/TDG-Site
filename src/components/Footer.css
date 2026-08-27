@@ -23,14 +23,53 @@
 .footer__brand {
   max-width: 320px;
 }
+/* ── the mark ──────────────────────────────────────────────────────────────
+   Built from `CrossGlyph` and one serif "DG", the same two pieces the hero's
+   own wordmark is built from, so the site has ONE lockup rather than a vector
+   at the top of the page and a raster at the bottom that can drift from it.
+   Footer.tsx says why the four `tdg-wordmark-*` files went with it.
+
+   `--hero-dg` and `--edge-hi` are read from tokens.css and both state their own
+   light value, which is the whole point: the old raster was drawn light-on-
+   transparent and the light theme reached it with `filter: invert(1)`, so what
+   a light-theme reader actually saw was a negated silver rather than the
+   graphite the palette asks for.
+
+   28px to match the height the raster occupied to the pixel, so nothing else in
+   this column moved. `1em` on the cross and `0.43em` on its width are the
+   hero's own ratios; stated here rather than shared because the hero's copy is
+   inside a `clamp()` that this does not want. */
 .footer__wordmark {
-  height: 28px;
-  width: auto;
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 0.06em;
   margin-bottom: 20px;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 0.8;
+  letter-spacing: -0.012em;
+  /* the ramp is the type's, and the cross takes its own from --cross-stop-* */
+  color: var(--text);
 }
-[data-theme='light'] .footer__wordmark {
-  filter: invert(1);
+.footer__wordmark-cross {
+  position: relative;
+  display: inline-block;
+  width: 0.43em;
+  height: 1em;
+}
+.footer__wordmark-cross svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.footer__wordmark-dg {
+  background-image: var(--hero-dg);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .footer__name {
   font: 500 12px var(--font-mono);

@@ -386,14 +386,18 @@ const CLOUD_DRIFT = 0.3
  * the viewport rather than against `--origin-dissolve`, and why it finishes
  * BEFORE the eclipse rather than with it.
  *
- * 0.35 -> -0.10 of a viewport: solid while Origin's top crosses the lower two
- * thirds of the screen, which is the whole of the arrival the dissolve exists
- * for, and at zero by the time that edge is 90px past the top of the frame.
- * At the position the owner reported (top edge 130px above the frame) it now
- * resolves to 1 — nothing of the hero's terrain is painted at all.
+ * 0.55 -> 0.00 of a viewport: full while Origin's top is still in the lower
+ * half of the screen, and at ZERO the moment that edge reaches the top of the
+ * frame. The first attempt ran 0.35 -> -0.10 and the owner reported the ridge a
+ * THIRD time — "i can still see the big mountain when scrolling into the our
+ * story section, it only hides once the ground of the cabin covers over it" —
+ * because a fade that is still finishing 90px past the top is a fade the reader
+ * is looking straight at while they read the first chapter. Once Origin's top
+ * edge has left the frame there is no boundary left to soften, so there is
+ * nothing for a range to be doing there at all.
  */
-const SINK_FROM = 0.35
-const SINK_SPAN = 0.45
+const SINK_FROM = 0.55
+const SINK_SPAN = 0.55
 
 const CLOUD2_LIFT = 0.42
 const CLOUD2_DRIFT = 0.18

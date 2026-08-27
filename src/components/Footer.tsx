@@ -1,6 +1,6 @@
 import { useAccountCount } from '../badges/useBadges'
 import { CONTACT, GITHUB_ORG, VOLUME_CONTROLLER } from '../data/content'
-import { asset } from '../lib/asset'
+import { CrossGlyph } from './CrossGlyph'
 import { ABOUT_HASH, STORE_HASH } from '../lib/route'
 import './Footer.css'
 
@@ -37,22 +37,38 @@ export function Footer() {
       <div className="footer__shell">
         <div className="footer__top">
           <div className="footer__brand">
-            <picture>
-              <source
-                type="image/avif"
-                srcSet={`${asset('assets/tdg-wordmark-56.avif')} 1x, ${asset('assets/tdg-wordmark-112.avif')} 2x`}
-              />
-              <img
-                className="footer__wordmark"
-                src={asset('assets/tdg-wordmark-56.webp')}
-                srcSet={`${asset('assets/tdg-wordmark-56.webp')} 1x, ${asset('assets/tdg-wordmark-112.webp')} 2x`}
-                alt="TDG"
-                width={53}
-                height={28}
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
+            {/* ── the mark, and it is drawn rather than fetched ────────────
+                The owner supplied a new TDG lockup — the cross standing in for
+                the T, "DG" beside it in the serif face, a silver ramp falling
+                top-left to bottom-right — and it is the same lockup the hero
+                already draws at the top of this page. So it is BUILT here, out
+                of the same two pieces, instead of shipped as a fifth raster.
+
+                Four things that buys, and the last one is why the old files are
+                deleted rather than kept beside it. It is one mark rather than
+                two that can drift apart. It is sharp at any size instead of at
+                the two the AVIF/WebP pair happened to be cut for. It costs no
+                request at all where the old one cost one lazy image. And it
+                reads correctly in BOTH themes from one declaration: the raster
+                was a light-on-transparent PNG that the stylesheet flipped with
+                `filter: invert(1)` for the light theme, which is rule 3's
+                predicted failure in its purest form — an asset drawn for one
+                theme and mechanically negated for the other, so the "silver"
+                became a muddy inverse rather than the graphite the light
+                palette actually wants. `--hero-dg` already states both.
+
+                `aria-label` on the wrapper and `aria-hidden` inside it, because
+                the visible glyphs are a cross and the letters D and G: read out
+                literally a screen reader would announce "DG" and nothing about
+                the T. The label says TDG once and the pieces say nothing. */}
+            <div className="footer__wordmark" aria-label="TDG" role="img">
+              <span className="footer__wordmark-cross" aria-hidden="true">
+                <CrossGlyph variant="hero" />
+              </span>
+              <span className="footer__wordmark-dg" aria-hidden="true">
+                DG
+              </span>
+            </div>
             <div className="footer__name">THE DISCIPLES OF GOD</div>
             <p className="footer__blurb">
               Brothers building software, games, and tools for the glory of Jesus.

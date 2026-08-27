@@ -149,6 +149,19 @@ const FROST_LEAD = 0.5
 const FROST_FULL = 0.55
 
 /**
+ * How much of the run past `#tools`' mark the frost spends coming back OFF,
+ * as a fraction of that run.
+ *
+ * It had no fall at all: the rise clamped at 1 and stayed, so the piece went on
+ * painting over Tools' bridge, its fence and the whole join into `#building` —
+ * pale crystal shards in a night sky over a stone footbridge, which is where
+ * the site owner saw them. 0.34 puts the fade entirely inside the last third of
+ * the walk, after the card grid's last row has left the frame and while the
+ * canvas is already washing out, so the two disappear together.
+ */
+const FROST_FALL = 0.34
+
+/**
  * Where the camera is along the walk, and where the two sections it settles on
  * begin. `Walk` computes it once a frame and hands it to `CabinScene`.
  *
@@ -415,6 +428,18 @@ export function Walk({ children }: { children: ReactNode }) {
       const run = Math.max(0.001, 1 - tools)
       const frostFrom = tools - run * FROST_LEAD
       const frostSpan = Math.max(0.001, run * (FROST_LEAD + FROST_FULL))
+      /* ── and it FALLS again, which it did not before ───────────────────
+         The ramp above only ever rose, so once the frost reached 1 it stayed
+         there for the rest of the walk — over Tools' own landscape floor and
+         across the join into #building, where it read as pale angular shards
+         hanging in the sky above a stone bridge. The frost belongs to the
+         WINDOW, and the window is gone by then: the camera has pushed through
+         it and the canvas is washing out.
+
+         So it comes off over the last `FROST_FALL` of the run, which lands it
+         at zero on the same edge the canvas's own dissolve does. Multiplying
+         the two ramps rather than branching keeps this one expression, and the
+         product is still exactly 1 across the middle where the cards are. */
       const nextFrost =
         tools <= 0
           ? '0'
@@ -422,7 +447,10 @@ export function Walk({ children }: { children: ReactNode }) {
             ? p >= (apps + tools) / 2
               ? '1'
               : '0'
-            : clamp01((p - frostFrom) / frostSpan).toFixed(3)
+            : (
+                clamp01((p - frostFrom) / frostSpan) *
+                (1 - clamp01((p - (1 - run * FROST_FALL)) / Math.max(0.001, run * FROST_FALL)))
+              ).toFixed(3)
 
       if (nextSnow === paintedFlakes && nextFrost === paintedFrost) return
       paintedFlakes = nextSnow
@@ -529,12 +557,29 @@ export function Walk({ children }: { children: ReactNode }) {
             needs an element to write `opacity` to. One writer per element:
             this box owns `opacity`, the image inside owns the kit's own
             `--art-near`. */}
+      </Stage>
+
+      {children}
+
+      {/* ── the frost is IN FRONT of the cards, and that is deliberate ────────
+          It used to live in the backdrop stage above, which `Stage.css` pins at
+          `z-index: 0` so nothing inside it can ever paint over a section's
+          copy — the right default, and the wrong one for this. The owner asked
+          for it: "the window frost pngs, allow it to be higher index to cover
+          some of the cards when scrolling, to make things more poppy and fun!"
+
+          So it gets its own `Stage` AFTER the sections. Same sticky pin, same
+          `aria-hidden`, same `pointer-events: none` — it cannot take a click
+          meant for a card and a screen reader never meets it — but it paints
+          last. `Walk.css` raises this one's z-index and shapes the mask that
+          keeps the middle of the frame clear, because a card whose text is
+          under frost is a card nobody can read, and the artwork is drawn clear
+          in its middle 60% for exactly this. */}
+      <Stage className="walk__front">
         <div ref={frost} className="walk__frost">
           <StillArt art="props/window-frost" className="walk__frost-art" />
         </div>
       </Stage>
-
-      {children}
     </div>
   )
 }

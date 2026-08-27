@@ -243,8 +243,16 @@
      and at any cap below ~0.093 x 100vw that dip passes under the section's
      bottom edge and the fence is drawn in two pieces with a hole in the middle.
      10.5vw keeps 16px of rail over the join at the dip's worst column. */
-  --tools-fence-bleed: clamp(40px, 14vw, 280px);
-  --tools-fence-cap: clamp(70px, 10.5vw, 280px);
+  /* Both numbers came down on the owner's note that the props at this join
+     "could be sized better, and placed better". The fence was 100vw + 28vw of
+     bleed at 14vw a side, so its top rail crossed the entire frame at one
+     height — a horizontal bar over the boundary rather than a fence standing
+     in it, and the single loudest shape in a band that is supposed to be a
+     handover. At 8vw the box is a fifth narrower, which drops the rail's
+     apparent height with it (the art is one aspect ratio, so width IS scale),
+     and the cap comes down so the whole run sits lower against the water. */
+  --tools-fence-bleed: clamp(24px, 8vw, 150px);
+  --tools-fence-cap: clamp(52px, 7.6vw, 196px);
 
   padding-top: var(--tools-lead);
   padding-bottom: calc(var(--tools-wash) + var(--tools-scene));
