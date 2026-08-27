@@ -16,7 +16,7 @@ and it is the authority for every sentence below.
 | --- | --- |
 | `types.ts` | `Badge` and `AdminBadge`. No badge id is written down here. |
 | `api.ts` | The four calls: `myBadges`, `publicStats`, `adminBadges`, `adminSetBadge`. |
-| `useBadges.ts` | `useMyBadges()` for the signed-in account, `useAccountCount()` for the footer. |
+| `useBadges.ts` | `useMyBadges()` for the signed-in account, and `useAccountCount()`, which has no caller today — see below. |
 
 ```ts
 const state = useMyBadges()        // 'checking' | 'signedOut' | 'error' | 'ok'
@@ -95,25 +95,26 @@ missing rather than a blank screen.
 The two **admin** calls are the opposite and throw, because their refusals are
 the point: the console shows what the server said.
 
-## What the footer does with the count
+## `useAccountCount()`, and why it is kept with no caller
 
 `useAccountCount()` returns how many TDG accounts exist — the server's own
 count of `public.profiles`, which is the same number the Developer console's
-overview calls `accounts`. One fact, one source, so the footer and the console
-cannot disagree.
+overview calls `accounts`. One fact, one source.
 
-**The number is printed exactly as it comes back.** Not rounded, not floored to
-something rounder, not padded, and never replaced by a fallback. A made-up
-count is a lie printed on the bottom of every page of the site; a missing one
-is a line that simply is not drawn. That is what `null` is for, and it is why
-the hook returns `number | null` rather than `number` with a default.
+**The site footer used to print it and no longer does.** The owner asked for it
+gone on 2026-08-27; the hook, `api.ts`'s `publicStats` and the SQL behind them
+were left in place rather than torn out with it, and that is a decision rather
+than an oversight. `tdg_public_stats` is **the only function on this project
+granted to `anon`**, and it was written, granted and audited for exactly this
+shape of question — a number about the whole system that carries no identity.
+Dropping the client would leave that grant standing with nothing to justify it,
+which is a worse state than an unused hook: the next person reading the grants
+would find an anon-callable function and no reason for it.
 
-The count is remembered at module scope for the life of the tab. The footer
-mounts on every hash route, and a number that moves a handful of times a year
-does not need asking again each time; two mounts in the same frame share the
-one request in flight. **A failed read is never remembered** — caching a hiccup
-would leave the count missing for the whole visit because one request at boot
-lost the network.
+So this is the one export in `src/` allowed to sit without a caller. If the
+count is never coming back, remove all four together — this hook, `publicStats`
+in `api.ts`, the row in the table above, and the `anon` grant in the migration —
+and say so in the migration that does it.
 
 ## Rules for changing anything here
 

@@ -83,24 +83,6 @@
   color: var(--muted);
 }
 
-/* How many TDG accounts there are. Rendered only when the number is actually
-   known — see the comment on AccountCount in Footer.tsx — so this rule never
-   describes a placeholder. Set below the blurb it qualifies, at the site's
-   quietest weight: it is a fact, not a claim. Both themes come from the tokens;
-   there is no colour written here. */
-.footer__count {
-  margin: 12px 0 0;
-  font: 400 13px/1.6 var(--font-body);
-  color: var(--faint);
-}
-/* The numeral in the mono face the rest of the site counts in, so six reads as
-   a measurement rather than as an apology for being six. */
-.footer__count-n {
-  font: 500 13px var(--font-mono);
-  letter-spacing: 0.04em;
-  color: var(--accent-2);
-}
-
 .footer__cols {
   display: flex;
   /* Three columns now, so the gap gives ground before the row wraps. The two

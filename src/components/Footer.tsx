@@ -1,35 +1,8 @@
-import { useAccountCount } from '../badges/useBadges'
 import { CONTACT, GITHUB_ORG, VOLUME_CONTROLLER } from '../data/content'
 import { CrossGlyph } from './CrossGlyph'
 import { ABOUT_HASH, STORE_HASH } from '../lib/route'
 import './Footer.css'
 
-/**
- * How many TDG accounts there are, or nothing at all.
- *
- * `useAccountCount()` answers `null` while the number is unknown or the read
- * failed, and the honest render of "we could not find out" is **nothing** — not
- * a zero, not a dash, not a skeleton. A made-up count is a lie printed on the
- * bottom of every page of the site, and this is the one place the site is being
- * quiet and factual. See src/badges/README.md, which is authoritative for it.
- *
- * The number is printed exactly as it comes back: never rounded, never floored
- * to something rounder, and never written `6+`. It is small, and small is what
- * it honestly is.
- *
- * Only the word after it is derived, so the day this reads `1` it does not read
- * `1 accounts`.
- */
-function AccountCount() {
-  const count = useAccountCount()
-  if (count === null) return null
-  return (
-    <p className="footer__count">
-      <span className="footer__count-n">{count}</span>{' '}
-      {count === 1 ? 'account' : 'accounts'} across the TDG apps.
-    </p>
-  )
-}
 
 export function Footer() {
   return (
@@ -73,7 +46,6 @@ export function Footer() {
             <p className="footer__blurb">
               Brothers building software, games, and tools for the glory of Jesus.
             </p>
-            <AccountCount />
           </div>
 
           {/*
