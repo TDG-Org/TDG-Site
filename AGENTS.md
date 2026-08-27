@@ -48,8 +48,9 @@ protection is RLS on the server.
 | `src/components/` | Every rendered surface, one `.tsx` + one `.css` per component. | [`src/components/README.md`](src/components/README.md) |
 | `src/styles/` | `tokens.css` (the palette) and `base.css` (the shared primitives). | [`src/styles/README.md`](src/styles/README.md) |
 | `src/lib/` | Routing, the animation loop, sections state, Supabase client, asset paths. | [`src/lib/README.md`](src/lib/README.md) |
-| `src/hooks/` | The four motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
+| `src/hooks/` | The five motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
 | `src/auth/` | Sign-in, the profile, session revocation, and what a refusal says. | [`src/auth/README.md`](src/auth/README.md) |
+| `src/badges/` | Global account badges, and the account count the footer prints. | [`src/badges/README.md`](src/badges/README.md) |
 | `src/feedback/` | Send Feedback, and the panel that delivers our replies. | [`src/feedback/README.md`](src/feedback/README.md) |
 | `src/store/` | Reading which packs an account owns. | [`src/store/README.md`](src/store/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
@@ -65,16 +66,34 @@ fix the README.
 
 ## 2 · The seventeen rules
 
-### 1. Content is data. It is never a component.
+### 1. A catalogue is data. A section's own headline is not.
 
-Every word a visitor reads lives in `src/data/`. `AppPage.tsx` knows nothing
-about any particular app; it renders whatever `appPages.ts` holds. Adding an app
-is an entry in `APP_PAGES` plus a `page:` on its card in `content.ts`. Fixing a
-line of a guide is one string.
+Everything this site says about a **product** lives in `src/data/`: every app,
+tool and game — card, chips, page, facts, guide — plus About, the Store
+catalogue and all its prose, the nav links and the Origin chapters.
+`AppPage.tsx` knows nothing about any particular app; it renders whatever
+`appPages.ts` holds. Adding an app is an entry in `APP_PAGES` plus a `page:` on
+its card in `content.ts`. Fixing a line of a guide is one string.
 
-**Never** hardcode copy into a component, and never add a component whose only
-job is to render one app's content. Ten pages stay consistent with each other
-precisely because one component draws all of them.
+**The test is whether the component drawing the words knows what it is
+drawing.** `AppPage.tsx` does not, and it draws ten — so the ten live in data,
+which is the only reason they have stayed consistent with each other.
+`Apps.tsx` draws its own kicker, heading and lede once and will never draw a
+second set, so those live in `Apps.tsx`. Every home-page section is written that
+way: `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith`, `Outro`, `Store`,
+`Footer`. Moving a one-off headline into a data file buys no consistency —
+there is no second instance for it to agree with — and costs the thing that
+makes a section legible, which is reading its words and its layout in one file.
+
+Copy that belongs to a **mechanism** stays with the mechanism, one place per
+fact: refusals in `src/auth/wording.ts`, the feedback form's words in
+`src/feedback/api.ts`. Both folders' READMEs say so and say why.
+
+**Never** hardcode a product's copy into a component — a name, a price, a chip,
+a status, a fact row, a paragraph of a guide — and never add a component whose
+only job is to render one app's content. That half is absolute; it is the half
+that costs money when it bends. [`src/data/README.md`](src/data/README.md) has
+the worked line.
 
 ### 2. Never write a colour, and never write a second one.
 
@@ -145,9 +164,12 @@ Proper nouns and acronyms keep their own form regardless — `TDG`, `Stripe`,
 ### 8. Routes are hashes, and every route carries a leading slash.
 
 `#/about`, `#/store`, `#/store/<app>`, `#/app/<slug>`, `#/dev`. The slash is not
-decoration: `#store` and `#story` are one letter apart, and a route that ate a
-section anchor would break the one-page scroll. Any new route gets the slash and
-puts its variable part behind a segment.
+decoration: a route that ate a section anchor would break the one-page scroll.
+The rule was learned from one near miss — the home section used to be `#story`,
+one letter from `#store`. That section is `#origin` now, so that particular pair
+cannot clash any more, and the rule stands unchanged regardless: what it buys is
+that no section anchor added in future collides with a route added today. Any
+new route gets the slash and puts its variable part behind a segment.
 
 An unrecognised route renders **home, with the hash untouched** — the same thing
 `#/banana` does. Never a "not found" screen, never a redirect: both of those
@@ -167,6 +189,20 @@ Never call `requestAnimationFrame` directly, never add a scroll listener, never
 add a `setInterval` for animation. Subscribe with `onFrame`, read element rects
 rather than a scroll offset, and call `frame.hold()` only while genuinely
 time-based work is outstanding.
+
+**There is a narrow exemption, and taking it means documenting it at the call
+site.** A legitimate one is all three of these at once: the work is **not
+animation** — no tick of it repaints something that is moving; the shared loop
+would be **worse**, because it would be held awake at 60 Hz to do something that
+happens once a second or once a session; and it **ends by itself**, so nothing
+is left running once the thing that wanted it is gone. A one-second countdown
+qualifies. A lerp never does, however cheap it looks.
+
+`src/feedback/FeedbackDialog.tsx`'s interval is the model to copy: its comment
+names the rule, says why a clock does not belong on the loop, and says exactly
+when the interval dies. Take the exemption without writing that paragraph and
+the next reader cannot tell it from a mistake — which is how a rule broken
+three times becomes a rule nobody applies.
 
 Honour `prefers-reduced-motion` — `motionIntensity` is 0 when the visitor asked
 for less, and every `@media (prefers-reduced-motion: reduce)` block in the
@@ -429,6 +465,10 @@ deliberately and the reasoning is in the file:
 - Folded pages that open as an index, shared by app pages, About and `#/dev`.
 - `#/dev` behaving exactly like an unknown hash for everybody else.
 - The always-dark auth modal, which deliberately does not reskin with the page.
+- `KeyArt.tsx`'s five drawn app covers, whose palette is fixed in both themes:
+  they share a grid with Bible Educator's dark raster, which cannot flip, so a
+  cover that went pale in light would read as broken art. The colours declared
+  on `.keyart` in `KeyArt.css` are that decision, not tokens somebody forgot.
 
 If a change genuinely requires breaking one of these, say so explicitly and
 explain why before you do it. Do not do it quietly as part of something else.
@@ -479,6 +519,25 @@ must stay that way: a version typed into `src/data/appPages.ts` is stale the day
 that app ships and nobody here will notice. Resolve a download's current release
 at runtime from the GitHub releases API, the way `makullveny-site` does — copy
 that pattern rather than pasting a number.
+
+**GitHub Actions & releases — ask first, every time.** Actions minutes AND
+Actions storage are shared org-wide across every TDG project — one repo can
+block Actions for all of them, and this repo has already contributed to it
+once (seven accumulated `github-pages` artifacts, ~125 MB, present when the
+org went over its 476.8 MB storage cap on 2026-08-26 and blocked every repo's
+Actions). Never create, edit, enable, or disable anything under
+`.github/workflows/`, and never run a workflow by hand
+(`workflow_dispatch`), without direct, in-the-moment permission — not a new
+file, not "just a small fix to a trigger," no exceptions. Never delete an
+Actions artifact or touch retention settings without being asked; checking
+usage is always free. Pushing to `main` is normal and stays covered by the
+rules above — `deploy.yml` runs on every push to `main` today, so a push and
+a deploy are currently the same event, and publishing is gated on one word:
+told **"release"** (or an equally explicit go-ahead, in that message), go
+ahead — don't ask twice, don't add ceremony. Absent that word, finishing a
+task never includes shipping it, and permission is per-release. If a task
+would naturally end with a publish or a workflow-file change: say so in one
+line and stop.
 
 ---
 
@@ -537,7 +596,11 @@ The fix shows most of this document at once:
   level down.
 - Verified by measurement: card 419 px open and shut, buttons 507×45 px each,
   rows 69 px each, and the price and the saving sharing one right edge to the
-  pixel in all three rows.
+  pixel in all three rows. **These are that session's readings, not a spec.**
+  They are recorded here and nowhere else — `src/components/README.md` used to
+  carry a second, different pair for the same button — and what carries forward
+  is the *equality*, not the number: re-measure both buttons after anything that
+  touches the action row rather than checking them against this line.
 
 **Rule 11 is that pattern written down.** Any future app selling a second plan
 copies it rather than designing beside it.

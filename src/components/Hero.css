@@ -1,75 +1,2007 @@
-.hero {
-  position: relative;
-  /* svh is the viewport with the mobile browser chrome showing, so the bottom
-     strip and the scroll cue are not hidden under the URL bar on first paint */
-  min-height: 100vh;
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  background-color: var(--hero-bg);
-  z-index: 1;
+/* ── the one value the hero declares on :root, and why it stays here ───────
+   There used to be two. The other was --hero-takeover-ink, named for a
+   `useHeroTakeover` hook that composed Origin's arrival shadow in JavaScript
+   and ramped it with scroll. **That hook has been deleted** — the hero pins
+   and Origin climbs over it on a negative margin, so there is nothing left to
+   time — and by then this file did not read the token at all: its only
+   consumer was Origin.css. A colour one component declares and another
+   component's stylesheet reads is palette, not a private value, so it moved
+   to tokens.css beside --card-shadow and was renamed for what it now is:
+   --origin-arrival-ink. See tokens.css, and Origin.css for the geometry.
+
+   --hero-glint is the opposite case and that is why it did not go with it.
+   `grep -rn 'var(--hero-glint)' src/` returns exactly one line, and it is
+   .hero__dg's second background layer further down this same file.
+   Nothing outside this file can want it, so tokens.css would gain a name it
+   can never be asked about. It is on :root only because :root is where a
+   theme is switched — a token declared on .hero itself cannot be restated
+   per theme without repeating the selector.
+
+   Both halves are stated because a colour written in ONE theme is the bug
+   rule 3 is about, and that is exactly what this was: a white glint with no
+   light variant.                                                           */
+:root {
+  /* The sweep that crosses "DG". --edge-hi is the site's highlight ink, per
+     theme, and 96% of its dark value is 0.912 — the same near-white the
+     glint has always been, to within 0.008 of alpha. */
+  --hero-glint: color-mix(in srgb, var(--edge-hi) 96%, transparent);
+
+  /* ── the sky's own dusk, and it is the third answer to one question ─────
+     "i understand why you made the moon dark in light theme, but could you
+     still make it bright white, maybe brighter white, and just have the hero
+     section sky just a tiny bit shaded, to still have the moon visible and
+     clear." That is the site owner, verbatim, for the third pass running.
+
+     The two answers already shipped were both correct and neither was
+     enough. `--moon-disc` is 0.99 white in light (tokens.css), and
+     `--hero-sky`'s light stops were taken down to L* 96.0 / 91.2 / 83.5 /
+     77.4. Measured at 1440x900 in light with EVERY layer this file adds
+     hidden — the two air ellipses, the bloom, the weather, the basin, the
+     grain, the vignette and the dust — the disc still read 1.29:1 against the
+     sky beside it at scroll 0 and 1.10:1 at scroll 700. So the wash is not
+     something this file paints over the sky: it is the sky.
+
+     ── why the sky's own shading could not reach it ─────────────────────────
+     --hero-sky is a RADIAL whose bright centre is at 74% 6% — the top right
+     corner. Its four stops darken with distance FROM that corner, so the
+     shading the lead added lands hardest at the bottom left, and the moon is
+     nowhere near there: it rests at 51% of the frame and two thirds of the
+     way down, and it EXITS up and to the left through the top of the frame,
+     which is the part of that gradient nearest its own bright centre. At the
+     disc's resting column the sky is L* 82; at scroll 700, where the disc has
+     climbed to y 118, it is L* 91. A 0.99-white disc cannot clear L* 91 by
+     1.6:1 — the arithmetic ceiling there is 1.22:1 with a disc painted pure
+     white — so the sky under the moon's whole path had to come down, and a
+     stop on a gradient centred in the opposite corner is the one shape that
+     cannot do it.
+
+     ── so the shade is VERTICAL, which is also the truer picture ────────────
+     Deepest at the top of the frame, gone by its floor. That is a dusk sky:
+     bright along the horizon, falling away toward the zenith, which is what
+     every sky with a low moon in it actually does — and it is the one profile
+     under which the moon GAINS contrast as it climbs instead of losing it.
+     Composed with --hero-sky's own radial underneath, the frame reads as a
+     band of horizon light across the middle right with the zenith settling
+     into the mountains' own haze above it.
+
+     The six stops are solved against four readings rather than chosen, all at
+     1440x900, all "the sky at the disc's own centre height, one disc radius
+     plus 26px out from its rim":
+
+       y 118 (scroll 700)  sky 219-231  needs alpha 0.271  ->  178-186
+       y 375 (the wordmark's band, which is not a moon reading but is the
+             constraint the profile has to dodge)  alpha 0.116  ->  192
+       y 641 (rest)        sky 199-200  needs alpha 0.081  ->  188
+
+     The middle is the reason the ramp is not a straight line. --hero-dg's
+     palest stop is #8a8a95 and the wordmark is read against the sky at y 285
+     to 465; a linear 0.29 -> 0 ramp puts alpha 0.149 through that band and
+     takes the glyph's pale end from 2.36:1 to 1.92:1. Easing the ramp flat
+     between 34% and 74% holds it at 2.03:1 and costs the moon nothing,
+     because the moon is never in that band — it is above it or below it.
+
+     Ink is --terrain-haze, the near range's own sampled foot ink, for the
+     same reason `.hero__valley` and `.hero__weather` paint in it: a sky that
+     settles toward the colour the mountains' haze already is is aerial
+     perspective, and a new colour here would be a second grey on a page whose
+     light palette has one.
+
+     Dark is `none`, and that is a decision and not an omission. The night
+     sky's disc measures 8.7:1 against it — it was 10.7 before the moon was
+     asked to sit a sixth of its diameter into the mountains and a cloud was
+     put in front of it, and 8.7 is still five times what the light theme has
+     to work with. There is nothing to fix and a shade over #02040a is a shade
+     nobody can see. --hero-sky is a
+     background-IMAGE, and --t-theme transitions background-COLOR, so this
+     layer snaps across the theme wave exactly as the sky under it always
+     has — there is no interpolation to keep alive by writing a transparent
+     gradient here instead.                                                  */
+  --hero-dusk: none;
+
+  /* ── how much of the moon's light is on the air ─────────────────────────
+     THE BEAMS ARE GONE AND THESE TWO REPLACED THEM. What used to live here
+     was `--hero-shaft-core`, the alpha of a 118px-wide tilted rectangle, and
+     the rectangle is the defect this pass exists to remove: three boxes
+     raking down-left from the top of the frame past the moon read as a
+     comet, and in light they read as a smear on the lens. The previous pass
+     moved the group's fade from 58/92 to 66/95 to stop the beam dying ON the
+     disc, and the wedge survived the move because a wedge is a SHAPE — it
+     has an axis a reader can trace and two ends, and no amount of fading
+     either end changes what the middle is.
+
+     The physics says a low moon does not send a visible shaft down through
+     clear air toward itself. It lights the haze it is standing in, and the
+     column of sky above it, and that is all. So the beams are two nested
+     ellipses of --hero-bloom now — the moon's own glow token, white in BOTH
+     themes — at two scales above the disc's own halo and the bloom on it:
+     432px (inside `Moon`), 907px (`.hero__bloom`), 1253px
+     (`.hero__shaft-core`) and 2160px (`.hero__shaft`), all at 1440x900. One
+     source, one ink, four radii, no axis and no terminus anywhere in it.
+
+     These are the two outer gains, spent as `filter: opacity()` beside the
+     blur, because `raybreathe` animates `opacity` and would overwrite it.
+     They multiply an ink that is already the right ink per theme, which is
+     why they are numbers and not colours — the same reason --art-far is one.
+
+     The LIGHT values are not the dark ones scaled. --hero-bloom's light stop
+     is 0.9 alpha white against dark's 0.2, so equal gains would be four and
+     a half times the wash; and light's sky at the moon's altitude is a dusk
+     rather than near-black, so it has a fraction of the headroom to be lifted
+     into. They used to be set so each ellipse lifts its own sky by the same
+     ALPHA that dark's does, and --hero-dusk is what showed that to be the
+     wrong currency — the light half below carries the argument and the
+     readings. */
+  --hero-air-gain: 0.62;
+  --hero-air-core-gain: 0.9;
+
+  /* ── the disc's own halo, inside `scene/Moon.tsx`, as the HERO wants it ──
+     A private RE-STATEMENT of a token rather than a new colour: `Moon` paints
+     its halo from --moon-halo, and this hands that element a different
+     strength of the same ink. It cannot be written as a color-mix of
+     --moon-halo ON `.hero__moon`, because a custom property whose own value
+     references itself is a cycle and resolves to nothing at all — hence a
+     second name here, and hence `.hero__moon` reading THIS one.
+
+     Dark is 100%: nothing is wrong with the night moon's rim. Light is 18%,
+     and that is the whole of "the disc's edge is lost in its bloom". In light
+     --moon-halo is rgba(255,255,255,0.86) and `Moon` paints it at stop
+     opacity 0.92 all the way out to the disc's own edge — so the ring of sky
+     immediately outside the disc is 0.79 white while the disc itself is 0.99
+     white, a step of 0.2 alpha, which is no edge at all. At 18% the ring is
+     0.15 white and the disc clears it by three quarters of an alpha. The site
+     owner asked for the light moon to be "visible and clear"; clear means it
+     has an edge, and this is the edge. It was 38% for one pass, which bought
+     the edge and left the halo lifting the sky where the contrast is read —
+     the light half below carries that measurement. */
+  --hero-moon-air: var(--moon-halo);
+
+  /* ── the disc's own SURFACE, as the hero wants it, and the same trick ────
+     A second private re-statement, for the same mechanical reason
+     --hero-moon-air needs one: `Moon` paints its maria and its limb from
+     --moon-mare, and a color-mix of --moon-mare declared ON `.hero__moon`
+     would be a custom property referencing itself, which is a cycle and
+     resolves to nothing at all.
+
+     This is the other half of "a white disc that measures white". `Moon`
+     lays a limb gradient across the WHOLE disc — a pool of --moon-mare
+     gathered at the lower right, still at 0.53 of its stop opacity at the
+     disc's own centre — so the pixel anybody samples to ask how bright the
+     moon is is the one that pool sits on. Measured at 1440x900 in light: the
+     disc composites to 254 and the limb takes it to 238, which is a sixteenth
+     of the moon's whole contrast budget spent on shading nobody asked about.
+
+     Dark is 100%: --moon-mare there is rgba(26,32,48,0.2) over a disc that
+     has 8.7:1 to spend and a night moon wants its maria. Light is 20%,
+     which measures the disc's centre at 248 and the three maria about 4 units
+     under it — still surface, still not a paper circle, and the "brighter
+     white" the site owner asked for twice. */
+  --hero-moon-mare: var(--moon-mare);
+
+  /* ── weather crossing the valley ────────────────────────────────────────
+     How much of `landscapes/valley-fog` is painted. Not a colour: it is how
+     much of each theme's OWN artwork is drawn, which is what --art-far is too,
+     and it is private because only `.hero__weather-art` in this file reads it.
+
+     **Both halves moved this pass and the old pair could not have survived.**
+     It used to be 0.50 / 0.10 and it was the alpha of a GRADIENT painting
+     --terrain-haze — the near range's own sampled foot ink, which is
+     #0e1a2c in dark. A dark ink over a near-black sky moves it by two or three
+     units, which is why half of it was affordable. The artwork that replaced
+     that gradient is a mid-slate cloud bank, far LIGHTER than the sky it is
+     laid on in dark, so the same 0.50 flooded the lower sky: measured at
+     1440x900, the sky one disc-radius-plus-26px out from the moon's rim went
+     from rgb(39,44,54) to rgb(66,80,97) and the disc's contrast against it
+     fell from 8.6:1 to 2.2:1. That is the number this whole neighbourhood is
+     judged on, so the ink changing meant the alpha had to change with it.
+
+     0.34 / 0.20, re-measured against the art with the layer shown and hidden
+     at 1440x900, scroll 0, with every self-animating layer frozen:
+
+       dark  0.34   87,947px of the frame carry it; strongest at (695,732),
+                    where it takes rgb(182,184,185) to rgb(139,147,155)
+       light 0.20   52,536px; strongest at (762,745), rgb(239,240,241) to
+                    rgb(229,231,233)
+
+     Both of those strongest points are on the disc's LOWER limb, which is the
+     moon standing in the fog it is rising out of and is the one place a haze
+     on the disc is not the frosted ball this section spent two passes
+     removing. At the disc's CENTRE the layer now costs nothing at all — see
+     `.hero__weather-art`, where the rim that guarantees it is set.
+
+     Light is not "a fifth of dark" any more and never should have been read as
+     a ratio: the two artworks sit at different distances from their own skies
+     and each alpha is what it took to make its own bank read as weather. */
+  --hero-weather-veil: 0.34;
+
+  /* ── the wisp that crosses the disc ─────────────────────────────────────
+     How much of `props/moon-cloud` is painted. Private for the same reason
+     --hero-weather-veil and --hero-valley-veil above are: it is a number and
+     not a colour, only `.hero__cloud` in this file reads it, and tokens.css
+     would gain a name nothing outside this section can ever ask about.
+
+     It is NOT --art-far, which is what this shipped as for one render, and the
+     render is why. The two themes need opposite corrections and --art-far
+     moves them the same way:
+
+       dark   --art-far 0.50 -> 0.36. At 0.50 the wisp read as a bank of storm
+              cloud lying ON the disc rather than passing in front of it, and
+              this section has spent three passes making the moon the
+              brightest, clearest thing in the frame. At 0.36 the torn edges
+              are all still there: 78,884px of the frame carry it, strongest at
+              (651,606) where it takes rgb(232,233,234) to rgb(177,183,188).
+       light  --art-far 0.36 -> 0.46. The light artwork is pale grey against a
+              sky that is already pale, so at 0.36 there was almost no wisp at
+              all — nothing to cross the disc with, which is the whole reason
+              the layer exists. At 0.46 it covers 54,186px and its strongest
+              point is in the SKY rather than on the disc, at (420,492),
+              lifting rgb(181,188,202) to rgb(206,211,220).
+
+     Neither is a colour and neither recolours the art: they are how much of
+     each theme's OWN artwork is drawn, which is what --art-far itself is. */
+  --hero-cloud-veil: 0.36;
+
+  /* ── the basin fog between the two ranges ───────────────────────────────
+     Not a colour: `.hero__valley` paints in --terrain-haze, which is the
+     near range's own sampled foot ink and lives in tokens.css beside the
+     ranges it was sampled from. This is how much of it there is, and it is
+     a number for the same reason --art-far is one — it multiplies ink that
+     is already the right ink for this theme.
+
+     0.34 in dark is a quarter of the way from the hero sky's floor (#02040a)
+     to --terrain-haze (#0e1a2c) at the frame's bottom edge, which reads as
+     depth without becoming a second band; the light value is half that
+     because the light palette has a fifth of dark's headroom below the sky
+     before a haze stops being haze and starts being a grey floor. */
+  --hero-valley-veil: 0.34;
+
+  /* How much of the bloom is painted. `.hero__bloom` cannot use `opacity`
+     for this — `bloombreathe` animates opacity and would overwrite it every
+     frame — so it is spent as `filter: opacity()` beside the blur that is
+     already there. 1 in dark: --hero-bloom is 0.2 alpha at its centre and
+     is meant to be seen. */
+  --hero-bloom-gain: 1;
+
+  /* ── the dust, which used to be hand-written in TypeScript ──────────────
+     `hero/Starfield.tsx` carried `isLight ? 'rgb(20,20,26)' : 'rgb(214,232,255)'`
+     and a bare 0.5 gain beside it — two colours and a number that no theme
+     switch and no palette change could ever reach, in the one file on this
+     page that paints outside CSS. They are names now and the canvas reads
+     them off its own computed style.
+
+     A canvas cannot ride the theme wave (base.css transitions declarations,
+     and there is no declaration here to transition), so this snaps where the
+     rest of the page crosses. That is the same trade `scene/Snow.tsx` makes
+     and it is invisible: the motes are 1–2px at a fifth of an alpha. */
+  --hero-dust: rgb(214, 232, 255);
+  --hero-dust-gain: 1;
+}
+:root[data-theme='light'] {
+  /* In light the wordmark is dark type on a pale scene, so the highlight is
+     ink. 34% of --edge-hi is 0.238, which is a shade under the 0.30 the dark
+     theme's glint carries, because the sweep crosses a gradient that is
+     already dark at one end. (This used to say "exactly as --hero-shaft-core
+     inverts below". Nothing inverts below any more: the beams that needed an
+     ink value in light are gone, and the moon's light is white in both
+     themes.) */
+  --hero-glint: color-mix(in srgb, var(--edge-hi) 34%, transparent);
+
+  /* ── the shade, and it is stated as the SEVEN alphas it was solved for ───
+     See the dark half for what this is and why it is vertical rather than a
+     stop on the sky's own radial. The percentages are lengths down the
+     frame's 100svh — `.hero__sky` is `inset: 0` inside the stage's pin, so
+     100% is the frame's floor and every number below is a y in that frame.
+
+       0%   0.35  the top of the frame
+      14%   0.33  y 126 at 900 — the disc's centre at scroll 700 is y 152
+      34%   0.19  the ramp flattens here, and the wordmark is why
+      55%   0.17
+      74%   0.18  y 666 — the disc's resting centre is y 674.5
+      90%   0.12  y 810
+     100%   0     the frame's floor, where the ridge's own haze takes over
+
+     The last two moved this pass and the seventh is new, and neither is a
+     taste change: --moon-bite went from 0.08 to 0.18 because the site owner
+     asked for the mountains to cover a sixth of the disc, which drops the disc
+     21.6px INTO the part of this ramp that was running out. The stops it is
+     sampled against are 74-86% of the frame at 1440x900, 79% at 1920x1080 and
+     85.5% at 375x667, and at the old 0.15/0 tail the contrast fell to 1.530 at
+     1920 and 1.551/1.513 at 375 — under the 1.60 floor at two viewports out of
+     four. Bending the tail rather than putting an alpha floor on the 100% stop
+     is what the previous pass said it would take; the 100% stop is still
+     transparent, so the flat tint across the seam that it warned about is
+     still not there.
+
+     The flat middle is not a plateau anybody wanted: it is the wordmark's
+     band, argued in the dark half. Nothing here is an edge — a stop whose
+     slope changes is still a gradient, and the outer stop is transparent.
+
+     Every alpha is well above what the first arithmetic asked for, and that
+     gap is the honest part of this number. The model said the shade had to buy
+     `alpha x (sky - ink)`; the rendered readings say it buys about 1.1 units
+     per hundredth of alpha, not 1.4, because the vignette, the grain and the
+     moon's own light all sit ON TOP of it and a white glow lifts a darker
+     ground further than a paler one. So the six were tuned against a sweep of
+     real screenshots rather than against the model, with 1.60:1 as the floor
+     rather than the aim.
+
+     Measured at 1440x900 in light, disc centre against the sky one disc
+     radius plus 26px out, left and right, with the moon at --moon-bite 0.18
+     and the wisp in front of it:
+
+       scroll   0    1.786 / 1.729     (was 1.651 / 1.651)
+       scroll 700    1.521 / 1.685     (was 1.764 / 1.757)
+
+     and at the other viewports this section is drawn at, scroll 0: 1.807 /
+     1.777 at 1100x900, 1.738 / 1.601 at 1920x1080, 1.630 / 1.613 at 375x667.
+     **Every reading at rest is above the 1.60 floor now, including the phone,
+     which had one side under it before.**
+
+     The scroll-700 left-hand reading is the one that fell and it is not the
+     shade's doing: `props/moon-cloud` has lagged 139px by then and the sample
+     point lands INSIDE the wisp, so what that number measures is the disc
+     against a cloud rather than against sky. --hero-cloud-veil came down from
+     0.55 to 0.46 for it; the rest is the picture, and a cloud beside the moon
+     being brighter than the sky beside the moon is what a cloud is. */
+  --hero-dusk: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--terrain-haze) 35%, transparent) 0%,
+    color-mix(in srgb, var(--terrain-haze) 33%, transparent) 14%,
+    color-mix(in srgb, var(--terrain-haze) 19%, transparent) 34%,
+    color-mix(in srgb, var(--terrain-haze) 17%, transparent) 55%,
+    color-mix(in srgb, var(--terrain-haze) 18%, transparent) 74%,
+    color-mix(in srgb, var(--terrain-haze) 12%, transparent) 90%,
+    transparent 100%
+  );
+
+  /* The light theme's beams used to be SHADOW — "a pale sky has nothing to be
+     brighter than, so a beam in it is the air the beam is not in" — and that
+     reasoning is exactly what drew the dark smudge across the pale sky in
+     `r2-L-0000`. It is also wrong about the sky: --hero-sky's light value is
+     a shaded dusk now, and --hero-dusk above takes it further down, so there
+     IS headroom above it and the moon's light can be light in both themes.
+
+     ── and the pair came DOWN when the sky did, which is the same rule ──────
+     They were 0.14 and 0.2, set so that `0.14 x 0.9` in light matched
+     `0.62 x 0.2` in dark — equal ALPHA, on the reasoning that two themes
+     should lift their own sky by the same amount. Alpha is the wrong
+     currency for that and --hero-dusk is what exposed it: what a reader sees
+     is the LIFT, and a white glow at a fixed alpha lifts a darker sky
+     further. Measured at 1440x900, the sky one disc-radius-plus-26px out from
+     the rim moved from 209 to 192 under the shade, so the same 0.126 alpha
+     bought 6 units of lift where it used to buy 4 — and every one of those
+     units comes straight off the disc's own contrast with the sky beside it,
+     which is the number this whole pass exists to raise.
+
+     So light's two gains are cut by about a third, to 0.09 and 0.12. The
+     visible lift beside the disc is 3 units rather than 6, the glow reads the
+     same because the ground under it fell as far as the gain did, and the
+     measurement the pass is judged on keeps the difference. */
+  --hero-air-gain: 0.09;
+  --hero-air-core-gain: 0.12;
+
+  /* 38% -> 18%, and this one turned out to be the single biggest thing in the
+     frame washing out the measurement. See the dark half for what it is; what
+     is new is where it lands. `Moon`'s halo runs from stop opacity 0.92 at the
+     disc's own rim to 0.30 at 0.68 of its box, so the sky ONE DISC RADIUS PLUS
+     26px out — which is exactly where "the sky immediately beside it" is
+     sampled — sits at 0.51 of the halo's own falloff. At 38% of a 0.86-alpha
+     white that is 0.165 alpha of white laid on the sky right where the
+     contrast is read: measured, 10 units of lift, more than the two air
+     ellipses and the bloom put together.
+
+     18% halves it to 5 units, and it does not cost the moon a halo — it is
+     still a visible ring of light around the disc against a sky that is now
+     dark enough to show one. It also sharpens the rim, which is the other
+     half of what "visible and clear" asked for. */
+  --hero-moon-air: color-mix(in srgb, var(--moon-halo) 18%, transparent);
+
+  /* 20%. See the dark half for why this needs a second name at all and for
+     the 254 -> 238 measurement it undoes; at 20% the disc's centre reads 248
+     and the three maria are still there at about 4 units below it. */
+  --hero-moon-mare: color-mix(in srgb, var(--moon-mare) 20%, transparent);
+
+  /* 0.10 -> 0.20 with the artwork. The dark half carries both readings and
+     why the old pair could not survive the gradient being replaced by a
+     painted bank. Twice dark's alpha buys a tenth of dark's visible step,
+     because a pale bank on a pale sky is a much smaller difference than a
+     pale bank on a night one. */
+  --hero-weather-veil: 0.2;
+
+  /* A little over dark's, and the dark half carries the two readings that set
+     the pair. A pale wisp on a pale sky and a dark one on a night sky are not
+     the same amount of paint. It came down from 0.55 for one reading: at
+     scroll 700, where the wisp has lagged 139px and is beside the climbing
+     disc, the sky sample this section measures its contrast at lands INSIDE
+     the cloud, and every point of alpha there comes off that number. */
+  --hero-cloud-veil: 0.46;
+
+  /* Half of dark's. See :root. */
+  --hero-valley-veil: 0.16;
+
+  /* --hero-bloom in light opens on rgba(255,255,255,0.9), which was composed
+     for a bloom sitting in the top corner of a near-white sky. It sits on the
+     MOON now (see .hero__bloom) and the light sky is a shaded dusk, so at
+     full strength it would be a white blob over the one object on the page
+     that is supposed to be the brightest thing in the frame.
+
+     It was 0.26, and that number was paying for something else: the bloom had
+     no hole in it, so every point of gain was a point of the disc's own EDGE
+     eaten from the outside in, and the only way to keep a rim was to keep the
+     whole glow faint. `.hero__bloom` is masked transparent over the disc now,
+     so the gain buys light in the AIR and cannot touch the rim at all — which
+     is what let it go up to 0.4 and the light sky finally read as having a
+     moon in it rather than a pale patch. Dark needs none of this:
+     --hero-bloom opens on 0.2 alpha there against light's 0.9.
+
+     0.4 -> 0.3 with --hero-dusk, for the reason the two air gains above give
+     at length: the sky this glow is laid on dropped about 17 units, so the
+     same alpha now lifts it further, and the lift immediately outside the
+     disc's rim is the one place this section cannot afford it. */
+  --hero-bloom-gain: 0.3;
+
+  /* Dark motes, because in light the dust is what the beam is NOT passing
+     through. The gain goes UP every time this theme's sky comes down, and it
+     has now done so twice: a dark speck is read against the sky behind it, so
+     what it is worth is `alpha x (sky - 20)` and the bracket shrinks as the
+     sky darkens. When --hero-sky's light value was shaded the bottom of the
+     frame went L* 88 -> 77 and the gain went 0.5 -> 0.72. --hero-dusk now
+     takes the sky the motes are actually in from about 220 to about 190
+     across the upper two thirds of the frame, which is another 14% off the
+     bracket, so 0.72 x 220/190 = 0.83. Rounded up to 0.85, because the same
+     shade costs the WHITE glow beside these motes nothing and a mote that is
+     only just visible is not dust, it is dirt on the screen. */
+  --hero-dust: rgb(20, 20, 26);
+  --hero-dust-gain: 0.85;
 }
 
+/* ── the section ───────────────────────────────────────────────────────────
+   Read Hero.tsx's header first: it has the three-box diagram and why the
+   section is more than twice the viewport tall while costing the page no
+   extra scrolling at all.
+
+   `overflow` is stated TWICE and that is not a mistake. `clip` is what this
+   wants — an ancestor with `overflow: hidden` is a SCROLL CONTAINER, so it
+   becomes the sticky boxes' scrollport and neither the stage nor the frame
+   ever pins; `clip` clips identically and is explicitly not one.
+   `Stage.css`'s `.stage-host` says the same thing and this element carries
+   that class too, so whichever stylesheet the bundler puts last, the answer
+   is `clip`. The `hidden` above it is the fallback for a browser that has
+   never heard of `overflow: clip` (Safari before 16): there the pin does not
+   engage and the hero is an ordinary tall section, which is a picture that
+   still works. Delete the `hidden` and the same browser gets `visible` and
+   the mountains spill across the whole document.
+
+   `display: block`, NOT the flex centring this used to have: the copy is
+   centred inside .hero__frame now, and a flex hero would centre the 130svh
+   flow box in the 230svh section — putting the seam a viewport from where
+   the negative margin below expects it.
+
+   No `z-index`. It used to be 1 and the removal is load-bearing rather than
+   tidying: `position: relative; z-index: 1` makes a stacking context, and a
+   stacking context is a ceiling. The lamppost belongs to #origin (z-index 4)
+   so that its foot can be drawn ON Origin's ground, and it therefore paints
+   over everything in this section — including the wordmark — unless the
+   hero's copy can get ABOVE 4. With no stacking context here, .hero__frame's
+   z-index 5 lands in the root stacking order and the order is
+   stage 0 < origin 4 (and the lamppost with it) < frame 5, which is exactly
+   "the pole is behind the text and in front of the mountains".
+
+   No box-shadow floor either. That existed to fill the band `useHeroTakeover`
+   opened by translating Origin down by up to 120px while it arrived. The
+   takeover is gone — a pinned hero IS a hero that Origin rises over, so the
+   effect the translate was faking is now the document's own behaviour — and
+   with no translate there is no band, so nothing to fill. */
+.hero {
+  position: relative;
+  display: block;
+  /* 100svh of frame + 30svh of runway + the 100svh #origin's negative margin
+     takes back. svh, not vh: on a phone 100vh is the viewport with the
+     browser chrome HIDDEN, so a vh-sized first screen is cropped by the
+     chrome for as long as the chrome is showing.
+
+     30svh of runway is a compromise and it is worth naming, because the two
+     things it is between both matter. Longer is a better dissolve — the copy
+     has more scroll to go out over. Longer also pushes the SEAM further down
+     the page, and the lamppost's head sits a fixed distance above the seam
+     (its foot is planted on it), so every extra svh of runway is an svh of
+     lamppost pushed below the fold on the first screen. At 30 the lamp's head
+     is at 67% of the viewport at 1440x900, 243px clear above the bottom strip,
+     and the copy dissolves over 270px. */
+  min-height: 230svh;
+  overflow: hidden;
+  overflow: clip;
+  background-color: var(--hero-bg);
+
+  /* ── the vertical room the terrain has ───────────────────────────────────
+     Re-derived, and the numbers are measurements rather than the earlier
+     estimates.
+
+     The copy column is centred in .hero__frame, which is exactly 100svh, so
+     its floor sits 50svh + half its own height down and the terrain's floor
+     is the frame's floor. Measured at 1440x900: .hero__inner is 412.2px tall,
+     so half of it is 206.1px, and the CTA row's bottom edge lands at 656.1px
+     with the frame's floor at 900 — 243.9px of clear band.
+
+     Three claims on that band, and they are stated separately because the
+     third is the one this pass had to re-derive:
+       206px  half the copy column, measured.
+        16px  air between the ridge's ink and the CTA row. It was 24, which
+              was a guess; 16 is still a clear band under a hard low-poly
+              edge and the site owner asked for more mountain, so the guess
+              is where the first 8px come from.
+        18px  reserved for SCROLL, and it was 12 until RIDGE_LIFT went from
+              56px to 0.22vh. The ridge rises TOWARD the CTA row, so what has
+              to be reserved is the ink's rise at the last moment anybody can
+              still read the row — not at the end of the pin, where the whole
+              column is at zero opacity and there is nothing left to protect.
+
+              The CTA row's own rate is `1 - out * 2.1`, so it reaches zero at
+              out 0.476; the copy's curve is `t^1.85`, so that is t = 0.670 of
+              the 30svh runway, which is 15.5% of the 130svh pin; the scenery's
+              curve is `3t^2 - 2t^3`, so smooth(0.155) = 0.0674, and
+              0.0674 x 0.22 x 900 = 13.3px at 1440x900. 18 is that with room
+              for the curve to be re-tuned without this number going stale.
+              (For reference, the rise at the moment the WORDMARK reaches zero
+              — 23.1% of the pin — is 29.9px, and the previously measured
+              clearance at rest was 37.2px, so even that instant stays clear.)
+     50svh - 240px. On a viewport with no band left this reaches 0 and the
+     terrain simply is not drawn, which is the art kit's own rule: the art is
+     what disappears first when vertical space runs out. */
+  --art-band: max(0px, calc(50svh - 240px));
+}
+
+/* The 130svh of ordinary flow whose FLOOR IS THE SEAM. #origin is pulled up
+   onto the hero's last 100svh with margin-top: -100svh, so this box's bottom
+   edge and Origin's top edge are the same line — which is what makes the one
+   rect Hero.tsx reads answer both "how far through the pin" and "how far
+   through the copy's runway". Nothing is painted on it. */
+.hero__above {
+  height: 130svh;
+}
+
+/* ── the part that dissolves ───────────────────────────────────────────────
+   Sticky inside .hero__above, so it holds still for 130 - 100 = 30svh and
+   then travels the last 100svh out of the frame while Origin covers it.
+   Measured at 1440x900: top read 0 at scroll 0, 60, 117, 175 and 234, and
+   -166 at 400 — pinned for the runway, tracking after it.
+
+   z-index 5: above #origin's 4, so the lamppost that rises out of Origin
+   into this section passes BEHIND the wordmark, the tagline, the CTAs, the
+   model and the strip. See the note on .hero above for why that works.       */
+.hero__frame {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+}
+
+/* ── covered ───────────────────────────────────────────────────────────────
+   Stamped by Hero.tsx once Origin's top has reached the top of the viewport,
+   which by construction is the last moment any pixel of this section can be
+   seen. Everything below it goes on EXISTING for another 100svh of scrolling
+   — the stage is still pinned, the frame is still in the viewport — and
+   without this the sky, two ridges, a pine, a starfield canvas and two
+   breathing gradients would all keep painting behind an opaque Origin.
+
+   `Stage`'s own `data-covered` cannot reach this: it watches the SECTION,
+   and the section deliberately runs a whole viewport past the seam.
+
+   visibility rather than display: none, for the reason Stage.css gives —
+   display takes the layout with it, and Starfield sizes its backing store
+   from the canvas's clientWidth. The animations are paused as well, because
+   `visibility: hidden` stops the paint but not the ticking, and a paused
+   compositor animation is the cheaper of the two.                          */
+.hero[data-eclipsed] .stage,
+.hero[data-eclipsed] .hero__frame {
+  visibility: hidden;
+}
+.hero[data-eclipsed] .hero__shaft,
+.hero[data-eclipsed] .hero__shaft-core,
+.hero[data-eclipsed] .hero__weather-art,
+.hero[data-eclipsed] .hero__bloom,
+.hero[data-eclipsed] .hero__dg,
+.hero[data-eclipsed] .hero__scroll-arrow {
+  animation-play-state: paused;
+}
+
+/* ── the stage's shared geometry ───────────────────────────────────────────
+   Every number here was already in this file; what is new is that each one is
+   now written ONCE. Rule 6 asks for one set of variables on the common parent
+   rather than a literal here and a matching literal there, and the version
+   before this had three copies of the main ridge's placement — on
+   `.hero__ridge-drift`, on `.hero__moon` (whose own comment apologised for it:
+   "this needs its own copy of the same expression"), and implicitly in every
+   comment that quoted the product. A bloom that has to sit on the moon and a
+   basin that has to stop at the ridge's skyline made that a fourth and a fifth
+   copy, which is the point at which a duplicated expression stops being a
+   wart and starts being a bug waiting for somebody to move one of them.
+
+   `.hero__stage` is the Stage's outer box; the layers are inside `.stage__pin`
+   inside it, so all of this simply inherits. Nothing outside this file reads
+   any of these names — `grep -rn -- '--art-rise\|--terrain-w\|--moon-' src/`
+   returns Hero.css and nothing else — which is why they are on a component
+   selector and not in tokens.css.
+
+   The REAR range overrides --terrain-w and --art-rise on its own wrapper,
+   which is what makes it a far range; everything else takes the values here.  */
+.hero__stage {
+  /* the main ridge: horizontal scale, and how far its highest ink stands above
+     the frame's floor. The three arms of the min() are, in order, the art's own
+     proportions, the copy's clearance budget, and plain restraint — see the
+     terrain block below, which is where the coefficients are argued. */
+  --terrain-w: max(146vw, 160vh);
+  --art-rise: min(
+    calc(var(--terrain-w) * 0.134),
+    calc(var(--art-band) + var(--terrain-w) * 0.0275),
+    300px
+  );
+
+  /* ── the moon, in the four numbers everything that has to agree with it
+     reads ────────────────────────────────────────────────────────────────
+     All four moved this pass, against one note: the moon at rest "is right of
+     centre and low", measured centre x 777 and y 669 of a 1440x900 frame, and
+     the site owner asked for it further LEFT and HIGHER. It only ever became
+     high and left on its way out of the frame, which is the exit and not the
+     composition.
+
+     ── --moon-sit is GONE, and it was measuring the wrong thing ────────────
+     It was "where the RIDGELINE is at the moon's column, as a fraction of the
+     ridge's PEAK HEIGHT", and the disc's centre was --moon-sit x --art-rise
+     plus a term in --moon-w. That is dimensionally wrong. --art-rise is where
+     the ink's highest point stands above the frame's floor, but how far BELOW
+     that point any other column of the range sits is a fraction of the box's
+     own WIDTH — it is drawn art, so it scales with --terrain-w, which is what
+     --art-head and --art-foot-* are fractions of and is a different length
+     from --art-rise at every viewport where --art-rise's cap or the clearance
+     budget binds.
+
+     What that cost, measured by diffing the rendered frame with
+     `.hero__ridge` shown and hidden, per row, at the disc's own column, under
+     the geometry that shipped:
+
+       1440x900   dark  skyline y 758, disc bottom 762.3    4.3px buried
+       1920x1080  dark  skyline y 949, disc bottom 926.7   22.3px CLEAR
+       1100x900   dark  skyline y 781, disc bottom 788.0    7.0px buried
+       1440x900   light skyline y 797, disc bottom 762.3   34.7px CLEAR
+
+     --moon-bite said 0.18 — 33.7px of a 187px disc behind ridge ink — and the
+     true figure was four pixels on one screen and a moon floating clear of the
+     mountains on the other three. "Resting on the horizon" was a declaration
+     rather than a fact, and re-checking it is exactly what the brief asked
+     for.
+
+     ── so the parameterisation changed, into the currency the art is in ────
+     --moon-drop replaces it: how far the ridgeline at the moon's column sits
+     BELOW the range's peak, as a fraction of --terrain-w. Then
+
+       skyline above the frame's floor = --art-rise - --terrain-w x --moon-drop
+
+     which is the same shape `.hero__ridge`'s own `bottom` is, and is true at
+     every viewport rather than at the one it was fitted on. Verified against
+     the rendered skyline at 1440x900, 1920x1080 and 1100x900, both themes.
+
+     0.053 is `--art-head x (1 - profile)`, where profile is the range's own
+     alpha at this column as a fraction of its peak: 0.16197 x 0.325 = 0.0527
+     in dark and 0.14133 x 0.379 = 0.0536 in light. The two agree to within
+     0.001 — 2px at 1440x900 — and that is only true because the light range
+     got its own --art-head in the same edit; `.hero__ridge-drift` carries the
+     43px that difference was worth. One number, both themes, and the disc
+     therefore does not move when the theme is toggled.
+
+     ── and the three that stayed, with what each one buys ────────────────
+     --moon-x 54% -> 51%. The hard stop on the left is the TAGLINE: its box is
+     452px wide from x 156, so text can reach x 608 at 1440, and the disc's
+     left limb must clear it at rest while the copy is still at full opacity.
+     At 51% with the wider disc below, that limb is at 626 — 18px of clear
+     sky. The disc's centre goes 777.6 -> 734.4, which is off the frame's own
+     centre line by 14px instead of by 58. (Under 900px there is no clear
+     column at all and this shifts; the media query below carries that.)
+
+     --moon-w clamp(240px, 26vw, 430px) -> clamp(230px, 30vw, 470px). A bigger
+     disc IS a higher disc: its centre is `(0.25 - bite/2) x --moon-w` above
+     the skyline, so 374 -> 432 at 1440 lifts the centre 12px on its own, and
+     216px of moon against 187px is the only one of these numbers a reader
+     will name. The FLOOR went the other way — 240 -> 230 — because that arm
+     only ever binds under 767px, where a 240px box is a 120px disc across a
+     375px screen and the vw arm is the one doing the composing.
+
+     --moon-bite is how much of the disc the ridge takes as a fraction of the
+     disc's diameter: 0 puts the lower limb exactly tangent to the skyline, 1
+     buries it entirely, and 0.5 is where this was three passes ago — centre ON
+     the skyline, half the disc behind mountains painted at --art-far, which is
+     what made it read as a frosted ball.
+
+     ── 0.08 -> 0.18, and the constraint that forced 0.08 was re-checked ─────
+     The site owner: "the moon should start further down, where the mountains is
+     covering 15-20% of the bottom of the moon, then while scrolling it goes
+     up." 0.18 is the middle of that, once the frame is measured rather than
+     the expression trusted — see the table below, which comes in about a
+     hundredth under the number as written.
+
+     The pass that set 0.08 did it because the ranges are drawn at --art-far —
+     0.5 in dark, 0.36 in light — so anything behind them shows THROUGH them,
+     and a deep bite put visible facets across the disc. **That constraint has
+     NOT gone away and this pass checked rather than assumed it**: --art-far is
+     still 0.5 and 0.36 in tokens.css and nothing has made the ranges opaque.
+     What changed is how much of the disc is involved and where. Half a disc
+     behind a half-opacity range is a frosted ball; a sixth of one, at the lower
+     limb, is a moon standing in a mountain — and the limb is where `Moon`'s own
+     gradient already pools its darkest surface, so the part being cut is the
+     part with the least brightness to lose. The rendered readings below are the
+     evidence for that sentence rather than the hope behind it.
+
+     ── measured on the RENDERED frame, which is the only true currency ─────
+     Diffing the composite with `.hero__ridge` shown and hidden, at the disc's
+     own column, is the method --moon-drop above carries and it is the method
+     used again here — the reading this replaces said 0.18 and the frame said
+     four pixels. Every layer that repaints on its own was frozen first, or the
+     diff measures the point cloud rather than the ridge. What the frame says
+     at 0.18, as a fraction of the disc's own diameter:
+
+                    dark               light
+       1440 x 900   36.5px  0.169      33.5px  0.155
+       1920 x 1080  38.9px  0.165      34.9px  0.148
+       1280 x 800   33.2px  0.173      29.2px  0.152
+        375 x 667   18.8px  0.164      21.8px  0.190
+
+     Eight readings between 0.148 and 0.190 against a note asking for 0.15 to
+     0.20, and the two themes agree to within 0.02 because they share one
+     --moon-drop and the near range got its own --art-head in an earlier pass.
+     At 1440x900 that is a skyline at y 746 and a disc spanning y 566.5 to
+     782.5.
+
+     ── the exit had to be re-checked and it still clears ──────────────────
+     Starting 21.6px lower means MOON_LIFT's 0.9 has 21.6px further to carry the
+     disc. It still finishes the trip: at the end of the pin the disc's lower
+     limb is 27.5px above the top of the frame at 1440x900 and 1.1px above it at
+     1920x1080, which is the tightest viewport this is drawn at and is the arm
+     that stopped this going to 0.19. And the check MOON_LIFT's own comment is
+     about — the disc staying ahead of Origin's arriving crest — keeps its
+     margin: disc bottom against crest reads 260 vs 400 at s=700, 164 vs 300 at
+     s=800, 82 vs 200 at s=900 and 19 vs 100 at s=1000.
+
+     Together: centre 777.6, 668.7 -> 734.4, 674.5 at 1440x900. 43px left, 6px
+     DOWN from where it began two passes ago, 15% more moon, and a lower limb a
+     sixth of the way into the mountains. */
+  --moon-w: clamp(230px, 30vw, 470px);
+  --moon-x: 51%;
+  --moon-drop: 0.053;
+  --moon-bite: 0.18;
+
+  /* ── and the one length derived from them, because FIVE layers need it ───
+     The disc's centre, above the frame's floor. The expression
+       --art-rise - --terrain-w x --moon-drop + (0.25 - bite/2) x --moon-w
+     was written out three times in this file before this pass and is now
+     read by `.hero__moon`, `.hero__bloom`, `.hero__shaft`, `.hero__shaft-core`
+     and — through `.hero__moon`'s own rect rather than through CSS —
+     `hero/Starfield.tsx`. Rule 6 asks for one set of variables on the common
+     parent; four copies of one product is the case it is asking about.
+
+     Every consumer states its own `bottom` as this minus half its own box,
+     so a glow can never end up somewhere its source is not, at any viewport
+     and in either theme. */
+  --moon-cy: calc(
+    var(--art-rise) - var(--terrain-w) * var(--moon-drop) + var(--moon-w) *
+      (0.25 - var(--moon-bite) * 0.5)
+  );
+
+  /* --beam-cx, --beam-tilt and --beam-over used to be here and all three are
+     GONE. They placed three tilted rectangles and told `hero/Starfield.tsx`
+     which line to light its dust along; there is no line any more, because
+     the light in this section radiates from the disc rather than raking past
+     it (see the `:root` block at the top of this file, and `.hero__shafts`
+     below). The canvas no longer reads them either — it measures the moon's
+     own rect, which is the same source of truth these two were trying to be
+     and cannot go stale when the moon moves. */
+
+  /* Nothing on this element is stated per theme, and that is deliberate
+     rather than an omission: every value here is GEOMETRY. The two places
+     the hero's geometry genuinely differs between themes are the ranges'
+     --art-head and --art-foot-*, because the two artworks are drawn at
+     different heights inside the same box, and both are stated on the
+     wrappers below with the alpha table that measured them. */
+}
+
+/* ── the one breakpoint the moon's column has ──────────────────────────────
+   Under 900px there is no column for it to be clear of. The reading copy is a
+   660px-max `.hero__inner` inside a `.hero__content` that is the whole frame,
+   so as the frame narrows the copy stops shrinking and the sky the moon can
+   stand in disappears from the LEFT — and 51% of 375px is 191px, which puts
+   the disc's left limb straight through the "Our origin" ghost button.
+
+   58% is the answer to that and not a taste: it is the smallest shift that
+   clears the ghost button's right edge at 375px, where the button ends at
+   x 145 and the limb then rests at 160. It is also better than what shipped
+   at every narrow width rather than only at the one that was measured —
+   limb 160 against 143 at 375, 302 against 275 at 620, 388 against 355 at
+   768, 455 against 426 at 900.
+
+   The TAGLINE still crosses the disc between about 620 and 900, and that is
+   accepted rather than missed. Its box is 452px wide and the frame is 620 to
+   900, so nothing short of moving the disc into the right-hand corner clears
+   it, and what the crossing actually costs is nothing: the tagline is dark
+   type, the disc is the brightest thing in the frame, and text over the moon
+   reads BETTER than text over the sky. It is the button's drawn border over a
+   bright disc that looked broken, and that is what moved.                   */
+@media (max-width: 900px) {
+  .hero__stage {
+    --moon-x: 58%;
+    /* Moving the column moves the RIDGELINE under it, so --moon-drop has to
+       come with it or the bite it states stops being the bite the frame has.
+       58% of the frame is 0.628 of the ridge file rather than 0.607, and the
+       range is a little lower there in both artworks. Measured off the
+       rendered skyline at 375x667: 58px above the floor in dark and 62 in
+       light against an --art-rise of 122.85, which is 0.0608 and 0.0570 of
+       --terrain-w. 0.059 is the mean. At the old --moon-bite of 0.08 that left
+       7px of the disc behind ridge ink in dark and 11px in light (and at
+       --moon-drop 0.053 the dark reading was 0.9px — tangent, which is not a
+       cut). --moon-bite is 0.18 now, which drops the disc a further
+       0.05 x --moon-w = 11.5px on a phone, and the rendered readings there are
+       18.8px and 21.8px of a 115px disc: 0.164 and 0.190, inside the 15-20% the
+       site owner asked for at the narrowest viewport this is drawn at. */
+    --moon-drop: 0.059;
+  }
+}
+
+/* Two layers, and the top one is `none` in dark. --hero-dusk is the shade the
+   site owner has asked for three times — see the block at the top of this
+   file, which carries the readings that sized it and the reason it could not
+   be a stop on --hero-sky itself. It is painted HERE rather than as its own
+   element because it is the same plane: one box, one `inset: 0`, no second
+   thing for the compositor to promote and nothing that can slide against the
+   sky it is shading. */
 .hero__sky {
   position: absolute;
   inset: 0;
-  background: var(--hero-sky);
+  background-image: var(--hero-dusk), var(--hero-sky);
   pointer-events: none;
 }
 
-/* ── light shaft ───────────────────────────────────────────────────────── */
+/* ── the drift wrappers ────────────────────────────────────────────────────
+   Seven elements exist only to own `translate`, and that is the pattern this
+   site already uses for `Seam` in Origin.css: the thing being moved is either
+   an <svg> or a `StillArt` <img>, and one element can have exactly one writer
+   of `translate` (ThemedArt.tsx's header is the long version — two writers
+   race inside a frame and the art shakes).
 
-.hero__shafts {
+   It was four before this pass and the three new ones are the three new pieces
+   of art: `.hero__cloud-drift`, `.hero__mid-drift` and `.hero__branch-drift`.
+   `.hero__weather` joined them without changing its name — it used to BE the
+   drawn layer and is now the wrapper around one, because the fog is
+   `landscapes/valley-fog` rather than a CSS ellipse, and its 74s sideways
+   drift is a `transform` that must not share an element with the `translate`
+   the loop writes.
+
+   Eleven layers are written every frame; the other three — `.hero__valley`,
+   `.hero__shafts` and `.hero__bloom` — need no wrapper, because they are
+   drawn in CSS rather than loaded as art and nothing else writes to them.
+
+   They are `inset: 0` boxes inside the stage's 100svh pin, so the art inside
+   positions itself against the pin exactly as it used to position itself
+   against the hero. `will-change: translate` because every one of them is
+   written on most frames the page moves.
+
+   The two RIDGE wrappers now hold two children each — the file and the haze
+   under it — so they also carry that range's placement variables and its
+   opacity. Both of those moved UP from the <img>, and each move is
+   load-bearing rather than tidying:
+
+     the variables, because a haze anchored to the same ink the art is
+     anchored to has to read the SAME numbers, and rule 6 says one set on the
+     common parent rather than a literal here and a different literal there;
+
+     the opacity, because two 0.5 layers stacked are not one 0.5 layer.
+     Painted separately, the ink over the haze over the sky composites to
+     0.75 ink + 0.25 sky where the ink is, and to 0.5 haze + 0.5 sky one
+     pixel below its cut edge — a dL* 2.0 step in dark, which is a fainter
+     version of the line this whole pass exists to remove. One group opacity
+     on the wrapper makes those two the same arithmetic, and the step is then
+     exactly zero rather than nearly zero.                                   */
+.hero__moon-drift,
+.hero__cloud-drift,
+.hero__rear-drift,
+.hero__mid-drift,
+.hero__weather,
+.hero__ridge-drift,
+.hero__pine-drift,
+.hero__branch-drift {
   position: absolute;
-  inset: -12% -20%;
+  inset: 0;
   pointer-events: none;
   will-change: translate;
-  -webkit-mask-image: linear-gradient(#000 0%, #000 62%, transparent 92%);
-  mask-image: linear-gradient(#000 0%, #000 62%, transparent 92%);
+}
+/* `.hero__valley` is written every frame too and is NOT in the list above,
+   because it is the drawn layer as well as the box that carries the
+   translate — there is no art inside it to keep separate from a transform.
+   Its own geometry, `will-change` included, is further down beside its
+   gradient, where the numbers that placed it are.                          */
+/* All THREE ranges at one opacity, and the mid one joining them is a decision
+   rather than a default. What separates these planes is not how much of each
+   is painted — it is the ink the three artworks are drawn in (the kit ships a
+   pale rear range, a medium mid one and a near-black near one, per theme) and
+   the haze planes between them. Giving the middle range its own alpha would be
+   a fourth mechanism saying the same thing as the other two, and it would be
+   the one that goes stale when a file is re-rendered. */
+.hero__rear-drift,
+.hero__mid-drift,
+.hero__ridge-drift {
+  opacity: calc(var(--art-far) * var(--hero-sink, 1));
+}
+
+/* ── --hero-sink: the terrain takes itself away, the sky does not ───────────
+   Written by Hero.tsx once a frame on the SECTION, so it inherits to every
+   layer in here from one style write. 1 while the hero is the shot, ramping to
+   0 across exactly the same `--origin-dissolve` the eclipse test uses, so the
+   silhouettes are gone at the instant the stage stops painting and the two can
+   never drift apart.
+
+   The site owner's report was "when i scroll onto the our story section, i
+   still see a mountain that is faint but still showing right in the middle of
+   the screen when it should've been fully faded away". They were right and it
+   was not the artwork: Contract D deliberately keeps the stage alive through
+   the whole of Origin's ramp so the ridges can carry down into the arriving
+   section instead of stopping on a ruled line, and for that whole ramp three
+   ranges went on painting at --art-far behind a band that is not yet opaque.
+   Making the band opaque sooner would put the seam back — the defect the owner
+   reported three passes running — so the ranges fade themselves instead.
+
+   **The sky is deliberately absent from every rule below.** It is a flat
+   gradient with no shape in it, so it cannot be mistaken for a mountain, and
+   it is the thing the dissolve is dissolving INTO — fading it would open the
+   join it exists to close. Same reasoning keeps `.hero__grain` and
+   `.hero__vignette` out: neither carries a silhouette.
+
+   The default of 1 is load-bearing. A browser that never runs the frame loop,
+   a background tab, and the reduced-motion identity all resolve `var(--hero-
+   sink, 1)` to the composed frame rather than to an invisible one.          */
+.hero__cloud-drift,
+.hero__pine-drift,
+.hero__branch-drift {
+  opacity: var(--hero-sink, 1);
+}
+
+/* ── the terrain ───────────────────────────────────────────────────────────
+   Two ranges, and the fog veil that used to sit behind them is GONE. It was
+   the "other smooth mountains behind the mountains" the site owner asked to
+   be rid of — soft blurred bands that read as vague hills — and nothing has
+   replaced it in that slot except a properly faceted distant range, which is
+   a different thing in the same drawing language.
+
+   ── the three numbers each layer is placed with ──────────────────────────
+   --terrain-w is HORIZONTAL SCALE and nothing else. Always at least 124vw,
+   because a ridge that stops short of the viewport's edges is an island
+   rather than a horizon. The vh term is the floor for a phone, where the
+   bottom strip wraps to three rows and eats 118px: sized off viewport WIDTH
+   alone the ridge measured entirely behind that strip at 375px.
+
+   --art-head is where the artwork's INK STARTS, as a fraction of the box's
+   own width, measured from the box's bottom edge. Both ridge files are
+   2172x724 (1600x533 in the .webp that is painted), so a fraction of the
+   width is a fraction of the height times three. Measured off the real alpha
+   channels at a threshold of 24/255:
+
+     mountain-ridge        dark ink top 0.5141 of the file, bottom 0.9475
+                           light        0.5760              0.9737
+     mountain-ridge-mid    dark ink top 0.1989 of the file, bottom 0.8405
+                           light        0.1932              0.9250
+     mountain-ridge-rear   dark ink top 0.6735 of the file, bottom 0.9662
+                           light        0.5197              0.7992
+
+   The main ridge's two themes agree closely enough to share one head (dark
+   binds, (1 - 0.5141) / 3 = 0.1620), and the MID range's agree closer still —
+   0.2670 and 0.2689, which is 0.0019 of the box's width, 3.7px at 1440x900.
+   It takes the LARGER of the two, so neither theme's peak can stand above the
+   height the clearance budget allowed for; dark's simply lands 3.7px under its
+   own --art-rise. The REAR ridge's do not agree — its light artwork is drawn
+   15 percentage points higher inside the same box — so it gets a head per
+   theme, below. That is geometry, not colour; the files are what they are and
+   one number would put one of them 100px off.
+
+   That table is also why the mid range needs NO haze and has none. Its ink
+   starts at 0.199 of the file against the near range's 0.514, so at head 0.2688
+   the box hangs far enough below the frame that its ragged bottom edge is under
+   the floor everywhere: at 1440x900 the lowest ink sits 192px below it, and the
+   0.095vh lift only ever takes 86px of that back. There is nothing to dissolve.
+
+   --art-foot-hi / --art-foot-lo are the same currency at the other end: the
+   HIGHEST and the LOWEST point of the ink's bottom edge, as fractions of the
+   box's width, above the box's bottom edge. The `bottom` column above is a
+   single number per file because it only ever needed the lowest; a haze that
+   has to be at full strength wherever the cut happens needs both, because
+   between them is a band and not a line. Re-scanned per column on the same
+   .webp at the same threshold, and a head-per-theme is a foot-per-theme for
+   the same reason:
+
+                          ink bottom runs      --art-foot-hi  --art-foot-lo
+     mountain-ridge  dark   0.8518-0.9475        0.04941        0.01751
+                     light  0.9099-0.9737        0.03002        0.00876
+     -rear           dark   0.8893-0.9662        0.03690        0.01126
+                     light  0.7974-0.7992        0.06754        0.06692
+
+   That last row is the whole complaint in one line: the rear range's light
+   artwork ends on a cut that deviates by ONE pixel across 1600 of width.
+   Stretched to 124vw it is a ruler laid across the page.
+
+   --art-rise is HOW FAR THE INK'S HIGHEST POINT STANDS ABOVE the frame's
+   floor. `bottom` is then derived from it and never chosen:
+   rise - width x head.
+
+   ── and the third number, which is what bought the extra height ──────────
+   --art-lee. The budget above protects a line of copy, and the copy is only
+   ever in the LEFT of the frame — the reading column is 660px wide against a
+   1430px hero. So the constraint is not "the ridge's highest peak" but "the
+   ridge's highest peak OVER THE COPY", and those are not the same place: the
+   art's two tall peaks sit at 20-26% and 78-84% of the file.
+
+   Shifting the whole range left by a tenth of its own width puts the low
+   shoulder behind the reading column and the tall peaks out over the model.
+   Measured on the alpha profile, per 2.5% column bucket, over the x-range
+   the reading column actually occupies, at every width in the table below:
+   the ink over the copy is at worst 0.0275 of the box's width lower than the
+   ink at the peak. So the peak may stand --art-lee x width higher than the
+   band allows, and the band still binds where it has to.
+
+   Measured clearance, ridge ink over the reading column down to the CTA row,
+   at the top of the page and again at full scroll lift:
+     see the block comment in Origin.css for the lamppost's table; this one's
+     readings are in the session report. All positive at 320, 375, 768, 1024,
+     1280, 1366, 1440, 1680 and 1920.                                        */
+.hero__rear,
+.hero__mid,
+.hero__ridge {
+  left: calc(50% - var(--terrain-w) * 0.1);
+  /* transform, NOT translate: the wrapper above owns `translate` and rewrites
+     the whole value every frame, so a centring translate would be gone by the
+     next one. Scene.css makes the same point from its end. */
+  transform: translateX(-50%);
+  width: var(--terrain-w);
+  height: auto;
+  /* stated as well as intrinsic, so the layer holds its box before the file
+     arrives and the composition does not assemble itself in two steps */
+  aspect-ratio: 2172 / 724;
+  bottom: calc(var(--art-rise) - var(--terrain-w) * var(--art-head));
+}
+
+/* The far range. Narrower than the main ridge on purpose — a smaller facet
+   scale is what reads as distance — paler by sharing --art-far with it while
+   sitting further back, and capped so its peak can never be the thing that
+   touches the copy: --art-band is the whole clearance, and this takes at most
+   all of it while the main ridge is allowed --art-band + lee. In practice
+   0.088 x width binds everywhere above a phone, which puts this range's
+   skyline BELOW the main ridge's shoulders — so it shows through the main
+   ridge's valleys and nowhere else, which is the only place a range behind a
+   range should be visible. */
+.hero__rear-drift {
+  /* the two the far range overrides — everything else comes down from
+     `.hero__stage`, which carries the main ridge's values */
+  --terrain-w: max(124vw, 138vh);
+  --art-rise: min(calc(var(--terrain-w) * 0.088), var(--art-band));
+  --art-head: 0.10883;
+  --art-foot-hi: 0.0369;
+  --art-foot-lo: 0.01126;
+  /* the far range's dissolve — see the haze block below for the pair */
+  --haze-lead: 0.055;
+  --haze-tail: 0.03;
+  --haze-ink: var(--terrain-haze-rear);
+}
+[data-theme='light'] .hero__rear-drift {
+  /* the light artwork is drawn higher in the same box — see the table above */
+  --art-head: 0.1601;
+  --art-foot-hi: 0.06754;
+  --art-foot-lo: 0.06692;
+}
+
+/* ── the third range, and what it is standing in for ───────────────────────
+   `landscapes/mountain-ridge-mid`, placed this pass. `.hero__valley` below was
+   carrying this plane's velocity and its haze with no silhouette attached, so
+   the frame had two ranges and a wash between them. The wash stays — it is
+   this plane's air, and it is what the near range's lifting foot has to have
+   under it — and the plane now has an edge.
+
+   ── the three numbers, and the one that had to be solved ─────────────────
+   --terrain-w max(134vw, 148vh) sits between the far range's max(124vw, 138vh)
+   and the near one's max(146vw, 160vh), which is the facet scale doing the
+   distance: a smaller facet reads as further away, and the three are now a
+   ladder rather than a pair.
+
+   --art-rise is the one that binds against the copy, and this artwork's shape
+   is not the near range's. The near range gets --art-band + 0.0275 x width
+   because its two tall peaks are at 20-26% and 78-84% of the file and the
+   tenth-of-a-width shift left puts a low shoulder behind the reading column.
+   This file's peaks are at 25-30% and 75-80%, so the same shift puts a peak
+   nearer the column: measured on its own alpha profile, per 2.5% column bucket
+   over the x-range the reading column occupies, the ink over the copy is at
+   worst 0.020 of the box's width below the ink at the peak. So the lee is
+   0.020 and not 0.0275, and it is a measurement of this file rather than a
+   number copied from the one above it.
+
+   0.115 x width is the other arm, and it is what makes this a MIDDLE distance:
+   the far range takes 0.088 and the near one 0.134. At 1440x900 the expression
+   gives 221.9px above the frame's floor and the rendered ink tops out at
+   218.1 — the 3.7px is the shared --art-head, above — against the near range's
+   267.8 and the far range's 157.1. So it shows through above the near range's
+   shoulders and stands clear of the far one, which is the only place a third
+   range can be seen at all. Measured on the rendered frame with the layer
+   shown and hidden: 65,106px of the frame carry it in dark, strongest at
+   (99,694), where it takes rgb(2,4,8) to rgb(47,55,71); 55,897px in light,
+   strongest at (165,707), rgb(169,177,194) to rgb(136,148,167). Both of those
+   are the left-hand peak standing above the near range's shoulder, which is
+   exactly the column this range was placed for.
+
+   ── and what it must not do, which is eat the moon ───────────────────────
+   The disc rests BEHIND all three ranges, so a mid range whose skyline at the
+   moon's own column stood higher than the near range's would take a second
+   bite out of it and --moon-bite would stop describing the frame. It does not
+   come close: at 1440x900 this artwork is at a low shoulder at that column
+   (its ink top is 0.499 of the file there), which puts its skyline about 27px
+   above the frame's floor against the near range's 156px. Verified by diffing
+   the rendered frame with this layer shown and hidden at 1440x900, 1920x1080,
+   1280x800 and 375x667, both themes: not one pixel of the disc's column
+   changes anywhere between its upper and lower limbs.                        */
+.hero__mid-drift {
+  --terrain-w: max(134vw, 148vh);
+  --art-rise: min(
+    calc(var(--terrain-w) * 0.115),
+    calc(var(--art-band) + var(--terrain-w) * 0.02)
+  );
+  /* one head for both themes — the table above has the 3.7px this costs */
+  --art-head: 0.2688;
+}
+
+/* The near range. --terrain-w and --art-rise now come down from
+   `.hero__stage` — they are the values four other layers have to agree with,
+   and the pass that declared them here is the pass in which `.hero__moon`
+   carried a hand-copied duplicate. The coefficients they are built from are
+   still argued here, because here is where the artwork they describe is:
+
+     0.134 = head 0.162 minus a 0.028 bleed below the floor, which is what
+     stops the range ending in mid-air above the bottom strip. 300px is
+     restraint: without a ceiling a 1600-tall window grows 340px of mountain,
+     which is a landscape and not the frame the kit asks for. It was 200 and
+     the site owner asked for more.                                          */
+.hero__ridge-drift {
+  --art-head: 0.162;
+  --art-foot-hi: 0.04941;
+  --art-foot-lo: 0.01751;
+  /* ── the near range's dissolve, and the tail is the number that moved ────
+     0.08 -> 0.15. RIDGE_LIFT went from 56px to 0.22vh in the same edit
+     (Hero.tsx argues why), and the constraint that binds a lifting range is
+     that its haze must still reach the frame's floor when it gets there:
+     the haze's reach below the floor is
+       (--art-head - --art-foot-lo + --haze-tail) x --terrain-w - --art-rise
+     and the lift eats it directly. At the old 0.08 that reach was 204px at
+     1440x900 against a 198px lift — six pixels left — and 115px against 147px
+     at 375x667, which is a foot hanging clear of its own haze on every phone.
+     At 0.15:
+
+                        reach   lift    margin
+       1440 x 900       351px   198px   153px
+       1920 x 1080      526px   238px   288px
+       1024 x 768       255px   169px    86px
+        375 x 667       192px   147px    45px
+
+     The tail only moves the haze's BOTTOM: its `bottom` drops by the same
+     length its `height` grows, so its top stop does not move and the proof
+     further down that the haze can never reach the copy is untouched.
+
+     It is also the better picture on its own terms. The two rates were "near:
+     crisp, falls a long way / far: soft high up, gone quickly"; the near one
+     now falls twice as far, which is more mass sinking into the sky under a
+     silhouette that is still hard-edged at its summit. */
+  --haze-lead: 0.018;
+  --haze-tail: 0.15;
+  --haze-ink: var(--terrain-haze);
+}
+[data-theme='light'] .hero__ridge-drift {
+  /* ── the head this range did NOT have, and what it cost ─────────────────
+     The table above says the near range's two artworks start their ink at
+     0.5141 and 0.5760 of the file — heads of 0.1620 and 0.1413 of the box's
+     width — and the paragraph beside it said they "agree closely enough to
+     share one head". They do not. `bottom` is `--art-rise - --terrain-w x
+     --art-head`, so a shared 0.162 places the LIGHT range by the DARK file's
+     proportions and the light artwork's peak then lands
+     (0.1620 - 0.1413) x --terrain-w BELOW --art-rise — 43px at 1440x900,
+     58px at 1920x1080.
+
+     Two things were paying for it and neither showed as an obvious defect:
+     the light theme had 43px less mountain than the budget on `.hero` had
+     already reserved for it, and the moon could not rest on a horizon that
+     was 43px lower than every expression placing the moon believed. Measured
+     by diffing the rendered frame with `.hero__ridge` shown and hidden, at
+     the disc's own column: the light skyline sat at y 792 of 900 against a
+     disc bottom at 748.6 — the moon floated 43px clear of the range it is
+     composed to be resting on, in every light-theme screenshot this section
+     has ever produced.
+
+     The rear range already gets a head per theme for exactly this reason and
+     for a difference twice this size. This is the same fix on the near one,
+     and it is what makes ONE --moon-drop true in both themes: with it the two
+     themes' skylines at the moon's column differ by 2px at 1440x900 instead
+     of by 43. */
+  --art-head: 0.1413;
+  --art-foot-hi: 0.03002;
+  --art-foot-lo: 0.00876;
+}
+
+/* ── where the mountains stop being mountains ──────────────────────────────
+   The site owner's note: "make the bottom of the mountains blend more and
+   perfectly into the story section, and the bottom of the mountains just
+   shows a straight line (BORING) so blend it to make it into a dark bluish
+   sky just like the same color of the mountains."
+
+   Both halves of that are one problem. A cutout ends where its alpha ends,
+   and both ridge files end along a cut that is nearly horizontal — the rear
+   one, in light, to within a single pixel across the whole file (the foot
+   table above). Composited as painted, the step across that cut is dE00 5.11
+   and 14.12 in dark for the near and far ranges, 13.97 and 5.40 in light.
+   That is an edge, and an edge across a whole page reads as a pasted picture.
+
+   ── why a band could not fix it, and a colour that lives HERE can ─────────
+   The obvious move is to bring --band-origin up to meet the mountains. It is
+   necessary but it cannot be sufficient, and the reason is geometric rather
+   than chromatic: the colour immediately under the ridge's foot is not a
+   band at all. The stage is pinned, so what is behind the foot is
+   --hero-sky's outer stop, and what arrives under it later is #origin's
+   --tint-top, which is --band-hero. --band-origin is #origin's --tint-mid
+   and does not reach the top of that section for 30% of its height. So no
+   band value can be the thing the ink stops on. A colour drawn HERE, under
+   the ink, is the only thing that can be.
+
+   (--band-origin moved anyway, because it is the story section the owner
+   named and because it is what this neighbourhood settles into once Origin
+   has taken the frame. tokens.css derives it from this same sampled ink and
+   argues the split between the two themes.)
+
+   ── the shape ────────────────────────────────────────────────────────────
+   Transparent, ramping to the file's own foot ink across --haze-lead, held
+   at full through the whole foot BAND — which is why the foot needed two
+   numbers and not one — then dissolving over --haze-tail. Held at full
+   through the band is the part that matters: wherever a given column's ink
+   happens to stop, the colour behind it is already exactly the colour it
+   stopped on, and one group opacity on the wrapper means "exactly" is
+   arithmetic and not an approximation. dE00 0.000 at the cut, both themes.
+
+   The tail passes through --seam-fade at its own half way point, which is
+   the rate every other dissolve on this page uses and is why this is not a
+   second mechanism. tokens.css owns that number.
+
+   ── and the two rates are NOT the same, which is free depth ──────────────
+   A far range loses itself in haze sooner than a near one, and keeps less
+   edge when it does.
+
+     near (.hero__ridge)  lead 0.018  tail 0.150   crisp, falls a long way
+     far  (.hero__rear)   lead 0.055  tail 0.030   soft high up, gone quickly
+
+   At 1440x900 dark that is: the near haze ramps in over 38px and dies over
+   315px, the far one ramps in over 98px and dies over 54px. So the near
+   range keeps a hard silhouette and a body that sinks most of a screen; the
+   far one has already begun going soft 30px below its own summit and is
+   finished 54px under its foot. Neither number has been looked at on a
+   screen. (The near tail was 0.080 and 168px until RIDGE_LIFT was taken to
+   0.22vh; `.hero__ridge-drift` above carries the table that sized it.)
+
+   ── it cannot reach the copy, and that is provable rather than measured ──
+   The haze's top edge is at rise - width x (head - foot-hi - lead), i.e.
+   width x (head - foot-hi - lead) BELOW the ink's own highest point. That
+   coefficient is 0.09459 and 0.11398 for the near range in dark and light
+   and 0.01693 and 0.03756 for the far one — positive in all four, so the
+   haze's top is strictly below the ink's peak at every viewport, and the
+   ink's peak is already the thing the clearance budget on `.hero` protects.
+   Computed at 1440x900: 199px, 240px, 30px and 67px below the respective
+   peaks. Against the CTA row the guaranteed floor is 33.9px + width x that
+   coefficient, because --art-rise is capped at --art-band and the CTA row's
+   bottom sits --art-band + 33.9px above the frame's floor; the actual
+   readings at 1440x900 are 163px (near) and 117px (far), the caps not being
+   the binding arm there. So every clearance in the budget is untouched by
+   construction, and the haze's top stop is transparent in any case.
+
+   (33.9 was 27.9 and 163 was 169 until the scroll reserve in `.hero`'s
+   --art-band went from 12px to 18px to pay for the bigger RIDGE_LIFT. The
+   coefficients did not move: --haze-tail changes only where the haze ENDS,
+   and every number in this paragraph is about where it starts.)            */
+.hero__rear-haze,
+.hero__ridge-haze {
+  /* the three lengths the box and the gradient are both built from, so
+     neither repeats a product the other one has to agree with */
+  --haze-in: calc(var(--terrain-w) * var(--haze-lead));
+  --haze-band: calc(var(--terrain-w) * var(--art-foot-hi) - var(--terrain-w) * var(--art-foot-lo));
+  --haze-out: calc(var(--terrain-w) * var(--haze-tail));
+  position: absolute;
+  /* the art's own placing, restated from the same variables — same width,
+     same centre, same tenth-of-a-width shift left, so the haze cannot slide
+     out from under the range it belongs to at any viewport */
+  left: calc(50% - var(--terrain-w) * 0.1);
+  transform: translateX(-50%);
+  width: var(--terrain-w);
+  /* the art's bottom, then up to the foot's LOWEST point, then --haze-out
+     below that */
+  bottom: calc(
+    var(--art-rise) - var(--terrain-w) * var(--art-head) + var(--terrain-w) * var(--art-foot-lo) -
+      var(--haze-out)
+  );
+  height: calc(var(--haze-in) + var(--haze-band) + var(--haze-out));
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    var(--haze-ink) var(--haze-in),
+    var(--haze-ink) calc(var(--haze-in) + var(--haze-band)),
+    color-mix(in srgb, var(--haze-ink) calc(var(--seam-fade) * 100%), transparent)
+      calc(var(--haze-in) + var(--haze-band) + var(--haze-out) * 0.5),
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ── the basin between the ranges ──────────────────────────────────────────
+   The cheapest plane on the page: one element, one gradient, no artwork, no
+   second request. It sits between the MID range and the fog now — there are
+   three silhouettes behind it rather than two — and one of the three jobs it
+   was written for has gone to the range it was standing in for.
+
+   ── the two jobs left, either of which would have earned it ───────────────
+   **Aerial perspective.** The ranges behind this are held to being far by
+   being paler and lower. That is two of the three cues and the third is the
+   biggest: distant things are separated from near things by HAZE. A band of
+   the near range's own foot ink lying between them puts real air in the
+   valley, and it is what stops three ranges reading as one thickness of
+   mountain in three shades.
+
+   **Ground for a range that now moves.** RIDGE_LIFT is 0.22vh — 198px at
+   1440x900, where it was 56 — so the near range's foot leaves the frame's
+   floor as the reader scrolls. `.hero__ridge-haze`'s tail was lengthened in
+   the same edit so that its own ink still reaches the floor at every viewport
+   (the table on `.hero__ridge-drift` has the margins), and this is what is
+   behind that arithmetic if it is ever wrong: a plane whose bottom half is
+   below the frame and cannot be lifted out of it.
+
+   **A velocity between the ranges.** 0.125vh against the near ridge's 0.220,
+   the fog's 0.155, the mid range's 0.095 and the far range's 0.045. It was
+   0.090 and it moved this pass, because 0.090 is where the MID RANGE now is
+   and this plane is drawn in FRONT of that silhouette: a layer in front of
+   another one while travelling slower than it is a depth cue pointing
+   backwards. The third job this element used to do on its own — "a third
+   terrain velocity so the two ranges have something to slide against besides
+   each other" — is what it was standing in for, and it belongs to a range with
+   an edge now. The two above are still this element's alone.
+
+   ── why it cannot be an edge ─────────────────────────────────────────────
+   Its top stop is transparent and its bottom is 40svh below the frame's
+   floor, so neither end of it is on screen. The only horizontal thing it can
+   ever draw is a gradient, which is the whole point of guardrail 4.
+
+   ── the geometry ─────────────────────────────────────────────────────────
+   The box's top is at 0.66 x --art-rise above the floor — 177px at 1440x900,
+   which is 76px above the rear range's own skyline (its rise is capped at
+   0.088 x its own width, 0.587 of the near range's rise there) — so the fog
+   starts in the far range's sky, not in the frame's. The stops are stated as
+   lengths in --art-rise rather than as percentages of the box, because the box
+   is mostly the 40svh of overhang below the floor and a percentage would put
+   full ink somewhere under the page:
+
+     transparent            at 0.66 x rise above the floor  (the box's top)
+     --seam-fade of the ink at 0.26 x rise above the floor
+     full ink               exactly AT the frame's floor
+     full ink               all the way down
+
+   --seam-fade is the alpha every other dissolve on this page passes through
+   at its own half way point, so this is not a second mechanism.            */
+.hero__valley {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -40svh;
+  height: calc(var(--art-rise) * 0.66 + 40svh);
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    color-mix(in srgb, var(--terrain-haze) calc(var(--seam-fade) * 100%), transparent)
+      calc(var(--art-rise) * 0.4),
+    var(--terrain-haze) calc(var(--art-rise) * 0.66),
+    var(--terrain-haze) 100%
+  );
+  opacity: calc(var(--hero-valley-veil) * var(--hero-sink, 1));
+  pointer-events: none;
+  will-change: translate;
+}
+
+/* ── weather crossing the valley ───────────────────────────────────────────
+   The hero holds still for 130svh and the copy is gone after the first 30 of
+   them, so a full viewport of this section is scenery with nothing happening
+   in it. Guardrail 9 of the brief: every extra pixel of air has to have
+   something in it, or it is a gap rather than air. This is the thing that
+   belongs in a valley at night.
+
+   ── it was one CSS ellipse and it is `landscapes/valley-fog` now ─────────
+   The ellipse was doing the job honestly and it was doing it without a shape:
+   a radial gradient has exactly one silhouette, and it is an oval. A fog bank
+   has torn edges, a heavier body on one side and thin fingers off the other,
+   and none of that is expressible in one `radial-gradient` however many stops
+   it is given. The art kit shipped the piece for exactly this slot, and its
+   own README says its alpha fades on all four sides so it needs no CSS mask.
+
+   TWO elements where there was one. `translate` is what Hero.tsx writes here
+   every frame and `transform` is the 74s sideways drift, and one element gets
+   one writer of each (ThemedArt.tsx's header is the long version). So
+   `.hero__weather` is the wrapper and takes the scroll rate; `.hero__weather-
+   art` is the <img> and takes the drift. The used value composes the two on
+   the ancestor chain exactly as it used to compose them on one element, so the
+   layer rides its scroll rate and its own weather with nothing to coordinate.
+
+   ── why it still cannot draw an edge ─────────────────────────────────────
+   The art's alpha reaches zero on all four sides — measured at threshold
+   24/255, its ink runs x 0.012-0.983 and y 0.212-0.844 of the file in dark and
+   x 0.015-0.984, y 0.186-0.933 in light — so there is no cut anywhere in it.
+   The box is also drawn wider than the frame and its left and right rims sit
+   off both sides at every viewport and at both ends of the drift: the binding
+   arithmetic is `0.5vw <= w x (0.5 - 0.012 - 0.042)`, i.e. w >= 1.121 x vw,
+   and the `max(124vw, ...)` arm below is what guarantees it.
+
+   ── the three things it is doing ─────────────────────────────────────────
+   **A terrain velocity between the basin and the ridge.** Hero.tsx drives it
+   at 0.155vh against the ridge's 0.220, the basin's 0.125, the mid range's
+   0.095 and the far range's 0.045 — and it sits in the DOM between the basin
+   and the near ridge, so it slides against both the plane behind it and the
+   silhouette in front of it. It was 0.135 and moved with the basin when the
+   mid range took 0.095; the ORDER is what this number has to keep, not the
+   value.
+
+   **Weather.** ±4.2% of the box's width is ±103px at 1440x900, over 74
+   seconds; slow enough that no reader watching one screen can see it move, and
+   far enough that the valley is a different place two paragraphs later.
+
+   **Aerial perspective with a rate.** The dark artwork is a slate-blue bank
+   and the light one its pale partner, so this is the same air the basin plane
+   is and it thickens what is behind it — the mid and far ranges — exactly as
+   haze does. `--hero-weather-veil` at the top of this file carries the two
+   alphas; they were solved for a gradient of --terrain-haze and re-measured
+   against the artwork in this pass.
+
+   ── the geometry, and it is now EXACT rather than approximately right ────
+   The ellipse's top rim was at 1.06 x --art-rise above the frame's floor,
+   because its own height was stated as a multiple of --art-rise. The art's
+   height is fixed by its aspect ratio (2172x724, so height = width / 3) and
+   its width has to be a fraction of the VIEWPORT to guarantee the overhang
+   above — two different lengths, which would put the ink's top rim in a
+   different place on every screen. So `bottom` is solved for the rim instead:
+
+     bottom = RIM x --art-rise - --fog-top x (--weather-w / 3)
+
+   where --fog-top is the height of the ink's top edge as a fraction of the
+   box, per theme (0.788 dark, 0.8143 light — the two artworks are drawn at
+   different heights inside the same box, exactly as the two ridge files are).
+   That puts the ink's top rim at RIM x --art-rise at EVERY viewport and in
+   both themes, which is what the ellipse only managed at the one it was fitted
+   at.
+
+   ── and RIM is 0.80, where the ellipse's was 1.06 ────────────────────────
+   This is the number the render changed, and the reason is that a painted bank
+   is not a gradient's outer rim. The ellipse reached transparent at its own
+   edge, so a rim 16px above the near range's summit put almost nothing over the
+   moon; the artwork is already at real alpha a few pixels inside its top edge.
+   At 1.06 the bank crossed the disc's CENTRE, and the measurement this
+   neighbourhood is judged on — the disc's centre against the sky one disc
+   radius plus 26px out — fell from 8.6:1 to 3.3:1 in dark and from 1.65:1 to
+   1.39:1 in light. Not a small regression; the whole of --hero-dusk exists to
+   buy a fifth of that.
+
+   At 0.80 the ink's top rim is 214.2px above the frame's floor at 1440x900
+   (y 685.8), which is 11px BELOW the disc's own centre and about 90px above
+   the skyline at most columns, since the art's peaks are at two places in the
+   file and everywhere else is shoulder. So the bank lies across the disc's
+   lower half and the valley under it, which is where fog in a valley is, and
+   the disc's centre is clear of it: measured with the layer shown and hidden,
+   the centre pixel is IDENTICAL in both themes at 1440x900, 1920x1080 and
+   1280x800, and moves 7 units at 375x667. Its strongest point in the frame is
+   on the disc's lower limb — rgb(182,184,185) to rgb(139,147,155) in dark at
+   (695,732) — which is the moon standing in the fog it is rising out of, and
+   not the frosted ball this section spent two passes removing, which was a
+   translucent crest across the WHOLE disc.
+
+   The ink's BOTTOM edge lands 105px below the frame's floor at 1440x900 and
+   below it at every other viewport, so the bank's own lower silhouette is never
+   on screen and there is nothing there to read as a line.                    */
+.hero__weather-art {
+  /* Wide enough that both rims stay off the frame at both ends of the drift
+     (the arithmetic is above), and tall enough to keep pace with the terrain
+     on a tall window, where --art-rise grows on the vh arm of --terrain-w. */
+  --weather-w: max(124vw, calc(var(--art-rise) * 6.9));
+  --fog-top: 0.788;
+  /* centred by `left` and not by a translateX(-50%), because the keyframes
+     below own `transform` outright — a centring transform would be gone the
+     first frame the drift wrote one */
+  left: calc(50% - var(--weather-w) / 2);
+  width: var(--weather-w);
+  height: auto;
+  /* stated as well as intrinsic, so the layer holds its box before the file
+     arrives and the composition does not assemble itself in two steps */
+  aspect-ratio: 2172 / 724;
+  /* RIM 0.80 — the block above carries what the render did to 1.06 */
+  bottom: calc(var(--art-rise) * 0.8 - var(--fog-top) * var(--weather-w) / 3);
+  opacity: calc(var(--hero-weather-veil) * var(--hero-sink, 1));
+  will-change: transform;
+  /* 0% is the resting composition, which is what lets base.css's blanket
+     `animation-play-state: paused` under reduced motion pin this at a frame
+     somebody composed rather than at an accident. The reduced-motion block at
+     the foot of this file states it again explicitly, because a keyframe that
+     depends on a rule in another file for its resting frame is a keyframe
+     whose resting frame nobody can find. */
+  animation: heroWeather 74s ease-in-out infinite;
+  transform: translate3d(-4.2%, 0, 0);
+}
+[data-theme='light'] .hero__weather-art {
+  /* the light artwork's ink starts higher in the same box — see the head
+     tables on the ranges above, which is the same measurement on other files */
+  --fog-top: 0.8143;
+}
+@keyframes heroWeather {
+  0%,
+  100% {
+    transform: translate3d(-4.2%, 0, 0);
+  }
+  50% {
+    transform: translate3d(4.2%, 0, 0);
+  }
+}
+
+/* ── the moon ──────────────────────────────────────────────────────────────
+   Resting on the horizon, behind both ranges and in front of the sky, and it
+   leaves up and to the left as the reader walks out of the hero. Hero.tsx
+   drives it; this only composes the resting shot.
+
+   --moon-drop, --moon-x, --moon-bite and --moon-w are all on `.hero__stage`,
+   with the argument for each: this element used to carry a hand-copied
+   duplicate of the ridge's whole --art-rise expression and its own comment
+   apologised for it, and the bloom below needs the same four numbers to sit
+   on the disc, which would have made three copies.
+
+   ── the placement ────────────────────────────────────────────────────────
+   --moon-cy is the disc's centre above the frame's floor, declared once on
+   `.hero__stage`; this element's `bottom` is that minus half the box, because
+   `Moon`'s visible disc is exactly the middle half of its own 100x100 box
+   (the other quarter each side is halo with no edge, which is why a moon
+   meant to read as 130px across wants a 260px box and the halo is allowed to
+   hang off the frame).
+
+   At bite 0 the disc's lower limb is tangent to the skyline; at 0.5 its
+   centre is ON the skyline, which is where this was three passes ago and is why
+   the ridge's --art-far alpha put mountains through the middle of the moon.
+   Computed at 1440x900 from the numbers on `.hero__stage`: --art-rise is
+   267.8px and --terrain-w x --moon-drop is 111.4px, so the skyline at this
+   column is 156.4px above the frame's floor, the disc spans 117.5-333.5 above
+   it, and the rendered frame puts 36.5px of a 216px disc behind ridge ink — a
+   sixth, at the bottom, where the ridge's body is darkest and where the disc's
+   own limb gradient is already at its dimmest. Those are the RENDERED figures
+   and not just the arithmetic: `.hero__stage` carries the method, the table
+   for both themes at four viewports, and the owner's note.
+
+   ── and the two private re-statements, which are why the light disc reads ─
+   `Moon` paints from three tokens and this element hands it different
+   strengths of two of them. Both are declared at the top of this file rather
+   than here, because a custom property whose value references itself is a
+   cycle that resolves to nothing at all; both are set HERE and not on the
+   stage so that they reach this instance of `Moon` and no other.
+
+   --moon-halo -> --hero-moon-air. In light --moon-halo is
+   rgba(255,255,255,0.86) laid at stop opacity 0.92 right out to the disc's
+   rim, and a 0.99-white disc inside a 0.79-white ring is not an edge —
+   `r2-L-0000` is what that looks like, a bright patch with a moon somewhere
+   in it. 18% in light, unchanged in dark — and at 38%, which is what one pass
+   shipped, the halo was still worth 10 units of white on the sky one disc
+   radius plus 26px out, which is where this section's whole contrast argument
+   is measured.
+
+   --moon-mare -> --hero-moon-mare. The limb gradient is a pool of --moon-mare
+   over the WHOLE disc and is still at half strength at its centre, so in
+   light it was taking the disc from 254 to 238 — a sixteenth of the moon's
+   entire contrast budget, spent on the one pixel anybody samples to ask how
+   bright the moon is. 20% in light, unchanged in dark.                      */
+.hero__moon {
+  --moon-halo: var(--hero-moon-air);
+  --moon-mare: var(--hero-moon-mare);
+  position: absolute;
+  display: block;
+  width: var(--moon-w);
+  height: var(--moon-w);
+  left: calc(var(--moon-x) - var(--moon-w) / 2);
+  bottom: calc(var(--moon-cy) - var(--moon-w) * 0.5);
+  pointer-events: none;
+}
+
+/* ── one torn wisp, crossing the disc ──────────────────────────────────────
+   `props/moon-cloud`, placed this pass, and the kit's own note on it is the
+   brief: one thin alpha-feathered cloud to cross the existing vector moon; it
+   never replaces or contains a moon. So it is drawn IN FRONT of `.hero__moon`
+   and behind every range, which is the only stacking order in which a wisp can
+   be seen to cross anything.
+
+   ── why it is here at all ────────────────────────────────────────────────
+   The moon's exit is the longest single piece of motion in this section and it
+   was, until this pass, a disc and three glows all travelling on one vector. A
+   sprite translating. One object in the same sky moving at a DIFFERENT rate is
+   what turns that into a sky the moon is leaving, and it costs one layer.
+   Hero.tsx's CLOUD_LIFT carries why it is a lift/drift pair rather than a
+   follow factor like the bloom and the air.
+
+   ── the geometry ─────────────────────────────────────────────────────────
+   Everything is stated from --moon-w and --moon-cy on `.hero__stage`, the two
+   names the disc itself is placed from, so the wisp cannot end up in a sky the
+   moon is not in at any viewport. 2.6 x the box makes it 1123px at 1440x900
+   against a 216px disc — a wisp two and a half moons wide and, at 0.556 of its
+   own box in ink, one disc tall.
+
+   The ink's vertical centre rests 0.28 x --moon-w ABOVE the disc's centre, so
+   its lower edge sits 17px clear above that centre at 1440x900 and the wisp
+   opens across the disc's upper third and the sky above it. It lags 0.24vh
+   over the pin, which is 216px against a 216px disc: it crosses the whole face
+   and clears the lower limb rather than sitting on it. 0.517 is where the ink's
+   centre sits in the box, measured off the shipped alpha (dark 0.201-0.757,
+   light 0.282-0.694 — the two centres differ by 0.009 of the box, 3.4px, which
+   is inside the width of the wisp's own feathering and not worth a second
+   declaration).
+
+   0.28 and not the 0.12 this shipped as for one render. At 0.12 the wisp lay
+   across the disc's CENTRE at rest, which is the one pixel this section's whole
+   contrast argument is sampled at: the reading fell to 1.39:1 in light and
+   3.3:1 in dark, and what it was measuring was cloud rather than moon. Raised,
+   the frame a reader opens on has a clean disc with a wisp over its crown, and
+   the crossing happens where the crossing is supposed to happen — during the
+   exit, over a viewport of scrolling, rather than in the still frame.        */
+.hero__cloud {
+  --cloud-w: calc(var(--moon-w) * 2.6);
+  position: absolute;
+  left: var(--moon-x);
+  width: var(--cloud-w);
+  height: auto;
+  aspect-ratio: 2172 / 724;
+  /* transform, NOT translate: the wrapper above owns `translate` — the same
+     trade the two ranges make, and for the same reason */
+  transform: translateX(-50%);
+  /* 0.28 keeps the wisp off the disc's centre at rest — see above */
+  bottom: calc(var(--moon-cy) + var(--moon-w) * 0.28 - var(--cloud-w) * 0.1723);
+  opacity: var(--hero-cloud-veil);
+}
+
+/* The far wisp. Wider, lower, fainter and mirrored, so a reader cannot see it
+   is the same file twice: at 3.4 moon-widths against 2.6 it reads as further
+   away rather than as bigger, and `scaleX(-1)` puts its torn end on the other
+   side. `--hero-cloud-veil` is stepped down by a third here rather than given
+   its own token, because aerial perspective is a RATIO of the near layer's
+   alpha and a second literal would be one more number to keep in step by hand
+   the next time the near one moves. */
+.hero__cloud--far {
+  --cloud-w: calc(var(--moon-w) * 3.4);
+  transform: translateX(-50%) scaleX(-1);
+  bottom: calc(var(--moon-cy) - var(--moon-w) * 0.06 - var(--cloud-w) * 0.1723);
+  opacity: calc(var(--hero-cloud-veil) * 0.66);
+}
+
+/* ── the near foreground ───────────────────────────────────────────────────
+   One oversized pine at the right edge, cropped by the frame, alone — the
+   art kit is explicit that this piece is used instead of a pine family and
+   never alongside one, and there is no other tree anywhere in this section.
+
+   It is the layer that answers the MOUSE most (48px against the moon's 13 and
+   the ridge's none) and it now RISES, at 0.88vh, which is the site owner's
+   note and is the number every other number in this block is solved against.
+   Hero.tsx's PINE_LIFT carries the note, the geometry and what the sign change
+   cost.
+
+   ── the four numbers, and all four moved ─────────────────────────────────
+   The owner, verbatim: "the tree on the right in the hero section is a bit too
+   big, and needs to be moved to the right just a bit more, and when scrolling
+   down, it should be moving up a bit more, the root or bottom of the tree
+   should stop where the header of the our story section starts."
+
+   Measured off the shipped alpha channels: ink x 0.110-0.946 of the box in
+   dark and 0.149-0.971 in light, the tip at 0.0033 of the box's height, and
+   the trunk running off the bottom edge at 0.9993 — so the box's bottom edge
+   IS the base, to within half a pixel, in both themes. That is what makes the
+   target below solvable in CSS at all.
+
+   ── the target, which fixes `bottom` rather than leaving it to taste ─────
+   Let W be --pine-w and `d` be how far the box hangs below the frame's floor.
+   The frame's floor is the stage's pin, so at rest the base is at vh + d, and
+   at the end of the pin (scroll 130svh, where the eased progress is 1) it is at
+
+     vh + d - PINE_LIFT x vh
+
+   and that has to equal `#origin .origin__heading`'s top. Read off the live
+   DOM at that scroll: 165.6 at 1440x900, 166.0 at 1920x1080, 151.2 at
+   1280x800, 135.0 at 1100x900. It tracks viewport WIDTH — Origin's shell
+   padding clamps on vw — and is flat in viewport height, so `d` has to carry a
+   vw term and a vh term, and it already did: W is a fraction of vw.
+
+     d = 0.225 x W - 0.08 x vh,  i.e.  bottom = 8svh - 0.15 x W x 1.5
+
+   The 0.15 is a fraction of the box's HEIGHT, which is the currency the old
+   -0.24 was in and is kept so the two are comparable; 0.225 is that times the
+   2:3 aspect. Solved on the two readings that share a viewport height (1440
+   and 1100 at 900), so the vw slope and the vh offset each come from a
+   measurement rather than from a fit through one point. The vw slope is not
+   free either: `d` itself does not depend on W at all — it is heading minus
+   (1 - lift) x vh — so the coefficient has to be 0.09 divided by the vw
+   fraction in --pine-w, and changing the tree's width means re-deriving this
+   in the same edit. At 40vw that is 0.225.
+
+   The residuals, which are the honest part of this: base against heading top,
+   positive meaning the base sits below the line.
+
+     1440 x 900    0.0px
+     1100 x 900    0.0px
+     1280 x 800   -4.0px
+     1920 x 1080  +7.7px   (the cap binds here — see --pine-w below)
+      375 x 812   the tree is not drawn at all: `display: none` under 1100px
+
+   The pointer can smear that line by ±21px (PINE_POINT_Y), which is the
+   largest term in the whole budget and is argued where it lives.
+
+   ── and it "stops" there in the ordinary sense of the word ───────────────
+   The stage is pinned for the whole of `.hero__above` and then TRACKS, and
+   #origin is pulled up onto the hero's last 100svh, so from the end of the pin
+   onward the stage and Origin travel together at page rate. The base does not
+   land on that line and move off it; it lands and stays, for the 0.78vh until
+   `data-eclipsed` stops this section painting.
+
+   **--pine-w: min(50vw, 780px) -> min(40vw, 580px).** 720 -> 576 at 1440x900,
+   and the visible INK goes from 439px wide to 317 — a 28% narrower tree, which
+   is more than "a bit" and is the price of the rest of the note. Two things
+   pushed it down. The owner asked for smaller; and the tree is 264px HIGHER at
+   rest than it was, because the base has to start just under the floor for the
+   target above to be reachable, so a box the old height would have run its
+   crown off the top of the frame — and a 2:3 tree cropped at the top, the right
+   AND the bottom is three cropped edges on one prop. At 576 the tip rests at
+   y 93.6, which is 33.6px clear under the nav: cropped by the RIGHT edge alone
+   while the frame is at rest, which is the composition this block has always
+   claimed. The cap came down 780 -> 580 for the target's sake rather than the
+   crown's: W is a fraction of vw and the heading's top is nearly constant in px
+   above 1440, so a cap that stops the tree growing is what keeps the base near
+   the line on a wide screen. At the old 780 the 1920x1080 residual would have
+   been +50px instead of +7.7.
+
+   **right: -0.28 -> -0.34 of the box.** The "further right" half, stated
+   directly: 195.8px of the box is pushed off the right edge, and because the
+   ink runs to 0.946 of the box that is 164.7px of INK outside the frame in
+   dark — the pointer's full 48px cannot pull the tree's right edge back in.
+   The visible ink runs x 1123-1440 at 1440x900, against 1001-1440 before.
+
+   **bottom: -0.24 x height - 7svh -> 8svh - 0.15 x height.** The sign of the
+   svh term flipped with the sign of PINE_LIFT and for the same reason: the box
+   used to hang 322px below the floor because it was travelling further down,
+   and it now hangs 57.6px below because it is about to travel up. There is a
+   floor on it — `min(-8px, ...)` — because the vw and vh terms pull opposite
+   ways, so on an unusually tall narrow window (vh > 1.125 x vw - 100, which is
+   a portrait desktop) the expression would go positive and stand the tree's cut
+   base in mid-air above the frame's floor. 8px of crop is the least this
+   composition may have; the target gives way there rather than the picture.
+
+   ── what it must not collide with, and this is where the width stopped ────
+   The reading column. `.hero__inner` is 660px wide inside a 1240px container,
+   so its ink ends at x 816 at 1440 and the visible pine ink starts at 1123 —
+   307px of clear frame, and 259px with the pointer at full excursion. The gap
+   NARROWS as the viewport does, because the column keeps its 660px while W
+   falls with vw, and the worst case is the narrowest viewport that still draws
+   the tree: at 1100px the column ends at 709.5 and the ink starts at 858,
+   which is 148px, or 100px with the pointer thrown fully left. The pass before
+   this one recorded 55px at that viewport and did not subtract the pointer;
+   the true figure was -3.5px, which is the reading column and the tree
+   overlapping. Re-measured, not assumed.
+
+   The point cloud's canvas is wider than the cross it draws. The crown passes
+   behind the cross's right arm, which is a sparse dust of points over a dark
+   mass rather than an occlusion, and the model paints over the pine in any
+   case (`.hero__frame` is z-index 5, the stage is 0).                       */
+.hero__pine {
+  --pine-w: min(40vw, 580px);
+  position: absolute;
+  width: var(--pine-w);
+  aspect-ratio: 2 / 3;
+  height: auto;
+  right: calc(-0.34 * var(--pine-w));
+  bottom: min(-8px, calc(8svh - 0.15 * var(--pine-w) * 1.5));
+  opacity: var(--art-near);
+}
+/* ── the bough at the camera ───────────────────────────────────────────────
+   `props/near-branch`, placed this pass. The hero had ONE near prop, at the
+   right edge, and nothing at all in its top half — a frame with a foreground
+   in one corner and bare sky everywhere else. This is the second, at the
+   opposite corner, and the kit drew it for exactly this: a top-left
+   through-frame bough whose top and left crops are intentional.
+
+   ── the two things it is doing that no other layer here does ─────────────
+   **It moves against the page.** -0.12vh while everything else rises, so its
+   travel relative to the pine is the SUM of the two — 1.00vh, 900px at
+   1440x900 — rather than the difference. That is the trick PINE_LIFT's
+   negative sign used to buy and had to give up to land the tree's base on
+   Origin's heading; it is cheaper here, because a bough at the camera is
+   exactly the thing a moving eye sees swing the other way.
+
+   **It is cropped by TWO edges.** The art's ink starts at x 0 and y 0 of its
+   own box in both themes — it is drawn running off the top-left corner — and
+   this places the box a further 0.22 of its width past the left edge and 0.36
+   of its height past the top. Nothing about its silhouette is a shape the
+   frame contains, which is the difference between a prop and a sticker.
+
+   ── the clearance that binds, which is vertical and not horizontal ───────
+   It is the only piece of art in this section over the NAV, and that is
+   allowed: the nav carries its own veil (`--nav-veil-*` in tokens.css) and the
+   bough passes behind it. What it may not reach is the COPY. Measured off the
+   shipped alpha at threshold 24/255 — ink to 0.831 of the box in dark, 0.772
+   in light, so dark binds — the ink's lowest point sits at 0.314 x --branch-w
+   below the frame's top edge, and these are the RENDERED rects rather than
+   that arithmetic:
+
+                    branch ink bottom   copy top   clear   after scroll
+     1440 x 900          169.6           243.9      74.3       59.7
+     1920 x 1080         203.5           328.8     125.3      107.8
+     1280 x 800          150.7           203.7      53.0       40.0
+     1100 x 900          169.6           264.7      95.1       80.5
+
+   The last column is there because the branch DESCENDS, so the budget has to
+   survive the scroll as well. It does, by construction rather than by luck:
+   the copy is fully dissolved at 30svh of the runway, where the scenery's
+   eased progress is only 0.135, so the most of its -0.12vh travel that can
+   happen while there is still copy to protect is 0.0162vh — 14.6px at
+   1440x900, 13.0 at 1280x800. The remaining 105px at 1440x900 is spent over an
+   empty frame.
+
+   1280x800 is the tightest row and it is why the size has a vh arm at all: the
+   copy column is centred in the frame and its top edge therefore rises as the
+   frame shortens, while a purely vw-sized branch would not. 60vh is the arm
+   that binds from 1440x900 down; 52vw binds on a wide short window; 700px is
+   restraint, the same third arm --pine-w has. The top crop went 0.30 -> 0.36
+   of the box in the same edit, which buys clearance without taking size off
+   the bough — the ink starts at y 0 of its own box, so cropping the box is
+   cropping the bough, and 0.36 is as far as that can go before the branch
+   stops reading as a branch.                            */
+.hero__branch {
+  --branch-w: min(52vw, 60vh, 700px);
+  position: absolute;
+  width: var(--branch-w);
+  aspect-ratio: 3 / 2;
+  height: auto;
+  left: calc(-0.22 * var(--branch-w));
+  top: calc(-0.24 * var(--branch-w));
+  opacity: var(--art-near);
+}
+
+@media (max-width: 1099px) {
+  /* the reading column has the whole frame here and the model is already
+     dimmed; the art is what goes, as it always is. Both near props go
+     together and for one reason: below this width the copy owns the frame
+     from edge to edge, so a foreground prop is not framing it, it is on it. */
+  .hero__pine-drift,
+  .hero__branch-drift {
+    display: none;
+  }
+}
+
+/* ── the moon's light on the air ───────────────────────────────────────────
+   The class names are the old ones and what they draw is not. `.hero__shafts`
+   and `.hero__shaft` are named in `base.css` — the print block hides the
+   group, the reduced-motion block pins `.hero__shaft` at 0.55 — and that file
+   is not this pass's to edit, so renaming them here would silently orphan two
+   rules that are still exactly right about what this layer is for. The names
+   stay; the geometry is new.
+
+   ── the defect, because it was the first thing anyone saw ────────────────
+   Three tilted rectangles: 26%, 5% and 13% of an overhanging box, raking
+   down-left from the top of the frame, past the moon, dying just above the
+   bottom strip. Every fix applied to them was a fix to their ENDS — a
+   two-axis falloff, a top fade at 9%, the group's tail moved from 58/92 to
+   66/95 so the beam would not die exactly on the disc. `r2-D-0000` and
+   `r2-L-0000` say all of it failed, and the reason is that a wedge is not a
+   set of edges, it is a SHAPE: it has an axis a reader can trace with a
+   finger and it points at the moon, so however softly it ends it reads as the
+   moon having a tail. In light, where the ink was near-black over a pale sky,
+   it read as a smear on the lens.
+
+   ── what a low moon actually does ────────────────────────────────────────
+   It does not cast a visible shaft down through clear air toward itself. It
+   lights the haze it is standing in, and the column of sky above it, and both
+   of those are edgeless and axis-free by construction. So this is two nested
+   ellipses of --hero-bloom — the moon's OWN glow token, and white in both
+   themes — centred on the disc and biased upward, joining the disc's halo and
+   `.hero__bloom` to make ONE falloff at four radii:
+
+      432px   the halo inside `scene/Moon.tsx`      --hero-moon-air, 1 / 0.38
+      907px   `.hero__bloom`, masked off the disc   gain 1 / 0.30
+     1253px   `.hero__shaft-core`, the humid air    gain 0.9 / 0.12
+     2160px   `.hero__shaft`, the lit column of sky gain 0.62 / 0.09
+
+   (Box widths at 1440x900, and the disc itself is 216px — the middle half of
+   `Moon`'s own box. The second column is the dark gain and then the light
+   one. All three light gains came down with --hero-dusk and the top of this
+   file argues why: the sky they are laid on fell about 17 units, so an
+   unchanged alpha would have bought MORE lift than it was composed for, and
+   every unit of that comes off the disc's own contrast.) Each radius is about
+   1.5-1.7x the last, so the composite falls off far more
+   slowly than any single radial can — which is what a light source in haze
+   looks like, and what no number of stops inside one gradient will do. There
+   is no line in it anywhere, nothing terminates, and the brightest point of
+   every layer is the disc, so a reader notices that the sky is lit rather
+   than that there is a shape in it. That is guardrail 7 of the brief with the
+   axis taken out of it.
+
+   ── and it MOVES with its source ─────────────────────────────────────────
+   Hero.tsx drives this group at AIR_FOLLOW x the moon's own offset — 0.58,
+   against the bloom's 0.86 — so the further out in the air a layer is, the
+   further it lags the disc that is lighting it. Three rates on one axis reads
+   as light staying behind in the sky the moon is leaving; one rate reads as a
+   sticker with two more stickers on it. The old --shaft-lift/--shaft-drift
+   pair is gone with the wedges: it gave this group a direction of its own,
+   and light on the air has no direction that its source does not give it.
+
+   No mask on the group. The old one existed to cut two beams that were
+   otherwise uniform along their length; a `closest-side` radial reaches
+   transparent on its own, at every radius, in every direction, so a mask here
+   could only be a second thing capable of drawing an edge.                  */
+.hero__shafts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: translate;
 }
 .hero__shaft,
-.hero__shaft-core,
-.hero__shaft-far {
+.hero__shaft-core {
   position: absolute;
-  top: -30%;
-  transform: rotate(21deg);
-  transform-origin: 50% 0;
+  /* Centred on the moon's column, and on --moon-cy less half the box plus
+     --air-lift of it — so each ellipse's centre sits --air-lift of its own
+     height ABOVE the disc. Stated as one shared rule from the stage's own
+     four moon numbers, because the alternative is what this file had before:
+     the same product written out at each consumer, and one of them left
+     behind the next time --art-rise moves. */
+  left: var(--moon-x);
+  width: var(--air-w);
+  height: calc(var(--air-w) * var(--air-ratio));
+  bottom: calc(var(--moon-cy) - var(--air-w) * var(--air-ratio) * (0.5 - var(--air-lift)));
+  transform: translateX(-50%);
+  background-image: var(--hero-bloom);
+  border-radius: 50%;
+  /* `filter: opacity()` and not `opacity`, because `raybreathe` animates THAT
+     and would overwrite it every frame — the same trade `.hero__bloom` makes
+     one block down and for the same reason. */
+  pointer-events: none;
 }
+/* The column of lit sky. 150vw at 1440x900 is 2160px across and 1685px tall
+   against a 900px frame, so what is inside the frame is the gradient's inner
+   half and the reader never meets its outer stop at all — which is the point:
+   an ellipse whose rim is off screen cannot be seen as an ellipse.
+
+   --air-lift 0.20 puts its centre 337px above the disc — measured, and it is
+   1.8 disc diameters — which is where the sky above a low moon is brightest. At 0 the
+   glow was symmetric about the disc and read as a ring; at 0.35 the bright
+   part had left the moon behind and became a second sourceless glow in the
+   top of the sky, which is the bug the bloom itself had before it was moved
+   onto the disc.
+
+   `raybreathe` and 11s are both kept from the beam this replaces: base.css's
+   reduced-motion answer for `.hero__shaft` is `opacity: 0.55 !important`,
+   which is within 0.02 of this keyframe's own mean of 0.53, so the pinned
+   frame and the moving one are the same picture. */
 .hero__shaft {
-  left: 47%;
-  width: 44%;
-  height: 170%;
-  background: var(--hero-shaft);
-  filter: blur(9px);
+  --air-w: clamp(760px, 150vw, 2400px);
+  --air-ratio: 0.78;
+  --air-lift: 0.2;
+  filter: blur(46px) opacity(var(--hero-air-gain));
   animation: raybreathe 11s ease-in-out infinite;
 }
+/* The humid air immediately around the disc — the layer that used to be the
+   2.2px "core" of the beam and is now the middle radius of the falloff. 87vw
+   is 1253px, 1.67x `.hero__bloom` and 0.58x the column above it.
+
+   17s against the column's 11s: no common factor under a minute, so the pair
+   never returns to the same shape, which is the one thing the old fan of
+   three got right and is worth keeping. --air-lift is smaller because air
+   this close to the disc is lit by it more or less evenly. */
 .hero__shaft-core {
-  left: 60.4%;
-  width: 2.2px;
-  height: 150%;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.5),
-    rgba(255, 255, 255, 0.12) 46%,
-    transparent 82%
-  );
-  filter: blur(0.6px);
-}
-[data-theme='light'] .hero__shaft-core {
-  background: linear-gradient(
-    180deg,
-    rgba(20, 20, 26, 0.22),
-    rgba(20, 20, 26, 0.06) 46%,
-    transparent 82%
-  );
-}
-.hero__shaft-far {
-  left: 75%;
-  width: 15%;
-  height: 165%;
-  background: var(--hero-shaft-2);
-  filter: blur(11px);
+  --air-w: clamp(560px, 87vw, 1420px);
+  --air-ratio: 0.86;
+  --air-lift: 0.11;
+  filter: blur(34px) opacity(var(--hero-air-core-gain));
+  animation: raybreathe 17s ease-in-out infinite;
 }
 
 .hero__stars {
@@ -80,16 +2012,77 @@
   pointer-events: none;
 }
 
+/* ── the moon's glow on the air ────────────────────────────────────────────
+   The comment that used to be here said "it sits where the moon sits", and it
+   did not: `top: -16%` with a height of 620px put its centre 154px ABOVE the
+   frame at 1440x900, while the moon's centre was 665px down it — 819px apart,
+   most of a screen. What it actually drew was a second, sourceless glow in
+   the top of the sky, and the moon's only light was the halo inside `Moon`'s
+   own 100x100 box.
+
+   It sits on the disc now, composed from --moon-cy on `.hero__stage` — the
+   one place the disc's centre is stated — so the two cannot come apart at any
+   viewport, and it TRAVELS with the moon at BLOOM_FOLLOW — 0.86, not 1,
+   because a glow welded to its source is a sticker with a second sticker on
+   it and the lag is what makes the light read as being in the air.
+
+   The size is the one judgement here, and it is now stated as a MULTIPLE of
+   the disc rather than as its own clamp. It used to be
+   `clamp(440px, 52vw, 860px)`, which was 2.0 x --moon-w on the vw arm and
+   very nearly that on the other two — the same product written twice, and the
+   pass that widened --moon-w is exactly the pass a duplicate like that costs
+   something in. See the hole below: the mask's transparent radius is a
+   fraction of THIS box and has to clear the disc's own rim, so a moon that
+   grows while its glow does not is a moon whose rim gets eaten again.
+
+   2.1 rather than 2.0 to buy the hole a little more room; at 1440x900 that is
+   907px against a 216px disc, so the glow is about four disc-widths across,
+   which is a moon in humid air rather than a moon with a ring drawn round it.
+   It deliberately reaches down over the ridge's shoulders — a light source
+   hazes what is in front of it, and that haze is the aerial perspective the
+   basin plane is doing lower down. It is the SECOND of four radii; the two
+   larger ones are `.hero__shaft-core` and `.hero__shaft` above.
+
+   ── the hole, which is the other half of "the disc has an edge" ──────────
+   This glow paints OVER the disc — it has to, because the same light is what
+   hazes the ridge in front of it — so every point of it laid across the disc
+   is a point of the disc's own RIM eaten from the outside in. In light, where
+   --hero-bloom opens on 0.9 alpha white, that was most of the rim.
+
+   So the box is masked transparent where the disc is and full a little
+   outside it, which is also the truer picture: the air AT a light source is
+   not what glows, the air around it is. The stops are fractions of the box's
+   own half-extents, and `closest-side` makes those the ellipse's own radii —
+   so 30% is 136px across and 117px down against a disc radius of 108px, and
+   the ramp to 58% is 263px and 226px. A soft ramp, and the only reason this
+   cannot be a new edge: at no radius does the mask step.
+
+   The VERTICAL number is the one that binds, because the box is 0.86 as tall
+   as it is wide and the disc is a circle. At the old `clamp(440px, 52vw,
+   860px)` it was 97px against a 94px rim — three pixels — and the wider disc
+   this pass composes would have pushed straight through it. Deriving the box
+   from --moon-w is what makes that impossible to get wrong again: 0.3 x 0.86
+   x 2.1 / 2 = 0.271 of --moon-w against a rim at 0.25 of it, at every
+   viewport and in either theme.
+
+   `translate` and not `transform`, because bloombreathe animates `transform`
+   and the two would fight; `filter: opacity()` and not `opacity`, because
+   bloombreathe animates THAT and would overwrite it every frame. See
+   --hero-bloom-gain at the top of this file for why light needs one.       */
 .hero__bloom {
+  --bloom-w: calc(var(--moon-w) * 2.1);
   position: absolute;
-  top: -16%;
-  left: 57%;
-  width: 760px;
-  height: 620px;
+  left: var(--moon-x);
+  width: var(--bloom-w);
+  height: calc(var(--bloom-w) * 0.86);
+  bottom: calc(var(--moon-cy) - var(--bloom-w) * 0.43);
   transform: translateX(-50%);
+  will-change: translate;
   border-radius: 50%;
   background: var(--hero-bloom);
-  filter: blur(30px);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 30%, #000 58%, #000 100%);
+  mask-image: radial-gradient(closest-side, transparent 30%, #000 58%, #000 100%);
+  filter: blur(30px) opacity(var(--hero-bloom-gain));
   animation: bloombreathe 12s ease-in-out infinite;
   pointer-events: none;
 }
@@ -167,8 +2160,33 @@
   opacity: 0.5;
 }
 
-/* ── content ───────────────────────────────────────────────────────────── */
+/* ── content, and the dissolve ─────────────────────────────────────────────
+   The site owner's note about the reference was that scrolling "makes the
+   hero section look like it's staying the same position but fading away from
+   the bottom". Both halves of that sentence are load-bearing and the previous
+   pass only had one of them: the copy rode `useHeroParallax(0.14)`, so it
+   SLID up as it faded, which is the opposite of staying in the same position.
+   That hook is gone from this section entirely.
 
+   "From the bottom" is four different fade rates rather than a mask. Hero.tsx
+   writes ONE custom property, --hero-out, 0 to 1 over the 30svh runway on an
+   ease-IN curve (`dissolve` in Hero.tsx), and
+   these four rules turn it into a dissolve that starts at the strip and ends
+   at the wordmark:
+
+     strip    gone at out 0.42
+     CTAs     gone at out 0.48   (its own rate, times the column's)
+     tagline  gone at out 0.67
+     column   gone at out 1
+
+   Nested opacities multiply, which is what makes the last three compose
+   without any of them having to know the others' numbers.
+
+   The blur is written as a whole filter value rather than a length, so at
+   rest the declaration is `filter: none` and there is no filter at all —
+   `blur(0px)` is still a filter, and a filter on a 660px column promotes a
+   compositor layer and gives it a containing block for the whole time nobody
+   is scrolling.                                                             */
 .hero__content {
   position: relative;
   z-index: 3;
@@ -176,7 +2194,9 @@
   margin: 0 auto;
   padding: 0 clamp(18px, 4.5vw, 56px);
   width: 100%;
-  will-change: translate, opacity;
+  opacity: calc(1 - var(--hero-out, 0));
+  filter: var(--hero-blur, none);
+  will-change: opacity, filter;
   /* the copy column sits above the model but must not steal its drag area */
   pointer-events: none;
 }
@@ -239,10 +2259,16 @@
    a different order of magnitude from the continuous, page-wide animations
    the rest of this codebase keeps off the paint path. It still parks fully
    off-frame at rest, which is where the site-wide
-   `animation-play-state: paused !important` under reduced motion freezes it. */
+   `animation-play-state: paused !important` under reduced motion freezes it.
+
+   The sweep is --hero-glint, declared per theme at the top of this file. It
+   was a bare rgba(255,255,255,0.92) with no light override — unlike
+   .hero__shaft-core just above, which has had one for exactly this reason —
+   so in the light theme a near-white band crossed dark type every eleven
+   seconds. Dark is unchanged to within 0.008 of alpha. */
 .hero__dg {
   background-image:
-    linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.92) 50%, transparent 60%),
+    linear-gradient(100deg, transparent 40%, var(--hero-glint) 50%, transparent 60%),
     var(--hero-dg);
   background-size: 400% 100%, 100% 100%;
   background-repeat: no-repeat, no-repeat;
@@ -275,6 +2301,87 @@
   font: 300 19px/1.62 var(--font-body);
   color: var(--hero-tag);
   text-wrap: pretty;
+  /* third out of four in the dissolve — see the block comment above */
+  opacity: calc(1 - var(--hero-out, 0) * 1.5);
+  /* ── the box is reserved, not measured every nine seconds ────────────────
+     The five lines in HERO_TAGLINES are different lengths and wrap to
+     different heights. Let the paragraph size to whichever one is showing
+     and the CTA row under it steps up and down every time a line changes —
+     the same bug the Store card's fixed min-height exists to stop, one
+     section over. So the box is reserved for the tallest line at the widest
+     the paragraph is ever drawn, and re-reserved at each breakpoint where
+     the column narrows and the wrap count goes up.
+
+     MEASURED, in the real face at 300 19px/1.62 with text-wrap: pretty, and
+     measured across every PREFIX of every line rather than the finished
+     sentences — the caret is an inline box, so a half-typed line can push a
+     word onto a row the completed line does not use, and reserving for the
+     finished text alone would still let the box grow mid-word.
+
+     Worst height, all five lines, all prefixes, caret included:
+       452px column (>=~500px wide) .. 62px  (2 rows of 30.78px)
+       382px / 339px / 324px column ... 62px
+       309px column (~345px wide) .... 92px  (3 rows)
+       284px column (320px wide) ..... 92px
+     The crossover is between a 309px and a 324px column, so the second
+     reservation starts at 359px, the widest viewport measured at 3 rows. */
+  min-height: 62px;
+  /* the caret is an inline box on the same baseline as the text */
+  --caret-w: 2px;
+}
+
+/* The typing itself. Decorative four ways over in Tagline.tsx; here it is
+   just an inline run so it wraps inside the paragraph like prose. */
+.hero__tagline-typed {
+  display: inline;
+}
+
+.hero__tagline-caret {
+  display: inline-block;
+  width: var(--caret-w);
+  height: 1.02em;
+  margin-left: 3px;
+  vertical-align: -0.17em;
+  background: currentColor;
+  opacity: 0.8;
+}
+/* Steady while characters are landing — a caret that blinks WHILE you type
+   is the one thing real terminals do not do. It blinks only on the empty
+   beat between two lines, and it is a CSS animation, so the site-wide
+   reduced-motion rule in base.css pauses it without a line of JavaScript. */
+.hero__tagline[data-phase='gap'] .hero__tagline-caret {
+  animation: taglineCaret 1.06s steps(1, end) infinite;
+}
+/* At rest the line is finished prose and should read as finished prose, so
+   the caret leaves rather than sitting there flashing for five seconds. */
+.hero__tagline[data-phase='rest'] .hero__tagline-caret {
+  opacity: 0;
+  transition: opacity 0.45s ease 0.65s;
+}
+/* reduced motion: one whole line, no caret at all, nothing running */
+.hero__tagline[data-phase='static'] .hero__tagline-caret {
+  display: none;
+}
+@keyframes taglineCaret {
+  0%,
+  52% {
+    opacity: 0.8;
+  }
+  53%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__tagline-caret {
+    display: none;
+  }
+}
+/* the column is 309px or narrower here and the longest line takes three rows */
+@media (max-width: 359px) {
+  .hero__tagline {
+    min-height: 92px;
+  }
 }
 
 .hero__ctas {
@@ -282,6 +2389,8 @@
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 40px;
+  /* second out of four in the dissolve */
+  opacity: calc(1 - var(--hero-out, 0) * 2.1);
 }
 .hero__cta {
   display: inline-flex;
@@ -319,16 +2428,46 @@
   box-shadow: none;
 }
 
-/* ── bottom strip ──────────────────────────────────────────────────────── */
-
+/* ── bottom strip ──────────────────────────────────────────────────────────
+   Anchored to .hero__frame rather than to the section, so it sits on the
+   floor of the first screen and stays there while the frame is pinned. Its
+   bottom edge and Origin's top edge are the same line the moment the frame
+   releases, which is why the strip reads as the horizon as it leaves.
+   First out of four in the dissolve.                                       */
 .hero__strip {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 3;
-  border-top: 1px solid var(--hero-strip-border);
-  background: var(--hero-strip-bg);
+  /* ── the rule, and why it is no longer a border ────────────────────────
+     `border-top: 1px solid var(--hero-strip-border)` is a hairline running
+     the full width of the viewport, which is precisely the defect this pass
+     exists to remove — and it is worse than the others because it is the one
+     the reader's eye lands on last on the first screen, directly under the
+     scenery. A border cannot fade; a background layer can, so the rule is a
+     1px background stripe that dissolves into nothing at both ends over the
+     outer 14% of the frame. Same ink, same weight where it is drawn, no edge
+     where the frame ends.
+     Two layers, so the wash under it is unchanged: the stripe is pinned to
+     1px at the top and --hero-strip-bg fills the rest. */
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      var(--hero-strip-border) 14%,
+      var(--hero-strip-border) 86%,
+      transparent 100%
+    ),
+    var(--hero-strip-bg);
+  background-repeat: no-repeat, no-repeat;
+  background-size:
+    100% 1px,
+    100% 100%;
+  background-position:
+    0 0,
+    0 0;
+  opacity: calc(1 - var(--hero-out, 0) * 2.4);
 }
 .hero__strip-inner {
   max-width: 1240px;
@@ -380,5 +2519,75 @@
   .hero__meta {
     gap: 12px;
     font-size: 9px;
+  }
+}
+
+/* ── reduced motion ────────────────────────────────────────────────────────
+   The runway is scroll that exists only so something can happen during it.
+   At motionIntensity 0 nothing does — Hero.tsx writes --hero-out: 0 and every
+   layer's resting translate — so 130svh of frozen hero would be 30svh of dead
+   scrolling followed by a viewport of an opaque section climbing over a
+   picture that never changes. The section goes back to being exactly one
+   screen tall, the pin never engages (a sticky box the height of its
+   containing block has nowhere to stick, which Stage.tsx's header calls out),
+   and #origin drops its negative margin in Origin.css to match. The scenery
+   stays where it composed: visible, still, which is guardrail 5 of the art
+   kit rather than a hidden section.
+
+   The drift wrappers give their promotion back for the same reason
+   Scene.css's does: nothing writes to them, so the compositor layer would be
+   paid for and never used.                                                 */
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    min-height: 100svh;
+  }
+  .hero__above {
+    height: 100svh;
+  }
+  .hero__moon-drift,
+  .hero__cloud-drift,
+  .hero__rear-drift,
+  .hero__mid-drift,
+  .hero__valley,
+  .hero__weather,
+  .hero__weather-art,
+  .hero__ridge-drift,
+  .hero__pine-drift,
+  .hero__branch-drift,
+  .hero__shafts,
+  .hero__bloom {
+    will-change: auto;
+  }
+  /* ── the layer base.css does not name ──────────────────────────────────
+     base.css pauses every animation under reduced motion, which pins each one
+     at its 0% frame, and for `raybreathe` that frame is the DIMMEST — 0.34,
+     not a resting state. base.css already answers that for `.hero__shaft` and
+     `.faith__ray` with `opacity: 0.55 !important`; `.hero__shaft-core` is a
+     second caller of the same keyframes and is not in that list, so it needs
+     the same answer stated here. 0.62 rather than 0.55 because this ellipse
+     is the smaller and dimmer of the pair and 0.62 is where the composite of
+     the two matches its own moving mean. The session report asks for the
+     selector to be folded into base.css's list, which is the file that owns
+     the keyframes.
+
+     `.hero__weather-art` needs no line here: `heroWeather`'s 0% frame IS its
+     resting composition, which is the whole reason that keyframe is written
+     0% → 50% → 100% about a centre rather than as a one-way sweep. Its
+     `transform` is restated on the element for the same reason. (The class
+     moved from `.hero__weather` to the <img> inside it this pass, when the fog
+     became art; the wrapper owns the scroll translate and the art owns the
+     drift.) */
+  .hero__shaft-core {
+    opacity: 0.62 !important;
+  }
+  .hero__content {
+    will-change: auto;
+    filter: none;
+    opacity: 1;
+  }
+  .hero__tagline,
+  .hero__ctas,
+  .hero__strip {
+    opacity: 1;
   }
 }

@@ -9,7 +9,7 @@ deletes it in a dashboard.
 | --- | --- |
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
-| `migrations/` | SQL already applied to the shared project. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, and `tdg_billing_subscription`. |
+| `migrations/` | SQL already applied to the shared project. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, and `tdg_billing_subscription`. |
 
 ## Why the site cannot do this itself
 
@@ -85,6 +85,45 @@ telling somebody to try their card again for a problem that is ours. The plan
 picker additionally wants the portal configuration to have the
 `subscription_update` flow enabled; when it does not, the function falls back to
 the plain portal, which reaches the same controls one click further in.
+
+## Account badges, and the one number the footer prints
+
+`20260826120000_tdg_account_badges.sql` adds a **global** mark on a TDG
+account — Bug Hunter, Playtester, Supporter, Early Access, plus Developer and
+Subscriber — true in every TDG app at once. The site's half is
+[`src/badges/`](../src/badges/README.md); there is no edge function, because
+nothing here needs a secret.
+
+**It is not `tdg_badges`.** That name was already taken by per-app achievement
+state, written by `tdg_badge_sync()` from inside an app, and it has live rows.
+These are `tdg_account_badges`, and the two are unrelated.
+
+**Two of the six are never stored.** Developer *is* `profiles.is_admin` and
+Subscriber *is* a paid `subscriptions.tier`. Each already has exactly one
+authority, and a row repeating it would be a second opinion that goes stale the
+moment the flag flips. So the catalogue marks them `derived`, every read
+computes them, and `tdg_admin_badge_set` refuses one **with a sentence** rather
+than silently doing nothing.
+
+**The catalogue is `tdg_badge_catalog()`, in SQL.** Same reason
+`tdg_feedback_kinds()` is: the server validates against exactly the list the
+console offered. A new badge is a migration, and no TypeScript changes.
+
+**The table has no policies.** RLS on, every client grant revoked, the four
+verbs are the whole surface — `tdg_my_badges` (the caller's own, and it takes
+no user id on purpose), `tdg_public_stats`, `tdg_admin_badges` and
+`tdg_admin_badge_set`, the last two opening with `tdg_admin_uid()` and every
+change they make landing in `bea_moderation_audit`.
+
+**`tdg_public_stats()` is the one function on this project granted to `anon`**,
+against the standing rule in `migrations/README.md`, and the exception is
+deliberate: it carries no identity and no refusal, and the footer is on every
+page including the ones nobody has signed in to read. It answers two integers —
+how many accounts, how many badges awarded — and there is nothing else in the
+shape to ask for. `accounts` counts `public.profiles`, which is the same count
+`tdg_admin_overview()` calls `accounts`, so the footer and the console cannot
+disagree. **The site prints it exactly as it comes back**: never rounded, never
+padded, and never replaced by a fallback when the read fails.
 
 ## Deploying
 

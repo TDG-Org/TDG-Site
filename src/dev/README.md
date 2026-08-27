@@ -34,10 +34,10 @@ about sections currently on screen. Switching tabs changes it, because the two
 buttons only act on what you can see.
 
 A shut section still carries its title, the sentence saying what it is, and a
-summary tag on the right: the tier, the pack count, `DEVELOPER`, `SUSPENDED`,
-whether there are unsaved edits. So the closed page is a readable index of the
-account rather than nine mystery headings, and one click gets you into the one
-you wanted instead of scrolling past eight you did not.
+summary tag on the right: the tier, the pack count, how many badges are held,
+`DEVELOPER`, `SUSPENDED`, whether there are unsaved edits. So the closed page is
+a readable index of the account rather than ten mystery headings, and one click
+gets you into the one you wanted instead of scrolling past nine you did not.
 
 Which sections are open follows you between accounts. Expanding Makullveny and
 then clicking the next person shows Makullveny open again, which is what makes
@@ -181,6 +181,9 @@ Search by name, `@username`, email or user id, then for the account you pick:
   Never on `@luke` or `@nm8` either, in the revoking direction (see below).
 - **TDG Core Subscription:** the tier every TDG app can gate on. Free grants,
   no Stripe. Flags duplicate `subscriptions` rows, which apps read as a fault.
+- **Badges:** one global mark on the account — Bug Hunter for a friend who goes
+  looking for what we broke — on or off, with a reason. Two of them are
+  computed and are shown rather than switched. See below.
 - **Makullveny:** its own tier and status, the Candle bundle, the supporter
   badge, and each marketplace theme.
 - **Every pack Store:** each pack on or off, for anybody, in every app that has
@@ -254,6 +257,108 @@ ignores impossible subscription-shaped metadata and never grows this panel.
 not the grant failing. The Store then offers to sell it again — with a line
 saying what ended and when, so a card that went back to Buy is not silent about
 why.
+## Badges
+
+A **badge** is one global mark on a TDG account — true in every TDG app at
+once, not per app and not per device. Bug Hunter for the friends who go looking
+for what we broke, Playtester for the people who saw a build before anybody
+else, Developer for us, Subscriber for anyone on a paid plan. It is a mark, not
+an entitlement: what somebody has *paid for* lives in `<app>_entitlements` and
+is granted from the Store panels, and nothing anywhere should gate a feature on
+a badge.
+
+The panel is a **switchboard, not a list**. `tdg_admin_badges` returns every
+badge in the catalogue with `held` set true or false, so the panel draws the
+whole set — a console that could only show what somebody already has could not
+be used to give them anything. A shut panel says how many are held, or `NONE`.
+
+**Nothing in `src/dev/` names a badge.** Not one id, anywhere. The names, the
+copy and which of them are computed all come back from `tdg_badge_catalog()` in
+tdg-core, which is the same discipline `apps.ts` keeps about products and rule
+17 keeps about every list on this site. **Adding a badge is a migration and
+nothing else** — no TypeScript, no second edit, and it renders here the day it
+lands.
+
+The consequence is that this panel cannot recognise anything, and that is the
+point. Where a catalogue row arrives without a label or without a blurb, the
+panel makes a name out of the id — `bug-hunter` reads as `Bug Hunter` — draws
+the row anyway, and says at the bottom which ids it could not read. Deliberately
+a bit ugly, and honest: a badge this site cannot name is still a badge it can
+award, and a list that quietly drops what it cannot read is a list you cannot
+trust about anything else on it.
+
+### Why the computed ones have no switch
+
+Two of today's six are `derived`: **Developer** follows `profiles.is_admin` and
+**Subscriber** follows the account's `subscriptions.tier`. Each of those facts
+already has exactly one authority, so a badge row repeating it would be a second
+opinion that goes stale the moment the flag flips.
+
+The server refuses to set one by hand — `23514`, with a sentence naming the fact
+it follows — so the panel draws those two as **state**: the name, the copy, and
+a `HELD` / `NOT HELD` tag, with a paragraph saying that changing the fact is
+what moves the badge and that the two facts live in panels directly above. A
+switch that can only ever fail is worse than no switch, which is the position
+`tdg_admin_uid`'s own comment takes and the one `storeAnswers.ts` keeps when it
+draws no `Manage Plan` button and says out loud why it is missing.
+
+**That is a drawing decision and not a permission one.** `adminSetBadge` on a
+derived badge still refuses in Postgres, whoever calls it and by whatever route.
+Nothing in the client decides who may grant a badge; a non-developer gets `42501`
+from both verbs, and that refusal is the boundary (rule 12).
+
+### The reason box, and the note it writes
+
+One optional line — *found the DevFleet pane crash* — goes onto whichever badge
+you switch on next. It is the difference between a badge and a memory, and it is
+worth typing.
+
+It is **not private**. `tdg_my_badges()` hands an account its own badges with
+their notes, so the person it is about can read it. The Reason box in **Standing
+& Access** is the one only a developer ever sees; these two boxes look alike and
+do not mean the same thing.
+
+For a badge somebody already holds, a **Save Note** button appears next to it as
+soon as the box says something different. It rewrites the note alone and leaves
+the date it was awarded and who awarded it exactly where they were, which is
+what the server does when it is sent a badge that is already on. Without it the
+only way to fix a typo would be to revoke and re-grant, which moves the award
+date and puts two more rows in the ledger to correct one word. It is only ever
+offered when there is something to write, so it can never be the button that
+empties a reason: an empty box means "no change", never "clear it".
+
+### Where the trail is
+
+**In the audit log, and nowhere else.** Every grant, revoke and note edit goes
+through `tdg_admin_log`, so it appears in **This Account's History** and in the
+whole-project **Audit Log** tab, tagged `badge-grant`, `badge-revoke` and
+`badge-note`, with the badge id and the reason in the detail. There is no second
+history on the panel, because a fourth copy of one fact is the first one to
+disagree with the other three.
+
+Nothing is confirmed before it fires, on purpose: a badge is trivially
+reversible — the switch that gave it takes it back, and the write is idempotent
+in both directions — so it is the pack tiles' shape, not Delete Forever's.
+
+### Reading it, and refreshing it
+
+Four states, and each has a face: **reading** (skeleton rows, one per badge the
+last read had, so the panel does not reflow when the answer lands), **unreadable**
+(the server's own sentence, shown whole), **read with none awarded**, and the
+switchboard itself. The panel carries a `min-height` so it does not change size
+between them.
+
+The read hangs off `readAll` with the other five, so **Refresh re-reads badges
+along with everything else** and holds your place while it does. It is also
+re-read after *every* write on the page, not only after a badge write: the two
+derived badges follow facts other panels own, so granting Developer two panels
+up has to move the Developer badge here in the same breath. One extra round trip
+per write is the whole cost of never showing a stale second opinion.
+
+The two verbs come from [`src/badges/api.ts`](../badges/README.md) rather than
+from `api.ts` here. Badges are a whole-site surface — the footer counts them and
+every TDG app reads them — so the folder that owns them owns the client, and
+this console is one of its callers.
 
 ## Feedback
 
@@ -318,14 +423,14 @@ reference implementation of the startup reply panel the other apps copy.
 | File | What it is |
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the four tabs, the roster, and the one action runner every write goes through. |
-| `AccountDetail.tsx` | The panels for one account — seven fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
+| `AccountDetail.tsx` | The panels for one account — eight fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
 | `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
-| `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the nine inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
-| `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. |
+| `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
+| `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. The one exception is the pair of badge verbs, which live in [`../badges/api.ts`](../badges/README.md) with the rest of that surface — see **Badges** above. |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |

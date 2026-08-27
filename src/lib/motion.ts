@@ -54,10 +54,29 @@ let wired = false
 /** Total frames the loop has ever run; zero means it has not run yet. */
 export const framesRun = () => frames
 
-/** True while the loop is asleep because nothing needs a frame. */
+/**
+ * True while the loop is asleep because nothing needs a frame.
+ *
+ * Nothing on the page calls this and nothing should: it is here to be ASKED,
+ * from a console or a check, because "did the loop actually park?" is the one
+ * claim in the header above that a screenshot cannot settle. AGENTS.md §7 asks
+ * for measurement rather than eyeballing, and this is the measurement.
+ */
 export const isParked = () => rafId === 0
 
-/** 0–1.5; scales parallax and takeover amounts. 1 is the designed feel. */
+/**
+ * The intensity knob, and what it is worth today.
+ *
+ * `motionIntensity()` clamps to 0–1.5, and 1.5 is reachable only through
+ * `setMotionIntensity` — which nothing in this repo calls. So on the shipped
+ * site this value is exactly 1, or 0 for a visitor who asked for less motion,
+ * and every subscriber's `mi` is one of those two numbers.
+ *
+ * The knob is kept rather than removed because the clamp is the contract for
+ * anything that ever turns it: above 1.5 the hero takeover overshoots its own
+ * section and below 0 layers travel the wrong way. Do not read the range as a
+ * feature the page uses — read it as the range a future caller may use.
+ */
 let intensity = 1
 let reduced = false
 
@@ -75,6 +94,12 @@ export function motionIntensity(): number {
   return reduced ? 0 : Math.max(0, Math.min(1.5, intensity))
 }
 
+/**
+ * The only writer of `intensity`. Nothing calls it yet; see the note there for
+ * why the knob is kept. It wakes the loop because a multiplier that changed
+ * while the page was parked would otherwise not be painted until the next
+ * scroll.
+ */
 export function setMotionIntensity(value: number) {
   intensity = value
   wake()
@@ -220,3 +245,44 @@ if (typeof window !== 'undefined') {
 }
 
 export const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n)
+
+/**
+ * A per-frame lerp rate, expressed per second, so 144Hz feels like 60Hz.
+ *
+ * ```ts
+ * current += (target - current) * settle(0.16, dt)
+ * ```
+ *
+ * The naive form is `current += (target - current) * 0.16` — a fixed fraction
+ * of the remaining distance every FRAME, which makes the settle a function of
+ * the display rather than of time. 0.16 per frame leaves 3% of the error after
+ * twenty frames: a third of a second at 60Hz and 0.14s at 144Hz. The same code
+ * reads as weight on one machine and as a snap on another, and the machine it
+ * is written on is usually the fast one.
+ *
+ * Raising the per-frame survival `(1 - rate)` to `dt * 60` makes `rate` mean
+ * "this fraction of the remaining distance per sixtieth of a second", so the
+ * curve through real time is the same at 30, 60 and 144Hz. `dt` is already
+ * clamped to 50ms above, so a backgrounded tab cannot make this jump.
+ *
+ * **It is here because it had five copies.** `hooks/useParallax`,
+ * `hooks/usePointer`, `components/Hero`, `components/origin/CabinScene` and
+ * `components/Cursor` each reached the identical expression on their own, and
+ * two of them carried a comment asserting there was "one settle on this site"
+ * — which is what builders who cannot see each other write. A correction to
+ * the curve would have landed in one copy and silently not the other four, and
+ * **the divergence is only visible above 60Hz**: correct on the machine of
+ * whoever changed it, wrong on every faster one.
+ *
+ * **`Cursor` was the fifth and was found last, which is the whole failure mode
+ * happening to this very comment.** The count above said four for three
+ * passes, and the copy it missed is the custom cursor — the one animated thing
+ * on EVERY page of the site, including the four routes with no scroll-linked
+ * scenery at all. It was `1 - Math.pow(1 - 0.19, dt * 60)` written out, behind
+ * a reduced-motion snap, in a file that already imported from here. So the
+ * sentence "a correction would land in one copy and silently not the others"
+ * was true of this list as well as of the arithmetic. If you add a caller, add
+ * it here; if you are reading this to check the number, the population is
+ * `grep -rn 'settle(' src/` minus this file's own two mentions.
+ */
+export const settle = (rate: number, dt: number) => 1 - Math.pow(1 - rate, dt * 60)

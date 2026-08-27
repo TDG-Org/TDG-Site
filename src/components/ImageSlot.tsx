@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { Shot } from '../data/content'
+import type { KeyArtSpec, Shot } from '../data/content'
 import { asset } from '../lib/asset'
+import { KeyArt } from './KeyArt'
 import './ImageSlot.css'
 
 /**
@@ -52,6 +53,24 @@ type Props = {
   id: string
   /** authoring-only prompt; never rendered in a production build */
   placeholder: string
+  /**
+   * Custom key art, drawn by `KeyArt`. **It wins over everything else**, a
+   * dropped image included.
+   *
+   * `art` and `shot` are not two ways of saying the same thing, so this is not
+   * a fallback chain with a winner picked arbitrarily. They are for two
+   * different places, and both are wanted: the card wants the cover, because a
+   * screenshot at the 280px a card is painted at is a grey rectangle, and the
+   * app's own page wants the screenshot, because somebody who opened the page
+   * wants to see the software. `shotForPage()` in `data/appPages.ts` reads
+   * `APPS[].shot` for that page, so the shot has to stay in the data even on a
+   * card that never shows it.
+   *
+   * It also beats a local drop, and that is the right way round: drop-to-fill
+   * exists to preview a slot that has nothing in it yet, and a slot with key
+   * art is finished. See `AUTHORING` above.
+   */
+  art?: KeyArtSpec
   /** a real screenshot; a local drop still overrides it in that browser */
   shot?: Shot
   /** widest the slot is ever painted, as a CSS sizes value */
@@ -64,14 +83,15 @@ const srcSet = (shot: Shot, ext: 'avif' | 'webp') =>
   shot.widths.map((w) => `${asset(`shots/${shot.slug}-${w}.${ext}`)} ${w}w`).join(', ')
 
 /**
- * A product screenshot, or a quiet empty frame that keeps
- * the card's proportions. In development the empty frame also accepts a
- * dropped image, kept in that browser only, so the page can be reviewed filled
+ * A card's cover: its own key art, a product screenshot, or a quiet empty frame
+ * that keeps the card's proportions. In development the empty frame also accepts
+ * a dropped image, kept in that browser only, so the page can be reviewed filled
  * in without a build.
  */
 export function ImageSlot({
   id,
   placeholder,
+  art,
   shot,
   sizes = '(max-width: 700px) 90vw, 320px',
 }: Props) {
@@ -107,11 +127,13 @@ export function ImageSlot({
     [id],
   )
 
-  const filled = Boolean(dropped || shot)
+  const filled = Boolean(art || dropped || shot)
 
   return (
     <div className="slot" data-over={over} data-filled={filled} data-authoring={AUTHORING || undefined}>
-      {dropped ? (
+      {art ? (
+        <KeyArt spec={art} />
+      ) : dropped ? (
         <img className="slot__img" src={dropped} alt={shot?.alt ?? ''} />
       ) : shot ? (
         <picture>
@@ -130,7 +152,11 @@ export function ImageSlot({
         </picture>
       ) : null}
 
-      {AUTHORING ? (
+      {/* Key art is not a slot waiting to be filled, so it gets no drop layer
+          at all — not even the drag-drop-to-replace one a screenshot keeps.
+          There is nothing here to preview and nothing a dropped file could
+          usefully stand in for. */}
+      {AUTHORING && !art ? (
         <>
           {/* A filled slot still accepts a drag-drop replacement, but it is not
               a button: clicking a screenshot should not open a file dialog. */}
@@ -152,6 +178,7 @@ export function ImageSlot({
                   stroke="currentColor"
                   strokeWidth="1.5"
                   aria-hidden="true"
+                  focusable="false"
                 >
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <circle cx="8.5" cy="9.5" r="1.6" />

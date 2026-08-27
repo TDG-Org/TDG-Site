@@ -1,13 +1,53 @@
-# `src/data/` · everything a visitor reads
+# `src/data/` · the catalogue, and every page drawn from it
 
-**Every word on this site is in this folder.** Not in a component, not in a
-translation file, not in a CMS. Adding an app is an entry here. Fixing a line of
-a guide is one string here. A component that renders content knows nothing about
-which app it is drawing, which is the only reason ten pages have stayed
-consistent with each other.
+**Everything this site says about a product lives in this folder.** Not in a
+component, not in a translation file, not in a CMS. Every app, tool and game —
+its card, its chips, its page, its packs — plus the About page, the Store
+catalogue and all its prose, the nav links and the Origin chapters. Adding an
+app is an entry here. Fixing a line of a guide is one string here. A component
+that renders content knows nothing about which app it is drawing, which is the
+only reason ten pages have stayed consistent with each other.
 
-If you are about to type a sentence a visitor will read into a `.tsx` file under
-`components/`, you are in the wrong folder.
+**A section's own headline is not in this folder, and never has been.** The
+`.kicker`, the `.h2` and the `.lede` that `Hero.tsx`, `Origin.tsx`, `Apps.tsx`,
+`Tools.tsx`, `Building.tsx`, `Faith.tsx`, `Outro.tsx`, `Store.tsx` and
+`Footer.tsx` open with are written where the section is written. That is the
+rule, not a backlog.
+
+## Where the line falls, and why there
+
+One test: **does the component that draws it know what it is drawing?**
+
+`AppPage.tsx` does not. It draws whatever page it is handed, ten times over,
+and that is exactly why the ten stay consistent with each other and why an
+eleventh is a content edit rather than a component. Anything a component draws
+*N* of belongs here, and the moment it does not, the ten start to drift.
+
+`Apps.tsx` draws its own heading once and will never draw a second one. Moving
+`Apps we're building.` into a data file buys nothing — there is no second
+instance for it to agree with — and costs the thing that makes a section
+legible, which is that its words and its layout are read in one file. A
+`HEADINGS` map keyed by section id is a lookup table with one row per key and a
+second file to open before either half makes sense.
+
+| In `src/data/` | With the component |
+| --- | --- |
+| Every app, tool and game: card, chips, page, facts, guide | The kicker, heading and lede a section opens with |
+| The About page, in the same block vocabulary | The words on one control: a button label, a field label, a tab name |
+| The Store catalogue, and every sentence about the money | An empty, loading or error state's own line |
+| The nav links, the hero taglines, the Origin chapters | The Faith verse and its citation — that section *is* the quote |
+
+Two other folders keep their own words, for the same reason and with the same
+"one place" discipline: refusal copy is
+[`../auth/wording.ts`](../auth/README.md) and the feedback form's copy is
+[`../feedback/api.ts`](../feedback/README.md). Those sentences are facts about a
+mechanism, and the mechanism is what has to stay in step with them — a refusal
+filed here would sit one folder further from the code that decides when it is
+shown.
+
+**Still the wrong folder, always:** an app's name, a price, a chip, a fact row,
+a status, or a paragraph of a guide, typed into a `.tsx`. That half of the rule
+has never bent, and it is the half that costs money when it does.
 
 ---
 
@@ -15,7 +55,7 @@ If you are about to type a sentence a visitor will read into a `.tsx` file under
 
 | File | What it holds |
 | --- | --- |
-| `content.ts` | The home page: nav links, the seven story chapters, the Apps / Tools / game cards, the Building and Faith copy, and the shared `Shot` and `IconShape` types. Every card names its own `page:` slug. |
+| `content.ts` | The home page's catalogue: nav links, the hero taglines, the seven Origin chapters, the Apps / Tools cards, the MARANATHA panel the Building section draws, what is queued next, and the shared `Shot` and `IconShape` types. Every card names its own `page:` slug. The sections' own headings and ledes are in the section components, per the line above. |
 | `appPages.ts` | One page per app, tool and game. The biggest file here (~2,300 lines) and deliberately so — it is content, and it is lazily loaded. |
 | `about.ts` | The About page, in the same block vocabulary as an app page. |
 | `pageBlocks.ts` | The block types a folded page is built from. Small on purpose. |

@@ -194,8 +194,10 @@ stop {
   padding: clamp(72px, 9vw, 130px) clamp(18px, 4vw, 40px);
 }
 
-/* Story / Tools / Faith paint an edge-to-edge blend; Apps / Building stay
-   flat as contrast anchors. Every boundary meets on an identical value. */
+/* Origin / Tools / Faith paint an edge-to-edge blend; Apps / Building stay
+   flat as contrast anchors. Every boundary meets on an identical value — and
+   since the bands below, it is the same --band-* token on both sides rather
+   than two hexes that happen to agree. */
 .section--blend {
   background-image: linear-gradient(
     180deg,
@@ -211,50 +213,180 @@ stop {
   background-color: var(--tint-mid);
 }
 
-#story {
-  --tint-top: #030304;
-  --tint-mid: #0a0b12;
-  --tint-bot: #08080c;
-  --story-glow-warm: rgba(245, 201, 138, 0.16);
+/* ── the bands of the page ─────────────────────────────────────────────────
+   Every one of these values is a --band-* token from tokens.css, which is the
+   one place the number is written. Read down the column and the boundaries
+   are visible as boundaries: a section's --tint-bot is the SAME TOKEN as the
+   next section's --tint-top, so "every boundary meets on an identical value"
+   above is now something this file enforces rather than asserts. It used to
+   be two hexes that happened to agree, twice over, once per theme.
+
+   --seam-fill is for a Seam (components/scene/) sitting on one of this
+   section's edges. It is that section's own band stepped --seam-step toward
+   --text, and the step is NOT decoration: a seam painted in a band flat would
+   be invisible, because the invariant above means a boundary is exactly where
+   two bands are equal. Measured on #apps: seam rgb(8,8,12), section behind it
+   rgb(8,8,12). Toward --text rather than toward a lighter or darker literal,
+   so one declaration is right in both themes — lighter than the sky in dark,
+   darker than it in light, the way the art kit's own ridges read. tokens.css
+   has how 94% was picked. A seam cannot read --tint-* directly either way:
+   those are registered `inherits: false` so the theme wave can animate them.
+
+   These blocks carry no theme of their own any more. The bands are per theme,
+   so the tints that read them are too, and there is no light twin to keep in
+   step — which is the duplication this replaced. The one thing that still
+   needs a light value is --origin-glow-warm, which is a colour in its own
+   right and not a band.
+
+   ── if the theme wave ever SNAPS at a section boundary, start here ────────
+   These tints are registered @property values precisely so the wave can
+   animate them: an unregistered custom property inside a gradient jumps, and
+   the wave would stop dead at every boundary. They used to be declared as
+   literal hexes, twice, once per theme — so a theme flip changed the
+   declaration on this very element. They now arrive through a var() on an
+   inherited property instead, and the value only changes because the band on
+   :root changed.
+
+   That should be identical as far as a transition is concerned: a transition
+   watches the COMPUTED value, var() substitution happens at computed-value
+   time, and a registered <color> is interpolable either way — it is the same
+   mechanism `background-color: var(--bg)` has always relied on here. It was
+   reasoned, not measured; no browser had run when it was written. So if the
+   blends ever snap instead of waving, this indirection is the first suspect,
+   and the fix is to state the hexes per theme again rather than to unpick the
+   bands.                                                                   */
+
+/* ── three of these eight have no Seam, and all three are kept ────────────
+   #top, #origin and .footer.
+
+   ── two numbers live in this paragraph and they are NOT the same number ──
+   The next reader is going to grep and find both, so they are separated here
+   rather than left to be reconciled.
+
+   **SEVEN `<Seam>` elements, across FIVE boundaries.** `grep -rn '<Seam' src/`
+   is the population: #apps and #faith each hang two — a far shape with a
+   nearer one over it — and #tools, #building and the Outro hang one each.
+   Five joins, seven silhouettes. (That grep returns twelve LINES: the seven,
+   four prose mentions in scene/README.md, and one `Record<SeamShape` in
+   Seam.tsx that matches by accident. Count the JSX, not the lines.)
+
+   **FIVE `--seam-fill` consumers, one per boundary.** `grep -rn
+   'var(--seam-fill)' src/components/` returns five `color:` declarations —
+   Apps.css, Tools.css, Building.css, Faith.css, Outro.css — plus four prose
+   mentions across Apps.tsx, Seam.tsx and scene/README.md. No sixth consumer.
+   The second silhouette at a doubled boundary is NOT a sixth: it is painted
+   from --seam-step-2 in its own section's stylesheet, because a masked second
+   band wants a different step. See tokens.css.
+
+   So: seven shapes, five fills, five joins. This line said FIVE shapes for a
+   pass, which was the join count wearing the shape count's units.
+
+   #top and .footer are the ends of the page and have carried no seam since
+   they were written: Hero.tsx and Footer.tsx render none. They are kept so
+   the table has an entry per band for the day one is added, and because
+   .footer's is the only consumer --band-foot has.
+
+   **#origin is the different case, and the difference is the half a future
+   reader needs: it drew one and stopped.** Origin traded its seam for the
+   snow bank, a drawn boundary in the art kit's own language rather than a
+   flat silhouette band. So this line is a declaration whose consumer was
+   REMOVED, not one written ahead of a consumer that never arrived — and the
+   two look identical from here. A reader who cannot tell them apart assumes
+   nobody got round to it and deletes it; the next builder who wants a seam
+   back on this boundary then re-mixes the band by hand in a component
+   stylesheet, which is rule 2's bug.
+
+   Kept rather than deleted under the rule scene/README.md states for an
+   export with no caller: kept only where its absence would push the next
+   builder toward something worse, and only if the file says out loud that it
+   has no consumer and why. That paragraph is this one. Deleting it would
+   also leave #origin the only one of the five blocks below that declares
+   tints to declare no --seam-fill beside them — the other four, #apps,
+   #tools, #building and #faith, declare both — which is an asymmetry a
+   reader has to go and investigate before they can trust the rest.
+
+   None of the three are part of the 94% working in tokens.css. That figure
+   used to be quoted over six sections, #origin among them; re-measured over
+   the five actually drawn, neither range moves. See --seam-step there.
+
+   #top also carries a trap, so read this before you use it. It is not only
+   the hero: About, AppPage, Store and #/dev all give their outer section
+   `id="top"` too, so on those four pages --seam-fill resolves to the HERO
+   band — measured on #/store, `color-mix(in srgb, #030304 94%, #f2f2f5)`,
+   which is not that page's colour and never was. A seam added to one of them
+   mixes its own page's band by hand, the way scene/README.md's "a seam that
+   reaches across a boundary" paragraph shows. Do not trust this line there. */
+#top {
+  --seam-fill: color-mix(in srgb, var(--band-hero) var(--seam-step), var(--text));
+}
+/* ── one band on this page is now taken off the artwork ───────────────────
+   --band-origin was #0a0b12 / #eef0f6 and is #040c19 / #ebf0fb: the colour
+   the hero ridge's foot actually composites to, at this band's own
+   lightness. tokens.css carries the sampling, the two composites and the
+   argument for why dark and light move on different axes.
+
+   Nothing in THIS file changed for it, and that is the point of the bands
+   rather than an oversight. Every boundary still meets on an identical value
+   because both sides of every boundary are the same token, so the whole
+   table below is untouched by a band moving — which is the property the
+   rewrite this file records was for. Resolved before and after, both themes,
+   all 22 --tint-* values: only #origin's --tint-mid differs, and it differs
+   by exactly the band.
+
+   --seam-fill is untouched too, and not by luck: the step is a fixed 6%
+   blend toward --text, so it tracks the band's LIGHTNESS, and the new value
+   was derived to hold the old one's L* to a tenth of a unit. #origin's own
+   step reads dL* 5.80 -> 5.81 dark and -4.56 -> -4.59 light across the
+   change, so --seam-step's 94% did not need re-deriving. See tokens.css. */
+#origin {
+  --tint-top: var(--band-hero);
+  --tint-mid: var(--band-origin);
+  --tint-bot: var(--band-apps);
+  /* No consumer: Origin's seam became the snow bank. Kept, and it is the one
+     of the three with a history — see the note above #top. */
+  --seam-fill: color-mix(in srgb, var(--band-origin) var(--seam-step), var(--text));
+  --origin-glow-warm: rgba(245, 201, 138, 0.16);
 }
 #apps {
-  --tint-mid: #08080c;
+  --tint-mid: var(--band-apps);
+  --seam-fill: color-mix(in srgb, var(--band-apps) var(--seam-step), var(--text));
 }
 #tools {
-  --tint-top: #08080c;
-  --tint-mid: #090b13;
-  --tint-bot: #0f0d0d;
+  --tint-top: var(--band-apps);
+  --tint-mid: var(--band-tools);
+  --tint-bot: var(--band-building);
+  --seam-fill: color-mix(in srgb, var(--band-tools) var(--seam-step), var(--text));
 }
 #building {
-  --tint-mid: #0f0d0d;
+  --tint-mid: var(--band-building);
+  --seam-fill: color-mix(in srgb, var(--band-building) var(--seam-step), var(--text));
 }
 #faith {
-  --tint-top: #0f0d0d;
-  --tint-mid: #0c0d15;
-  --tint-bot: #0b0b10;
+  --tint-top: var(--band-building);
+  --tint-mid: var(--band-faith);
+  /* This is the one boundary on the page that did NOT meet, and had not for a
+     long time. The floor here was #0b0b10 dark / #ececed light — that is
+     --bg2, the FOOTER's colour — while the Outro sitting directly beneath
+     this section paints --bg. Faith's floor was reaching past a whole section
+     to a band two down, leaving a step of 4 values in dark and 10 in light at
+     a boundary readers had said felt abrupt. Closed here deliberately, and
+     recorded rather than quietly absorbed into the rename that surfaced it:
+     this line is the only pixel in the band rewrite that is not what it was.*/
+  --tint-bot: var(--band-outro);
+  --seam-fill: color-mix(in srgb, var(--band-faith) var(--seam-step), var(--text));
+}
+.outro {
+  --seam-fill: color-mix(in srgb, var(--band-outro) var(--seam-step), var(--text));
+}
+/* The other end of the page, and the second of the two with no Seam behind
+   it — see the note above #top. Unlike #top this one has no trap in it: the
+   class is the footer's alone, so the value is right if a seam ever wants it. */
+.footer {
+  --seam-fill: color-mix(in srgb, var(--band-foot) var(--seam-step), var(--text));
 }
 
-[data-theme='light'] #story {
-  --tint-top: #fbfbfc;
-  --tint-mid: #eef0f6;
-  --tint-bot: #f8f8fa;
-  --story-glow-warm: rgba(184, 118, 58, 0.12);
-}
-[data-theme='light'] #apps {
-  --tint-mid: #f8f8fa;
-}
-[data-theme='light'] #tools {
-  --tint-top: #f8f8fa;
-  --tint-mid: #eceff6;
-  --tint-bot: #f8f5f3;
-}
-[data-theme='light'] #building {
-  --tint-mid: #f8f5f3;
-}
-[data-theme='light'] #faith {
-  --tint-top: #f8f5f3;
-  --tint-mid: #eff0f7;
-  --tint-bot: #ececed;
+[data-theme='light'] #origin {
+  --origin-glow-warm: rgba(184, 118, 58, 0.12);
 }
 
 .texture {
@@ -329,10 +461,17 @@ stop {
   gap: 6px;
 }
 
+/* The plate, then the lift. Two layers and not one: --card-bg is the theme's
+   own ground at ~0.75 alpha, which is what makes a card read as an object in
+   front of a section's scenery rather than as a paler patch of it, and
+   --surface stays on top as the 4.5% highlight it always was. Painted as a
+   background-image over a background-color so both survive one declaration and
+   neither has to know the other's alpha. tokens.css carries the reasoning. */
 .card {
   position: relative;
   border-radius: 3px;
-  background-color: var(--surface);
+  background-color: var(--card-bg);
+  background-image: linear-gradient(var(--surface), var(--surface));
   border: 1px solid var(--border);
   box-shadow: var(--card-shadow);
   isolation: isolate;
@@ -489,7 +628,7 @@ stop {
     transform: translateX(120%);
   }
 }
-/* see .story__pulse: these replace an animated box-shadow with two
+/* see .origin__pulse: these replace an animated box-shadow with two
    compositor-only layers */
 @keyframes pulseRing {
   0%,
@@ -615,7 +754,7 @@ stop {
   .tools__road,
   .tools__sun,
   .tools__sun-ring,
-  .story__pulse {
+  .origin__pulse {
     display: none !important;
   }
   .section,
@@ -649,7 +788,7 @@ stop {
   /* Pausing pins each animation at its 0% frame, and for these that frame is
      the dimmest one, not a resting state. The scroll cue faded to 0.4 and the
      light shafts to their darkest. An !important author declaration is the one
-     thing that outranks a running animation. (The story pulse is deliberately
+     thing that outranks a running animation. (The Origin pulse is deliberately
      left pinned: its 0% frame is the ring tucked behind the dot.) */
   .hero__scroll-arrow {
     opacity: 1 !important;

@@ -1,0 +1,1168 @@
+/* ── the summit ───────────────────────────────────────────────────────────
+   Three smooth ridges, the moon low behind them, and the cross standing on
+   the crest with the disc directly behind it. Summit.tsx's header carries the
+   reasoning and the motion; this file carries the geometry, and the geometry
+   is the part that has to be exact.
+
+   Every number below hangs off two variables, so the three claims that decide
+   whether this beat works are true BY CONSTRUCTION at every width rather than
+   at the one width somebody happened to open:
+
+     --summit-crest      how far the crest LINE sits above the section's floor
+     --summit-cross-h    the cross's height, and the unit the moon is sized in
+
+   Nothing here is measured off a screenshot and nothing is tuned per
+   breakpoint. If one of those two moves, the ridge box, the cross's foot, the
+   moon's disc and the section's own bottom padding all move with it.       */
+
+/* ── the section's contract ───────────────────────────────────────────────
+   Declared on the SECTION, the way Stage.css ships `.stage-host` for the
+   section that holds a stage. Faith.tsx puts `faith-summit-host` on `#faith`
+   beside `.section`, and Faith.css reads --summit-clearance for its own
+   bottom padding — the summit is what knows how much sky it needs, so the
+   summit is where that sum lives.                                          */
+.faith-summit-host {
+  /* Where the crest peaks, as a fraction of the section's width. Right of
+     centre, like the reference, and far enough off it that the summit cross
+     never stacks directly under the CrossGlyph at the top of the content.
+     The crest path's apex is authored at 0.68 x 1440 = 979.2 in its own
+     viewBox, so this value and that number are one decision in two places —
+     change either and change both.
+
+     **It was 62% and the site owner asked for the moon and the cross "a
+     little bit more to the right".** Moving this alone would have slid the
+     cross off the top of the hill, because the apex is a literal in
+     `Summit.tsx`'s path; both moved in one edit, and `RIDGES.crest` there
+     carries the re-authored flanks and the arithmetic that scaled them.
+
+     68 and not further, and the bound is the moon rather than taste. The
+     moon's BOX is 3.92 cross-heights wide and the disc is half of that, so at
+     the narrow end — where `--summit-cross-h` is pinned to its 66px floor and
+     the disc is 129.4px across — the disc's right limb sits at
+
+         320px    0.68 x 320 + 64.7 = 282.3     37.7px inside the frame
+         375px    0.68 x 375 + 64.7 = 319.7     55.3px inside
+
+     and the bloom around it hangs off the right the way it already did at 62%
+     (13px at 375 then, 9px now). A whole disc with air beside it is the
+     picture; the bloom running to the frame is not a boundary and nothing on
+     the other side of it can disagree. At 70% the 320px column loses 11px of
+     that margin, which is where the disc starts to read as leaning on the
+     edge. */
+  --summit-x: 68%;
+
+  /* The crest line, above the section's floor. 11vw between a phone floor and
+     a 168px ceiling: the hill has to be tall enough to read as a summit and
+     short enough that the sky above it stays the subject. */
+  /* MUCH lower, on the owner's note: "when the user is on the faith section,
+     the cross and mountain should be much lower". This is how far the crest
+     LINE sits above the section's floor, so a smaller number sinks the whole
+     welded group — hill, cross and the moon that is sized off it — toward the
+     bottom of the frame, which is where the beat wants it: the verse owns the
+     upper half and the summit rises into the lower one as the reader comes
+     over it. Was clamp(78px, 11vw, 168px); this is 44% of it at every stop. */
+  --summit-crest: clamp(34px, 4.8vw, 74px);
+
+  /* The cross, and the unit everything above the crest is measured in.
+     Every ratio below is quoted in cross-heights, so this one clamp scales
+     the cross, the disc, the bloom, the shadow and the section's own bottom
+     padding together and nothing has to be re-tuned per breakpoint.
+
+     It was clamp(56px, 7vw, 108px) and it is 23% taller at every width now.
+     The site owner's report was that the cross "is not finished — you just
+     have one line going up", and two thirds of that was the mask bug recorded
+     down at .faith__ridges. The last third was true on its own terms: this is
+     the destination of a six-section walk and the page's own title mark, and
+     at 0.64 of the crest hill's height it was a detail on the hill rather than
+     the thing the hill is there for. At 0.78 it stands. (100.8 against 158.4
+     at 1440 before; 123.8 against the same 158.4 now.) */
+  --summit-cross-h: clamp(66px, 8.6vw, 128px);
+
+  /* ── the disc, in cross-heights ────────────────────────────────────────
+     Named rather than inlined because they are the two numbers the whole
+     "is the cross inside the moon" sum is written in, and a reader asked to
+     re-do that sum should be substituting rather than hunting for the digits
+     in four different calcs.
+
+       --summit-disc-r   the disc's radius
+       --summit-disc-c   the disc's centre, above the crest LINE
+
+     They were 0.72 and 0.62. The disc is bigger for two reasons that arrive
+     at the same number:
+
+     - **The moon is the page's thread and this is where it lands.** It rests
+       on the horizon in the hero and arrives here five sections later behind
+       the cross. At 0.72 it arrived smaller than it set out, which reads as a
+       different moon. At 0.98 the disc is 242.7px across at 1440 — the hero's
+       is 34vw / 2 = 244.8px at the same width. It is the SAME moon, within a
+       percent, and the bloom around it matches to within four pixels too
+       (3.92 x 123.84 = 485.4 against the hero's 489.6px box).
+     - **The drift needs somewhere to happen.** The ladder in `Summit.tsx`
+       opened from 17px of moon-against-cross travel to 77px, and every pixel
+       of that is spent moving the disc's edge past the cross's. The sum under
+       .faith__moon is worked at the new figures and every corner of it clears.
+
+     Change either and re-do that sum. Nothing else in this file needs to
+     move: the section's padding, the moon's box, its offset and its centring
+     are all written in terms of these two. */
+  --summit-disc-r: 0.98;
+  --summit-disc-c: 0.52;
+
+  /* How far the ridge box hangs BELOW the section's floor.
+
+     A ridge that drifts upward would otherwise open a strip of bare band
+     under it. The largest upward excursion any ridge takes is the far one's:
+     half of FAR_RISE plus its pointer y, so 27px at 1440 — and Summit.tsx
+     scales that with the section's width, so this scales with it too. The
+     cover is thinner than it was, because the ladder opened and this clamp did
+     not: 16 against 13.5 at 375, 30.2 against 27 at 1440, 34 against 29.7 at
+     1920 — a consistent 1.12x to 1.19x across the whole range rather than the
+     2x it used to carry.
+
+     **It was not widened to restore that 2x, and the reason is that the 2x was
+     never what was holding the floor.** The near ridge does not drift at all
+     and its path closes on y = 400 across the entire width, so the bottom of
+     this box is covered by an opaque layer at every x whatever the far ridge
+     does behind it. What the dip actually buys is a runway BELOW the section's
+     floor for the fade to finish in, which is a fact about --summit-foot and
+     not about anybody's excursion. Widening it would have moved the near
+     ridge's measured ends — the numbers three paragraphs down — for nothing.
+
+     **It has to scale, and not for the drift.** A constant 30 was the first
+     answer and it quietly distorted the whole composition, because the band's
+     height is a vw and the dip was not: at 1440 a flat 30 ate 12% of the band
+     and at 375 it ate 21%, so the near ridge — the layer closest to the floor
+     — sank below the section's bottom edge on a phone and simply was not
+     there. Measured after, as a percentage of the crest's own height so the
+     two widths are comparable at all: the near ridge's visible ends sit at
+     23.1% / 33.7% at 375 and 24.0% / 34.5% at 1440, the far ridge's band at
+     47.3–58.7% and 46.8–59.5%, and sampling nine points across the width
+     gives the same string of which layers are visible — F-N F-N F-N FCN -CN
+     -CN FCN F-N F-N — at both. It is the same picture, not the same picture
+     with its bottom layer sliced off at the narrow end. */
+  --summit-dip: clamp(16px, 2.1vw, 34px);
+
+  /* The bottom fade. A silhouette that stops dead ON a section boundary is a
+     line, because base.css's invariant is that adjacent bands meet on an
+     identical value — so the ridges dissolve into the floor instead, at the
+     rate every other seam on this page dissolves at (--seam-fade).
+
+     Kept just under the dip's own scale so the near ridge has body above it.
+     The fade is meant to hide a boundary, not to erase the layer that sits on
+     it: at 1440 it is fully opaque 31.7px above the floor and the near ridge's
+     visible ends are at 38.0 and 54.7; at 375, 18.0 against 18.0 and 26.3. */
+  --summit-foot: clamp(18px, 2.2vw, 38px);
+
+  /* Clear sky between the moon's DISC and the last line of the copy.
+
+     ## Why it is measured to the disc again, and what pays for the bloom
+
+     The site owner's note on this section was that the moon and the cross sit
+     "too far down" and want to be "a little closer to the text". Measured at
+     1440x900 with the section's floor parked at the viewport's bottom, the
+     copy's last line ended at y 362 and the disc's top limb did not begin
+     until y 561 — 199px of band between them, on a section 1141px tall that
+     has never fitted in a viewport. That is the hole he is describing.
+
+     Raising --summit-crest cannot close it, and the arithmetic is worth
+     stating because it is the obvious move: --summit-clearance contains the
+     crest, so the section's FLOOR moves down by exactly as much as the crest
+     moves up and the distance from the copy to the disc is unchanged. All a
+     taller crest buys is a taller hill in a taller section. The only two terms
+     in that distance are this one and --summit-cross-h:
+
+        copy's bottom -> disc's top  =  clearance - (crest + (c + r)h)
+
+     ## So the sum reserves the bloom's READABLE reach, not its geometry
+
+     The version this replaces reserved to the bloom's outermost pixel —
+     crest + (c + 2r)h — and that pixel has alpha ZERO by construction:
+     `Moon.tsx`'s halo is a userSpaceOnUse radial that is 0.30 of --glow at
+     0.68 of the box radius and 0 at 1.00. Reserving clear sky above a row
+     that paints nothing is 0.98 cross-heights of nothing, which at 1440 is
+     121px of the 199.
+
+     Ablated and measured rather than derived from the stops: the summit
+     parked as above, `.faith__moon-disc` hidden and shown, one column straight
+     up from the disc's centre, the difference read in CIE L*. Distances from
+     the disc's centre in cross-heights, both themes:
+
+                              dark      light
+        bloom under 2.0 L*    1.787h    1.755h
+        bloom under 1.0 L*    1.852h    1.852h
+        bloom under 0.5 L*    1.884h    1.852h
+
+     The disc's own top is at 1.00h (c + r = 0.52 + 0.98), so **0.90 of a cross
+     height above the disc is where the bloom stops being readable in either
+     theme** — the 0.5 L* row in dark, past it in light. That is this value,
+     and it is stated in cross-heights rather than in vw so the claim holds at
+     every width instead of at the one it was measured at.
+
+     ## The second requirement: the DISC may never reach the copy
+
+     The moon drifts, so the clearance has to survive the drift:
+
+        --summit-air > (MOON_RISE / 2 + MOON_PY) x k
+
+     MOON_RISE is 88 and MOON_PY is 6 in `Summit.tsx`, and k is the motion
+     scale that file applies, clamp(0.5, width / 1440, 1.1), so the requirement
+     is 50k. Against 0.9h:
+
+        320 / 375    59.4 vs 25.0        1440    111.5 vs 50.0
+        768          59.4 vs 26.7        1920    115.2 vs 55.0
+       1024          79.3 vs 35.6
+
+     — a factor of 2.1 or better everywhere, and it is a floor twice over,
+     because the frames where the copy and the moon are both on screen are the
+     middle of `p` rather than its ends: at 1440x900 the copy's bottom edge does
+     not come on screen until p 0.308, where the moon has risen 16.9px of its
+     44 — a third of the excursion the requirement above is written against.
+
+     What crosses the copy's own bottom edge at rest is therefore the bloom at
+     under half a unit of luminance, which is beneath the step a reader can see
+     on a soft field — and this section already paints `.faith__blob`, a --glow
+     radial at 0.7 opacity, directly behind the verse.
+
+     Measured after: the copy-to-disc band is 111px at 1440 where it was 199,
+     and the section is 1059px rather than 1141. */
+  --summit-air: calc(var(--summit-cross-h) * 0.9);
+
+  /* ── the two derived lengths ───────────────────────────────────────────
+     The crest path's apex is at viewBox y = 100 of 400, so it sits three
+     quarters of the way up the ridge box. The box's own bottom is
+     --summit-dip below the section's floor. So:
+
+        crest above floor = 0.75 x box height - dip
+
+     and solving that for the height is the line below. This is the whole of
+     the "foot on the crest line" guarantee: the cross's `bottom` is
+     --summit-crest, and the apex is at --summit-crest, and neither of them
+     can move without this calc moving too.                                */
+  --summit-band-h: calc((var(--summit-crest) + var(--summit-dip)) * 4 / 3);
+
+  /* How far the ridge BOX reaches above the crest line.
+
+     Not a look; a clip. `.faith__ridges` carries the scene's bottom fade, and
+     a mask clips whatever falls outside its own box — so anything that stands
+     up out of that box is cut off at the box's top edge, silently, with no
+     other symptom. That is what was happening to the cross: it stood
+     `--summit-cross-h` above the crest line in a box whose top edge was only
+     (crest + dip) / 3 above it, so at 1440 the top 37.9px of a 100.8px glyph
+     were simply not painted. The crossbar sits at 26.5%–35.3% from the top of
+     the path. It was inside that 37.9px at EVERY width — 44% of the glyph was
+     gone at 375 — which is precisely and only "one line going up".
+
+     So the box gets exactly the headroom the scene stands up into, by
+     construction rather than by a clamp somebody would have to re-check:
+
+        cross above the box's top   = cross-h - (crest + dip) / 3
+        + the crest's own upward drift  (CREST_RISE / 2 x k, at most 6.1px)
+        + the shadow and wash's soft edges
+
+     and 24px covers the last two at every width with the tightest case being
+     roughly 18px of it. Never negative even where the first term goes to
+     zero, which is what keeps a narrow viewport from clipping the wash. */
+  --summit-head: calc(
+    var(--summit-cross-h) - (var(--summit-crest) + var(--summit-dip)) / 3 + 24px
+  );
+
+  /* How much room the summit needs under the copy.
+
+     The tallest thing in the scene a reader can actually SEE is the moon's
+     disc, and it is what this sum is written against. `Moon.tsx`'s geometry is
+     a disc of radius 25 in a 100 viewBox, so the bloom's radius is exactly
+     twice the disc's, and everything follows:
+
+        disc centre = crest + c              c = --summit-disc-c = 0.52
+        disc top    = crest + c + r          r = --summit-disc-r = 0.98
+                                             = crest + 1.50 cross-heights
+        bloom edge  = crest + c + 2r         = crest + 2.48 cross-heights
+
+     so the DISC's top limb is exactly --summit-air below the content's bottom
+     edge at every width, without measuring a line of type — the same trick the
+     old hillside used, one layer up, applied to the highest edge of the right
+     object.
+
+     **The bloom is not in the sum, and that is the site owner's note being
+     answered rather than an omission.** It used to be: the third line above
+     was the term, which reserved clear sky above a row whose alpha is zero and
+     bought 0.98 cross-heights — 121px at 1440 — of nothing between the verse
+     and the moon. --summit-air carries the ablation that says where the bloom
+     actually stops being readable (0.90 cross-heights above the disc, in both
+     themes) and is set to exactly that, so the outer bloom now lies in the
+     air rather than under it and the band between the two closed from 199px to
+     111 at 1440.
+
+     Worst-case drift eats 50px of that air at 1440 (half the moon's rise plus
+     its pointer y, scaled by the same k the amplitudes are), against an air of
+     111.5 — and the frames where both the copy and the moon are on screen
+     spend at most 18px of it. At 1440 the disc's top sits 344px above the
+     section's floor and the copy's bottom edge at 456px, all of it band. */
+  --summit-clearance: calc(
+    var(--summit-crest) + var(--summit-cross-h) *
+      (var(--summit-disc-c) + var(--summit-disc-r)) + var(--summit-air)
+  );
+
+  /* ── the inks ──────────────────────────────────────────────────────────
+     Every ridge is the section's own band stepped toward the page's ink, the
+     same construction --seam-fill uses and for the same reason: painted in
+     its band flat a silhouette is invisible, because a band is exactly the
+     value it is being drawn against. A step toward --text is one declaration
+     that is right in both themes — lighter than a near-black sky, darker than
+     a near-white one — which is how the six seams already on this page read
+     and how the art kit's own -dark and -light ridges are drawn.
+
+     **The ORDER of the three flips with the theme, and that is deliberate.**
+     In both themes the far ridge is the lighter one and the near ridge the
+     darker one — that is what aerial distance looks like, and it is what the
+     kit's own art does (its dark mountains are lifted midnight blue with the
+     nearest fringe darkest; its light ones are pale mist with a graphite note
+     at the front). But "lighter" is a step TOWARD --text in dark and AWAY
+     from it in light, so one set of percentages cannot say it twice. The
+     light block below swaps the two ends, and it overrides the crest as well
+     — see the note above that block for why the "the crest needs no override"
+     this line used to end on stopped being true.
+
+     13% / 9% / 5% of ink, not the 6% a seam takes. A seam is a boundary that
+     must not become a stripe; this is scenery that has to read as three
+     distances, and it is the section's subject rather than its edge.        */
+  --summit-ink-far: color-mix(in srgb, var(--band-faith) 87%, var(--text));
+  --summit-ink-crest: color-mix(in srgb, var(--band-faith) 91%, var(--text));
+  --summit-ink-near: color-mix(in srgb, var(--band-faith) 95%, var(--text));
+
+  /* ── where the backlight lands ─────────────────────────────────────────
+     Three inks the section did not have, and they live down here with the
+     other five rather than on `:root` for a checkable reason: two of them are
+     mixed FROM --summit-ink-crest, which is declared on this selector, so a
+     `:root` declaration could not resolve them at all. Both themes are stated
+     in the same edit either way — the light block is directly below.
+
+     **--summit-shadow** is the wedge the cross cuts out of the moonlight
+     falling over the crest, and it has to be DARKER than the hill it lies on
+     and LIGHTER than the cross casting it. "Darker" is not one direction: the
+     crest ink is the band stepped toward --text, and --text is near-white in
+     dark and near-black in light, so the shadow steps 38% back toward
+     --invert-fg in dark and 22% further toward --text in light. Same look,
+     opposite arithmetic — the same flip the far and near ridges take three
+     declarations up, and for the same reason. Against the crest ink it lies on
+     and the cross it belongs to: #181920 between #212228 and #0c0f1a in dark,
+     #929399 between #b6b7bd and #4e4e5a in light — the light pair moved with
+     the light crest ink this pass and the mix that derives it did not. The
+     dark value was 60% of
+     --invert-fg to begin with, which put the shadow at #0b0c13 — as dark as
+     the cross itself, so the two read as one continuous object rather than as
+     a thing and the mark it leaves.
+
+     **--summit-wash** is the light itself, spilling over the crest line either
+     side of the foot. It is --moon-disc, because the moon is literally what is
+     lighting it, and --moon-disc is white in BOTH themes — so one ink, two
+     alphas: 26% over a near-black hill is a clear lift, and a pale hill needs
+     twice that to move at all. Light was 62% and is 52%, because the light
+     crest is L* 74.5 this pass where it was 87.9: a wash that had to fight a
+     near-white hill has a mid-grey one to lift now, and at 62% it was blowing
+     the crest to white rather than lighting it.
+
+     **--summit-sky** is the band deepened behind the disc, and the light theme
+     is what it exists for. --band-faith is L* 94.87 and the disc composites to
+     about 99, which is four points of separation for the brightest object in
+     the section; the hero had exactly this problem and tokens.css fixed it by
+     shading --hero-sky. The band cannot be shaded here — it is one token the
+     lead owns — so the sky is shaded locally, in a soft pool that has no edge
+     anywhere.
+
+     **It has been at 11% and at 16% and both were measured failing.** The
+     reading that settled it was taken off a render rather than off the mix.
+     1440x900, light, the summit parked with the disc's centre at viewport
+     y 459; the DISC is every pixel inside 0.9 of its radius with the middle
+     0.6 excluded, because the cross stands there, and the SKY is the annulus
+     1.5 to 2.0 radii with the same column excluded and nothing below the
+     disc's centre, because that is hill:
+
+         disc L* 94.8   sky L* 92.2   ratio 1.07:1
+
+     — not the 17.5 L* the 16% mix was supposed to be buying. Two things ate
+     it. The pool's mask held only its inner 18% flat and gave the whole of the
+     rest over to fading, so at the disc's own rim it was down to about 0.19
+     alpha; and its ellipse was 2.2 cross-heights wide, which is 1.04 disc
+     radii — narrower than the disc it was drawn for.
+
+     So the mask's flat core runs to 54%, the ellipse is 9.2 cross-heights wide
+     (see `.faith__moon-sky`), and the ink is 31% of --text rather than 16%.
+     Composited with `.faith__dusk`, which is opaque at the disc's own height,
+     the same measurement now reads
+
+         disc L* 92.9   sky L* 74.4   ratio 1.675:1
+
+     against a floor of 1.6. Dark's INK is untouched — it is a different mix, off
+     --invert-fg rather than --text — but it shares the geometry, so the same
+     measurement moved from 78.3 / 9.1 / 9.76:1 to 78.3 / 6.4 / 10.28:1. A wider
+     pool of an ink that is 0.3 L* off its own band cannot do more than that,
+     which is the point: dark never needed it.
+
+     **Re-read after the group moved right and up this pass**, because
+     `.faith__dusk`'s stops are fractions of a section that got 82px shorter and
+     the disc now sits at a different row of that ramp. Nothing in this block
+     was changed for it; the same measurement, same definitions, same parked
+     frame:
+
+         light   disc L* 95.41   sky L* 73.85   ratio 1.819:1
+         dark    disc L* 85.27   sky L*  6.33   ratio 12.55:1
+
+     Both moved the right way and neither ink needed re-solving — the disc is a
+     translucent white over the sky, so it reads brighter wherever the ramp
+     behind it is less deep, and 70% is a little higher up the ramp than 72%
+     was on a taller box.
+
+     **The two shadings carry it together and neither could alone.** This pool
+     is pinned vertically by the section's floor — the sum under
+     `.faith__moon-sky` — so it cannot reach much past 2.3 disc radii above the
+     disc's centre, and the sky beyond that is `.faith__dusk`'s. Taking the pool
+     deep enough to do the whole job on its own put a visible grey ellipse
+     around the moon: rendered, a smudge with an edge, which is the one failure
+     mode this element is not allowed. At 31% it is L* 70.4 at its core against
+     a dusked band of 76.9 — a difference of six points, which reads as haze.
+
+     The mix is quoted against the disc's RING mean rather than its rim for a
+     reason worth keeping: `Moon.tsx`'s limb wash covers the disc's lower right
+     at --moon-mare's own alpha and eats several points out of exactly the half
+     of the disc the pool was bought to light. The rim reads L* 98.6 and clears
+     the same sky by 1.87:1.
+
+     Dark gets a token step toward --invert-fg for the same shape of reason at
+     a tenth of the size: a night sky has room to spare and only needs the
+     bloom to have something to be brighter than. */
+  --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 62%, var(--invert-fg));
+  --summit-wash: color-mix(in srgb, var(--moon-disc) 26%, transparent);
+  --summit-sky: color-mix(in srgb, var(--band-faith) 86%, var(--invert-fg));
+}
+
+/* ── the light theme's three ridges, re-solved against a shaded sky ────────
+   The light block used to swap the two ends of the ladder and leave the crest
+   alone, because the crest sat in the middle of a band that was not moving.
+   The band moves now: `.faith__dusk` shades this section's sky and the pool
+   above shades it further behind the disc, so all three inks are re-derived
+   against what is actually behind them rather than against the bare token.
+
+   `.faith__dusk` is at full alpha from 72% of the section down to the crest
+   line, so the sky the ridges are drawn against in light is its L* 76.9 rather
+   than the band's 94.87, and the pool takes the patch behind the disc to 70.4.
+   The old light inks were 91.0 / 87.9 / 84.8 — every one of them LIGHTER than
+   that sky, which is a hillside floating in front of its own horizon. The
+   three below are 80.1 / 74.5 / 68.8: the order the dark theme has (far
+   lightest, near darkest, because distance is what reads as haze), every ridge
+   below the band, and the scene's own range opened from 6.2 L* to 11.3. Their
+   ratios against the band go 1.11 / 1.20 / 1.31 to 1.50 / 1.76 / 2.10, which is
+   the dark theme's 1.37 / 1.22 / 1.10 read from the other end.
+
+   The crest therefore has an override where the comment above says it needs
+   none. That claim was true of the value it was written for and is not true
+   any more; this line is the correction rather than an oversight, and
+   --summit-shadow follows it because it is mixed FROM it.                   */
+[data-theme='light'] .faith-summit-host {
+  --summit-ink-far: color-mix(in srgb, var(--band-faith) 81%, var(--text));
+  --summit-ink-crest: color-mix(in srgb, var(--band-faith) 74%, var(--text));
+  --summit-ink-near: color-mix(in srgb, var(--band-faith) 67%, var(--text));
+  --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 78%, var(--text));
+  --summit-wash: color-mix(in srgb, var(--moon-disc) 52%, transparent);
+  --summit-sky: color-mix(in srgb, var(--band-faith) 69%, var(--text));
+}
+
+/* ── the scene's own box ──────────────────────────────────────────────────
+   A sibling of .shell, absolutely positioned over the section's padding box,
+   taking no flow space and carrying no z-index — so it paints after the
+   section's gradient field and before .faith__content, which has z-index 2.
+   Every child is decorative and says so twice: aria-hidden in the markup and
+   pointer-events here.
+
+   No `overflow` and no `mask` on this element. It is nearly a thousand pixels
+   tall at 1440 and either one would promote a compositor layer that size; the
+   fade that IS needed lives on .faith__ridges, which is a quarter of the
+   height.                                                                  */
+.faith__summit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── the moon ─────────────────────────────────────────────────────────────
+   A wrapper rather than Moon's own <svg>, because `Moon` takes a className
+   and nothing else — which is the right shape: its header says the caller
+   animates it, and Summit.tsx owns this element's `translate` outright.
+
+   The box is 4r cross-heights and the visible disc is exactly half of that
+   (Moon's geometry: radius 25 of a 100 viewBox), so with r = --summit-disc-r
+   and c = --summit-disc-c, and h for a cross height:
+
+       disc diameter = 2r x h = 1.96h
+       bloom radius  = 2r x h = 1.96h   (the box's own half-width)
+
+   `bottom` puts the box's own bottom at crest - (2r - c)h, and the centre is
+   half the box above that, so every line below falls out of those two ratios
+   and nothing here is a measured constant:
+
+       centre  = crest - (2r - c)h + 2rh = crest + c.h       = crest + 0.52h
+       top     = centre + r.h            = crest + (c + r)h  = crest + 1.50h
+       bottom  = centre - r.h            = crest - (r - c)h  = crest - 0.46h
+
+   which is the shot: the disc's top clears the cross's top (crest + 1.00h) by
+   half a cross height, and its bottom tucks 0.46 of one behind the hill so the
+   hill reads as being IN FRONT of it.
+
+   ## The worst case, worked
+
+   The moon and the cross drift at different rates on purpose — that is the
+   depth — so the disc slides against the cross by half the difference of their
+   rises ((88 - 11) / 2 = 38.5px) plus the moon's own pointer travel (12px
+   across, 6px down), all of it scaled by the section's width in Summit.tsx.
+   Taking the worst corner for each part of the glyph — the disc DOWN for the
+   top, UP for the foot, and the pointer pushing sideways at the same time —
+   and measuring from the disc's centre in cross-heights, where the stem's
+   half-width is 0.044h and the arm's is 0.21h:
+
+                         at rest    worst @375   worst @1440   worst @1920
+     cross TOP,   inside   0.498h      0.152h       0.129h        0.105h
+     cross FOOT,  inside   0.458h      0.112h       0.090h        0.066h
+     arm TIP,     inside   0.680h      0.343h       0.329h        0.303h
+
+   In pixels the tightest cell in that table is the foot at 1920: 8.4px, and it
+   is the very bottom of the stem, the pixels sitting ON the crest line where
+   the cross is read against the hill's own ink and not against the disc at
+   all. At 1440 the same cell is 11.1px and the cross's top is 16.0px inside.
+   Nothing goes negative anywhere, which the 0.72/0.62 version could not say —
+   its foot went 2.7px outside at 1440 and 0.8px at 375.
+
+   The three columns being so close together is the point of the motion scale
+   in Summit.tsx rather than a coincidence: it holds the drift at a roughly
+   constant FRACTION of a cross height (0.337 / 0.359 / 0.382) across the whole
+   range, which is why this table can be written in h at all.
+
+   And the tuck survives too, which is the claim that is easiest to lose when a
+   disc grows: the disc's bottom at its highest is crest - (0.46 - 0.382)h,
+   9.9px below the crest line at 1920 and further below it everywhere else, so
+   the lower limb never emerges over the ridge at any point of any drift.
+
+   Re-do this before changing MOON_RISE, CREST_RISE, MOON_PY, MOON_PX,
+   --summit-disc-r or --summit-disc-c.
+
+   ## Re-read from the live boxes after the group moved, this pass
+
+   None of the six inputs above changed — `--summit-x` is horizontal and
+   --summit-air is not in this sum at all — so the table is arithmetic that
+   still holds. It was re-measured anyway, because a proof nobody re-runs is a
+   proof that quietly stops being true. Every width, both themes, the section's
+   floor parked at the viewport's bottom, reading the eight extreme points of
+   `CrossGlyph`'s own path (stem x 16.6..25.4 and crossbar y 26.5..35.3 of its
+   42x100 viewBox) against the disc's live centre and radius:
+
+       width   cross-h   disc r   worst point   inside   in cross-heights
+        320     66.00     64.68     foot         30.31        0.459
+        375     66.00     64.68     foot         29.97        0.454
+        768     66.05     64.73     foot         28.28        0.428
+       1024     88.06     86.30     foot         40.01        0.454
+       1440    123.83    121.36     top          58.57        0.473
+       1920    128.00    125.44     top          59.94        0.468
+
+   Positive at every width, in both themes, and flat in cross-heights to within
+   a twentieth — which is the motion scale doing its job. The other two claims
+   read at the same time: the cross's foot against the crest path's own apex is
+   0.00px at 320, 375 and 1920 and ±0.01 elsewhere, and the disc's lower limb
+   sits 28.3 to 62.7px BELOW the crest line at every width, so the tuck behind
+   the hill survives too.
+
+   opacity 1, and no --art-* token. Those are the art KIT's opacities — numbers
+   that multiply a raster already drawn at the right value. This is drawn from
+   tokens that carry their own alpha per theme, so the disc is already
+   restrained by construction, the way a Seam is.                           */
+.faith__moon {
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(
+    var(--summit-crest) - var(--summit-cross-h) *
+      (var(--summit-disc-r) * 2 - var(--summit-disc-c))
+  );
+  width: calc(var(--summit-cross-h) * var(--summit-disc-r) * 4);
+  height: calc(var(--summit-cross-h) * var(--summit-disc-r) * 4);
+  /* Centred on --summit-x with margin, NOT with translate: Summit.tsx writes
+     the whole of `translate` every frame and would wipe a -50% out of it. */
+  margin-left: calc(var(--summit-cross-h) * var(--summit-disc-r) * -2);
+  will-change: translate;
+}
+
+/* ── the sky behind the disc ──────────────────────────────────────────────
+   A pool of deepened band, so the moon is the brightest thing in the section
+   rather than a pale thing on a pale band. See --summit-sky for the L* the
+   light theme was solved against; dark takes a tenth of the same idea.
+
+   Faded to nothing well before its own edge, because the one way this fails is
+   by having an edge: a pool with a visible boundary is a smudge on the page,
+   not evening. **9.2 by 3.3 cross-heights — 1139 x 409 at 1440 — with the
+   inner 54% of the radius held flat and the outer 30% given over to
+   disappearing in.**
+
+   ## Why it is twice as wide as it was, and why the core is 54%
+
+   It was 4.4 by 3.3 with the flat core at 18%, and rendered that is a pool
+   that does not reach the disc it was drawn for. 4.4 cross-heights is a
+   half-width of 272.5px at 1440 against a disc radius of 121.4 — 2.2 radii —
+   and with the flat core at 18% the alpha at the disc's own rim was about
+   0.19. Sampled off the render along five rays out of the disc's centre, the
+   sky at 1.5 radii read L* 90.3–94.9 against a bare band of 94.87: the pool
+   was contributing between nothing and four points, and the disc measured
+   1.07:1 against it.
+
+   The two numbers are solved together. `a` is the half-width, `b` the
+   half-height (1.65 cross-heights, unchanged — see the floor sum below, which
+   it is pinned by), and the pool's centre is lifted 0.58 cross-heights above
+   the disc's, so a point beside the disc at the same height as its centre sits
+   at a normalised radius of
+
+       r = sqrt( (dx/a)^2 + (0.58h / b)^2 )   with 0.58h / b = 0.3514
+
+   a = 4.6h is 569.7px at 1440, so with a flat core at 54% and zero at 84% the
+   alpha beside the disc runs
+
+       1.5 radii  r 0.54  alpha 1.00      2.4 radii  r 0.62  alpha 0.73
+       2.0 radii  r 0.55  alpha 0.96      3.0 radii  r 0.71  alpha 0.43
+
+   — full over the whole of the disc's immediate surround and out past where
+   `Moon.tsx`'s bloom has died at 2 radii, then a fade that takes another two
+   radii to reach nothing. That last figure is the one the width buys: at
+   a = 3.6h the same fade was over by 3.0 radii and the render showed a ring.
+
+   The element is 1139px wide at 1440, centred on --summit-x, so since that
+   moved to 68% it spans x 410..1549 and hangs 109px off the right of the
+   frame. At 375px it is 607px wide and runs off both. Neither costs anything,
+   and the reason is in the mask rather than in the width: the normalised
+   radius at the right frame is sqrt((460.8/569.7)^2 + 0.3514^2) = 0.882 at the
+   disc's own height, past the `transparent 84%` stop, so the pool is at zero
+   alpha there before the frame reaches it. Along the pool's own midline it is
+   0.10 alpha at that edge, which is 0.7 L* in light and 0.03 in dark — and a
+   frame is not a boundary, so there is nothing beyond it for even that to be
+   measured against.
+
+   A child of .faith__moon rather than a sibling, so it takes the moon's
+   translate without a second style write per frame — and so it cannot slide
+   off the disc it is drawn for.
+
+   ## Why it is an ELLIPSE, and why it is raised off the disc's centre
+
+   It was a circle centred on the disc and inset -44% of the moon's box, and
+   **that drew a ruled line across the bottom of the section.** Measured, at
+   1440x900 with the section's floor parked at viewport y = 400 and the
+   one-pixel luminance step taken at fifteen columns: zero at every column in
+   the outer thirds and -10, -13, -4.6 in dark and +17, +21, +21, +19, +12 in
+   light across x = 720 to 1120 — which was exactly the width this element had
+   at the time (4.4 cross-heights, 545px), centred on --summit-x. Nothing else
+   on the page was that shape. (Those columns are read at --summit-x = 62%,
+   which is where it stood for that reading; add 86px to every x in this
+   paragraph to find the same window at 68%.) It is 7.2 cross-heights now; what keeps the
+   floor clear is the sum below, which is written in the HEIGHT and the lift
+   and is untouched by the width.
+
+   The cause is geometry, not the pool: the disc is low and the disc is big.
+   Its centre sits crest + 0.52 cross-heights above the floor, 222.8px at 1440,
+   and the moon drifts up to 50px further down; a pool wide enough to be sky
+   around a 242px disc reaches past the floor from there, `#faith` clips at its
+   own edge, and a soft wash cut by a clip is a line. It is the same class of
+   bug as the ridge box's mask cutting the cross's arms off, one element over.
+
+   So the pool is wider than it is tall and its centre is lifted 0.58 of a
+   cross height above the disc's, which is where the sky is anyway — below the
+   disc is a hill. The sums, at 1440, in px above the section's floor:
+
+       pool centre    crest + 1.10h                   = 294.6
+       visible bottom centre - 0.84 x half-height     = 123.0
+       ... at the moon's worst downward drift          =  73.0
+       ridge fade fully opaque at                      =  31.7
+       visible top    centre + 0.84 x half-height     = 466.0
+       the bloom's own top                             = 465.0
+
+   so the pool clears the floor by 73px at the worst corner of the drift, and
+   its outer edge lands within a pixel of the bloom's — which is the right
+   answer for a second reason: --summit-clearance already reserves the sky
+   above the bloom, so the pool cannot reach the verse either.
+
+   **A flat background-color under a mask, not a radial-gradient.** They draw
+   the same pool, and only one of them crosses on the theme wave: --t-theme
+   names `background-color` and base.css applies it to `div`, but no browser
+   transitions a `background-image`, so the gradient version would have SNAPPED
+   to the new sky while the page around it crossed. A mask is an alpha channel
+   and not a colour — the #000 in it paints nothing.                        */
+.faith__moon-sky {
+  position: absolute;
+  /* `top: 50%` of the moon's box is the disc's own centre; the margin centres
+     this on it and then lifts it by another 0.58h. Half the height is 1.65h,
+     so -2.23h is those two added, and the two terms are written out rather
+     than folded so the lift can be changed without re-deriving the centring. */
+  top: 50%;
+  left: 50%;
+  width: calc(var(--summit-cross-h) * 9.2);
+  height: calc(var(--summit-cross-h) * 3.3);
+  margin-top: calc(var(--summit-cross-h) * -1.65 - var(--summit-cross-h) * 0.58);
+  margin-left: calc(var(--summit-cross-h) * -4.6);
+  background-color: var(--summit-sky);
+  -webkit-mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
+  mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
+}
+/* `position: relative` is load-bearing and it is the second half of the sky
+   pool below. CSS paints POSITIONED descendants after in-flow block content,
+   whatever the DOM order says — so an absolutely positioned .faith__moon-sky
+   declared FIRST still landed on top of this svg, and the pool bought to make
+   the disc read as the brightest thing in the section was being painted over
+   the disc instead. Rendered, that turned the dark theme's moon into a dark
+   disc with a bright rim and left the light theme's exactly as invisible as it
+   had been, which is what sent this back for a second look. Giving the svg a
+   position puts it in the same painting step as the pool, where the DOM order
+   it was written in finally means what it says.                             */
+.faith__moon-disc {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── the floor, where the bloom has to end ────────────────────────────────
+   **The disc is big and it sits low, so the moon's BLOOM reaches past the
+   bottom of the section and `#faith` clips it there.** Its box bottom lands
+   19.9px under the floor at 1440 before the moon has drifted anywhere, and up
+   to 70px under it at the bottom of the drift; a soft glow cut by a clip is a
+   ruled line, which is the defect this whole pass exists to remove.
+
+   Measured, at 1440x900 with the floor parked at viewport y = 400 and the
+   one-pixel luminance step read at fifteen columns across the width: nothing
+   at all in the outer thirds and -8.1, -11.8, -2.8 across x = 820 to 1020 in
+   DARK, which is the disc's own width centred on --summit-x — read while that
+   was 62%; the same window is x 858..1101 at the 68% it is now, and the strip
+   below is full width, so nothing about the repair moved with it. Dark only,
+   because --moon-halo is a blue-white glow over a near-black band there and
+   plain white over a near-white one in light, where the same cut has nothing
+   to show.
+
+   Three repairs were weighed. Shrinking the moon until its box clears the
+   floor puts the disc back under 76px across, which gives up the whole of the
+   arrival this pass is for. Raising it — a bigger --summit-disc-c — needs
+   1.25 cross-heights before the box clears, by which point the disc's lower
+   limb is ABOVE the crest line and no longer tucks behind the hill. Masking
+   the moon's own element moves the fade with the moon, so the cut just drifts.
+
+   So the floor is painted instead: a strip of the value the section's own
+   background already has down there, opaque on the boundary and gone by the
+   time it could dim anything meant to be seen.
+
+   --band-outro and not --band-faith, which is the whole subtlety. base.css
+   gives #faith a --tint-bot of var(--band-outro) and .section--blend runs the
+   gradient from --tint-mid at 70% to --tint-bot at 100%, so the section is
+   NOT its own band at its floor — it is already most of the way to the Outro's.
+   A strip in --band-faith would have closed the bloom's cut and opened a
+   7-value step of its own in dark. At the top of this strip the background
+   gradient is within a value of --band-outro anyway, and the strip's alpha is
+   zero there, so the two agree at both ends.
+
+   clamp(34px, 3.6vw, 56px), and the height is not arbitrary: the crest hill is
+   opaque in front of the bloom everywhere below about 77px above the floor
+   across the moon's whole width, so the only place the cut can be SEEN is the
+   strip where the ridges' own bottom fade has thinned them — --summit-foot,
+   31.7px at 1440. This is that, with margin. The fade is the same three-stop
+   shape and the same --seam-fade midpoint the ridges dissolve on, so the two
+   go out together rather than at two rates.                                */
+.faith__floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(34px, 3.6vw, 56px);
+  background-color: var(--band-outro);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / var(--seam-fade)) 50%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / var(--seam-fade)) 50%,
+    transparent 100%
+  );
+}
+
+/* ── the three ridges ─────────────────────────────────────────────────────
+   One box for all three, hanging --summit-dip below the section's floor, so
+   there is one bottom fade instead of three and an upward drift has somewhere
+   to go. Its width is the section's own, which is what lets --summit-x mean
+   the same thing here and on the moon above.
+
+   ## The box is --summit-head taller than the ridges in it, and that is the
+   ## whole of the "cross is not finished" bug
+
+   This element carries the scene's bottom fade, and **a mask clips its own
+   box**: with `mask-repeat: repeat-x` there is no mask tile above the top
+   edge, so the alpha out there is zero and anything a child stands up into is
+   not painted. It leaves no other trace. `getBoundingClientRect` still returns
+   the child's full size, the path is still a complete cross, devtools still
+   show the element — which is why the first diagnosis of this was that the
+   glyph was white on a white moon, and why that diagnosis survived being
+   checked against a screenshot: the light theme's cross was PALE on a grey
+   disc and lost exactly the same top third.
+
+   The arithmetic, at 1440: the box was --summit-band-h, which is
+   (crest + dip) x 4/3 = 251.5px, and the cross stood (crest + dip) + cross-h
+   = 289.4px up from its bottom. 37.9px of a 100.8px glyph, cut. The crossbar
+   sits at 26.5%–35.3% from the top of the path, so it was inside the cut at
+   every width — worst at 375, where 44% of the glyph went.
+
+   So the box now runs --summit-band-h + --summit-head, and the three ridge
+   svgs are pinned to --summit-band-h explicitly instead of taking `height:
+   100%` of it. The fade below is stated in absolute lengths from the BOTTOM,
+   so extending the top costs it nothing: past its last stop the gradient
+   continues opaque all the way up, which is exactly what a scene standing in
+   front of a moon needs.
+
+   Two other repairs were tried first and are recorded because they look
+   right. Moving the mask onto the three ridges individually keeps one
+   declaration and unclips everything — and it changes the picture, because
+   three overlapping opaque layers each faded to 55% do not composite to one
+   layer faded to 55%: at the floor, where all three paths close on y = 400,
+   it leaves a residual strip of stacked ink instead of the clean dissolve the
+   group fade gives. And `mask-repeat: repeat` instead of repeat-x tiles the
+   fade VERTICALLY, which paints a second dissolve across the cross's arms.  */
+.faith__ridges {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--summit-dip) * -1);
+  height: calc(var(--summit-band-h) + var(--summit-head));
+
+  /* The ridges dissolve into the section's floor rather than stopping on it.
+     A silhouette that ends at a boundary ends where two bands are equal —
+     base.css's invariant — so it would read as a line drawn across the page
+     rather than as ground. --seam-fade is the alpha every other seam on this
+     page is still at halfway through its own dissolve; using it here means
+     the summit's floor and the Outro's seam directly below fade at one rate.
+
+     The transparent stop is at --summit-dip, which is exactly the section's
+     bottom edge, so the fade is spent on the strip a reader can actually see.
+
+     repeat-x and not the default: the far ridge below is deliberately wider
+     than this box, and the gradient is uniform across so tiling it sideways
+     is free — while tiling it VERTICALLY would put a second fade above the
+     box for nothing. */
+  -webkit-mask-image: linear-gradient(
+    to top,
+    transparent var(--summit-dip),
+    rgb(0 0 0 / var(--seam-fade)) calc(var(--summit-dip) + var(--summit-foot) * 0.5),
+    #000 calc(var(--summit-dip) + var(--summit-foot))
+  );
+  mask-image: linear-gradient(
+    to top,
+    transparent var(--summit-dip),
+    rgb(0 0 0 / var(--seam-fade)) calc(var(--summit-dip) + var(--summit-foot) * 0.5),
+    #000 calc(var(--summit-dip) + var(--summit-foot))
+  );
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+}
+
+/* Every ridge is --summit-band-h tall and sits on the box's floor, so viewBox
+   y = 100 lands on the crest line for all three whatever the width. It is
+   stated rather than `height: 100%` because the box above is deliberately
+   taller than the ridges now — see --summit-head, and the mask note on
+   .faith__ridges for what that headroom is buying.
+
+   `display: block` because an <svg> is an inline box and would otherwise carry
+   a descender gap under it — the same lesson Seam.css records.
+
+   `transition: var(--t-theme)` because a ridge is painted through
+   `currentColor` and base.css's transition list covers `body, nav, section,
+   footer, article, a, button, h1..h3, p, span, div, blockquote, img` — no
+   `svg` and no `path`. Without this line the ridges SNAP to the new theme
+   while the page around them crosses on the wave. --t-theme already carries
+   `color` and `fill` with the element's own --wave-delay substituted in, so
+   one declaration buys the ride. */
+.faith__ridge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  height: var(--summit-band-h);
+  transition: var(--t-theme);
+}
+
+/* Wider than its box by 22px each side, because this is the one ridge that
+   answers the pointer horizontally and a layer that slides sideways inside a
+   box its own size would show bare band at one edge. FAR_PX is 16 and the
+   motion scale tops out at 1.1, so the overhang has to clear 17.6px; 22 is
+   that with room. It carries no cross and no moon, so its own x mapping does
+   not have to agree with --summit-x — which is precisely why it is the ridge
+   that got the pointer.
+
+   ## The haze, and why this layer now needs one
+
+   The disc is 1.96 cross-heights across rather than 1.44, so its lower limb
+   and this range's apex are within 6px of each other at rest and cross for
+   most of the drift. That is the right picture — a far range silhouetted
+   against a low moon is what aerial perspective is FOR, and it is the first
+   thing on this hillside that has given the far ridge anything to read
+   against. What it cannot be is a hard edge: a crisp line laid across a bright
+   disc is a cut between two depth planes, which is the one defect this whole
+   pass exists to remove.
+
+   So the top of this layer dissolves in its own ink. Transparent at 47% of the
+   band, --seam-fade at 53%, solid by 63%: the ridge's own highest ink is at
+   50.5% (viewBox y = 202 of 400), so its crest arrives at a third of full
+   alpha and thickens downward over about 30px at 1440.
+
+   **The first pass at this was 44/58/74 and it erased the layer.** Rendered,
+   the far range simply was not there any more: its whole visible band is 202
+   to roughly 300 in the viewBox, 50.5% to 75%, so a fade that did not finish
+   until 74% spent itself across the entire layer rather than across its top
+   edge. A haze band belongs BETWEEN two depth planes; stretched over one it is
+   just an opacity. 47/53/63 puts all of it in the top 40px.
+
+   It does not interact with the group's bottom fade: this one is spent by 63%
+   of the band and that one does not begin until the last 27%.
+
+   `no-repeat` rather than the default `repeat`, because a mask that tiles is
+   how the cross lost its crossbar one element up — see .faith__ridges. There
+   is nothing to tile here (the gradient covers the box) and saying so keeps
+   the next reader from having to work that out.                            */
+.faith__ridge--far {
+  left: -22px;
+  width: calc(100% + 44px);
+  color: var(--summit-ink-far);
+  will-change: translate;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 47%,
+    rgb(0 0 0 / var(--seam-fade)) 53%,
+    #000 63%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 47%,
+    rgb(0 0 0 / var(--seam-fade)) 53%,
+    #000 63%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.faith__ridge--crest {
+  color: var(--summit-ink-crest);
+}
+
+.faith__ridge--near {
+  color: var(--summit-ink-near);
+}
+
+/* ── the weld ─────────────────────────────────────────────────────────────
+   The crest ridge, the light on it, the shadow across it and the cross
+   standing on it are ONE element taking ONE translate, which is what makes
+   "the foot is on the ridge line" and "the shadow starts at the foot"
+   properties of the DOM rather than numbers somebody has to keep re-checking.
+   Give the cross a drift of its own and it either lifts off the crest or
+   matches it and moves nothing.                                            */
+.faith__crest {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  will-change: translate;
+}
+
+/* ── the wash: moonlight spilling over the crest line ─────────────────────
+   The moon is directly behind the cross, so light comes over the ridge either
+   side of it. This is that light, and it is also the "faint halo where the
+   disc meets the silhouette" the summit was asked for — the silhouette it can
+   actually be seen against is the HILL's, because the cross's own edge has a
+   white disc behind it in both themes and nothing pale can be read against
+   that. See Summit.tsx's header for the rim that is deliberately not drawn.
+
+   Anchored so its TOP edge IS the crest line, which is what keeps it off the
+   sky: the crest path is solid from y = 100 down to y = 400 at --summit-x, so
+   every pixel of this box lies on the hill at every width, and none of it can
+   stray onto the band above the ridge where a pale pool would read as fog.
+
+   2 cross-heights wide against 0.62 tall, because moonlight over a broad dome
+   spreads sideways. At 1440 that is 248 x 77px, spanning x 855..1103 around
+   the apex at 979.2. Evaluated on the re-authored crest path, the hill's
+   surface at those two x sits 25 viewBox units below the apex on the left and
+   50 on the right — 16px and 31px once 400 units are squeezed into the band's
+   251.5px — against a pool 77px deep. So it is on the hill at both edges, with
+   the smaller margin on the right because that flank is the shorter and
+   therefore the steeper of the two. (The same two readings on the old path,
+   with the apex at 892.8, were 30 units left and 35 right — 19px and 22px.
+   Moving --summit-x to 68% shortened the right flank by 16% and steepened it
+   by about the same, which is where the 31 comes from.)
+
+   background-color under a mask rather than a radial-gradient, for the reason
+   .faith__moon-sky records: only the flat colour crosses on the theme wave. */
+.faith__crest-wash {
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(var(--summit-crest) + var(--summit-dip) - var(--summit-cross-h) * 0.62);
+  display: block;
+  width: calc(var(--summit-cross-h) * 2);
+  height: calc(var(--summit-cross-h) * 0.62);
+  margin-left: calc(var(--summit-cross-h) * -1);
+  background-color: var(--summit-wash);
+  -webkit-mask-image: radial-gradient(62% 100% at 50% 0%, #000, transparent 78%);
+  mask-image: radial-gradient(62% 100% at 50% 0%, #000, transparent 78%);
+}
+
+/* ── the shadow the cross throws forward ──────────────────────────────────
+   The light is behind the cross, so the shadow falls toward the reader, down
+   the near face of the crest. It is the SAME `CrossGlyph` path flipped about
+   its own foot, stretched and sheared — not a trapezoid, which would have been
+   one clip-path and no second svg and would have thrown the shadow of a post.
+   The crossbar is the whole reason the site owner could tell this cross was
+   unfinished; it belongs in the shadow too.
+
+   transform-origin is the foot, so the flip pivots exactly on the crest line
+   and the shadow cannot detach from the cross however either one is sized.
+   Read right to left: 2.3 wider, sheared 15 degrees, then flipped and
+   stretched to 1.45 cross-heights. The shear runs the way the disc's own
+   highlight does — `Moon.tsx` lights it from fx 0.36 / fy 0.3, the upper left
+   — so the shadow leans down and to the right, which is the one direction in
+   the frame that is not an arbitrary choice.
+
+   **The width and the shear are not taste, they are the whole difference
+   between a shadow and a pole.** The first version of this was 1.22 wide and
+   sheared 9 degrees, and rendered it read as the cross's stem simply
+   continuing down the hill for another two hundred pixels — which is the
+   site owner's original complaint arriving from the opposite end. A light
+   source directly behind an object throws its shadow straight at the viewer,
+   so in a side-on frame the shadow starts exactly under the stem and there is
+   no honest way around that; what breaks the read is the shadow being visibly
+   WIDER than the thing casting it from its first pixel (2.3 x 11px of stem is
+   25px against 11) and visibly diverging from it (15 degrees moves the tip
+   48px sideways at 1440).
+
+   1.45 and not longer: at 1440 that is 180px reaching down from a crest line
+   188.6px above the ridge box's floor, so the tip lands inside the group's own
+   bottom fade and dissolves with the ridges rather than being cut by the box.
+   Its own mask has it near zero well before then — solid at the foot,
+   --seam-fade by 44%, gone by 82%, which is 11px above the section's floor —
+   because a shadow that keeps its density for its whole length is a painted
+   shape, not a shadow. The crossbar's own shadow lands at 0.94 to 1.07 cross
+   heights out, where that mask leaves it around a quarter alpha: present, so
+   the shadow is a cross's and not a post's, and quiet enough that it is not a
+   second mark on the hill.
+
+   The mask is in the element's own coordinates, BEFORE the transform, so
+   "opaque at the bottom" means opaque at the foot after the flip.
+
+   The ink comes through CrossGlyph's own <stop>s, redirected by redeclaring
+   --summit-stop-* here. The component writes `stopColor` as an inline style
+   and an inline style beats a stylesheet rule, so this is the only override
+   available that does not need `!important` — and it keeps the shadow riding
+   the theme wave, because base.css transitions `stop { stop-color }`.       */
+.faith__cross-shadow {
+  --summit-stop-0: var(--summit-shadow);
+  --summit-stop-1: var(--summit-shadow);
+  --summit-stop-2: var(--summit-shadow);
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(var(--summit-crest) + var(--summit-dip));
+  display: block;
+  width: calc(var(--summit-cross-h) * 0.42);
+  height: var(--summit-cross-h);
+  margin-left: calc(var(--summit-cross-h) * -0.21);
+  transform-origin: 50% 100%;
+  transform: scaleY(-1.45) skewX(-15deg) scaleX(2.3);
+  /* A shadow cast a cross-height and a half from its object does not have
+     crisp corners, and the crossbar's own shadow is the corner that proves it:
+     unblurred it landed as a hard horizontal rectangle low on the hill, which
+     read as a step cut into the slope rather than as a shadow. The blur is
+     stated before the transform, so the stretch above spreads it 5.8px down
+     and 9.2px across at 1440 — more spread further from the object, which is
+     what a real penumbra does. `filter` is not in --t-theme's list and does
+     not need to be: every colour in here still arrives through <stop>s, which
+     base.css does transition, and a blur radius has no theme. */
+  filter: blur(3px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / var(--seam-fade)) 44%,
+    transparent 82%
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / var(--seam-fade)) 44%,
+    transparent 82%
+  );
+}
+.faith__cross-shadow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The cross's foot IS the crest line: --summit-crest is where the ridge box
+   puts viewBox y = 100, and this is the same value plus the box's own dip.
+   Its x is --summit-x of the same width the crest path is stretched across,
+   so the apex, the cross and the moon share one vertical.
+
+   42 x 100 is CrossGlyph's viewBox and the path fills it corner to corner, so
+   0.42h x h is the glyph at its own aspect and `meet` has nothing to letterbox
+   — the foot lands on this element's bottom edge exactly.                  */
+.faith__summit-cross {
+  position: absolute;
+  left: var(--summit-x);
+  bottom: calc(var(--summit-crest) + var(--summit-dip));
+  display: block;
+  width: calc(var(--summit-cross-h) * 0.42);
+  height: var(--summit-cross-h);
+  margin-left: calc(var(--summit-cross-h) * -0.21);
+}
+.faith__summit-cross svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* **There is no fill override here any more, and its absence is the fix.**
+
+   This rule used to read `fill: var(--summit-ink-cross)` with a
+   `transition: var(--t-theme)` under it, on a glyph rendered as
+   `variant="faith"` — a flat colour stamped over the component's own gradient,
+   because `faith` is the LIT ramp drawn above the verse and opens on white,
+   and a white cross in front of a white disc is not a cross.
+
+   The override worked and it was the wrong layer to fix it on. It beat the
+   `fill` presentation attribute and therefore threw away the gradient
+   entirely, so the one glyph on the page that is a SILHOUETTE was the only one
+   with no light falling across it at all; and a flat fill is not in any of
+   base.css's transition lists, so it needed a declaration of its own just to
+   cross on the theme wave that every other glyph rides for free.
+
+   `CrossGlyph` has a `summit` variant now — three stops, dark in both themes,
+   from --summit-stop-* in tokens.css — so the component paints the right thing
+   and this file has nothing to say about it. The one place --summit-stop-* is
+   still touched from here is .faith__cross-shadow, which redeclares the
+   custom properties rather than the fill, for the reason recorded there. */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Summit.tsx multiplies every offset by `mi`, so at 0 all three land on the
+     zero translate this stylesheet composed them at — visible, still, exactly
+     where they were drawn. A compositor hint for a layer that will never move
+     is a promoted layer paid for and never used; Scene.css makes the same
+     trade for the art kit. */
+  .faith__moon,
+  .faith__ridge--far,
+  .faith__crest {
+    will-change: auto;
+  }
+}
+
+@media print {
+  /* Decorative, like everything else base.css's print block drops. */
+  .faith__summit {
+    display: none !important;
+  }
+}

@@ -1,0 +1,835 @@
+/* ── one registered property this file needs and tokens.css has no name for ─
+   `--tint-top`, `--tint-mid` and `--tint-bot` are registered in tokens.css so
+   the theme wave can ANIMATE them inside a gradient — an unregistered custom
+   property in a gradient snaps instead, and base.css's own note says the
+   blends stopping dead at every boundary is the failure to look for. There are
+   three of them and this file's backdrop has four bands to cross, so it needs
+   a fourth of exactly the same kind.
+
+   It is NOT a new colour. It is set on `.walk` below to `var(--band-tools)`,
+   a token that already exists in both themes, in the same way base.css sets
+   `#tools { --tint-mid: var(--band-tools) }` — so there is no `[data-theme]`
+   twin here for the same reason those blocks have none: the band underneath
+   already carries the theme, and a second declaration would be the same string
+   written twice.
+
+   `inherits: false`, like the three it stands beside, so it cannot leak into
+   `#origin`, `#apps` or `#tools` and quietly become part of a gradient that
+   never asked for it.                                                        */
+@property --walk-tint-low {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+/* ── CONTRACT W: the container the whole walk pins inside ──────────────────
+   Read `Walk.tsx`'s header first — it has the shot, the structure and the
+   three things that break it silently. This file has the declarations and the
+   traps that live in CSS.
+
+   ── overflow ─────────────────────────────────────────────────────────────
+   `clip`, and it is the single most load-bearing line in this file. An
+   ancestor with `overflow: hidden` is a SCROLL CONTAINER, so it becomes the
+   sticky pin's scrollport, and since it never scrolls the pin never sticks —
+   which is not a visual bug, it is the whole mechanism failing with nothing on
+   screen to point at. `Stage.tsx` and `Stage.css` both carry the measurement
+   that settled it on `#origin`: with `hidden` the stage tracked the page down
+   (top 72 -> -228 -> -1449) instead of holding steady; with `clip` a CONSTANT
+   offset held for the whole run and released exactly on the bottom edge.
+
+   The three sections INSIDE may keep `.section`'s own `overflow: hidden`. They
+   are siblings of the stage, not ancestors of it, so they are nowhere on the
+   pin's containing-block chain — which is `.stage__pin` -> `.stage` -> `.walk`
+   -> `main` -> `.page` -> `body`, and none of those five is a scroll container
+   either. (`body { overflow-x: hidden }` in base.css is not one: `html`'s
+   overflow is `visible`, so the body's value propagates to the viewport and
+   the body itself is treated as `visible`. Stage.css records the control
+   measurement.)
+
+   ── the clip margin ──────────────────────────────────────────────────────
+   130svh, and it is Origin's own number moved up one level, because the thing
+   it is for still has to happen: the lamppost is a child of `#origin` and it
+   rises out of the top of it into the hero. `.walk`'s top edge is at exactly
+   the same document position `#origin`'s is, so the two clips fall on the same
+   line and the pole survives both. 130svh is the tallest the pole can ever be
+   (--pole-w is capped at 78svh x 1.5 = 117svh, plus its 30px plant) with room
+   to spare; Origin.css has that working in full.
+
+   `overflow-clip-margin` is defined only for `clip`, which is a second reason
+   `hidden` cannot be used here even if the pin did not care. The fallback for
+   a browser with neither (Safari before 16) is `.stage-host`'s `clip` and then
+   nothing: the pole is cut at the seam and the backdrop does not pin, so the
+   page is three ordinary sections with a cabin behind the first. That is a
+   picture that still reads.
+
+   ── the margin that MOVED here, and why it had to ────────────────────────
+   `margin-top: -100svh` was on `#origin`. It pulls this half of the page up
+   onto the hero's last viewport, which is what makes Origin climb over a
+   backdrop that has NOT moved — Hero.css and Origin.tsx carry that
+   arrangement, and it is measured: the hero is 230svh with 130svh of flow, so
+   this margin takes back precisely the 100svh the hero added and **the
+   document is not one pixel longer than it would be with a plain 130svh
+   hero.**
+
+   Left on `#origin` it would now be the top margin of the FIRST IN-FLOW CHILD
+   of a new wrapper, which collapses out through the wrapper's own top edge
+   unless the wrapper establishes a block formatting context. That is a silent
+   failure with two shapes depending on which way the browser resolves it —
+   either the whole walk moves up a viewport, or Origin slides up inside a
+   wrapper that stayed put — and neither of them says anything about a margin.
+   So it lives here, on the box that is supposed to have it, and `.walk`'s
+   border-box top lands exactly where `#origin`'s used to. `scrollIntoView`,
+   `rememberOrigin`, `takeOrigin` and CONTRACT D's dissolve all measure from
+   that line and none of them had to change.
+
+   ── and it must NOT have a stacking context ──────────────────────────────
+   `position: relative` with `z-index: auto`, no `opacity` below 1, no
+   `filter`, no `will-change`, no `isolation`, no `contain`. Every one of those
+   would trap `#origin`'s `z-index: 4` and `.hero__frame`'s 5 inside this
+   wrapper and re-order them against each other: the lamppost would be painted
+   over the hero's wordmark, because a section inside a stacking context cannot
+   reach a sibling of that context. The numbers only work because they are all
+   resolved in the ROOT stacking order. Walk.tsx's header says the same thing
+   where a reader is likelier to be standing when they break it.
+
+   ── --origin-veil ────────────────────────────────────────────────────────
+   The dissolve distance, spelled once, as a length. `--origin-dissolve` in
+   tokens.css is a unitless fraction of the viewport because `Hero.tsx` has to
+   read it as a NUMBER and multiply it by the vh it already measures; three
+   rules across two files need it as a length — this file's backdrop ramp and
+   its stage mask, and `.origin__grid`'s mask and `.origin__blob`'s clearance
+   in Origin.css — and rule 6 says one set of variables on the common parent
+   rather than four calc()s that agree until one of them does not.
+
+   It keeps Origin's name rather than taking this file's, because it is still
+   Origin's dissolve: the distance over which the hero hands the page to the
+   story section. `.walk`'s top edge and `#origin`'s are the same line, so the
+   variable is measured from the same place it always was and the two rules
+   left in Origin.css inherit it from here unchanged.
+
+   Not per theme: it is a distance and the geometry is the same in both.      */
+.walk {
+  position: relative;
+  margin-top: -100svh;
+  overflow: clip;
+  overflow-clip-margin: 130svh;
+  --origin-veil: calc(var(--origin-dissolve) * 100svh);
+
+  /* ── the bands of the walk ───────────────────────────────────────────────
+     The whole backdrop is one gradient on THIS element, and the three sections
+     inside it paint no background at all. That is a change of owner rather
+     than a change of colour, and it is forced by the z-order: `#origin` is
+     `z-index: 4` and `#apps` and `#tools` are positioned, so all three paint
+     ABOVE the stage now that the stage is their sibling instead of their
+     child. An opaque band on any of them would simply hide the cabin.
+
+     So the bands move to the one box that is underneath the canvas, and what
+     the page gains for it is the thing this whole pass is about: the walk is
+     ONE continuous ramp with no internal boundary at all. The two joins that
+     are still real — into the hero above and into `#building` below — are
+     unchanged, because this gradient opens on `transparent` (so the hero's
+     ridges carry on down behind it and fade rather than stopping) and closes
+     on `--band-building` (so `#building` still meets a band identical to its
+     own).
+
+     Four bands and not two, and the middle two are mostly invisible on
+     purpose: once the camera is inside the cabin the canvas fills the frame
+     and nothing here can be seen. They are what a visitor with no WebGL gets,
+     and for them the page's own colour story — origin, apps, tools, building —
+     is worth more than a flat slab. Nothing steps: every stop is a hold and a
+     ramp, and the shortest ramp in the list is 22% of the box.
+
+     Every value is a `--band-*` token from tokens.css read through a
+     REGISTERED property, which is what lets the theme wave cross this element
+     instead of snapping — see the `@property` block at the top of this file
+     for the fourth one. `--tint-*` are `inherits: false`, so declaring them
+     here cannot disturb the ones base.css declares on `#origin`, `#apps` and
+     `#tools`.
+
+     `max()` on the second stop and not a bare 30%, because those two stops are
+     a length and a percentage of two different boxes and their order is not
+     guaranteed. The walk is about six viewports tall, so 30% of it is ~1.8
+     viewports against a veil of 0.78 — but a stop that comes out BEHIND the
+     one before it is clamped to it, and stating the floor is one line.
+     Origin.css records the same guard on the gradient this replaces.         */
+  --tint-top: var(--band-origin);
+  --tint-mid: var(--band-apps);
+  --walk-tint-low: var(--band-tools);
+  --tint-bot: var(--band-building);
+  background-color: transparent;
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    var(--tint-top) var(--origin-veil),
+    var(--tint-top) max(30%, var(--origin-veil)),
+    var(--tint-mid) 54%,
+    var(--walk-tint-low) 78%,
+    var(--tint-bot) 100%
+  );
+  transition:
+    var(--t-theme),
+    var(--t-tint),
+    --walk-tint-low 0.6s ease var(--wave-delay, 0ms);
+
+  /* ── the three numbers every plate in the walk is built from ────────────
+     Five blocks of copy in this half of the page are read over a lit 3D room:
+     Origin's intro, its seven chapter rows, the link that closes its timeline,
+     and the heads of `#apps` and `#tools`. Each takes a soft-edged plate in
+     --card-bg through `.walk-plate` below, and rule 6 says the measurements
+     they share live once, on the common parent, rather than five times in
+     three stylesheets that agree until somebody changes one.
+
+     --scrim-pad RESTATES `.section`'s own horizontal padding from base.css,
+     and it has to, because it is what stops a plate reaching past the
+     section's border box. The obvious version is `calc(50% - 50vw)`, which
+     reaches the VIEWPORT — and `100vw` includes the scrollbar, so on a window
+     with a classic 15px one that box hangs 7.5px past each side. `#apps` and
+     `#tools` are `overflow: hidden` and would clip it; `#origin` is
+     `overflow: clip` with a 130svh MARGIN that opens every edge, so there it
+     would put a horizontal scrollbar on the document — the identical trap
+     `.origin__ground` records having measured at 1470px against a 1430px
+     client width. Written as the padding it never reaches past the frame at
+     any width. **If base.css's `.section` padding moves, this moves with it.**
+
+     --scrim-bleed is how far past the frame's LEFT edge every plate runs, so
+     the frame crops it instead of the plate ending inside the picture. 40px
+     was written four times in three files before this pass and is named once
+     here. A plate cropped by the frame has no edge — that is what a frame is
+     for — and it is the same argument `.origin__lamp-pool` makes about light
+     arriving from off screen.
+
+     --scrim-fade is how long every plate's right-hand falloff is. 240px at
+     1440, and it is the number that decides whether a plate reads as a shape:
+     --card-bg is 0.74 alpha in dark, so 240px of ramp is 0.003 of alpha per
+     pixel, against the ~0.02 per pixel at which a ramp starts to read as an
+     edge in the alpha probe this pass was measured with.
+
+     `min(240px, 18vw)` and not a bare 240: the ramp is spent out of the room
+     between the copy's last glyph and the frame, and that room shrinks with
+     the viewport. At 901px it is 162px, which still leaves 43px of solid plate
+     past the longest line in this half of the page (Origin's lede, which fills
+     its 660px column).
+
+     At 900px and below it is 0. The shell IS the viewport there, the copy runs
+     the full width, and there is no room on the right for a falloff at all —
+     so every plate goes solid to its own right edge and is cropped by the
+     frame. The breakpoint is 900 because that is the width at which `.lede`'s
+     500px column stops leaving room for a ramp.
+
+     **That only works if the plate's right edge IS the frame, and --plate-col
+     is the thing that has to give.** Measured at 900x900 with only the fade
+     zeroed: `.origin__more-plate` is 545px of column, so its box stopped at
+     viewport 581 with no ramp left to end on — a 0.479 alpha step in one
+     pixel, 300px inside the picture, which is the exact defect this whole pass
+     is about, reintroduced at one breakpoint. So the media query below sets
+     --plate-col on the pseudo-element itself, where it beats every caller's
+     own value, and `100vw` is guaranteed to lose the `min()` against
+     `100% + --scrim-pad` — which is the section's border box, and is where
+     these plates ended before this pass at every width.
+
+     ── the defaults ─────────────────────────────────────────────────────────
+     `.walk-plate::before` reads four more custom properties, and a `var()`
+     with no value makes the whole declaration invalid at computed-value time —
+     which would silently unset `width` or `mask-image` rather than fail
+     loudly. So all four are declared here, on the ancestor every caller has,
+     and a caller sets only what it is changing. */
+  --scrim-pad: clamp(18px, 4vw, 40px);
+  --scrim-bleed: 40px;
+  --scrim-fade: min(240px, 18vw);
+  --plate-ink: var(--card-bg);
+  --plate-col: 760px;
+  --plate-up: 84px;
+  --plate-down: 92px;
+
+  /* ── the two numbers the OUT beat is cut from ───────────────────────────
+     The last row of the spec's beat table is "push toward the window and let
+     the frame wash to the outside light, so the canvas can fade out into the
+     next band with nothing to cut". `CabinScene` does the push — `ST_WINDOW_IN`
+     overflows the window on all four sides so there is no edge left in the
+     picture — and until this pass NOTHING did the fade. These two are it, and
+     they are on `.walk` rather than in Tools.css because the stage's mask and
+     `#tools`' padding are both solved from them and rule 6 says one set of
+     variables on the common parent.
+
+     --tools-scene is Tools' landscape band: the stone footbridge, the water,
+     the boulders and the neon horizon the reader steps out onto. Its value is
+     unchanged (`clamp(220px, 23vw, 400px)`, 331px at 1440) and Tools.css still
+     owns what it is FOR and positions every prop from it. It moved here because
+     of what it also has to be: **the run of page the canvas may not paint in.**
+
+     The canvas is a 100svh pin sliding down this box, so its LAST position is
+     always the bottom 100svh of the walk — pages `walkBottom − 100svh` to
+     `walkBottom` — and Tools' landscape band is the bottom --tools-scene of the
+     same box. The overlap was therefore structural, not a tuning miss: measured
+     at 1440x900 before this pass, the pin released at scroll 5619 and then
+     scrolled away as a 900px rectangle with a hard bottom edge, and the bridge
+     (page 6339), the boulders (6404) and #building's own wayfinding post were
+     painted over the cabin's ceiling and wall planes for the whole of it. That
+     is the worst continuity error the page had: a river crossing inside an
+     interior shot.
+
+     A mask on the stage fixes it by construction rather than by a number,
+     because the mask is measured in THIS box's coordinates: whatever the pin's
+     travel, a pixel of canvas landing in the bottom --tools-scene of the walk
+     is a pixel at mask alpha 0. The landscape band can never have the room
+     behind it again, at any viewport, at any section height.
+
+     --walk-out is the ramp above that, and it is what makes the wash a wash
+     rather than a cut. 24svh, 216px at 1440x900, spent over the scroll where
+     the camera is already pushing into the glass: `KNOT[5]` puts that push at
+     p 0.969..1, which at these heights is scroll 5324..5457, and the ramp's top
+     edge crosses the middle of the frame at 5324. The two land together without
+     either being told about the other, because both are anchored to the same
+     bottom edge.
+
+     The two ends of this mask cannot cross. --origin-veil resolves to 702px at
+     1440x900 and the ramp's top stop to 4640, which is 3938px — 4.4 viewports —
+     of solid mask between them, and the walk is never shorter than about three
+     screens at any width. If they ever did, CSS clamps a stop to the one
+     before it, which costs the ramp and keeps the transparent band: the
+     continuity fix survives and only the softness goes. That is the right way
+     round for a degradation and is why there is no `max()` guard here where the
+     background gradient above needed one. */
+  --tools-scene: clamp(220px, 23vw, 400px);
+  --walk-out: clamp(140px, 24svh, 300px);
+}
+@media (max-width: 900px) {
+  .walk {
+    --scrim-fade: 0px;
+  }
+  /* On the pseudo-element and not on `.walk`, so it beats the value each
+     caller sets on its own wrapper. See --scrim-fade above for what it is for.
+     `.origin__row::before` carries the same override in Origin.css, because
+     its hover wash reads --plate-col to land its falloff on the same two
+     pixels this plate's does. */
+  .walk-plate::before {
+    --plate-col: 100vw;
+  }
+}
+@media (max-width: 640px) {
+  /* The landscape band existed for the art, and at this width most of the art
+     comes off — Tools.css drops the boulders, the bench and the reeds at 640
+     under guardrail 7 of the kit, leaving the bridge. The band shrinks with
+     them rather than sitting there as a hole. This is Tools' own number, moved
+     up with the declaration above so the stage's mask and the section's padding
+     cannot end up reading two different bands; Tools.css says what the band is
+     for and why the bridge stays. */
+  .walk {
+    --tools-scene: clamp(130px, 15vw, 190px);
+  }
+}
+
+/* ── the plate a block of copy over the walk is read off ───────────────────
+   One recipe, five callers, and the reason it is a class in THIS file rather
+   than the same twenty lines in three stylesheets is that the five plates are
+   over one continuous camera move. Two headings a viewport apart should be
+   plated by one idea; before this pass there were three ideas — two linear
+   ramps for the heads, a radial ellipse for the chapter rows, a second, weaker
+   ellipse for the intro — and the two ellipses were measurably rectangles.
+
+   ── what was wrong, measured ─────────────────────────────────────────────
+   The plate's own alpha is recoverable: hide the canvas, force `.walk`'s band
+   to a flat #808080, and read it back as `(128 - r) / 119`. Scanned that way
+   at 1440x900, worst single-pixel alpha step:
+
+     .origin__intro::before   0.37 across its left edge, 0.89 down its top edge
+     .origin__row::before     0.82 across its left edge, 0.82 at every gap
+                              between two rows and at the column's two ends
+     the three linear plates   0.008 horizontally, 0.017 vertically
+
+   An ellipse cannot do this job, and that is arithmetic rather than taste.
+   `radial-gradient(74% 130% at 26% 50%, #000 0 44%, transparent)` is opaque
+   wherever the distance from 26% is under 0.44 x 74% = 32.6% of the box — and
+   the box's own left edge is 26% away, so the mask is at FULL alpha there. The
+   ellipse that covers copy running from the frame's left edge is necessarily
+   still opaque AT that edge. Vertically the same mask is opaque out to +-57%
+   of the row, so it was opaque through both of the row's edges as well, and
+   `.origin__row` is `overflow: hidden`: seven rows 4px apart drew six ruled
+   lines across the shot and capped the column with two more.
+
+   ── what it is instead ───────────────────────────────────────────────────
+   Two linear ramps intersected, each side answered separately, which is the
+   construction the three head plates already used and the one that measured
+   edge-free:
+
+     left    runs --scrim-bleed past the frame's own left edge, so the frame
+             crops it and there is nothing to find.
+     right   solid to --scrim-fade short of the box's right edge, nothing at
+             the edge itself. The BOX is what carries the geometry here rather
+             than a stop, so the ramp cannot be clipped part-way down by a box
+             that turned out to be narrower than the stop: `width` is
+             --plate-col from the wrapper's left edge, and the mask's two stops
+             are 100% and 100% - --scrim-fade of whatever that came out as.
+     top and dissolve over (--plate-up - 20px) and (--plate-down - 20px),
+     bottom  written as LENGTHS rather than percentages so the ramp is the same
+             at every width. A percentage of a box whose height is the copy's
+             own would be a different ramp every time a heading wrapped. The
+             20px is the solid margin the plate keeps past the copy's box, so
+             the first and last lines of type are never on the ramp.
+
+   ── --plate-col, and why every plate now stops in the same place ─────────
+   It is the distance from the WRAPPER's left edge to where the plate has
+   reached nothing, so a caller sets it to (its own longest line) + 40px + a
+   --scrim-fade. Measured at 1440x900, every one of the five is now solid to
+   38-40px past its own last glyph and gone 240px after that:
+
+     block            longest line ends   solid to   nothing from   was
+     Origin intro          830              870          1110       850 (hard)
+     Origin chapters       691              730           970      1270
+     Origin's last link    435              475           715      1350
+     #apps head            610              650           890      1350
+     #tools head           702              740           980      1350
+
+   `min(var(--plate-col), 100% + var(--scrim-pad))` is the guard that keeps the
+   right edge on the section's border box when the copy is wider than the room
+   — at 375px every one of them resolves to the frame edge exactly, and the
+   frame crops what the ramp no longer has space to do.
+
+   `calc(50vw - 50%)` is the wrapper's own left edge expressed from inside it,
+   which is what lets `left` reach the frame and `width` be measured from the
+   copy's column rather than from the box. **It is only true for a wrapper
+   CENTRED in the frame** — every caller here is a `.shell` or a full-width
+   child of one. `.origin__intro` is 660px inside an 1100px shell and is NOT
+   centred, which is why Origin.tsx wraps it rather than plating it directly.
+
+   ── the wrapper, and why the plate is never on the revealing element ─────
+   `useReveal('wipe')` writes `clip-path: inset(N% 0 0 0)` to the element it
+   reveals, and a clip-path clips that element's PSEUDO-ELEMENTS to its border
+   box. On a revealing element this plate is drawn as a hard rectangle with
+   four cut edges for the six-tenths of a second the wipe runs — caught in a
+   render at 1440x900 as a 1180 x 122 box, arriving at exactly the moment the
+   reader scrolls the section into view. So `.walk-plate` is always an ordinary
+   block wrapped round the copy and the copy reveals inside it.
+
+   `position: relative` is what the ::before needs and it is the only thing the
+   wrapper changes: every caller is a block in normal flow inside a `.shell`,
+   which already carries the stacking context, so `z-index: -1` puts the plate
+   just above that shell's background and under everything else in it.
+
+   `mask-composite: intersect, add` and not a single `intersect`, which is the
+   trap. The list is per layer and the BOTTOM layer composites against a
+   transparent-black destination, so `intersect` there would intersect the ramp
+   with nothing and the whole mask would come out empty. `add` on the bottom
+   layer leaves it as itself; the top layer then intersects with it.
+   `.origin__grid` records the same pair. A browser with neither
+   `mask-composite` nor `-webkit-mask-composite` falls back to the default
+   `add`, which is the UNION of the two ramps — a plate that is softer than
+   intended rather than an empty or a black box.                             */
+.walk-plate {
+  position: relative;
+}
+.walk-plate::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--plate-up));
+  bottom: calc(-1 * var(--plate-down));
+  left: calc(50% - 50vw - var(--scrim-bleed));
+  width: calc(
+    50vw - 50% + var(--scrim-bleed) + min(var(--plate-col), 100% + var(--scrim-pad))
+  );
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--plate-ink);
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 0 calc(100% - var(--scrim-fade)), transparent 100%),
+    linear-gradient(
+      180deg,
+      transparent 0,
+      #000 calc(var(--plate-up) - 20px),
+      #000 calc(100% - var(--plate-down) + 20px),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in, source-over;
+  mask-image:
+    linear-gradient(90deg, #000 0 calc(100% - var(--scrim-fade)), transparent 100%),
+    linear-gradient(
+      180deg,
+      transparent 0,
+      #000 calc(var(--plate-up) - 20px),
+      #000 calc(100% - var(--plate-down) + 20px),
+      transparent 100%
+    );
+  mask-composite: intersect, add;
+  transition: var(--t-theme);
+}
+
+/* ── the stage takes the dissolve ──────────────────────────────────────────
+   CONTRACT D, and this is the half that is easy to miss. Making the backdrop's
+   BACKGROUND transparent at the top achieves nothing on its own, because the
+   background is not what a reader sees up here: `CabinScene`'s canvas is
+   pinned over it, edge to edge.
+
+   The canvas itself is honest about this — `setClearAlpha(0)`, so its sky is
+   genuinely transparent and the hero shows through it. What is not transparent
+   is the scene's GROUND: the cabin's far snow and hills are opaque geometry,
+   fogged to --band-origin, and they begin at about a fifth of the pin's
+   height. Inside the dissolve that is a horizon of full-strength band arriving
+   over a hero sky that is still fully visible — a step of about 3 L* in dark,
+   which nobody would find, and about 35 in light, which is a bright line
+   across a dusk sky.
+
+   So the whole stage fades in over the same ramp the backdrop does. The mask
+   goes HERE, on `.stage`, and not on `.walk__cabin`, and the reason is
+   geometry rather than taste: `.stage` is `inset: 0` on `.walk`, so its box IS
+   the walk's box and a mask measured from its own top is measured from the
+   boundary at every scroll position. `.stage__pin` inside it is sticky — once
+   the walk's top passes the top of the viewport the pin's top and the walk's
+   top are different numbers, so the same mask on the canvas would ramp from
+   the wrong place and would permanently dim the top of the cabin scene for the
+   rest of the page.
+
+   **The masked box got five times taller in this pass and the mask did not
+   change.** It used to be `.origin__stage`, one section (1712px at 1440x900);
+   it is now the whole walk (~5350px). That is a real cost to know about — a
+   mask makes the stage a composited layer — and it is the same trade
+   Origin.css already argued and paid: one layer, once, for the one element on
+   the page that needs it, against a ruled line across the top of the section
+   the site owner has now reported three times. Below the veil the mask is
+   solid, so the browser has one gradient to sample and nothing else changes
+   about the cabin anywhere a reader spends time.
+
+   `Stage.css` asks callers not to put opacity, filters or promotions on the
+   stage element itself and then says why: on `.stage` they would promote a
+   full-viewport compositor layer for EVERY section that has one. That is an
+   argument about the shared class, and this is the caller's own class doing
+   exactly what that note says a caller may do — one backdrop, one layer, once.
+
+   It also fades the near snow canvas, which is inside the stage, and that is
+   correct rather than incidental: flakes that begin abruptly on a boundary row
+   are the same defect one layer nearer.
+
+   ── and the OUT beat, which is the same idea at the other end ─────────────
+   Two more stops, and they are the whole of the wash-out. See --tools-scene
+   and --walk-out on `.walk` above for the arithmetic and for what the page
+   looked like without them; the short version is that the canvas's last
+   resting position is always the bottom 100svh of this box and Tools'
+   landscape band is the bottom --tools-scene of it, so the room was painted
+   behind the footbridge by construction.
+
+   The mask is in `.stage`'s coordinates, which are the walk's, so these two
+   stops are a PAGE band rather than a moment: no pixel of canvas is ever
+   drawn in the bottom --tools-scene of the walk, whatever the pin's travel,
+   whatever a section's height, at any viewport. Above it --walk-out of ramp
+   is what turns "gone" into "washed out".
+
+   **It is deliberately NOT a JS opacity on the canvas.** That was the obvious
+   version and it is worse three ways: it needs a second `onFrame` subscriber
+   and a second element to write to, it has to decide what a reduced-motion
+   reader gets (the identity there is the rest frame, which is exactly what
+   this geometry already leaves), and it fades the WHOLE frame — so the top of
+   the shot would leave at the same moment the bottom does and the reader
+   would watch the room evaporate rather than watch the outside arrive from
+   below. A band in the walk's own coordinates is the honest statement of what
+   is actually true: the canvas does not belong down there.
+
+   Reduced motion needs nothing extra for the same reason. The mask is
+   geometry, not motion: at motionIntensity 0 `CabinScene` parks at WALK_REST
+   and this leaves that composed frame visible and still, with its bottom edge
+   dissolved into the band instead of cut by a footbridge.                   */
+.walk__stage {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--origin-veil),
+    #000 calc(100% - var(--tools-scene) - var(--walk-out)),
+    transparent calc(100% - var(--tools-scene))
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 var(--origin-veil),
+    #000 calc(100% - var(--tools-scene) - var(--walk-out)),
+    transparent calc(100% - var(--tools-scene))
+  );
+}
+
+/* The cabin's canvas fills its stage's pin, which is one viewport tall and
+   sticky — the framing CabinScene.tsx says it was composed for. It sizes its
+   own backing store from this box's client size, so the box has to have one
+   before the first frame; `inset: 0` on a pin that is already 100svh does. */
+.walk__cabin {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── the near snow ─────────────────────────────────────────────────────────
+   The second half of the weather, in front of the cabin's own. Walk.tsx has
+   the depth ladder, the density and the fade; this file has the two boxes.
+
+   Two boxes and not one, and the split is the "one element, one writer" rule
+   rather than decoration: the wrapper owns `opacity`, written from the frame
+   loop as the camera goes through the door, and the canvas owns the art kit's
+   own `--art-near`. `Snow` takes no ref, so there is nothing to write to on
+   the canvas itself, and two opacities on one element would be two writers.
+   They multiply, which is what is wanted — the flakes fade out FROM the
+   density they were composed at, not to it.
+
+   Same box as `.walk__cabin` above, and for the same reason: `Snow` sizes its
+   backing store from the canvas's client box, so the box has to have one
+   before the first frame, and `inset: 0` on a pin that is already 100svh does.
+   It is the LATER of the two canvases in the DOM and neither carries a
+   z-index, so this paints over the cabin and both stay under `.shell`'s
+   z-index 1 — the copy is never at risk from either.
+
+   `pointer-events` is already none twice over — `.stage` sets it and the
+   property inherits — and it is restated because this is a full-viewport box
+   sitting directly under the reader's cursor, and a canvas that quietly ate a
+   click on a chapter would be found by a person and not by a test.
+
+   ── opacity, and why it is a token and not a number ───────────────────────
+   --art-near is the kit's opacity for "the props closest to the reader" —
+   0.68 dark, 0.52 light — and it is the same token `.origin__lamp` is drawn
+   at, which is the other near object in this half of the page. It is doing
+   real work here rather than dressing:
+
+   Snow takes its hue from --glow, which is this site's palette inverting the
+   way it should: rgba(255,255,255,0.2) in dark, rgba(20,20,26,0.16) in light.
+   Only the triple is read, so the flakes are white on dark and near-black on
+   light. White on #0a0b12 is snow. Near-black on #eef0f6 needs the second
+   look, and the answer is that flakes DARKER than the sky is the right
+   direction here and not a bug — CabinScene reaches the same conclusion from
+   the other end, putting its light-theme flakes part way DOWN the tone ramp
+   because "near-white snow over a near-white sky is invisible". What the token
+   cannot fix alone is how far down. Composited against the bands, per flake
+   alpha 0.16 (smallest, farthest) to 0.66 (largest, nearest):
+
+     light, over --band-origin (#eef0f6 when these were measured; the band has
+     since been re-derived from the hero ridge's ink and is #ebf0fb, which moves
+     the rows below by under one level and changes nothing this rule decides)
+       without this rule   rgb(203,205,211) .. rgb( 94, 95,101)
+       at --art-near 0.52  rgb(220,222,228) .. rgb(163,164,170)
+     dark, over --band-origin (#0a0b12 when measured; now #040c19, same note)
+       without this rule   rgb( 49, 50, 56) .. rgb(172,172,174)
+       at --art-near 0.68  rgb( 37, 38, 44) .. rgb(120,121,124)
+
+   The light row is the one that needed it. rgb(94,95,101) on a near-white band
+   is a dark speck — closer to soot than to snow — and there would be one of
+   those for every flake near the front of the field. At 0.52 the same flake is
+   a mid grey, and the far end of the field lands on rgb(220,222,228), which is
+   within a few steps of the rgb(214,215,219) CabinScene's own light flakes
+   composite to right behind it. The two layers read as one snowfall at two
+   depths, which is the whole point of drawing both.
+
+   Dark needed the same token for the opposite reason: rgb(172,172,174) is most
+   of the way to --text, and a field of that behind seven chapters of prose is
+   a glare. It is the argument CabinScene's own ramp cap makes about the same
+   scene, one layer nearer.
+
+   Opacity on these elements and NOT on `.stage`: Stage.css says out loud that
+   a caller wants opacity on its own layers, one at a time, because on the
+   stage it would promote a full-viewport compositor layer for every section
+   that has one. Here it promotes one layer for one canvas that is already
+   being composited.                                                          */
+.walk__flakes,
+.walk__flakes-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.walk__flakes-canvas {
+  opacity: var(--art-near);
+}
+
+/* ── the frost on the west window ──────────────────────────────────────────
+   `props/window-frost`, the piece the cabin builder asked the kit for because
+   a scene with zero textures and zero image loads cannot draw frost on its own
+   glass. Walk.tsx has the fade and why this is a full-frame layer rather than
+   a prop at a position; this file has the two boxes and the ink.
+
+   ── two boxes, for the reason the snow has two ──────────────────────────
+   The wrapper owns `opacity`, written from the frame loop as the dolly closes
+   on the glass. The image owns `--art-near`, the kit's own opacity for the
+   layer closest to the reader — and nothing is closer than the pane the camera
+   is pressed against. Two opacities on one element would be two writers; these
+   multiply, which is what is wanted: the frost arrives AT the density it was
+   composed at rather than towards it.
+
+   ── it starts at zero, and that is the safe direction ──────────────────
+   The tick sets this every frame the page moves, but the first paint happens
+   before any frame runs and a background tab may never run one at all. At 0
+   the failure is a window with no frost on it; at the browser's default 1 it
+   is a frosted pane over the whole walk, Origin's chapters included. The tick
+   writes over this within a frame of the reader touching the page.
+
+   ── `object-fit: cover`, and what it costs ─────────────────────────────
+   The artwork is 1000x667 and the frame it has to fill is whatever the reader's
+   window is. `fill` would stretch faceted crystal by the aspect difference —
+   1.5 to 1.6 at 1440x900 is not much, 1.5 to 0.46 at 375x812 is a smear.
+   `cover` keeps every facet its own shape and crops the middle instead, which
+   is the part the artwork deliberately leaves empty: the middle 60% is clear.
+   At 375x812 it crops 421px off each side, and because the crystal grows from
+   each corner INWARD, what a narrow frame's corner shows is a slightly thicker
+   part of the same bloom. There is no width at which a corner stops being a
+   corner.
+
+   No `mix-blend-mode` and no filter. The kit ships -dark and -light as
+   separate drawings for exactly this — pale blue crystal against a dark room,
+   near-white crystal against a bright one — and a blend mode would be this
+   file deciding that again, worse, in one theme.
+
+   ── what it is worth as INK, measured, because it was asked ─────────────
+   It was hoped this layer would lift the tools cards' contrast as well as look
+   right. **It does not, and it cannot**, and the reason is in the artwork's own
+   brief: the kit was asked for a piece whose middle 60% is almost clear so
+   that it would not sit behind the reading area — and the reading area is
+   exactly where `#tools`' two cards and its head are.
+
+   Ablated on the rendered page (this rule forced to `display: none`, the same
+   frame measured twice) at five scroll positions through the tools grid at
+   1440x900 and four at 375x812, both themes, sampling each text node's own
+   line boxes rather than its element box:
+
+     rows compared                          162 at 1440, 46 at 375
+     rows the frost changed by >=0.05        4 at 1440, 0 at 375
+     the four, worst first
+       dark  #tools .kicker__num   s5150   17.61 -> 13.95   (floor 4.5)
+       dark  #tools .tools__index  s5150    8.54 ->  7.55
+       dark  #tools .tools__cta    s5000   12.32 -> 11.37
+       light #tools .kicker__num   s5150   17.61 -> 17.12
+
+   Every one of the four is a cost rather than a gain, and every one of them
+   still clears its floor by more than three times. A pale layer cannot lift a
+   contrast in either theme here: dark's risk is a backdrop that is too bright
+   for near-white type, and light's is the same window seen through near-black
+   type, so brightening the edges of the frame can only ever help one of them
+   and this artwork brightens both.
+
+   What it costs the PICTURE is the number worth watching, and it is small: at
+   scroll 5000 in dark it lifts the frame's mean pixel by 3.2 levels (54.2 ->
+   57.4) and its 98th percentile by 19.8 (124.1 -> 143.9). The comparison to
+   keep is the plates this file replaced last pass, which lifted the mean by 24
+   levels in dark and 39 in light — an eighth of that, and spent on a drawn
+   object at the frame's edge rather than on a wash across the middle.
+
+   The worst contrast anywhere over the walk with this layer on is 6.96:1
+   (`#tools .tools__index`, dark, scroll 5000) against a 4.5 floor, and 8.02:1
+   against the 3.0 large-text floor.                                        */
+/* ── the front stage ───────────────────────────────────────────────────────
+   `Stage.css` pins `.stage` at `z-index: 0` so nothing a caller hangs in a
+   backdrop can reach a section's copy. That is the right default and this is
+   the one layer that wants past it: the owner asked for the frost to "cover
+   some of the cards when scrolling, to make things more poppy and fun".
+
+   3 rather than 2, because `.shell` inside each section is `z-index: 1` and the
+   sections themselves do not open a stacking context, so 2 would be a coin toss
+   against anything a section raises later. It stays `pointer-events: none` and
+   `aria-hidden` from `Stage` itself, so what it covers it never blocks. */
+.walk__front.stage {
+  z-index: 3;
+}
+
+/* ── BOLD, and the first attempt at this was the opposite ──────────────────
+   The owner asked for the frost to "cover some of the cards when scrolling, to
+   make things more poppy and fun", and what shipped was a wide soft hole cut
+   through its middle plus the kit's `--art-near` on top of it — a piece made
+   fainter in the exact place it was asked to be stronger. Their reply was
+   unambiguous: "YOU MADE IT MORE TRANSPARENT AND FAINT, I TOLD YOU TO MAKE IT
+   MORE BOLD".
+
+   So the hole is nearly gone and what is left of it is a small keep-clear at
+   the very centre rather than a 44% void: the artwork is already drawn clear
+   through its middle 60%, which is what lets the window read, and the mask's
+   only remaining job is to stop the two clear zones from stacking into a
+   rectangle of nothing. Full alpha from 30% out, so the corners land on the
+   cards at the piece's own strength.
+
+   The cards stay readable because they carry `--card-bg` plates at 0.74/0.88
+   and because the crystal is heaviest in the corners, where a card has margin
+   rather than text. That is a claim to re-measure if the artwork is ever
+   re-rendered, not a permanent property of the layer. */
+.walk__frost {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    96% 78% at 50% 52%,
+    rgba(0, 0, 0, 0.28) 0 12%,
+    #000 30%
+  );
+  mask-image: radial-gradient(96% 78% at 50% 52%, rgba(0, 0, 0, 0.28) 0 12%, #000 30%);
+}
+.walk__frost-art {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* NOT `--art-near`. That token is the kit's opacity for a prop sitting in a
+     landscape at the near depth plane, and this is not one — it is glass
+     between the reader and the shot, and the owner asked for it bold. Stated
+     here rather than promoted to tokens.css because exactly one layer on the
+     site is a foreground overlay of this kind; a second would be the moment to
+     move it. */
+  opacity: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The overlap is scroll that exists only so the hero can be climbed over
+     while it holds still, and at motionIntensity 0 the hero is one screen tall
+     again (Hero.css) with nothing to hold. Give the 100svh back rather than
+     pulling this wrapper up over a hero that is no longer there. Stated in the
+     same edit as the hero's, because the two are one number, and it moved here
+     from `.origin` with the margin itself.
+
+     ── what that does to CONTRACT D, and why it is left alone ──────────────
+     With no overlap there is no hero behind the dissolve, so the transparent
+     first 78svh resolves against `.page`'s own --bg instead. That is a ramp
+     from --bg to --band-origin rather than from --band-hero, and the one step
+     it introduces is at the HERO's floor: #030304 -> #07070a in dark and
+     #fbfbfc -> #f6f6f8 in light, 1.5 and 1.8 of L*. Both are under half of the
+     3.6-4.6 tokens.css records for a card face over its band, which this
+     file's neighbours use as the floor for "deliberately visible". Restoring
+     an opaque first stop would close that 1.8 and reopen the ruled line for
+     anybody who toggles the preference back, which is the worse trade. Left
+     alone deliberately, not overlooked.
+
+     Origin's mist and its treeline do become visible at rest here, because the
+     walk's top edge is at 100svh instead of 130. That is correct rather than a
+     leak: guardrail 5 of the art kit asks for art in its composed resting
+     location, visible and still, and what a reduced-motion reader sees at the
+     bottom of the hero is the frame everybody else scrolls to. `.hero__frame`
+     is z-index 5 against `#origin`'s 4, so the wordmark, the CTAs and the
+     bottom strip are still drawn over all of it. */
+  .walk {
+    margin-top: 0;
+  }
+}
+
+@media print {
+  /* The stage itself is dropped by Stage.css's own print block, so the cabin
+     and the snow go with it. What that cannot reach is this wrapper's own
+     background, and base.css's print block does NOT neutralise the --band-*
+     tokens — it rewrites --bg, --surface, --text and the hero's set, and stops
+     — so the walk would print a five-thousand-pixel gradient slab behind three
+     sections that have each been forced to white. The sections would cover
+     most of it and the clip margin's 130svh would not be covered at all.
+
+     `background: none` and not a white fill: the sections above and below
+     already print white, so there is nothing for this box to contribute.
+     Origin.css and Tools.css record the identical trap for the identical
+     reason.                                                                 */
+  .walk {
+    background: none !important;
+  }
+
+  /* And the same trap one layer up, for all five plates at once. base.css's
+     print block does not neutralise --card-bg either — it rewrites --bg,
+     --surface, --text and the hero's set, and stops — so every plate would
+     print as rgba(9,10,16,0.74) in the dark theme: a near-black slab under
+     black type, across the whole of Origin's timeline and both section heads.
+
+     One rule here rather than one in each of the three stylesheets. Apps.css
+     and Tools.css used to carry their own and Origin.css carried two; all four
+     are gone, and each file says so where its plate is declared, because a
+     print rule that is repeated is a print rule that will eventually be
+     repeated wrongly.                                                       */
+  .walk-plate::before {
+    display: none !important;
+  }
+}

@@ -27,7 +27,7 @@ Two brothers, Nate & Luke. This is our landing page.
 
 |  |  |
 |:--|:--|
-| <img src="docs/story.webp" alt="The story timeline"> **Our story** · seven chapters on a timeline that fills as you read | <img src="docs/apps.webp" alt="The apps grid"> **Apps** · cards that tilt toward your cursor and light their edge nearest it |
+| <img src="docs/origin.webp" alt="The Origin timeline"> **Our origin** · seven chapters on a timeline that fills as you read | <img src="docs/apps.webp" alt="The apps grid"> **Apps** · cards that tilt toward your cursor and light their edge nearest it |
 | <img src="docs/building.webp" alt="The MARANATHA feature"> **Building now** · what's on our screens right now | <img src="docs/faith.webp" alt="The faith section"> **Faith** · a slow gradient field and one verse |
 
 **📄 Every card opens its own page.** Each app, tool and the game has a page of its own:
@@ -107,10 +107,11 @@ authoritative for its folder:
 
 | | | |
 |:--|:--|:--|
-| [`src/`](src/README.md) · the shape of it | [`src/data/`](src/data/README.md) · every word a visitor reads | [`src/components/`](src/components/README.md) · every rendered surface |
+| [`src/`](src/README.md) · the shape of it | [`src/data/`](src/data/README.md) · the catalogue, and the pages drawn from it | [`src/components/`](src/components/README.md) · every rendered surface |
 | [`src/styles/`](src/styles/README.md) · palette & primitives | [`src/lib/`](src/lib/README.md) · router, frame loop, machinery | [`src/hooks/`](src/hooks/README.md) · the motion hooks |
-| [`src/auth/`](src/auth/README.md) · signing in to TDG Core | [`src/store/`](src/store/README.md) · what an account owns | [`src/theme/`](src/theme/README.md) · two worlds and the wave |
-| [`src/dev/`](src/dev/README.md) · the Developer console | [`supabase/`](supabase/README.md) · the part that runs on a server | |
+| [`src/auth/`](src/auth/README.md) · signing in to TDG Core | [`src/badges/`](src/badges/README.md) · the marks on an account | [`src/feedback/`](src/feedback/README.md) · sending feedback, and hearing back |
+| [`src/store/`](src/store/README.md) · what an account owns | [`src/theme/`](src/theme/README.md) · two worlds and the wave | [`src/dev/`](src/dev/README.md) · the Developer console |
+| [`supabase/`](supabase/README.md) · the part that runs on a server | | |
 
 ```bash
 npm install && npm run dev

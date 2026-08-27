@@ -19,7 +19,7 @@
   inherits: false;
   initial-value: transparent;
 }
-@property --story-glow-warm {
+@property --origin-glow-warm {
   syntax: '<color>';
   inherits: false;
   initial-value: transparent;
@@ -40,8 +40,56 @@
   --accent-soft: rgba(255, 255, 255, 0.07);
   --glow: rgba(255, 255, 255, 0.2);
   --warm: #f5c98a;
-  --nav-scrolled: rgba(9, 7, 17, 0.72);
+  /* ── the nav's scrolled veil, one ink at three alphas ───────────────────
+     `.nav__veil` in Nav.css fades in on `[data-scrolled='true']` and is a
+     180deg gradient: full at the top, roughly half at 55%, out at the bottom.
+     Three names rather than one, because the alphas are NOT a shared ramp the
+     two themes could take one percentage of — light sits heavier at both ends
+     (0.72 / 0.38) than dark does (0.5 / 0.26). One ink plus the
+     `color-mix(in srgb, var(--token) N%, transparent)` rule 2 offers would
+     therefore have had to declare BOTH Ns per theme up here as well: three
+     lines either way, and the version where two of them are bare numbers is
+     the one a reader cannot check against the gradient.
+
+     **A single `--nav-scrolled` was here, in both themes, and is gone. Do not
+     re-add a lone one.** It was a flat ink for this exact state, read by
+     nothing — `grep -rn -- '--nav-scrolled' src/` returned its two
+     declarations and no consumer at all — while `.nav__veil` hand-rolled six
+     literal `rgba()` stops beside it, the light triple `245, 243, 251`
+     matching it to the digit. It was sized to a flat fill this veil never
+     wanted, so the veil stepped over it and rule 2 was broken in the site's
+     most-seen component: a token the one thing it was for walked past is not
+     preventing anybody from writing a colour, it is the evidence that it did
+     not. What the gradient can actually consume is a stop per stop, which is
+     what these are.
+
+     Unregistered on purpose, unlike --tint-*: `@property` with
+     `inherits: false` would stop them reaching `.nav__veil` from :root at
+     all. The veil transitions `opacity` and nothing else, so its background
+     snaps with the theme exactly as the two hand-written rules did.       */
+  --nav-veil-top: rgba(4, 4, 6, 0.5);
+  --nav-veil-mid: rgba(4, 4, 6, 0.26);
+  --nav-veil-bot: rgba(4, 4, 6, 0);
   --card-shadow: 0 22px 54px -26px rgba(0, 0, 0, 0.72);
+  /* ── the ink #origin's arrival shadow is drawn with ─────────────────────
+     The soft dark edge above #origin, so the section reads as a sheet
+     lifting over the hero's valley rather than as a colour boundary.
+     Origin.css states the geometry and composes no colour of its own, so
+     this is the only place that colour is written. Beside --card-shadow
+     because it is the site's only other shadow ink and because the light
+     value below is that one's, restated at the alpha a section-sized blur
+     can carry.
+
+     It lived in Hero.css as --hero-takeover-ink until this pass. Both
+     halves of the name had stopped being true: the `useHeroTakeover` hook
+     it was named for — which composed this shadow in JavaScript and ramped
+     it with scroll — has been deleted, and the hero pins now, so the shadow
+     is a constant with nothing left to time; and Hero.css itself no longer
+     reads it, which left a token declared in one component's stylesheet and
+     consumed only by another's. A colour that crosses that line is palette.
+     Verified before the move: `grep -rn 'hero-takeover-ink' src/` returned
+     the two declarations and one consumer, Origin.css.                    */
+  --origin-arrival-ink: rgba(0, 0, 0, 0.6);
   --cross-glow: rgba(255, 255, 255, 0.82);
   --sb: rgba(255, 255, 255, 0.2);
   --edge-hi: rgba(255, 255, 255, 0.95);
@@ -51,6 +99,36 @@
   --live-fg: #59b880;
   --live-bg: rgba(74, 222, 128, 0.14);
   --live-border: rgba(74, 222, 128, 0.4);
+
+  /* ── danger ─────────────────────────────────────────────────────────────
+     The red for a destructive control and for a bad standing. Same shape as
+     the --live-* trio above and the same lesson: --danger is stated per
+     theme because ONE red cannot sit on both a near-black surface and a
+     near-white one — #e88a8a is legible on the dark console and washes out
+     on the light one, #b03636 the other way about. src/dev/DevConsole.css
+     already kept both, as a [data-theme='light'] override on every rule that
+     used them; this is that decision moved to where the palette lives.
+
+     --danger-soft and --danger-border are one red, rgb(224, 90, 90), at the
+     fill and border alphas .dev__tag[data-tone='bad'] uses — the direct
+     opposite number of .dev__tag[data-tone='live'], which is what --live-bg
+     and --live-border were lifted from. They are NOT per theme, unlike the
+     green, because that red is not: every mix of it in DevConsole.css sits
+     outside any [data-theme] block, so the same two values are already what
+     both themes paint. If the light console ever wants its own, this is the
+     one place to split it.
+
+     Written down here because it was written down eleven times over there,
+     at seven different percentages of the same red — 8, 12 and 14 for fills,
+     34, 48, 52 and 55 for borders. That spread is drift, not design, and it
+     is exactly what the second half of rule 2 is about.
+
+     The Developer console's destructive controls are the only consumer
+     today: buttons, bad tags, bad stats and standings, the danger panel, the
+     confirm box and the bad toast, all under src/dev/.                    */
+  --danger: #e88a8a;
+  --danger-soft: rgba(224, 90, 90, 0.12);
+  --danger-border: rgba(224, 90, 90, 0.52);
 
   /* the one pair the reference calls "invert": a chip that flips with theme */
   --invert-bg: #f2f2f5;
@@ -105,6 +183,483 @@
   --faith-stop-1: #dcdce4;
   --faith-stop-2: #8d8d99;
 
+  /* ── the page's horizontal bands ────────────────────────────────────────
+     One name per band of the one-page scroll, top to bottom, and the ONLY
+     place each of those colours is written down. `base.css` builds every
+     section's --tint-top / --tint-mid / --tint-bot out of these, and a Seam
+     (components/scene/) takes its colour from one of them too — stepped, see
+     --seam-step below, because a seam painted in a band flat is invisible.
+
+     That is the whole reason they exist. A boundary here is the one place two
+     bands are required to be the SAME number, and anything drawn at one is
+     therefore drawn against a value it has to be measured away from. Two
+     hexes that happen to agree can drift apart silently and turn a seam into
+     a stripe; one name cannot, and one name is also what lets a seam step a
+     known distance from it.
+
+     It also makes the promise above `.section--blend` in base.css something
+     the file enforces instead of asserts — a section's --tint-bot and the
+     next section's --tint-top are now literally the same token.
+
+     Three of the eight are an alias, not a value, because the number
+     already has an owner: the hero's floor is --hero-bg, the Outro paints
+     --bg and the footer paints --bg2. Those follow the theme through the
+     token they point at, so they are declared once, here, and correctly
+     have no entry in the light block below. The five section bands have no
+     other owner and are stated in both.                                   */
+  --band-hero: var(--hero-bg);
+  /* ── the one band that is taken from the artwork rather than chosen ──────
+     It was #0a0b12 — near-black with a hint of blue — and the site owner's
+     complaint was that the mountains "just show a straight line" where they
+     stop, and that what is under them ought to be "a dark bluish sky just
+     like the same color of the mountains". This band is the story section
+     they meant.
+
+     Derived, not eyeballed, by one rule that is stated once and applied in
+     both themes: **--band-origin is the colour the ridge's FOOT actually
+     composites to on screen, taken to the band's own lightness.** The foot
+     ink is sampled from the shipped art — see --terrain-haze below — and
+     composited over the hero sky's floor at --art-far, which is how it is
+     painted:
+
+       dark   #0e1a2c at 0.50 over #02040a -> #080f1b  L*  4.27 a* 0.81 b* -8.33
+       light  #3c485a at 0.36 over #d9d9df -> #a0a5af  L* 67.63 a* 0.22 b* -5.77
+
+     Take that a* and b* to the band's existing L* and sRGB gives #040c19 and
+     #ebf0fb — the two values below. (Not written as "a-star-slash-b-star":
+     that pair spells a comment terminator, and it silently ended this block
+     three paragraphs early the first time it was typed.)
+
+     ── why lightness is the axis that does NOT move, and why that is a
+        measurement rather than a preference ────────────────────────────────
+     Decomposed against the foot ink, the gap is not the same shape in the
+     two themes:
+
+       dark   dL*   5.97   db* -10.29   -> hue-dominated
+       light  dL* -64.56   db*  -9.09   -> lightness-dominated
+
+     In dark the two colours are already within 6 L* of each other and differ
+     mostly in HUE, and a hue shift at constant lightness costs the section
+     nothing: nobody reads a 0.1 L* change in a near-black band, and everyone
+     can see that the ground under the mountains is soot rather than midnight.
+     In light the gap is 64 L*, which is not a hue problem at all — closing it
+     would turn a near-white section mid-grey, under seven chapters of prose.
+     So light takes the same HUE move and keeps its lightness, and the rest of
+     the reconciliation is done by the haze, which has further to fade there
+     and is drawn at a lower opacity to match. One rule, two themes, and the
+     difference between them comes out of the measurement.
+
+     Lightness held to a tenth of a unit in both: L* 3.14 -> 3.24 dark,
+     94.80 -> 94.72 light. Computed consequences, before -> after:
+       --text  on the band  17.573 -> 17.536 dark, 16.113 -> 16.077 light
+       --muted on the band   6.645 ->  6.615 dark,  5.254 ->  5.252 light
+       #origin's --seam-fill step  dL* 5.80 -> 5.81 dark, -4.56 -> -4.59 light
+     The last line is why --seam-step's 94% below did not need re-deriving:
+     the step is a fixed 6% blend toward --text, so it depends on the band's
+     LIGHTNESS, and the lightness is what this move deliberately did not
+     touch. Every boundary still meets on an identical value, because the
+     boundaries are the same token on both sides — see base.css.           */
+  --band-origin: #040c19;
+  --band-apps: #08080c;
+  --band-tools: #090b13;
+  --band-building: #0f0d0d;
+  --band-faith: #0c0d15;
+  --band-outro: var(--bg);
+  --band-foot: var(--bg2);
+
+  /* ── the scene layer ────────────────────────────────────────────────────
+     Opacities for the parallax art kit, by how far back the layer reads:
+     --art-far is the mountains and the fog, --art-near the props closest to
+     the reader, --art-mid the band both families overlap in.
+
+     Numbers, not colours, because they multiply a PNG that is already the
+     right colour for this theme — the kit ships separate -dark and -light
+     artwork and public/assets/parallax/README.md is explicit that a CSS
+     filter must never stand in for the swap.
+
+     The ranges are that README's: mountains 0.48–0.64 dark and 0.34–0.48
+     light, props 0.50–0.72 dark and 0.38–0.56 light. Light sits lower right
+     through because those ranges do — the light artwork is drawn low
+     contrast and pale to begin with, so it needs less opacity to sit at the
+     same distance. Stated here once so no section re-guesses its own
+     restraint, which is how a kit meant to be quiet ends up loud in one band
+     and invisible in the next. These values are inside the ranges but have
+     NOT been looked at on a screen yet; the first section to use one should
+     check both themes and move the token, not write a literal.           */
+  --art-far: 0.5;
+  --art-mid: 0.58;
+  --art-near: 0.68;
+
+  /* ── the ink each ridge STOPS on ────────────────────────────────────────
+     A transparent cutout has a hard alpha edge wherever its ink runs out,
+     and both ridge files run out along a nearly horizontal cut. Measured off
+     the real alpha at 24/255, per column, on the .webp that is actually
+     painted (1600x533 — the .png beside it is the illustrator's source and
+     is NOT what the browser decodes; ThemedArt.tsx says why), as a fraction
+     of the file's height:
+
+       mountain-ridge       dark  base runs 0.8518-0.9475  (51px of arc)
+                            light            0.9099-0.9737 (34px)
+       mountain-ridge-rear  dark             0.8893-0.9662 (41px)
+                            light            0.7974-0.7992 (1px — DEAD FLAT,
+                            one pixel of deviation across 1600 of width)
+
+     Stretched over a 2100px-wide box those are a very shallow arc and, in
+     the rear range's light artwork, a ruled line edge to edge. That is the
+     "straight line" the site owner is looking at. Composited as they are
+     actually painted — the ink at --art-far over the hero sky's floor — the
+     step across that cut is:
+
+       dark  main  #080f1b -> #02040a   dL*  -3.17   dE00  5.11
+       dark  rear  #273441 -> #02040a   dL* -19.99   dE00 14.12
+       light main  #a0a5af -> #d9d9df   dL*  19.22   dE00 13.97
+       light rear  #c2cad4 -> #d9d9df   dL*   5.86   dE00  5.40
+
+     So these are the colours a soft gradient under each ridge has to START
+     on for that step to be zero. They are SAMPLED, not chosen: the MEDIAN,
+     per column, of the eight fully-opaque pixels immediately above that
+     column's last inked row, over every inked column. Median and not mean
+     because the .webp is yuva420p — chroma is subsampled, so the mean is
+     pulled about by ringing along the treeline and the median is not. Dark
+     and light are separate artwork, so each theme is sampled from its own
+     file, which is the same rule public/assets/parallax/README.md states for
+     the opacities above: a CSS filter must never stand in for the swap.
+
+       --terrain-haze       mountain-ridge       dark #0e1a2c  light #3c485a
+       --terrain-haze-rear  mountain-ridge-rear  dark #4c6377  light #98aec0
+
+     They are colours and the --art-* above are numbers, and both belong in
+     the same block for the same reason: they are properties of the shipped
+     files, read off them once, so no section re-derives them and no
+     component writes a hex. Hero.css is the only consumer today — it draws
+     the haze inside each ridge's own drift wrapper, in the SAME opacity
+     group as the art, which is what makes the step exactly zero rather than
+     approximately zero. --band-origin above is derived from the first of
+     them; that is the whole argument for this pass and it is written there.
+
+     The rear range is the paler of the two in both themes because it is
+     further away, and its haze therefore starts brighter and dies sooner —
+     Hero.css carries the two rates and why they differ.
+
+     NOT yet checked on a screen. The sampling is arithmetic off the files
+     and the composites above are arithmetic off the tokens; how much haze
+     reads as right is a judgement nobody has made yet.                    */
+  --terrain-haze: #0e1a2c;
+  --terrain-haze-rear: #4c6377;
+  /* How far a seam steps away from its own band, toward --text.
+
+     A seam CANNOT be painted in its band unmodified. base.css's invariant is
+     that adjacent bands meet on an identical value, so a shape drawn at a
+     boundary in either neighbour's colour is drawn where the two colours are
+     equal: measured, #apps gave rgb(8,8,12) for both the seam and the section
+     behind it. Invisible everywhere, by construction, not by mistake.
+
+     So a seam is a shape that CONTRASTS, not a colour that matches, and the
+     step goes toward the page's own ink — which makes it right in both themes
+     for one reason instead of two. --text is near-white in dark, so the
+     silhouette comes out slightly lighter than the sky; near-black in light,
+     so it comes out slightly darker than a pale one. That is exactly how the
+     art kit's -dark and -light ridges read, so a seam and the PNG beside it
+     finally agree.
+
+     94% and not 92 or 96, chosen against a measurement rather than by eye.
+     The anchor is .card's own face — --surface over its section, the site's
+     quietest plane that is still deliberately visible — taken at the quietest
+     it gets across the six banded sections: dL* 3.6 in dark, which is the
+     Outro's and the low end of a tight 3.6-4.6, and 2.4 in light, which is
+     the Apps band's and the low end of a much wider 2.4-5.6.
+
+     94% puts the FIVE seams this page actually draws — apps, tools,
+     building, faith, outro — at dL* 5.0-6.1 dark and 4.6-4.8 light: above
+     that anchor in both themes, because a seam is usually masked by
+     --seam-fade below and so paints most of its band at part opacity, and
+     nowhere near the dL* 7.7-10.6 that 90% gives, which would be five grey
+     stripes across the page. Dark runs higher than light on every one of
+     them, so neither theme reads louder.
+
+     But "above a card face" is a floor in DARK ONLY, and this used to claim
+     it flatly. --surface is a 4.5% white wash in dark, so a card sits a
+     near-constant 3.6-4.6 off whatever band it is on and every seam clears
+     every one of them. In light --surface is OPAQUE, so the distance is only
+     how far the band happens to be from white — 2.4 on apps, 5.6 on tools —
+     and the light seams clear apps, building and the Outro while sitting
+     UNDER the card face on tools and faith. That is a property of an opaque
+     light surface, not of the step, and 94% stands. It is spelled out
+     because a number offered as a calibration has to be re-derivable from
+     what is written beside it, and the flat version was not.
+
+     ── the population these numbers are quoted over ────────────────────────
+     Five, not six, and not eight. base.css declares --seam-fill for all
+     eight bands. #top and .footer have never drawn a seam, so they were
+     never in these numbers. **#origin drew one and stopped** — it traded the
+     seam for the snow bank this pass — so it has left them, and this line
+     counted it until now.
+
+     Re-measured for the five that are left, on the live page in both themes:
+     resolve each band and its own color-mix(in srgb, band 94%, --text)
+     through getComputedStyle, take L* of each, subtract. Dark — outro 4.95,
+     apps 5.14, tools 5.70, faith 6.06, building 6.07. Light — tools 4.60,
+     faith 4.63, building 4.72, outro 4.73, apps 4.76. Both ranges above are
+     unchanged: #origin's own were 5.72 and 4.62, inside each range and at
+     neither end, so dropping it moved the population and not the numbers.
+
+     ── and --band-origin has since MOVED, without moving this ──────────────
+     None of the five reads --band-origin, so the population is untouched by
+     construction. #origin's own figure is untouched too, and the reason is
+     worth having: the step is a fixed 6% blend toward --text, so what it
+     depends on is the band's LIGHTNESS, and the new band was derived to hold
+     the old one's L* to a tenth of a unit. Recomputed the same way — resolve
+     the band, mix it 94% with --text, take L* of each, subtract — #origin
+     gives 5.80 -> 5.81 dark and -4.56 -> -4.59 light across the change.
+     (5.80 rather than the 5.72 above: that line was read back off the
+     browser's rounded rgb(), this one is computed from the hex. The pair is
+     consistent within itself either way, and 94% stands on both.)
+
+     The light pair read -4.56 -> -4.56 for a pass, which was this file
+     disagreeing with itself: the --band-origin block above says -4.59 and so
+     does base.css. Re-derived to settle it — mix, round to 8 bits the way a
+     browser paints, then take L*: #eef0f6 -> #e1e3e9 is -4.5596 and #ebf0fb ->
+     #dee3ed is -4.5870. Round the mix and you get -4.56 / -4.59; do not round
+     it and you get -4.62 / -4.62, which is where a flat pair comes from. State
+     which convention you used if you re-derive this, because the two answers
+     differ by more than the change being measured.
+
+     One older line did not reproduce and has been softened rather than
+     restated: "dark runs 0.4 to 1.3 higher than light" comes out 0.2 (outro)
+     to 1.4 (faith) from the readings above. The conclusion it supported —
+     that neither theme reads louder — survives, but do not quote 0.4-1.3 as
+     a measurement. 94% is unchanged either way, and the whole calibration is
+     still numbers only, NOT yet checked on a screen.                        */
+  --seam-step: 94%;
+
+  /* ── the SECOND band's step, where a boundary carries two ────────────────
+     94% above is the primary band at all five joins. This is the second one,
+     and the second one is always the masked one: #apps' near canopy over its
+     far treeline, and #faith's rising range under its hanging bank. Two
+     boundaries carry two bands today — `grep -rn 'seam-step-2' src/` is the
+     population, and it was two literal 92%s in two stylesheets until this
+     pass.
+
+     It is here for exactly the reason --seam-step is: it is ONE decision. Two
+     sections each picking the second band's ink separately is how a page goes
+     loud in one band and invisible in the next, which is the same sentence
+     the --art-* block above makes about the kit's opacities.
+
+     92 and not 90 or 93, and the working lives here rather than in a section
+     stylesheet, the way --seam-step's does. Computed as CIE L* against the
+     band the shape is drawn on, at the alpha the mask actually leaves:
+
+       theme   band   step  alpha   dL* vs the band
+       dark    apps     94   1.00       5.14
+       dark    apps     92   1.00       7.50
+       dark    apps     92   0.55       3.44
+       light   apps     94   1.00       4.76
+       light   apps     92   1.00       6.36
+       light   apps     92   0.40       2.53
+
+     The 94 rows reproduce the 5.0-6.1 dark / 4.6-4.8 light this file records
+     for --seam-step, which is what says the two numbers were picked by one
+     method. 92 clears 94 by 2.4 dark / 1.6 light at full alpha — enough to
+     read as a different plane at a soft edge — and is nowhere near the
+     9.6-10.6 / 7.7-8.0 a 90% step gives, which this file rejected as a grey
+     stripe. It also sits inside the range faith/Summit.css already paints its
+     three ridges at, 87 / 91 / 95.
+
+     Toward --text for the same single reason 94 is, so one declaration is
+     correct in both themes. Single value, like --seam-step and for the same
+     reason: the ink it steps toward already carries the theme.
+
+     Promoting it moved no pixel. Resolved before and after, both consumers,
+     both themes: #apps' canopy #1b1b1f dark / #e6e6e8 light, #faith's climb
+     #1e1f27 dark / #dddee5 light — a var() substituting the identical
+     percentage into the identical color-mix.                               */
+  --seam-step-2: 92%;
+
+  /* ── how much of its own ink a seam's wrapper backfills ABOVE its top ────
+     Not a colour and not an opacity: a LENGTH, and the fourth member of the
+     seam family for the same reason as the other three — one decision, four
+     boundaries, one place.
+
+     A `Seam` path is solid from the TOP of its viewBox down to the
+     silhouette, so it carries a straight horizontal edge across the whole
+     width. That edge is invisible only while it sits exactly on the section's
+     boundary, where the section's own overflow cuts it — and it does not sit
+     there. `useParallax` writes `centreOffset * -factor`, which for a
+     zero-height wrapper at a section's top edge is `factor * (vh/2 - top)`, so
+     a positive factor pushes the band DOWN by up to `factor * vh/2` once the
+     boundary has passed the middle of the screen and the straight edge comes
+     out from behind the join with a strip of bare band above it.
+
+     So each drift wrapper paints a solid strip of its own ink from its top
+     edge UPWARD, and the section's overflow cuts THAT instead of cutting the
+     path:
+
+       ::before spans [d - lift, d]      the backfill
+       the seam spans [d, d + height]    the shape
+       union     spans [d - lift, d + height]
+
+     With `lift >= d_max` the union always starts at or above the boundary, so
+     the top edge can never be seen at any scroll position in either direction.
+
+     **4vh, and it is a vh on purpose.** The drift is a fraction of the
+     viewport HEIGHT, so a lift in pixels would be right on one window and
+     wrong on the next. 4vh covers a factor of 0.08 (4 = 100 * f / 2 solved for
+     f) and the largest factor at any boundary on this page is #faith's 0.034,
+     so every band has better than twice the cover it needs. `vh` and not
+     `svh`: 100vh is the LARGE viewport, never smaller than the
+     `window.innerHeight` the frame loop measures, so the inequality holds on a
+     phone with its chrome showing as well as with it hidden.
+
+     **Two of the seven seams deliberately consume nothing.** The token
+     inherits everywhere; what makes a boundary take the lift is having a
+     `::before` at all. `.faith__climb-drift` is `edge="bottom"`, so its mass
+     is at the bottom and its own top is transparent — there is no edge there
+     to expose. `.outro__seam-drift` opens its mask on `transparent`, so the
+     fix is inside the mask rather than beside it. Both files say so at the
+     rule. Neither writes the token and neither reads it.
+
+     Apps.css carries the artefact itself — the two-depth canopy is where it
+     was found, and its block has the per-boundary drift in px at the five
+     factors this page uses. It was declared four times, once per section
+     stylesheet, until this pass; `grep -rn -- '--seam-lift' src/` is the
+     population. Promoting it moved no pixel: four `height: var(--seam-lift)`
+     rules resolved 4vh before and resolve 4vh after.                       */
+  --seam-lift: 4vh;
+
+  /* A seam that wants to dissolve rather than stop at a line masks itself
+     with a gradient; this is the alpha that gradient is still at halfway
+     down, so every seam on the page dissolves at the same rate. Higher in
+     dark: those tints are near-black, and a fade can carry further there
+     before it starts to read as a grey smear across the boundary. */
+  --seam-fade: 0.55;
+
+  /* ── how deep a section dissolves out of the one above it ───────────────
+     A FRACTION of the viewport, unitless, and the only place the number is
+     written. `Origin.css` spends it as `calc(var(--origin-dissolve) * 100svh)`
+     and `Hero.tsx` reads it off the document element and multiplies it by the
+     viewport it already measures every frame.
+
+     It has to be one number in two languages because the two are the same
+     decision. Origin's background used to open on `--band-hero` at full
+     opacity, so the section's top edge cut the hero's mountains along a ruled
+     horizontal line — the defect the site owner has now reported three times.
+     The fix is for Origin to open TRANSPARENT and ramp to its own band over
+     this distance, so the hero's ridge, its haze and its sky carry on down
+     behind the arriving section and fade out instead of stopping.
+
+     That only works while the hero's stage is still painting, and the hero
+     stops painting at `data-eclipsed`. So the eclipse test moved from "Origin
+     has reached the top of the viewport" to "Origin's dissolve has finished",
+     which is this number below the same edge. Two consumers, one value: raise
+     it here and the ramp gets longer and the hero goes on painting for exactly
+     as long as the ramp needs, with nothing to keep in step by hand.
+
+     0.78 and not 1: the hero's `overflow: clip` cuts its own stage 100svh
+     below Origin's top edge (Hero.tsx has the box arithmetic), so a dissolve
+     of a whole viewport would be racing that cut. 0.78 leaves 22svh of margin
+     and is still three quarters of a screen of ramp, which at 900px is 700px
+     of scrolling for a boundary that used to be a line.
+
+     Not per theme. It is a distance, and the geometry is the same in both. */
+  --origin-dissolve: 0.78;
+
+  /* ── the moon, both times the page draws it ─────────────────────────────
+     `scene/Moon.tsx` used to paint its disc from --cross-glow and its surface
+     from --invert-fg, and both were borrowed rather than chosen. In light
+     --cross-glow is rgba(20,20,26,0.45) — near-black — so the light theme's
+     moon rendered as a grey blob with a hole in it, which is what the site
+     owner reported. The disc now has its own ink and it is WHITE in both
+     themes, because a moon is the same object at the same phase whichever
+     palette the page is wearing.
+
+     A white disc on a near-white sky needs the sky to move rather than the
+     moon: --hero-sky's light value is shaded below, so the moon has something
+     to be brighter than. That pair is the whole decision and it is why these
+     two live next to each other.
+
+     --moon-mare is the surface, and it cannot be --invert-fg any more for the
+     same reason: in light that token is near-white, and near-white maria on a
+     white disc are no maria at all. A cool grey in both themes reads as
+     shadow on the disc without becoming a second colour on the page.
+
+     --moon-halo is the bloom. It is the only one of the three that is allowed
+     to differ in kind between themes: over a night sky the halo is the light
+     scattering, over a pale one it is the disc's own edge softening into the
+     mist, so dark gets the sky's own blue-white and light gets plain white. */
+  --moon-disc: rgba(255, 255, 255, 0.95);
+  --moon-mare: rgba(26, 32, 48, 0.2);
+  --moon-halo: rgba(214, 232, 255, 0.26);
+
+  /* ── the cross standing on the Faith summit ────────────────────────────
+     Its own three stops, and they are a SILHOUETTE rather than the lit glyph
+     --faith-stop-* draws above the verse.
+
+     The site owner's report was that the summit cross "is not finished, you
+     just have one line going up". It was finished; it was invisible. The
+     glyph's own ramp opens on #ffffff in dark, and the cross stands directly
+     in front of a white moon — so the crossbar, which sits in the top third
+     of the path and therefore inside the disc, was white on white. Only the
+     stem below the disc's edge had anything to contrast with, and a stem with
+     no crossbar is a line going up.
+
+     A cross on a ridge with the moon behind it is backlit, so it is dark in
+     both themes and the ramp runs from the ridge's own ink upward rather than
+     from white downward. Light's values are lighter than dark's because the
+     light theme's summit is a pale hillside — the silhouette still has to be
+     the darkest thing in the frame, but it cannot be the only black on a page
+     with no other black on it.
+
+     Painted through <stop>s like every other glyph on this site, so it rides
+     the theme wave. `CrossGlyph.tsx` has that argument. */
+  --summit-stop-0: #0c0f1a;
+  --summit-stop-1: #141826;
+  --summit-stop-2: #222738;
+
+  /* ── the lamppost's light ───────────────────────────────────────────────
+     The pole is artwork (`hero/lamppost-left`) and the artwork draws a lit
+     lantern, but nothing on the page ever answered it: no glow around the
+     glass, no warmth on the air, no pool on the snow the foot stands in. The
+     site owner asked for "some colour, a bit transparent, lighting to the pole
+     where the light should come from, to have a bit more warmth and glow".
+
+     Four stops rather than one, because a lamp is four different intensities
+     at four different distances and each is drawn by a different element in
+     `Origin.css`: the lantern's own core, the halo around it, the cone of lit
+     air falling down the pole, and the ellipse it puts on the ground.
+
+     They are the only warm colours in the hero's frame and that is deliberate
+     — one warm source in a cold blue valley is what makes the valley read as
+     cold. --warm is not reused for it: --warm is the site's accent (it is
+     #b8763a in light, a burnt orange), and an accent is a UI colour that
+     belongs to chips and links. A light source is not a chip.
+
+     Light theme keeps the lamp lit but quieter. A lantern at dusk still glows;
+     it just has less darkness to glow into, and the same alphas over a
+     near-white sky would read as a stain rather than as light. */
+  --lamp-core: rgba(255, 216, 154, 0.95);
+  --lamp-glow: rgba(255, 198, 122, 0.44);
+  --lamp-spill: rgba(255, 188, 108, 0.16);
+  --lamp-pool: rgba(255, 192, 116, 0.22);
+
+  /* ── the plate a card is drawn on ───────────────────────────────────────
+     --surface is rgba(255,255,255,0.045) in dark: a 4.5% white lift, which is
+     a card that is 95% whatever is behind it. That was right while the page
+     behind a card was a flat band, and it stopped being right the moment
+     there was scenery back there — the site owner's note is that the cards are
+     hard to see and should be "darker and or lighter to be easily seen
+     depending on the theme".
+
+     So `.card` takes a PLATE and keeps the lift on top of it. The plate is
+     mostly opaque, which is what makes a card read as an object in front of
+     the place rather than as a rectangle of slightly paler place; the alpha it
+     does keep is what stops the section's art dying at the card's edge.
+
+     Both values are ~0.75 alpha rather than 1 for the same reason, and each is
+     pulled toward its own theme's ground: near-black in dark so the copy on it
+     keeps the contrast it was measured at, near-white in light so a card over
+     Origin's lit snow is still a card. */
+  --card-bg: rgba(9, 10, 16, 0.74);
+
   /* type */
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -127,8 +682,17 @@
   --accent-soft: rgba(20, 20, 26, 0.055);
   --glow: rgba(20, 20, 26, 0.16);
   --warm: #b8763a;
-  --nav-scrolled: rgba(245, 243, 251, 0.82);
+  /* the veil's three stops in the light ink, heavier at the top and the mid
+     than dark's — :root carries why they are three and why the lone
+     --nav-scrolled that used to sit here is not the shape to re-add */
+  --nav-veil-top: rgba(245, 243, 251, 0.72);
+  --nav-veil-mid: rgba(245, 243, 251, 0.38);
+  --nav-veil-bot: rgba(245, 243, 251, 0);
   --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
+  /* the same ink --card-shadow above uses in light, at the alpha a
+     section-sized blur can carry without reading as a bruise across the
+     boundary */
+  --origin-arrival-ink: rgba(23, 18, 45, 0.3);
   --cross-glow: rgba(20, 20, 26, 0.45);
   --sb: rgba(20, 20, 26, 0.15);
   --edge-hi: rgba(20, 20, 26, 0.7);
@@ -138,11 +702,32 @@
   --live-bg: rgba(45, 140, 85, 0.12);
   --live-border: rgba(45, 140, 85, 0.42);
 
+  /* --danger-soft / --danger-border are deliberately absent, not missing:
+     the red they are mixed from is the same in both themes. See :root. */
+  --danger: #b03636;
+
   --invert-bg: #141419;
   --invert-fg: #f6f6f8;
 
   --hero-bg: #fbfbfc;
-  --hero-sky: radial-gradient(118% 96% at 74% 6%, #ffffff 0%, #f4f4f6 30%, #e6e6ea 62%, #d9d9df 100%);
+  /* ── shaded, and the moon is the reason ─────────────────────────────────
+     It was #ffffff → #f4f4f6 → #e6e6ea → #d9d9df: a sky whose darkest corner
+     is L* 88. Nothing can be brighter than that, which is why the light
+     theme's moon had to be painted dark to be seen at all, and a dark moon in
+     a bright sky is a hole rather than a moon.
+
+     So the sky takes the shading instead — a cool dusk that keeps the light
+     theme unmistakably light while giving the disc somewhere to sit. The
+     bottom two stops carry it, because that is the half of the frame the moon
+     and the ridges occupy; the top stays near-white so the wordmark and the
+     nav are reading against the same value they were measured against.
+
+     L* at the four stops: 96.0, 91.2, 83.5, 77.4 (was 100, 96.1, 91.0, 87.6).
+     The disc at --moon-disc's 0.99 white composites to ~99, so it clears the
+     sky behind it by better than 21 L* where it actually sits, against 12 the
+     other way round before. It also takes --hero-meta's contrast over the sky
+     from 4.18 up over the AA line, which was a separate open item.        */
+  --hero-sky: radial-gradient(118% 96% at 74% 6%, #f4f5f9 0%, #e6e8f0 30%, #ccd2e0 62%, #bcc4d6 100%);
   --hero-shaft: linear-gradient(
     100deg,
     transparent 0%,
@@ -186,6 +771,62 @@
   --faith-stop-0: #14141a;
   --faith-stop-1: #33333d;
   --faith-stop-2: #6f6f7b;
+
+  /* the five section bands. --band-hero / --band-outro / --band-foot are
+     aliases of --hero-bg / --bg / --bg2 and already follow this block, so
+     they are deliberately absent rather than missing — see :root. */
+  /* the ridge's foot, at this band's own lightness — the same rule the dark
+     value is derived by, and the axis it does NOT move on is the one the
+     measurement picked. See :root. It was #eef0f6; L* 94.80 -> 94.72. */
+  --band-origin: #ebf0fb;
+  --band-apps: #f8f8fa;
+  --band-tools: #eceff6;
+  --band-building: #f8f5f3;
+  --band-faith: #eff0f7;
+
+  /* the scene layer, at the light end of the kit's ranges — see :root */
+  --art-far: 0.36;
+  --art-mid: 0.44;
+  --art-near: 0.52;
+  /* sampled off the -light files, which are separate artwork and not the
+     dark ones filtered. The light ridge is mist and silver rather than
+     midnight, so its haze is a cool grey-blue and it is drawn at --art-far's
+     0.36 rather than 0.5 — which is what keeps it mist instead of a smear.
+     See :root for the sampling and the composites. */
+  --terrain-haze: #3c485a;
+  --terrain-haze-rear: #98aec0;
+  --seam-fade: 0.4;
+
+  /* The moon's disc is the same white it is in dark — see :root for why it
+     stopped borrowing --cross-glow, and see --hero-sky above for the shading
+     that gives a white disc something to be brighter than. A touch MORE alpha
+     than dark, not less: over a pale sky the disc has only a few L* of room,
+     so every bit of it counts. The maria are a cool mid-grey and the halo is
+     plain white, which over mist reads as the disc's edge softening rather
+     than as light being scattered. */
+  --moon-disc: rgba(255, 255, 255, 0.99);
+  --moon-mare: rgba(124, 136, 160, 0.22);
+  --moon-halo: rgba(255, 255, 255, 0.86);
+
+  /* The summit silhouette, lighter than dark's because this hillside is pale
+     and the cross has to be the darkest thing in the frame without being the
+     only black on a page that has none. See :root. */
+  --summit-stop-0: #2c3345;
+  --summit-stop-1: #3a4254;
+  --summit-stop-2: #4c5568;
+
+  /* Same lantern, less darkness to glow into. See :root: at dark's alphas
+     these would read as a stain on a near-white sky rather than as light. */
+  --lamp-core: rgba(255, 238, 202, 0.95);
+  --lamp-glow: rgba(247, 199, 133, 0.36);
+  --lamp-spill: rgba(242, 194, 132, 0.13);
+  --lamp-pool: rgba(240, 194, 136, 0.2);
+
+  /* The plate, at this theme's ground. --surface is already #ffffff here, so
+     what this buys in light is the opposite of what it buys in dark: a card
+     over Origin's lit snow keeps a little of the snow instead of stamping a
+     hard white rectangle on it. See :root. */
+  --card-bg: rgba(255, 255, 255, 0.88);
 }
 
 /* ── Theme transition ─────────────────────────────────────────────────────

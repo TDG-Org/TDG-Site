@@ -27,7 +27,7 @@ One `useRoute()` call decides which of five things is on screen:
 
 | Route | What renders |
 | --- | --- |
-| `home` | Hero, Story, Apps, Tools, Building, Faith, Outro — the one-page scroll |
+| `home` | Hero, Origin, Apps, Tools, Building, Faith, Outro — the one-page scroll |
 | `#/about` | `About`, lazily |
 | `#/store` · `#/store/<app>` | `Store`, landed at that app's shelf when one is named |
 | `#/app/<slug>` | `AppPage`, lazily |
@@ -39,11 +39,15 @@ menu) and `ReplyInbox`, which renders nothing until a developer's reply is
 actually waiting for the signed-in account. See
 [`feedback/README.md`](feedback/README.md).
 
-**Three lazy chunks, for two different reasons.** `AppPage` and `About` are a
+**Four lazy chunks, for three different reasons.** `AppPage` and `About` are a
 lot of prose, and a visitor who reads the landing page and leaves should not
 download a word of it. `DevConsole` is lazy so its panels, labels and table
 names are never in the bundle everyone gets — tidiness, not a lock; the lock is
-in Postgres. See [`dev/README.md`](dev/README.md).
+in Postgres. See [`dev/README.md`](dev/README.md). The fourth is
+`hero/PointCloud`, split from `Hero.tsx` itself: the model and its twelve form
+definitions are the largest thing on the page and none of it is needed to paint
+the hero. All four ship as `assets/<hash>.js` — `vite.config.ts` says why the
+names are anonymous.
 
 **Scroll restoration lives in one effect in `App.tsx`.** A page change scrolls
 `instant`, never smooth: the document's own `scroll-behavior: smooth` makes
@@ -56,12 +60,13 @@ the hash is the one that was left — see `lib/route.ts`.
 
 | Folder | What it owns | README |
 | --- | --- | --- |
-| `data/` | Every word a visitor reads, and the shop catalogue | [→](data/README.md) |
+| `data/` | The catalogue and every page drawn from it, plus the shop | [→](data/README.md) |
 | `components/` | Every rendered surface, one `.tsx` + one `.css` each | [→](components/README.md) |
 | `styles/` | The palette (`tokens.css`) and the primitives (`base.css`) | [→](styles/README.md) |
 | `lib/` | Routing, the frame loop, sections state, Supabase, asset paths | [→](lib/README.md) |
-| `hooks/` | Reveal, tilt, parallax, offscreen pause | [→](hooks/README.md) |
+| `hooks/` | Reveal, tilt, parallax, hero parallax, offscreen pause | [→](hooks/README.md) |
 | `auth/` | Sign-in, the profile, session revocation, refusal wording | [→](auth/README.md) |
+| `badges/` | Global account badges, and the account count the footer prints | [→](badges/README.md) |
 | `feedback/` | Send Feedback, and the panel that delivers our replies | [→](feedback/README.md) |
 | `store/` | Which packs an account owns | [→](store/README.md) |
 | `theme/` | The theme wave and `data-theme` | [→](theme/README.md) |
@@ -69,8 +74,10 @@ the hash is the one that was left — see `lib/route.ts`.
 
 ## Two rules that decide most edits
 
-**Content is data.** If you are typing a sentence a visitor will read into a
-`.tsx` file, stop — it belongs in `data/`.
+**A catalogue is data.** If you are typing an app's name, a price, a chip, a
+status or a paragraph of a guide into a `.tsx`, stop — it belongs in `data/`. A
+section's own kicker, heading and lede stay with the section that draws them;
+[`data/README.md`](data/README.md) has the line and why it falls there.
 
 **Colour is a token.** If you are typing a `#hex` into a `.css` file, stop — it
 belongs in `styles/tokens.css`, and it needs a light value too.

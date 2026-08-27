@@ -381,6 +381,7 @@ export function FeedbackTab({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden="true"
+                    focusable="false"
                   >
                     <path d="m6 9 6 6 6-6" />
                   </svg>

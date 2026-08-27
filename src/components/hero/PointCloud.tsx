@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { onFrame } from '../../lib/motion'
-import { onDprChange } from '../../lib/dpr'
+import { MAX_DPR, onDprChange } from '../../lib/dpr'
 import { useTheme } from '../../theme/ThemeProvider'
 import { buildShapes } from './shapes'
 
@@ -92,8 +92,8 @@ export function PointCloud() {
     const to = new Float32Array(shapes[0].pts)
     const scales = new Float32Array(COUNT)
     // per-point brightness is fixed; the theme's base opacity is applied at
-    // draw time (0.92 additive on dark, 0.72 over on light, matching the reference's
-    // uOpacity uniform)
+    // draw time, and the two numbers are NOT the same because the two themes
+    // are not the same blend — see below.
     const alphas = new Float32Array(COUNT)
     for (let i = 0; i < COUNT; i++) {
       const s = 0.6 + Math.random() * 0.8
@@ -101,7 +101,36 @@ export function PointCloud() {
       alphas[i] = Math.min(1, 0.45 + s * 0.5)
     }
     const DARK_OPACITY = 0.92
-    const LIGHT_OPACITY = 0.72
+    /**
+     * ── why light's is nearly 1 and dark's is not ─────────────────────────
+     * It was 0.72, matching the reference's uOpacity, and the report was that
+     * the cross "does not read as a cross in the light theme". It does read —
+     * at 1440x900 the form is unmistakable in a screenshot — but it reads
+     * measurably thinner than the same cloud in dark, and the reason is the
+     * BLEND rather than the point count.
+     *
+     * Dark composites additively (`acc[at] += v`), so two points landing on
+     * one pixel are worth twice one point and the crowded middle of a bar
+     * burns out to solid white. That bloom is most of what makes the dark
+     * cross read as a mass with a spine rather than as a fog of dots.
+     *
+     * Light composites source-over (`prev + v(1 - prev)`), which is what a
+     * dark speck on a pale sky has to do — additive would only ever make it
+     * brighter, i.e. more like the sky. Under source-over a pixel can never
+     * be worth more than the alpha of the darkest point that touched it, so
+     * the whole form sat at whatever one point was worth: alphas[] runs
+     * 0.75-1.0 and the profile tapers to zero at each point's rim, so 0.72
+     * put a typical inked pixel at about a third of an alpha — ink 20 over a
+     * sky near 200 landing at 140, a grey speckle.
+     *
+     * 0.95 gives a point's own core the density the additive blend gives dark
+     * for free, and overlaps then compound to opaque in two hits instead of
+     * four. Nothing else changes: the count is `pointBudget()` in BOTH themes
+     * and stays that way, because raising it in one theme would be paying a
+     * device's CPU to fix something the blend caused, and the profile still
+     * feathers every point's edge so the form keeps its soft rim.
+     */
+    const LIGHT_OPACITY = 0.95
 
     const WHITE = packRGB(255, 255, 255)
     const INK = packRGB(20, 20, 26)
@@ -143,7 +172,10 @@ export function PointCloud() {
         return
       }
       // A soft point cloud gains nothing from 2x, and it costs 4x the fill.
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      // That argument is the one `lib/dpr.ts` states for the whole site, and
+      // it was written from this file — where it used to be a bare literal
+      // with no name on it, in the one place that owned the reasoning.
+      dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
       const nw = Math.round(cw * dpr)
       const nh = Math.round(ch * dpr)
       if (nw === W && nh === H) return
@@ -210,6 +242,22 @@ export function PointCloud() {
     window.addEventListener('blur', up)
 
     // ── frame ─────────────────────────────────────────────────────────────
+    /*
+     * The model fades on the COPY's clock, not the section's.
+     *
+     * `#top` is 230svh tall now and pinned — `Hero.css`'s `min-height` on
+     * `.hero` is where that is declared, so read it there — which means
+     * `-#top.top / vh` would take more than two viewports of scrolling to
+     * reach 1 and the model would still be at two-thirds opacity when Origin
+     * had already covered it. That is both wrong to look at and 100svh of 3D
+     * projection painted behind an opaque section. `.hero__above` is the box
+     * whose height is the pin's travel and whose bottom edge is the seam, and
+     * `height - vh` is the runway the copy dissolves over. Fading on that
+     * puts the model out at the same moment the wordmark goes, and the
+     * `opacity <= 0` return below then stops every point of the work.
+     *
+     * `?? #top` is the fallback for a PointCloud mounted outside that box.
+     */
     let hero: HTMLElement | null = null
     const focal = 1 / Math.tan(((FOV * Math.PI) / 180) / 2)
     let lastFade = -1
@@ -220,10 +268,12 @@ export function PointCloud() {
       if (!W || !H || !holder.offsetParent) return
 
       // the model fades out as the hero sinks; stop grabbing once it is faint
-      hero ??= document.getElementById('top')
+      hero ??= holder.closest('.hero__above') ?? document.getElementById('top')
       let opacity = 1
       if (hero) {
-        const p = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / (vh || 800)))
+        const r = hero.getBoundingClientRect()
+        const runway = Math.max(1, r.height - vh) || vh || 800
+        const p = Math.max(0, Math.min(1, -r.top / runway))
         opacity = Math.max(0, 1 - p * 1.35)
       }
       const grabbable = opacity > 0.2 ? 1 : 0

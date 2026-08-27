@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
-import { FEEDBACK_KINDS, fetchQuota, quotaLine, submitFeedback, type FeedbackQuota } from './api'
+import {
+  CONTACT_PLACEHOLDER,
+  FEEDBACK_KINDS,
+  fetchQuota,
+  quotaLine,
+  submitFeedback,
+  type FeedbackQuota,
+} from './api'
 import './Feedback.css'
 
 /**
@@ -305,7 +312,7 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
                   type="text"
                   maxLength={200}
                   value={contact}
-                  placeholder="My instagram is @tdgluke"
+                  placeholder={CONTACT_PLACEHOLDER}
                   autoComplete="off"
                   onChange={(e) => setContact(e.target.value)}
                 />

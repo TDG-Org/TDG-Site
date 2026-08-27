@@ -3,6 +3,12 @@ import { useAuth } from '../auth/AuthProvider'
 import { AccountDetail, type Run } from './AccountDetail'
 import * as api from './api'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevFeedback, DevOverview } from './api'
+// The one read this page makes that does not live in `./api`. Badges are a
+// whole TDG surface rather than a console feature — the site's footer and every
+// app read the same four verbs — so the folder that owns them owns the client
+// too, and this page is one of its callers. See src/badges/README.md.
+import { adminBadges } from '../badges/api'
+import type { AdminBadge } from '../badges/types'
 import { appTitles, ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
 import {
   LedgerTag,
@@ -105,6 +111,19 @@ function DevConsoleBody({
   const [audit, setAudit] = useState<DevAuditRow[]>([])
   const [historyState, setHistoryState] = useState<'loading' | 'ready' | 'error'>('loading')
 
+  /*
+   * The open account's badges, and the sentence the server said if it refused.
+   *
+   * The message is kept beside the state rather than folded into it because a
+   * badge read has exactly one interesting failure — `42501`, "the console is
+   * limited to developer accounts" — and it is worded to be READ. A panel that
+   * knew only 'error' would have to invent its own wording for the one case
+   * where the server already wrote the right words.
+   */
+  const [badges, setBadges] = useState<AdminBadge[]>([])
+  const [badgesState, setBadgesState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [badgesError, setBadgesError] = useState<string | null>(null)
+
   const [allEvents, setAllEvents] = useState<DevEvent[]>([])
   const [allAudit, setAllAudit] = useState<DevAuditRow[]>([])
   const [ledgerState, setLedgerState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -205,6 +224,42 @@ function DevConsoleBody({
     }
   }, [])
 
+  /**
+   * The open account's badge switchboard: every catalogue row, held or not.
+   *
+   * Read here rather than inside the panel so it hangs off `readAll` with the
+   * other five, which is the rule this console keeps about anything that
+   * re-reads (see README, "Adding a new kind of verb"). One Refresh for the
+   * whole page is the point of the rail; a panel with its own quiet fetch is a
+   * second refresh button that refreshes less.
+   *
+   * Sequenced like the history read beside it: click three accounts quickly
+   * and only the last answer may land.
+   */
+  const badgesSeq = useRef(0)
+  const loadBadges = useCallback(async (id: string | null) => {
+    if (!id) return false
+    const seq = ++badgesSeq.current
+    setBadgesState('loading')
+    try {
+      const list = await adminBadges(id)
+      if (seq !== badgesSeq.current) return false
+      setBadges(list)
+      setBadgesError(null)
+      setBadgesState('ready')
+      return true
+    } catch (e) {
+      if (seq === badgesSeq.current) {
+        // The server's own sentence, kept whole. `adminBadges` has already
+        // stripped the `tdg: ` log prefix and told a refusal apart from a
+        // request that never landed; there is nothing left here to improve.
+        setBadgesError(message(e))
+        setBadgesState('error')
+      }
+      return false
+    }
+  }, [])
+
   /*
    * Both whole-project ledgers, unfiltered, once. They used to reload on every
    * keystroke of the audit box and to be filtered in Postgres; now the page
@@ -269,7 +324,9 @@ function DevConsoleBody({
       const here = scope === 'again' ? captureAnchor() : null
       if (scope === 'again') setRefreshing(true)
       const reads: Promise<boolean>[] = [loadOverview(), loadCatalog(), loadLedger(), loadFeedback()]
-      if (scope === 'again') reads.push(loadRoster(query), loadHistory(selectedId))
+      if (scope === 'again') {
+        reads.push(loadRoster(query), loadHistory(selectedId), loadBadges(selectedId))
+      }
       const landed = await Promise.all(reads)
       // Only when something actually came back. A rail that says "read 1m ago"
       // after five refused reads is telling you the page is fresh at the exact
@@ -282,7 +339,17 @@ function DevConsoleBody({
         holdAnchor(here, { ms: 900 })
       }
     },
-    [loadOverview, loadCatalog, loadLedger, loadFeedback, loadRoster, loadHistory, query, selectedId],
+    [
+      loadOverview,
+      loadCatalog,
+      loadLedger,
+      loadFeedback,
+      loadRoster,
+      loadHistory,
+      loadBadges,
+      query,
+      selectedId,
+    ],
   )
 
   const refresh = useCallback(() => {
@@ -317,6 +384,11 @@ function DevConsoleBody({
     void loadHistory(selectedId)
   }, [selectedId, loadHistory])
 
+  /** And its badges, which are per account for the same reason. */
+  useEffect(() => {
+    void loadBadges(selectedId)
+  }, [selectedId, loadBadges])
+
   /* ── one write, then re-read what actually landed ─────────────────────── */
 
   const run: Run = useCallback(
@@ -341,7 +413,18 @@ function DevConsoleBody({
               setRows((list) => list.filter((r) => r.user_id !== id))
               setSelectedId(null)
             }
-            await loadHistory(id)
+            // Both, after EVERY write, not only after a badge write.
+            //
+            // Two of the badges are derived: Developer follows
+            // `profiles.is_admin` and Subscriber follows the account's tier,
+            // and both of those facts are owned by OTHER panels on this page.
+            // Re-reading badges only when a badge switch was pressed would
+            // mean granting Developer two panels up leaves the Badges panel
+            // printing "not held" about the flag that had just been set —
+            // which is the stale second opinion the derived design exists to
+            // make impossible. One extra round trip per write, on a page two
+            // people use, is the whole cost of never showing that.
+            await Promise.all([loadHistory(id), loadBadges(id)])
           }
           void loadOverview()
           setReadAt(Date.now())
@@ -354,7 +437,7 @@ function DevConsoleBody({
         }
       })()
     },
-    [selectedId, push, loadOverview, loadHistory],
+    [selectedId, push, loadOverview, loadHistory, loadBadges],
   )
 
   /* ── selecting on a narrow screen should show the thing you selected ──── */
@@ -364,6 +447,21 @@ function DevConsoleBody({
     if (window.matchMedia('(max-width: 1040px)').matches) {
       // The detail renders below the roster there, and a click that changes
       // something 800px off-screen reads as a click that did nothing.
+      //
+      // One frame, and only one. `setSelectedId` above has not reached the DOM
+      // yet — React commits in a microtask — so scrolling now aims at the
+      // placeholder's height rather than at the account that is about to
+      // replace it. This waits for the commit; it does not animate anything.
+      // The smooth part is `scrollIntoView`'s, which is the browser's own.
+      //
+      // Rule 9's loop is the wrong instrument twice over: `onFrame` would have
+      // to be subscribed and unsubscribed around a single frame, and
+      // subscribing is what permanently wires that loop's eight wake listeners
+      // onto a page that otherwise has none (see viewState.ts's holdAnchor for
+      // the same trade). A `useEffect` on `selectedId` is the other candidate
+      // and is worse here: it would also fire for the account the session
+      // restore selects on boot, and scroll the reader away from the place
+      // `useRestoreView` is at that moment putting them back to.
       window.requestAnimationFrame(() =>
         detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
       )
@@ -598,6 +696,9 @@ function DevConsoleBody({
                   events={events}
                   audit={audit}
                   historyState={historyState}
+                  badges={badges}
+                  badgesState={badgesState}
+                  badgesError={badgesError}
                 />
               ) : (
                 <div className="dev__placeholder">

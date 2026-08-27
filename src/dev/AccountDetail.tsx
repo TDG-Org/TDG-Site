@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DevAccount, DevAuditRow, DevCatalog, DevEvent } from './api'
 import * as api from './api'
+// The badge verbs live with the rest of the badge surface rather than in
+// `./api`, because the site's footer and every other TDG app call the same
+// module. This console is one of its callers. See src/badges/README.md.
+import { adminSetBadge } from '../badges/api'
+import type { AdminBadge } from '../badges/types'
 import { grantNote, storeApps, type DevStoreApp } from './apps'
 import { GRANT_SHAPES, grantArgsFor, shapeOfGrant } from './grantShapes'
 import {
@@ -43,6 +48,12 @@ type Props = {
   events: DevEvent[]
   audit: DevAuditRow[]
   historyState: 'loading' | 'ready' | 'error'
+  /** Every catalogue row for this account, held or not. Read by DevConsole so
+   *  it re-reads with everything else when Refresh is pressed. */
+  badges: AdminBadge[]
+  badgesState: 'loading' | 'ready' | 'error'
+  /** What the server said when it refused, kept whole. Null when it did not. */
+  badgesError: string | null
 }
 
 /**
@@ -110,6 +121,10 @@ export function AccountDetail(props: Props) {
       <IdentityPanel {...props} />
       <PermissionsPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <CorePanel {...props} />
+      {/* Directly under the two panels that own the facts today's derived
+          badges follow, so "change the fact and the badge follows" points
+          upward at something the reader can already see. */}
+      <BadgesPanel {...props} />
       <MakullvenyPanel {...props} />
       {stores.map((app) => (
         <StorePanel key={app.id} {...props} app={app} />
@@ -382,6 +397,323 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
         >
           Save Subscription
         </Button>
+      </div>
+    </Panel>
+  )
+}
+
+/* ── badges ────────────────────────────────────────────────────────────── */
+
+/**
+ * The badge switchboard: hand a friend Bug Hunter, or take it back.
+ *
+ * ## Why this is a full switchboard and not a list
+ *
+ * `tdg_admin_badges` returns EVERY catalogue row with `held` set, not only the
+ * ones the account already has, so the panel draws the whole set. A console
+ * that can only show what somebody holds cannot be used to give them anything,
+ * which is the entire reason this page exists.
+ *
+ * ## Nothing here writes a badge id down
+ *
+ * Not one, anywhere in this folder. The names, the copy and which of them are
+ * computed all arrive from `tdg_badge_catalog()`, so a seventh badge added by
+ * a migration tomorrow renders here the same day with no edit — AGENTS.md rule
+ * 17, and `src/badges/README.md` explains why the catalogue is in SQL. The
+ * consequence worth stating out loud is that this component cannot recognise
+ * anything: it renders what it is handed, and where the server sent an id with
+ * no words attached it makes a name out of the id and says so, rather than
+ * dropping a row it could not read.
+ *
+ * ## Derived badges are drawn as STATE, not as a control
+ *
+ * Two of today's six are computed — one follows `profiles.is_admin`, one
+ * follows the account's tier — and the server refuses to set either by hand,
+ * with `23514` and a sentence saying which fact it follows. A switch that can
+ * only ever fail is worse than no switch: that is this project's own position,
+ * written into `tdg_admin_uid`'s comment and kept by `storeAnswers.ts`, which
+ * draws no Manage Plan button where there is no Stripe subscription behind it
+ * and says out loud why it is missing. So the derived rows get a HELD / NOT
+ * HELD tag and a paragraph saying where the fact behind them is changed.
+ *
+ * The client is not deciding anything by doing that. `adminSetBadge` on a
+ * derived badge still refuses in Postgres, whoever calls it and however; this
+ * is only the difference between a page that offers a dead control and one
+ * that explains itself.
+ *
+ * ## Where the history is
+ *
+ * There isn't one here, on purpose. Every grant, revoke and reason-edit writes
+ * to the shared audit log through `tdg_admin_log`, so it lands in **This
+ * Account's History** below and in the whole-project **Audit Log** tab, tagged
+ * `badge-grant`, `badge-revoke` and `badge-note`. A second private trail on
+ * this panel would be a fourth place the same fact is written down, and the
+ * first one to disagree with the other three.
+ *
+ * ## Why no confirmation
+ *
+ * A badge is trivially reversible: the switch that granted it revokes it, the
+ * write is idempotent in both directions, and the ledger keeps both halves. It
+ * is the pack tiles' shape, not Delete Forever's. `TypeToConfirm` is for the
+ * thing that cannot be undone.
+ */
+
+/** The catalogue's own name, or the id made readable when it sent none. */
+function badgeName(b: AdminBadge): string {
+  return (b.label ?? '').trim() || prettyId(b.id)
+}
+
+function badgeBlurb(b: AdminBadge): string {
+  return (b.blurb ?? '').trim()
+}
+
+/** A catalogue row this site has no words for — see the panel's comment. */
+function badgeUnnamed(b: AdminBadge): boolean {
+  return !(b.label ?? '').trim() || !badgeBlurb(b)
+}
+
+const NO_COPY = 'The catalogue lists this badge but sent no description with it.'
+
+function BadgesPanel({ account: a, badges, badgesState, badgesError, run, busy }: Props) {
+  const [note, setNote] = useState('')
+
+  // A reason typed about one person must not follow you to the next one.
+  useEffect(() => setNote(''), [a.user_id])
+
+  const typed = note.trim()
+  const ready = badgesState === 'ready'
+  const held = badges.filter((b) => b.held)
+  const grantable = badges.filter((b) => !b.derived)
+  const awarded = grantable.filter((b) => b.held)
+  const derived = badges.filter((b) => b.derived)
+  const unnamed = badges.filter(badgeUnnamed)
+
+  const setBadge = (b: AdminBadge, on: boolean) =>
+    run(`badge:${b.id}`, `${badgeName(b)} ${on ? 'granted' : 'revoked'}.`, async () => {
+      await adminSetBadge(a.user_id, b.id, on, on ? typed : undefined)
+      // Cleared only on the way back from a grant that actually landed. A
+      // reason left sitting in the box would attach itself, silently and
+      // wrongly, to whichever badge you switched on next.
+      if (on) setNote('')
+    })
+
+  /*
+   * Re-sending a badge that is already on, with a different reason, is how the
+   * server edits a note: it updates the note alone and leaves `granted_at` and
+   * `granted_by` where they were, and logs it as `badge-note`. Worth reaching,
+   * because the alternative a developer would otherwise find is revoking and
+   * re-granting — which moves the day the badge was awarded and writes two
+   * rows into the ledger to fix a typo.
+   *
+   * Offered only when there is something to write, so it can never be a button
+   * that empties a reason somebody wrote: the box starts empty on every
+   * account, and an empty box means "no change", not "clear it".
+   */
+  const saveNote = (b: AdminBadge) =>
+    run(`badge-note:${b.id}`, `Reason saved on ${badgeName(b)}.`, async () => {
+      await adminSetBadge(a.user_id, b.id, true, typed)
+      setNote('')
+    })
+
+  return (
+    <Panel
+      title="Badges"
+      what="One global mark on the account, true in every TDG app at once — not per app and not per device. The list is the server's, so a badge added there shows up here with nothing changed on this page."
+      writes="public.tdg_account_badges"
+      terms={[
+        ...badges.map((b) => `${b.id} ${badgeName(b)} ${badgeBlurb(b)} ${b.note ?? ''}`),
+        'badge badges award grant revoke mark',
+      ]}
+      right={
+        badgesState === 'loading' ? (
+          <Tag>READING</Tag>
+        ) : badgesState === 'error' ? (
+          <Tag tone="bad">UNREADABLE</Tag>
+        ) : held.length ? (
+          <Tag tone="ok">{held.length} HELD</Tag>
+        ) : (
+          // Not "0 HELD". An account with no badges is a normal account, and a
+          // zero in a summary tag reads as a number that went wrong.
+          <Tag>NONE</Tag>
+        )
+      }
+    >
+      <div className="dev__badges">
+        {badgesState === 'loading' && (
+          <>
+            <p className="dev__panel-quiet">Reading this account's badges…</p>
+            {/* One placeholder per row the last answer had. The catalogue is
+                the same for every account, so from the second account onward
+                this count is exactly right and the panel does not reflow when
+                the real rows land — the trick the Overview tiles use. On the
+                very first read there is nothing to guess from, which is what
+                the min-height on .dev__badges is for. */}
+            {badges.length > 0 && (
+              <div className="dev__badge-list" aria-hidden="true">
+                {badges.map((b) => (
+                  <div key={b.id} className="dev__badge-skeleton" />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {badgesState === 'error' && (
+          <p className="dev__warn">
+            {/* The server's own sentence, whole. It is written to be read, and
+                a message of ours over the top of it would be this page
+                guessing at something it was already told. */}
+            <strong>{badgesError ?? "Couldn't read this account's badges."}</strong> Nothing has
+            changed on the account, and nothing below has been switched. Press{' '}
+            <strong>Refresh</strong> to ask again.
+          </p>
+        )}
+
+        {ready && badges.length === 0 && (
+          <p className="dev__warn">
+            The catalogue came back with no badges in it at all, so there is nothing to award. That
+            is <code className="dev__code">tdg_badge_catalog()</code> in tdg-core answering with an
+            empty list — <strong>not</strong> this account holding none of them. Adding a badge is a
+            migration; see <code className="dev__code">src/badges/README.md</code>.
+          </p>
+        )}
+
+        {ready && badges.length > 0 && (
+          <>
+            <Field
+              label="Reason (Optional)"
+              htmlFor="dev-badge-note"
+              hint={
+                <>
+                  Why this person got it — <em>found the DevFleet pane crash</em>. It goes on
+                  whichever badge you switch on next, and it is <strong>not private</strong>: the
+                  account it is about reads its own badges, notes included. The Reason box in
+                  Standing &amp; Access is the one only a developer ever sees. Up to 200 characters.
+                </>
+              }
+            >
+              <TextInput
+                id="dev-badge-note"
+                value={note}
+                onChange={setNote}
+                maxLength={200}
+                placeholder="e.g. found the DevFleet pane crash"
+              />
+            </Field>
+
+            {grantable.length === 0 ? (
+              <p className="dev__panel-quiet">
+                Every badge in the catalogue is computed today, so there is nothing here to switch
+                on by hand.
+              </p>
+            ) : (
+              <div className="dev__badge-list">
+                {grantable.map((b) => {
+                  const current = (b.note ?? '').trim()
+                  const canSaveNote = b.held && typed !== '' && typed !== current
+                  return (
+                    <div className="dev__badge" key={b.id}>
+                      <Switch
+                        checked={b.held}
+                        busy={busy === `badge:${b.id}`}
+                        onChange={(next) => setBadge(b, next)}
+                        label={badgeName(b)}
+                        hint={
+                          <>
+                            {badgeBlurb(b) || NO_COPY}
+                            {b.held && (
+                              <>
+                                {' '}
+                                <span className="dev__badge-since">
+                                  Awarded {fmtDate(b.grantedAt)} · {fmtRelative(b.grantedAt)}
+                                  {current ? ` · “${current}”` : ' · no reason written'}
+                                </span>
+                              </>
+                            )}
+                          </>
+                        }
+                      />
+                      {canSaveNote && (
+                        <div className="dev__badge-note">
+                          <Button
+                            busy={busy === `badge-note:${b.id}`}
+                            onClick={() => saveNote(b)}
+                            title="Writes the reason above onto a badge this account already has, without moving the day it was awarded."
+                          >
+                            Save Note
+                          </Button>
+                          <span className="dev__badge-note-copy">
+                            {current ? (
+                              <>
+                                Replaces “{current}” on {badgeName(b)}. The date it was awarded and
+                                who awarded it stay as they are.
+                              </>
+                            ) : (
+                              <>
+                                {badgeName(b)} was granted without a reason. This writes the one
+                                above onto it.
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {grantable.length > 0 && awarded.length === 0 && (
+              <p className="dev__panel-quiet">
+                None of these has been awarded to this account yet. Switching one on is the whole
+                grant: it takes effect in every TDG app the next time that app reads.
+              </p>
+            )}
+
+            {derived.length > 0 && (
+              <>
+                <hr className="dev__rule" />
+                <h4 className="dev__sub">Computed, Not Granted</h4>
+                <p className="dev__hint">
+                  These follow something TDG Core already knows about the account, so there is no
+                  switch to press: change the fact and the badge follows on the next read. Asking
+                  for one by hand is refused, and{' '}
+                  <strong>the refusal names the fact it follows</strong> — which is where that
+                  sentence belongs, because nothing on this page keeps a list of which badge is tied
+                  to what. Today the two facts are the Developer permission and the TDG Core tier,
+                  both set in panels directly above this one.
+                </p>
+                <div className="dev__badge-list">
+                  {derived.map((b) => (
+                    <div className="dev__badge-fixed" key={b.id} data-held={b.held || undefined}>
+                      <span className="dev__badge-fixed-text">
+                        <span className="dev__badge-fixed-name">{badgeName(b)}</span>
+                        <span className="dev__hint dev__badge-fixed-what">
+                          {badgeBlurb(b) || NO_COPY}
+                        </span>
+                      </span>
+                      <Tag tone={b.held ? 'ok' : 'plain'}>{b.held ? 'HELD' : 'NOT HELD'}</Tag>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {unnamed.length > 0 && (
+              <p className="dev__warn">
+                {unnamed.length === 1 ? 'One badge above came' : `${unnamed.length} badges above came`}{' '}
+                back from the catalogue without a name, or without a line of copy:{' '}
+                {unnamed.map((b) => b.id).join(', ')}.{' '}
+                {unnamed.length === 1 ? 'It is drawn from its id' : 'They are drawn from their ids'}{' '}
+                rather than left out, because a badge this site cannot name is still a badge it can
+                award — and a list that quietly drops what it cannot read is a list you cannot trust
+                about anything else on it either. Fill the label and the blurb in{' '}
+                <code className="dev__code">tdg_badge_catalog()</code> and every TDG surface starts
+                saying the same words at once, with nothing changed here.
+              </p>
+            )}
+          </>
+        )}
       </div>
     </Panel>
   )

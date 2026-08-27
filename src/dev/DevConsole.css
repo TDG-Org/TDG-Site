@@ -15,6 +15,18 @@
   --dev-radius: 3px;
   --dev-rail: 360px;
 
+  /* The switch and the space beside it. Two rules set the switch row's
+     geometry and a third indents under it — the Save Note affordance in the
+     Badges panel, which has to line up with the text of the switch above it or
+     it reads as belonging to the panel rather than to that badge. Per rule 6
+     that alignment comes from one pair of variables rather than from the same
+     two numbers typed in three places.
+     The knob's `translateX` is the one thing still derived by hand from the
+     width: it is width minus knob minus both insets, and it lives with the
+     knob because it is about the knob. Change the width and check it.        */
+  --dev-switch-w: 42px;
+  --dev-switch-gap: 12px;
+
   /* The strip down the right that the Refresh tile owns, reserved as this
      section's own padding-right so no content can ever reach into it. The tile
      then rides the shell's right edge: `slack` is how far the 1440px shell
@@ -163,7 +175,7 @@
   border-color: color-mix(in srgb, var(--warm) 45%, transparent);
 }
 .dev__stat[data-tone='bad'] {
-  border-color: color-mix(in srgb, #e05a5a 48%, transparent);
+  border-color: var(--danger-border);
 }
 .dev__stat--skeleton {
   min-height: 78px;
@@ -438,7 +450,7 @@
   border-color: color-mix(in srgb, var(--warm) 42%, transparent);
 }
 .dev__standing[data-tone='bad'] {
-  border-color: color-mix(in srgb, #e05a5a 48%, transparent);
+  border-color: var(--danger-border);
 }
 .dev__standing[data-tone='ok'] {
   border-color: var(--live-border);
@@ -452,8 +464,22 @@
   background-color: var(--surface);
   transition: var(--t-theme);
 }
+/* The one danger surface that is NOT painted in --danger-border, and the only
+   one that keeps a percentage of its own.
+
+   Every other red in this file paints the colour ONTO the surface. This one
+   tints the panel's ordinary border TOWARDS red and leaves it a border: a
+   whole 700px section outlined as loudly as the Delete Forever button inside
+   it would make the button invisible by making the section shout the same
+   word. So it mixes with var(--border) rather than with transparent, which is
+   a different job, not a different strength of the same one.
+
+   --danger rather than the mix tokens because those carry an alpha and this
+   needs a solid to tint with. It is per theme, and that is the right way
+   round: the tint lands lighter on the dark console and darker on the light
+   one, which is what keeps it reading as one step off neutral in both. */
 .dev__panel[data-tone='danger'] {
-  border-color: color-mix(in srgb, #e05a5a 34%, var(--border));
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
 }
 
 /* The whole header row is the toggle. A 12px chevron is a 12px target, and
@@ -817,6 +843,14 @@
   color: var(--text);
   font-weight: 600;
 }
+/* For an example of the thing being described rather than emphasis — the shape
+   of a reason to write on a badge. Stated rather than left to the browser's
+   default italic, because that default is the one thing on this page nobody
+   chose, and it reads at the same weight as the sentence around it. */
+.dev__hint em {
+  font-style: italic;
+  color: var(--muted);
+}
 
 .dev__input {
   width: 100%;
@@ -919,7 +953,7 @@
 .dev__switch-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--dev-switch-gap);
 }
 .dev__switch-row[data-disabled] {
   opacity: 0.62;
@@ -927,7 +961,7 @@
 .dev__switch {
   position: relative;
   flex: none;
-  width: 42px;
+  width: var(--dev-switch-w);
   height: 24px;
   margin-top: 1px;
   padding: 0;
@@ -1036,14 +1070,11 @@
   background-color: var(--invert-bg);
 }
 .dev__btn[data-variant='danger'] {
-  border-color: color-mix(in srgb, #e05a5a 55%, transparent);
-  color: #e88a8a;
+  border-color: var(--danger-border);
+  color: var(--danger);
 }
 .dev__btn[data-variant='danger']:hover:not(:disabled) {
-  background-color: color-mix(in srgb, #e05a5a 14%, transparent);
-}
-[data-theme='light'] .dev__btn[data-variant='danger'] {
-  color: #b03636;
+  background-color: var(--danger-soft);
 }
 
 .dev__btn-spinner {
@@ -1100,13 +1131,12 @@
   background-color: color-mix(in srgb, var(--warm) 12%, transparent);
   color: var(--warm);
 }
+/* The exact opposite number of [data-tone='ok'] above, token for token, which
+   is where --danger-soft and --danger-border were lifted from. */
 .dev__tag[data-tone='bad'] {
-  border-color: color-mix(in srgb, #e05a5a 52%, transparent);
-  background-color: color-mix(in srgb, #e05a5a 12%, transparent);
-  color: #e88a8a;
-}
-[data-theme='light'] .dev__tag[data-tone='bad'] {
-  color: #b03636;
+  border-color: var(--danger-border);
+  background-color: var(--danger-soft);
+  color: var(--danger);
 }
 .dev__tag[data-tone='hot'] {
   border-color: var(--border-hover);
@@ -1222,6 +1252,117 @@
   color: var(--faint);
 }
 
+/* ── badges ───────────────────────────────────────────────────────────── */
+
+/* A fixed floor, for the reason the Store card has one (rule 5): the panel
+   answers in three stages — reading, then the switchboard, then whatever the
+   account turns out to hold — and a box that changes height twice while you
+   watch reads as a page still loading. The skeleton rows do the rest of the
+   job from the second account onwards; this covers the first read, when there
+   is no row count to guess from.
+
+   A floor, deliberately, not a height: a catalogue that outgrows it makes the
+   panel taller, which is the right way for this to fail. Clipping a badge
+   would be the panel lying about how many there are.                        */
+.dev__badges {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 300px;
+}
+
+.dev__badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.dev__badge {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* When and why it was awarded, inside the switch's own hint so a screen reader
+   gets it as part of the description rather than as a stray line after it.
+   Mono, because it is a stamp: a date and a quotation, not prose. */
+.dev__badge-since {
+  display: block;
+  margin-top: 3px;
+  font: 400 10.5px/1.5 var(--font-mono);
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+
+/* Indented to the switch's text column — the switch plus the row's gap — so it
+   reads as belonging to the badge above it rather than to the panel. Both
+   numbers come from the pair of variables the switch row itself uses, per rule
+   6: an indent typed here would go out of step the first time a switch changed
+   size, and nothing would fail loudly when it did. */
+.dev__badge-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-left: calc(var(--dev-switch-w) + var(--dev-switch-gap));
+}
+.dev__badge-note-copy {
+  flex: 1 1 200px;
+  min-width: 0;
+  font: 400 11.5px/1.5 var(--font-body);
+  color: var(--faint);
+}
+
+/* A computed badge: a fact with a tag on it, not a control.
+
+   Solid, and lit exactly the way .dev__own is when a pack is owned, because it
+   is answering the same question. NOT dashed, even though "there is nothing to
+   press here" is roughly what dashed means elsewhere in this file: there it
+   means a switch that CANNOT be pressed — an app with no table behind it — and
+   a disabled control invites waiting for it to become available. This one is
+   never going to become a switch, and the paragraph above the group says so.
+
+   It reads as different from the rows above it without needing the hint: a
+   switch row is unboxed, 42px of switch and then text, and this is a bordered
+   card with a tag at its right edge. */
+.dev__badge-fixed {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  transition: var(--t-theme);
+}
+.dev__badge-fixed[data-held] {
+  border-color: var(--live-border);
+  background-color: var(--live-bg);
+}
+.dev__badge-fixed-text {
+  min-width: 0;
+}
+.dev__badge-fixed-name {
+  display: block;
+  font: 600 13px var(--font-body);
+  color: var(--text);
+}
+.dev__badge-fixed-what {
+  display: block;
+  margin-top: 3px;
+  max-width: 76ch;
+}
+
+/* One row's worth of nothing, at the height a switch row settles at: a name, a
+   line of hint, and the padding between them. */
+.dev__badge-skeleton {
+  height: 46px;
+  border-radius: var(--dev-radius);
+  background-color: var(--accent-soft);
+  opacity: 0.45;
+}
+
 /* ── one standing action ──────────────────────────────────────────────── */
 
 .dev__action {
@@ -1263,8 +1404,8 @@
   width: min(340px, 100%);
   padding: 14px;
   border-radius: var(--dev-radius);
-  border: 1px solid color-mix(in srgb, #e05a5a 52%, transparent);
-  background-color: color-mix(in srgb, #e05a5a 8%, transparent);
+  border: 1px solid var(--danger-border);
+  background-color: var(--danger-soft);
 }
 .dev__confirm-copy {
   margin: 0;
@@ -1703,7 +1844,7 @@
   border-color: var(--live-border);
 }
 .dev__toast[data-tone='bad'] {
-  border-color: color-mix(in srgb, #e05a5a 55%, transparent);
+  border-color: var(--danger-border);
 }
 .dev__toast-text {
   flex: 1 1 auto;
@@ -1782,6 +1923,21 @@
   }
   .dev__fact-value {
     text-align: left;
+  }
+  /* The indent under a badge switch is worth 54px of a 254px column, and the
+     thing it aligns to is the reason it exists. At this width there is no
+     second column to align with: the sentence beside the button has already
+     wrapped under it, so the indent is only narrowing the text. */
+  .dev__badge-note {
+    margin-left: 0;
+  }
+  /* And a derived badge stacks its tag under its name, the way .dev__fact
+     does directly above — a HELD tag squeezed against the right edge takes
+     the name down to two words. */
+  .dev__badge-fixed {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
   /* The feedback table stacks the way the ledgers do: one report reads as a
      small card, and the sort row wraps into a strip of buttons. Nothing is

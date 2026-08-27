@@ -19,6 +19,37 @@ import { OFFLINE_MESSAGE, authMessage } from './wording'
  */
 const ACCOUNT_FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tdg-site-account`
 
+/**
+ * Where a provider redirect and a password-reset email are told to land.
+ *
+ * **`window.location.origin` alone is wrong here, and wrong only in
+ * production.** This site is served from a subpath — `base: '/TDG-Site/'` in
+ * vite.config.ts — so the origin on its own is `https://tdg-org.github.io`,
+ * which is the ORG's Pages root and not this site. Somebody who signed in with
+ * GitHub or Google, or clicked the link in a reset email, was returned to
+ * somebody else's index page, and the two handlers waiting for them — the
+ * `?error=` reader and the `PASSWORD_RECOVERY` branch, both below — live on a
+ * page that never loaded. They could not run, so nothing ever looked broken
+ * from in here.
+ *
+ * `BASE_URL` is the piece that knows the subpath: `/` under `npm run dev`,
+ * `/TDG-Site/` in a production build, always with a trailing slash. Same
+ * reasoning as `src/lib/asset.ts`, and the same failure shape AGENTS.md rule 15
+ * names — it works perfectly in dev and breaks only after deploy, which is why
+ * it sat here unnoticed.
+ *
+ * Read at call time rather than at module load: `window.location.origin` is
+ * whatever host this build is actually being served from, so one build works on
+ * localhost, on `vite preview` and on Pages without being told which.
+ *
+ * The other half of this is NOT in this repo. GoTrue checks the value against
+ * the project's own **Redirect URLs allow-list**, a Supabase dashboard setting,
+ * and refuses anything not on it. `https://tdg-org.github.io/TDG-Site/**` has
+ * to be listed there or the corrected URL is refused just as flatly as the
+ * wrong one worked.
+ */
+const siteUrl = () => window.location.origin + import.meta.env.BASE_URL
+
 async function callAccountFn(
   body: Record<string, unknown>,
 ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
@@ -239,7 +270,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signInWithOAuth(provider) {
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
-          options: { redirectTo: window.location.origin },
+          // siteUrl(), never window.location.origin: the origin alone drops the
+          // /TDG-Site/ base path and lands the reader on the org's Pages root.
+          options: { redirectTo: siteUrl() },
         })
         return { error: error?.message ?? null }
       },
@@ -250,7 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const answer = await callAccountFn({
           action: 'reset',
           identifier,
-          redirectTo: window.location.origin,
+          // Same as OAuth above, and it matters more here: this one is baked
+          // into an email that outlives the tab that asked for it, so a wrong
+          // base path is a dead link in somebody's inbox rather than a bad
+          // second of browsing. The endpoint passes this straight through to
+          // GoTrue's `redirect_to`; see supabase/functions/tdg-site-account.
+          redirectTo: siteUrl(),
         })
         return { error: answer.ok ? null : answer.error }
       },

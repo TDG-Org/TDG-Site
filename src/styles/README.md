@@ -38,10 +38,107 @@ in the same edit.
 | Accent | `--accent` `--accent-2` `--accent-soft` `--glow` `--warm` |
 | Shadow | `--card-shadow` |
 | "Playable" green | `--live-fg` `--live-bg` `--live-border` |
+| Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
+| The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
+| The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-step-2` `--seam-lift` `--seam-fade` `--terrain-haze` `--terrain-haze-rear` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
 `--live-*` is per theme deliberately: one hardcoded `#4ea36a` failed AA in both.
+`--danger` is per theme for the same reason. Its `-soft` and `-border` are
+not — the red they are mixed from is the same in both — so they are declared
+once on `:root` and are deliberately absent from the light block. `--seam-step`
+and `--seam-step-2` are single for a better reason: they step toward `--text`,
+which already carries the theme, so one percentage is correct in both.
+`--seam-lift` is single because it is a length and has no theme to have.
+
+### The bands of the page
+
+One name per horizontal band of the one-page scroll, top to bottom, and the
+**only** place each of those colours is written down. `base.css` builds every
+section's `--tint-top` / `--tint-mid` / `--tint-bot` out of them, so a section's
+floor and the next section's ceiling are not two hexes that agree — they are
+the same token. That is what turns the promise above `.section--blend` ("every
+boundary meets on an identical value") into something the file enforces rather
+than asserts.
+
+`base.css` also hands each section a `--seam-fill`, for a `Seam` from
+[`../components/scene/`](../components/scene/README.md) sitting on one of its
+edges. It is **not** the band itself: because adjacent bands meet on an
+identical value, a shape drawn at a boundary in either neighbour's colour is
+drawn where the two are equal, and paints nothing at all — measured on `#apps`,
+`rgb(8, 8, 12)` for both. So `--seam-fill` is the band stepped `--seam-step`
+toward `--text`, which lifts the silhouette slightly above a dark sky and drops
+it slightly below a pale one from a single declaration, the way the art kit's
+two ridge files are drawn. See that folder's README.
+
+Three of the eight are an alias rather than a value, because the number already
+has an owner: `--band-hero` is `--hero-bg`, `--band-outro` is `--bg`,
+`--band-foot` is `--bg2`. Those follow the theme through the token they point
+at, so they are declared once on `:root` and are **deliberately absent** from
+the light block. The five section bands have no other owner and are stated in
+both, as rule 3 requires.
+
+Adding a section: its band goes here in both themes, its `--seam-fill` goes in
+`base.css` beside the others, in the same edit, and its tint triple reads bands
+rather than hexes.
+
+**One of the eight is taken off the artwork rather than chosen.**
+`--band-origin` is the colour the hero ridge's foot actually composites to —
+the sampled foot ink of `landscapes/mountain-ridge`, painted at `--art-far`
+over the hero sky's floor — brought to the band's *own* lightness. That last
+clause is the whole design: dark and light move on different axes because the
+measurement says they must (the gap is `dL* 5.97` and hue-dominated in dark,
+`dL* -64.56` and lightness-dominated in light), and a near-white section band
+cannot give up lightness under seven chapters of prose. `tokens.css` shows the
+working. Lightness is held to a tenth of a unit in both themes, which is why
+`--seam-step`'s calibration did not have to be re-derived: that step is a fixed
+6% blend toward `--text`, so it tracks lightness and nothing else.
+
+### The scene layer tokens: three opacities, two dissolve rates, a length, two steps, two inks
+
+`--art-far` / `--art-mid` / `--art-near` are the opacities the transparent art
+kit in `public/assets/parallax/` is drawn at, by how far back the layer reads,
+and `--seam-fade` is the alpha a soft edge is still at halfway down, for
+anything that dissolves into a section rather than stopping at a line. Those
+four are plain **numbers** because they multiply artwork that is **already**
+the right colour for the theme — the kit ships separate `-dark` and `-light`
+files and its own README is explicit that a CSS filter must never stand in for
+that swap.
+
+**`--seam-step-2` is the second band's step, where a boundary carries two.**
+94% is the primary band at all five joins; 92% is the second, and the second is
+always the masked one — `#apps`' near canopy over its far treeline, and
+`#faith`'s rising range under its hanging bank. `tokens.css` carries the
+computed L\* table both numbers were picked from. It was a literal `92%` in two
+section stylesheets, which is two sections separately deciding one thing.
+
+**`--seam-lift` is the odd one out: a length, `4vh`.** It is how much of its own
+ink a seam's drift wrapper backfills ABOVE its top edge, so that parallax cannot
+slide a `Seam` path's straight horizontal top edge out from behind the join and
+draw a line across the page. Four section stylesheets declared it; `tokens.css`
+carries why 4 and why a `vh` rather than a px, and `Apps.css` carries the
+artefact. Theme-independent, so it has no light twin — and unlike the tokens
+above it, a boundary opts out by having no `::before` rather than by not
+declaring it.
+
+`--terrain-haze` and `--terrain-haze-rear` are the two that are **colours**,
+and they are here for the same reason the numbers are: they are properties of
+the shipped files, read off them once. A cutout has a hard alpha edge wherever
+its ink runs out, and both hero ridge files run out along a nearly horizontal
+cut — the rear range's light artwork to within a single pixel across the whole
+file. These are the ink each one stops on, sampled per column off the `.webp`
+that is actually painted, so a gradient drawn under the art can start on
+exactly that value and the step at the cut is zero rather than `dE00` 5 to 14.
+Per theme, like everything else, because they come from two different files.
+`Hero.css` is the only consumer today and carries the geometry.
+
+They are tokens rather than per-section literals because the kit's restraint is
+one decision, not seven. That README gives the ranges (mountains 0.48–0.64 dark
+/ 0.34–0.48 light, props 0.50–0.72 dark / 0.38–0.56 light); these sit inside
+them, light lower throughout, so no section has to re-guess and end up loud in
+one band and invisible in the next. The primitives that consume them are in
+[`../components/scene/`](../components/README.md).
 
 ### Radii are tight, everywhere
 
@@ -54,7 +151,7 @@ read as belonging to a different site.
 @property --tint-top { syntax: '<color>'; ... }
 ```
 
-`--tint-top`, `--tint-mid`, `--tint-bot` and `--story-glow-warm` are registered
+`--tint-top`, `--tint-mid`, `--tint-bot` and `--origin-glow-warm` are registered
 so the section blend gradients can **animate** with the theme wave. An
 unregistered custom property inside a gradient snaps instead of transitioning,
 which would make the wave stop dead at every section boundary.
@@ -131,9 +228,18 @@ the always-dark auth modal each come back as themselves.
 ### `@media print` and `@media (prefers-reduced-motion: reduce)`
 
 Printing a dark page produces white-on-white, so the print block re-uses the
-light tokens and drops everything decorative. The reduced-motion block is not
-optional — every component stylesheet carries its own, and anything you add with
-a transform or an animation needs an entry.
+light tokens and drops everything decorative.
+
+The reduced-motion block in `base.css` pauses **every** animation on the page —
+`*, *::before, *::after { animation-play-state: paused !important }` — so a
+component stylesheet needs no block of its own merely to stop a keyframe
+animation, and most do not have one. What a component's own block is for is
+what the global pause cannot reach: a transition, a transform on hover or
+focus, and any animation whose 0% frame is not a resting state — the hero's
+scroll arrow and shafts and the Faith rays are pinned back up in `base.css` for
+exactly that reason. If what you added is a decorative keyframe animation
+inside a section, it is already covered. If it moves on hover, on focus or on a
+state change, write the block.
 
 ### `overflow-wrap` on text elements
 

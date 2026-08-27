@@ -22,7 +22,7 @@ import { hay, useSearch } from './search'
  * write it: what this section IS, and what changing it does. `writes` names the
  * actual table underneath, because when something looks wrong the next question
  * is always "where does that live?". Both stay visible while collapsed, so a
- * shut page still reads as an index rather than as a stack of nine mystery
+ * shut page still reads as an index rather than as a stack of ten mystery
  * headings.
  *
  * Collapsed by default. See `sections.tsx` for why, and for how Expand All
@@ -122,6 +122,7 @@ export function Panel({
               strokeWidth="2.6"
               strokeLinecap="round"
               strokeLinejoin="round"
+              focusable="false"
             >
               <path d="m9 18 6-6-6-6" />
             </svg>
@@ -189,6 +190,7 @@ export function SectionControls({ hint }: { hint?: ReactNode }) {
             stroke="currentColor"
             strokeWidth="2.2"
             strokeLinecap="round"
+            focusable="false"
           >
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.6-3.6" />
@@ -310,6 +312,23 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
     )
   }, [value])
 
+  /*
+   * The 1400ms is a real window in which this button can leave the page: every
+   * Fact on the account detail carries one, and clicking a different account
+   * unmounts all of them at once. Without this the timer still fires and calls
+   * setState on a component that no longer exists.
+   *
+   * React 19 dropped the warning that used to make that loud, so it now fails
+   * silently — which is the reason to clear it here rather than to trust that
+   * nobody has noticed a problem.
+   */
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current)
+    },
+    [],
+  )
+
   return (
     // `label` for a value too long to be its own name: "Copy report #142" is
     // hearable, a five-paragraph aria-label read out in full is not.
@@ -427,6 +446,7 @@ export function Select({
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
+        focusable="false"
       >
         <path d="m6 9 6 6 6-6" />
       </svg>
@@ -655,6 +675,7 @@ export function OwnTile({
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
+          focusable="false"
         >
           <path d="M20 6 9 17l-5-5" />
         </svg>
@@ -750,16 +771,57 @@ let toastSeq = 0
 export function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  const push = useCallback((tone: 'ok' | 'bad', text: string) => {
-    const id = ++toastSeq
-    setToasts((list) => [...list, { id, tone, text }])
-    // A refusal is something to read; a success is something to notice. The
-    // failure sits four times as long for exactly that reason.
-    window.setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), tone === 'ok' ? 2600 : 9000)
+  /*
+   * Every toast still counting down, by id.
+   *
+   * There is one of these per message rather than one for the newest, because
+   * they overlap: a Refresh that refuses five reads pushes five 9-second
+   * toasts inside one frame, and a single handle would leave four of them
+   * alive with nothing holding their ids.
+   *
+   * Kept so they can all be cleared on unmount. Nine seconds is long enough
+   * to leave the console — the failure toast is deliberately the long one, so
+   * it is also the one most likely to outlive the page it was pushed from —
+   * and a timer that fires after that calls setState on a component that is
+   * gone. React 19 no longer warns about it, so this fails silently rather
+   * than loudly, which is why it survived until an audit went looking.
+   */
+  const timers = useRef(new Map<number, number>())
+
+  /** Take one toast down, and stop its clock. Both, always: a toast dismissed
+   *  by hand used to leave its timer running to filter an id already gone. */
+  const dismiss = useCallback((id: number) => {
+    const t = timers.current.get(id)
+    if (t !== undefined) {
+      window.clearTimeout(t)
+      timers.current.delete(id)
+    }
+    setToasts((list) => list.filter((x) => x.id !== id))
   }, [])
 
-  const dismiss = useCallback((id: number) => {
-    setToasts((list) => list.filter((t) => t.id !== id))
+  const push = useCallback(
+    (tone: 'ok' | 'bad', text: string) => {
+      const id = ++toastSeq
+      setToasts((list) => [...list, { id, tone, text }])
+      // A refusal is something to read; a success is something to notice. The
+      // failure sits four times as long for exactly that reason.
+      timers.current.set(
+        id,
+        window.setTimeout(() => dismiss(id), tone === 'ok' ? 2600 : 9000),
+      )
+    },
+    [dismiss],
+  )
+
+  useEffect(() => {
+    // Captured at effect time rather than read in the cleanup: the ref object
+    // itself never changes, and reading `.current` on the way out is the
+    // pattern that goes wrong when it does.
+    const live = timers.current
+    return () => {
+      for (const t of live.values()) window.clearTimeout(t)
+      live.clear()
+    }
   }, [])
 
   return { toasts, push, dismiss }
@@ -845,7 +907,7 @@ export function RefreshRail({
   /*
    * The clock lives here rather than on the page, so the thing that re-renders
    * every thirty seconds is one button, not a console holding three lists and
-   * nine panels. An age that never ticks is worse than no age at all: it says
+   * ten panels. An age that never ticks is worse than no age at all: it says
    * "2m" for an hour.
    */
   const [, tick] = useState(0)
@@ -888,6 +950,7 @@ export function RefreshRail({
             strokeWidth="2.3"
             strokeLinecap="round"
             strokeLinejoin="round"
+            focusable="false"
           >
             <path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01" />
             <path d="M20.5 4.5v5h-5" />

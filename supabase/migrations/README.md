@@ -21,6 +21,7 @@ can rebuild, and a change nobody can read the reasoning for six months later.
 | `20260825120000_store_subscription_management.sql` | The service-role-only `tdg_billing_subscription` lookup used by the Store's Change, Cancel and Resume actions. It resolves the signed-in account's Stripe ids from the app's own grants row and accepts only apps discovered by `tdg_store_apps()`, so the browser never names a customer or subscription id. |
 | `20260826090000_admin_pack_grant_shape.sql` | `tdg_admin_set_pack_grant`, which lets a developer preview every real recurring-pack standing without inventing a Stripe subscription id: renewing, ending on a date, trialing, payment retry and ended. It writes the authoritative `grants` object only for apps that have one and records the action in both ledgers. |
 | `20260826120000_admin_pack_grants_authoritative.sql` | Applied 2026-08-26. Makes the Developer console's on/off switch write `grants` for grants-aware apps, rather than changing only the legacy `owned_packs` mirror that TDG Veditor does not read. ON becomes a perpetual admin grant, OFF removes it, and one-time-only apps retain the existing `owned_packs` path. This is what let a Theme Pack accidentally put into Ended be granted back normally. |
+| `20260826120000_tdg_account_badges.sql` | Global account badges, and the one public number the site's footer prints. `tdg_account_badges` with RLS on and **no** client policies; the catalogue is `tdg_badge_catalog()` in SQL, for the same reason `tdg_feedback_kinds()` is, so a new badge is a migration and no TypeScript. Two of the six are `derived` — Developer *is* `profiles.is_admin`, Subscriber *is* a paid `subscriptions.tier` — computed on every read rather than stored, because a stored copy is a second opinion that goes stale the moment the flag flips; `tdg_admin_badge_set` refuses one with its own sentence rather than silently doing nothing. Verbs: `tdg_my_badges` (the caller's own, taking no user id on purpose — one that took one would be a profile-scraping endpoint), `tdg_public_stats` (two integers, and **the only function on this project granted to `anon`** — no identity, no refusal, and the footer is on the pages nobody signs in to read), `tdg_admin_badges` (every catalogue row with `held`, so the console draws a full switchboard) and `tdg_admin_badge_set`, both admin verbs opening with `tdg_admin_uid()` and auditing every change through `tdg_admin_log`. `user_id` is ON DELETE CASCADE, the opposite of `tdg_feedback`: a bug report outlives its reporter because the bug is still there, and a badge is a sentence about an account. NOT to be confused with `public.tdg_badges`, which is per-app achievement state and is untouched. |
 
 
 ## Rules
@@ -38,6 +39,15 @@ can rebuild, and a change nobody can read the reasoning for six months later.
 - **Grants go to `authenticated`, never `anon`.** A signed-out caller has no
   admin row to check, so reaching these could only ever produce a refusal and a
   probe endpoint.
+
+  There is exactly **one** exception, `tdg_public_stats()` in
+  `20260826120000_tdg_account_badges.sql`, and what makes it one is that it has
+  no identity in it at all: no parameter, no `auth.uid()`, no refusal to probe
+  with, and a return shape of two integers that name nobody. It is granted to
+  `anon` because the site's footer is on every page, including all the ones
+  nobody has signed in to read. A second exception needs to clear the same bar,
+  which is a high one — the moment a function can answer differently about
+  different people, it belongs behind `authenticated`.
 
 ## Applying one
 

@@ -1,14 +1,132 @@
-.apps__dots {
-  opacity: 0.72;
-  background-image: repeating-radial-gradient(
-    circle at 86% 10%,
-    var(--border) 0 1px,
-    transparent 1px 76px
-  );
-  -webkit-mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
-  mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
+/* ── the section ───────────────────────────────────────────────────────────
+   Read `Walk.tsx` and CONTRACT W in internal/checklists/cabin-interior-spec.md
+   before this file. This section is the middle third of one pinned camera
+   move: the reader has come in through the cabin door and the camera has
+   settled looking DOWN at a big table, and the project cards are read against
+   the paper spread across it.
+
+   **Everything this file used to draw is deleted, not disabled.** A lit floor,
+   a park bench, a stand of scrub, and a band that crossed UP over the Origin
+   boundary carrying a fir line, a broadleaf, a haze band and a near grove —
+   plus `--apps-ground-ink`, `--apps-cross`, `--apps-over-depth`,
+   `--apps-firs-h`, the two broadleaf variables, the two grove variables, the
+   reed pair, the bench pair, this section's `overflow-clip-margin`, and the
+   `:root` block the whole lot hung from. Apps.tsx has the reasoning and it is
+   one sentence: they were the treatment for a join between two landscapes, and
+   there is no join there any more, only a room.
+
+   ── no background, and that is the load-bearing line ──────────────────────
+   `.section--flat` came off the class list. It is `background-color:
+   var(--tint-mid)`, an opaque band edge to edge, and this section paints OVER
+   the walk's stage — `.stage` is `z-index: 0` and every section inside `.walk`
+   is a positioned sibling of it, painted later in tree order. An opaque band
+   here does not sit behind the cabin, it hides it completely.
+
+   So the backdrop for all three sections of the walk is ONE gradient, on
+   `.walk`, underneath the canvas: transparent at the top for the hero's
+   dissolve, --band-origin through the approach, --band-apps and --band-tools
+   through the interior, --band-building at the floor so `#building` still
+   meets a band identical to its own. Walk.css carries it. What this section
+   gains for giving its own band up is the thing the whole pass is about: there
+   is no boundary at either end of it left to treat.
+
+   `background-color: transparent` is stated rather than left to the default,
+   because putting `.section--flat` back is a one-word change and it is the one
+   change that would hide the shot.
+
+   ── the two paddings, and what they are for ───────────────────────────────
+   They are not air. Each is a BEAT of the camera move, and they are the only
+   room those beats have:
+
+     --apps-lead   the TURN. The camera comes off the door axis and swings left
+                   toward the south-west corner, and the fireplace sweeps
+                   across the back of frame. It runs from Origin's last line to
+                   this section's kicker.
+     --apps-floor  LOOKING UP. The camera tilts off the table and starts its
+                   pan toward the west window. It runs from the last card row
+                   to `#tools`' top edge.
+
+   Both are `svh` and not `vw`, and that is the whole reason the numbers are
+   what they are. The pin's run is `walk height − 100svh`, so every pixel of
+   height either of these adds is a pixel of CAMERA, measured against the
+   viewport. A `vw` clamp gives a tall narrow window almost no run for a beat
+   and a short wide one too much — which is exactly the defect this pass was
+   sent to fix at `#tools`, where 870px of section left the window beat with
+   less than a viewport to happen in.
+
+   30svh and 34svh, resolved at 1440x900: 270px of turn and 306px of tilt. The
+   floor is the larger of the two because the tilt has further to travel than
+   the turn does and because it also has to carry the reader's eye off the last
+   card before the next heading arrives. Together they add 144px to this
+   section against the 130 + 302 it had, and what they buy is measured at the
+   top of Tools.css: the walk's marks land at p 0.385 for this section's top
+   edge and 0.815 for `#tools`'.
+
+   The site owner approved more spacing between these sections for exactly this
+   beat, and it is being spent on something rather than opened as a gap: over
+   both of these bands the canvas is the only thing on screen, and it is
+   moving.                                                                   */
+.section.apps {
+  --apps-lead: clamp(96px, 30svh, 340px);
+  --apps-floor: clamp(120px, 34svh, 400px);
+
+  padding-top: var(--apps-lead);
+  padding-bottom: var(--apps-floor);
+  background-color: transparent;
 }
 
+/* The box `.apps__blob` lives in: `aria-hidden` and `pointer-events: none` in
+   one place rather than two. It used to be the box that stopped the floor art
+   escaping through the section's clip MARGIN; the margin went with the
+   treeline that needed it, so the section is back to `.section`'s own
+   `overflow: hidden` and this is a plain wrapper now. It keeps `overflow:
+   clip` anyway — `hidden` would make it a scroll container for no reason, and
+   `.origin__clip` and `.tools__clip` are the same box in the two sections
+   either side of this one. `inset: 0` is the section's PADDING box, which is
+   what every percentage in here resolves against. */
+.apps__clip {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+}
+
+/* ── `.apps__dots` is DELETED, and the render is the reason ────────────────
+   It was `.texture` carrying `repeating-radial-gradient(circle at 86% 10%,
+   var(--border) 0 1px, transparent 1px 76px)` under a radial mask — a lattice
+   of concentric rings 76px apart, at 0.72, over the whole section.
+
+   The argument for keeping it when this section moved indoors was that a
+   lattice at the page's own scale reads as the page's grain sitting on the
+   glass rather than as an object at a distance. It does not. Caught in the
+   renders of this pass at scroll 2400 in both themes: faint concentric
+   circles drawn across the cabin's interior wall, which is a ring pattern on a
+   photograph of a room and reads as exactly that. There is no viewing distance
+   at which a wall has rings on it.
+
+   **It could not be moved behind the canvas, and that is worth writing down
+   because it is the obvious fix.** Every section inside `.walk` is a
+   positioned sibling of the stage painted later in tree order, so this layer
+   is above the canvas by construction. `z-index: -1` would not put it under
+   the canvas either: `.walk` deliberately establishes no stacking context, so
+   a negative index here resolves in the ROOT order — behind `.walk`'s own
+   background band as well as behind the stage, which is not "under the canvas"
+   but "gone". And there is no stretch of this section where the camera is
+   outside the cabin to keep it on: `#apps` is the table beat end to end.
+
+   So the section's one remaining decorative layer is `.apps__blob`, which is
+   light on the air and is the one thing that is still true over an interior.
+   `.origin__grid` is a different layer in a different file and one section up,
+   where the camera spends most of its run outdoors; nothing here decides
+   anything about it.                                                        */
+
+/* Up and to the LEFT, which is where the fire is once the camera has turned
+   toward the table — so this is the room's light on the air rather than a sky
+   glow, and it is the one thing this section paints that is not type. The box
+   is unchanged from when it was a sky glow; what changed is what is behind it.
+   `.blob` in base.css carries the gradient and the promotion, and its
+   `will-change: translate` is paid for: this is the section's only
+   `useParallax` subscriber. */
 .apps__blob {
   top: 14%;
   left: -4%;
@@ -17,10 +135,97 @@
   filter: blur(30px);
 }
 
+/* ── narrow ────────────────────────────────────────────────────────────────
+   640 is where this grid drops to one column, so it is where the section is at
+   its tallest and its two bands are the only air in it. The beats still need
+   room — the camera turns and tilts on a phone exactly as it does on a laptop
+   — but a phone's whole viewport is 812px and a 306px band under two stacked
+   cards is a third of a screen of nothing.
+
+   22svh and 24svh: 179px and 195px at 375x812, a quarter of a screen for each
+   beat rather than a third. The floor stays the larger of the two for the same
+   reason it is larger above.
+
+   The five `display: none` rules that used to be here went with the layers
+   they hid, and so did the four re-declared clamps: there is no peripheral art
+   left in this section for guardrail 7 of the art kit to take off.          */
+@media (max-width: 640px) {
+  .section.apps {
+    --apps-lead: clamp(84px, 22svh, 200px);
+    --apps-floor: clamp(84px, 24svh, 220px);
+  }
+}
+
 .shell.apps__shell {
   max-width: 1180px;
 }
 
+/* ── the head's scrim ──────────────────────────────────────────────────────
+   The kicker, the heading and the lede have no plate of their own. `.card`
+   does — base.css gives every card `--card-bg`, a ~0.75-alpha plate at each
+   theme's own ground — so the eight cards below this block were already safe
+   over a lit backdrop and the four lines above them were not.
+
+   That did not matter while the page behind this section was a flat band. It
+   matters now: under CONTRACT W these words sit over a cabin interior with a
+   fire in it, and `Origin.css` has the measurement of what that does to
+   unplated type — --faint on the cabin's lit wall composites to
+   rgb(224,224,222) over rgb(200,180,140), which is 1.5:1. The tags were not
+   low contrast, they were gone.
+
+   ── it is `.walk-plate` now, and what changed is how far it reaches ──────
+   Walk.css carries the construction — two linear ramps intersected, no edge on
+   any side, cropped by the frame on the left — and the argument for it, and
+   the print rule that used to be duplicated in this file. It is the same
+   recipe Origin's three blocks and `#tools`' head now use, which is the point:
+   five plates over one continuous camera move should be one idea.
+
+   **What was wrong here was not the edge, it was the reach.** The alpha probe
+   (canvas hidden, `.walk` forced to a flat #808080, alpha read back as
+   `(128 - r) / 119`) measures this plate's worst single-pixel step at 0.008
+   horizontally and 0.017 vertically — it was already edge-free. It was also
+   1390 x 429 at 1440x900, which is 96% of the frame's width and 48% of its
+   height, for copy that occupies 480 x 149. Nine tenths of the ink was over
+   picture with no words on it, and the site owner's report — the cabin
+   delivered as a grey gradient — is the sum of that across five plates.
+
+   --plate-col 760: the head's copy runs x 130..610 (`.apps__heading` is 469px
+   of 48px display type and `.lede` is capped at 500), so 480 from the shell's
+   left edge, plus 40px of solid past the last glyph, plus a 240px
+   --scrim-fade. At 1440 the plate is solid to viewport 650 and gone by 890,
+   where `--scrim-x` used to hold it solid to 775 and carry it to 1350.
+
+   96 / 110 above and below, so the ramps are 76px and 90px and the solid band
+   still starts 20px above the kicker and ends 20px below the lede at every
+   width — the stops are lengths measured from the bleed rather than
+   percentages of a box whose height changes every time the heading wraps. The
+   box is 355px tall against the 429 it was.
+
+   `.apps__nudge` sits at viewport 1197..1310, where this mask is now at zero
+   rather than 0.25. That is deliberate rather than a gap and it always was: it
+   carries its own plate, and two plates on one element is double the ink on
+   the one thing in this block that already had some. Its rule below has the
+   numbers.
+
+   ── the plate hangs on a WRAPPER, not on the head ────────────────────────
+   `useReveal('wipe')` writes `clip-path: inset(N% 0 0 0)` to the element it
+   reveals, and a clip-path clips that element's PSEUDO-ELEMENTS to its border
+   box. On `.apps__head::before` that meant the scrim was drawn as a hard
+   1180 x 122 rectangle with four cut edges for the length of the wipe —
+   caught in a render at 1440x900, and arriving at exactly the moment the
+   reader scrolls this section into view, which is the worst possible timing
+   for the one defect this pass exists to remove.
+
+   So `.apps__head-plate` is an ordinary block wrapped round the head; the head
+   reveals inside it and the words wipe on over a plate that was already there.
+   `.apps__head`'s `margin-bottom` collapses out through the wrapper, so the
+   plate's box is the head's box exactly and no layout moved. Apps.tsx has the
+   note where the wrapper is rendered.                                       */
+.apps__head-plate {
+  --plate-col: 760px;
+  --plate-up: 96px;
+  --plate-down: 110px;
+}
 .apps__head {
   display: flex;
   align-items: flex-end;
@@ -35,13 +240,49 @@
 .lede.apps__lede {
   max-width: 500px;
 }
+/* The hover hint, and it is the one piece of copy in this block that the head's
+   scrim deliberately does not reach: it sits at the far right, from 91% to
+   100% of the block, where that mask is already at zero.
+
+   It needs its own plate for the same reason the head needed one, and worse.
+   --accent-soft is `rgba(255,255,255,0.07)` in dark — 7% of white over
+   whatever is behind it, which is nothing at all — and measured on the
+   rendered page at 1440x900 this pill sits on rgb(118,105,89) in dark and
+   rgb(194,185,179) in light at scroll 3150: the fire's own light on the
+   cabin's right-hand wall, the warmest and brightest part of the frame.
+   --accent-2 on those was 2.74:1 and 4.53:1 against a 4.5 floor for 12.5px.
+
+   Three layers rather than one, and the third is this pass's: --card-bg is the
+   plate, --card-bg again is a second coat of it, and --accent-soft is the lift
+   on top. None of them has to know another's alpha. `background-color` plus
+   `background-image` and not the `background` shorthand, which would reset
+   whichever was written second, and the image list paints FIRST-ON-TOP, so the
+   lift is written before the coat it sits on.
+
+   ── why a second coat, measured ──────────────────────────────────────────
+   The head's plate used to reach this far right at about 0.25 of alpha, and
+   that quarter was quietly holding this pill up: with the plate now stopping
+   240px past the head's own last glyph, the same pill measured 4.38:1 against
+   its 4.5 floor — a regression this pass caused and had to pay for locally
+   rather than by making the head's plate wide again.
+
+   One coat of --card-bg is 0.74 in dark, so over the table's paper it leaves
+   26% of rgb(112,113,117) showing and --accent-soft's 7% white puts it back
+   up. Two coats are 0.93, which lands the pill on rgb(33,34,40) and --accent-2
+   at 6.5:1 — and in light two coats of 0.88 are 0.986, a pill that is very
+   nearly the theme's own white, which is what a small control over a lit table
+   should be. It is a UI object rather than scenery; scenery is what the plates
+   are for, and they are the things that had to get smaller. */
 .apps__nudge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 9px 15px;
   border-radius: 2px;
-  background-color: var(--accent-soft);
+  background-color: var(--card-bg);
+  background-image:
+    linear-gradient(var(--accent-soft), var(--accent-soft)),
+    linear-gradient(var(--card-bg), var(--card-bg));
   border: 1px solid var(--border-hover);
   font: 500 12.5px var(--font-body);
   color: var(--accent-2);
@@ -158,10 +399,34 @@
   font-size: 12px;
 }
 
+/* The ninth tile, and the only one in this grid that is not a `.card`. It used
+   to be a 7%-white wash inside a dashed border, which read as an empty slot on
+   a flat band and reads as nothing at all over a lit table — --accent-soft is
+   `rgba(255,255,255,0.07)` in dark, so its own copy was being read straight
+   off the backdrop.
+
+   Three layers, not one: --card-bg is the plate, --card-bg again is a second
+   coat, and the gradient is the lift on top. None of them has to know
+   another's alpha, and the image list paints first-on-top, so the lift is
+   written before the coat it sits on. `background-color` plus
+   `background-image` rather than one `background` shorthand, because the
+   shorthand resets the other.
+
+   The second coat is this pass's and it is the same repair `.apps__nudge`
+   below got, for the same reason: the head's plate used to reach across most
+   of this grid and is now gone 240px past the head's own last glyph, so both
+   of these boxes lost a quarter-alpha of ink they had been quietly leaning on.
+   Measured on the rendered page at 1440x900, this tile's copy came out at
+   4.49:1 against its 4.5 floor with one coat; two coats put it at 5.4. A UI
+   tile over a lit table is allowed to be nearly opaque — it is an object, not
+   scenery, and scenery is what had to get smaller. */
 .apps__more {
   border-radius: 3px;
   padding: 30px;
-  background: linear-gradient(150deg, var(--accent-soft), transparent);
+  background-color: var(--card-bg);
+  background-image:
+    linear-gradient(150deg, var(--accent-soft), transparent),
+    linear-gradient(var(--card-bg), var(--card-bg));
   border: 1px dashed var(--border-hover);
   display: flex;
   flex-direction: column;
@@ -180,4 +445,29 @@
 .apps__more-link {
   font: 600 13px var(--font-body);
   color: var(--accent-2);
+}
+
+@media print {
+  /* `.apps__head-plate::before` used to head this list, because base.css's
+     print block does not neutralise --card-bg — it rewrites --bg, --surface,
+     --text and the hero's set, and stops — so the plate would print as
+     rgba(9,10,16,0.74) in the dark theme: a near-black rectangle under black
+     type, across the section's whole heading. It is still true and it is
+     answered once now, for all five plates in the walk, by
+     `.walk-plate::before` in Walk.css's print block. Origin.css and Tools.css
+     each dropped a copy of the same rule in the same edit.
+
+     (`.apps__over` and `.apps__ground` used to be here too, for the crossing
+     band and the lit floor. Both are deleted; see the top of this file.)
+
+     The same trap two elements down. `.apps__more` and `.apps__nudge` both took
+     a --card-bg plate in this pass so their copy is not read straight off the
+     cabin's table, and on paper each plate is the same near-black rectangle.
+     Both boxes stay — they are content, not scenery — so the plate is cleared
+     rather than the box hidden, and the borders and the --accent-soft lifts are
+     left alone. */
+  .apps__more,
+  .apps__nudge {
+    background-color: transparent !important;
+  }
 }

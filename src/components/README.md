@@ -14,11 +14,12 @@ shared primitives every one of these builds on live in
 
 | | |
 | --- | --- |
-| `Hero.tsx` | The opening scene. Owns `useHeroTakeover`, which slides Story up over it. Its canvases are in `hero/`. |
-| `Story.tsx` | Seven chapters on a timeline that fills as you read. Backed by `story/StoryField.tsx`. |
-| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. |
+| `Hero.tsx` | The opening scene, and a **pinned** one: a 230svh section whose `scene/Stage` holds still for 130svh while the copy dissolves over it and Origin climbs up on a `margin-top: -100svh`. Its own header draws the three boxes and names the trap in each; read it before you touch the seam. Its canvases and its typed tagline are in `hero/`. (It used to own a `useHeroTakeover` hook that slid Origin with a JS translate. That hook is gone — the overlap is CSS now, so there is nothing left to time.) |
+| `Walk.tsx` | **Not a section — a wrapper around three of them.** It owns the one 3D backdrop the whole cabin walk is read against, and the `margin-top: -100svh` that pulls this half of the page onto the pinned hero. See below. |
+| `Origin.tsx` | Seven chapters on a timeline that fills as you read, over the walk's `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read, and then goes inside. |
+| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. Both are read against the walk's camera — the projects over a table, the tools over a window — so neither paints a background of its own. |
 | `Building.tsx` | What is on our screens right now. |
-| `Faith.tsx` | A slow gradient field and one verse. |
+| `Faith.tsx` | A slow gradient field, one verse, and the summit below it — `faith/Summit.tsx`, where the page's moon finally arrives behind the cross. |
 | `Outro.tsx` | The makers note and the GitHub card that close the page. |
 
 ### The routed pages
@@ -44,19 +45,136 @@ shared primitives every one of these builds on live in
 | --- | --- |
 | `Folded.tsx` | The folding, and the blocks inside it. Shared by the app pages and About so the two cannot drift into different ideas of what a section looks like. Runs on the same state as the Developer console, via `lib/sections.tsx`. Its stylesheet is `AppPage.css`. |
 | `AppIcon.tsx` | One app's icon, drawn the same way in all four places it appears. One component rather than four copies, because the alignment is the whole difficulty and four copies is four chances to get it wrong differently. |
-| `ImageSlot.tsx` | A screenshot slot. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
-| `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph. |
+| `ImageSlot.tsx` | A picture slot: key art, else a real screenshot. `art` wins over `shot` and over a local drop, because the two are for different places — the card wants the cover, the app's own page wants the software. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
+| `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the five drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
+| `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph — and painted through `<stop>`s rather than a flat `fill` so it rides the theme wave. Three of them render on the home page, so its gradient id is per instance from `useId`, the way `scene/Moon.tsx` and `KeyArt.tsx` do it. |
 
-### `hero/` and `story/`
+### `Walk.tsx` — the one component here that is not a surface
 
-Hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx` morphs
-between the twelve forms in `shapes.ts`; `Starfield.tsx` is the dust;
-`StoryField.tsx` is the same technique scaled down to ambient.
+Everything else in this folder draws something. `Walk` draws almost nothing: it
+is a wrapper around `<Origin />`, `<Apps />` and `<Tools />` whose whole job is
+to be the box a `scene/Stage` can pin inside for all three at once.
 
-**No three.js and no WebGL in any of them**, despite `three` being a dependency.
-This is the site's own proven approach. Point counts scale to what the device can
-comfortably paint, and the dust runs at 24 Hz on a capped DPR because nobody can
-tell and it is 2.5× less canvas work for an identical result.
+**Why it has to exist.** A `Stage` is a sticky pin inside an
+`absolute; inset: 0` box, so it holds for `section height − 100svh` and
+releases on that section's bottom edge. `CabinScene` lived in a stage inside
+`#origin`, which meant it could not paint one pixel behind `#apps` or `#tools`
+— and the shot the site owner asked for goes in through the cabin door during
+Origin, settles on a table while the project cards are read, and pans to a
+window while the tools are. One camera, three sections. The stage moves up a
+level; nothing else can buy that.
+
+`internal/checklists/cabin-interior-spec.md` is the authority for the shot and
+CONTRACT W in it is the architecture. Four things are worth knowing before you
+touch anything in this half of the page:
+
+- **It hands `CabinScene` a `WalkProgress`**, not a section progress: `p` is
+  the sticky pin's own travel, 0 when the wrapper's top reaches the viewport
+  top and 1 when the pin releases, plus `apps` and `tools` — the p at which
+  each of those sections' top edges arrive, measured from the live boxes so
+  the camera's settled beats stay on the headings when a section's height
+  changes. It is a frozen accessor over a ref, like `usePointer`, so nothing
+  re-renders sixty times a second.
+- **The three sections paint no background.** `#origin` is `z-index: 4` and the
+  other two are positioned siblings of the stage, so any band on them is a lid
+  on the canvas. The backdrop for all three is one gradient on `.walk`,
+  underneath it — transparent at the top for the hero dissolve, `--band-building`
+  at the floor so `#building` still meets an identical band.
+- **The copy is plated, and a plate is a LOCAL object.** `.card` already had
+  `--card-bg`; the five blocks of copy read against the room — Origin's intro,
+  its seven chapter rows, the link that closes its timeline, and the heads of
+  `#apps` and `#tools` — take one soft-edged plate each from **`.walk-plate`**,
+  which is declared in `Walk.css` because that is the file that owns all three
+  sections. Each is anchored to its own copy's column and has reached nothing
+  240px past its own last glyph; a caller sets only `--plate-col`,
+  `--plate-up`, `--plate-down` and `--plate-ink`. The version before it ran
+  1350–1390px wide for copy 265–660px wide and two of the five were measurably
+  rectangles — that is what "the cabin is being delivered as a grey gradient"
+  was. `Walk.css` carries the alpha probe that measures a plate's own edge and
+  the numbers each block is solved against.
+- **`.walk` must not become a stacking context and must not be `overflow:
+  hidden`.** Either one breaks something silently — the first re-orders the
+  lamppost against the hero's wordmark, the second stops the pin sticking at
+  all. Walk.css states both where they can be broken.
+
+### `hero/` and `origin/`
+
+`hero/` is hand-rolled 2D-canvas 3D — rotate, project, splat. `PointCloud.tsx`
+morphs between the twelve forms in `shapes.ts`; `Starfield.tsx` is the dust.
+**No WebGL in either**, and that is still the site's own proven approach: point
+counts scale to what the device can comfortably paint, and the dust runs at
+24 Hz on a capped DPR because nobody can tell and it is 2.5× less canvas work
+for an identical result.
+
+`hero/Tagline.tsx` is the one file in there that draws no canvas: it types the
+lines of `HERO_TAGLINES` out under the wordmark and swaps them from a shuffle
+bag, so no line repeats until every line has had its turn. It is also the
+worked example of a state machine living **inside** `onFrame` rather than on a
+timer — it accumulates `dt`, holds the loop only while a character is actually
+pending, and lets it park through the five-second rest. Under reduced motion
+the first line renders whole, immediately, with no caret.
+
+`origin/` is the exception, and it is a recent one. `CabinScene.tsx` is **real
+three.js on a `WebGLRenderer`** — the only file in `src/` that imports `three`,
+and the reason that dependency is in `package.json` at all. It replaced
+`OriginField.tsx`, a 2D projected point field standing in for depth this
+section can now have properly, so there is one canvas in Origin where there
+were two. The cabin is **built in code** rather than loaded: no `.glb`, no
+loader, ~540 triangles in four draw calls, in the flat faceted language of the
+art kit. Its header argues each of those and is the file to read first; it is
+also lazy, behind a `Suspense`, so the chunk does not reach a reader who never
+scrolls that far.
+
+The folder name is now the one thing about it that is out of date: the cabin is
+not `#origin`'s any more, it is the whole walk's. `Walk.tsx` mounts it, defers
+its chunk and hands it the camera's progress — see above.
+
+**What did not change is rule 9.** The cabin is one `onFrame` subscriber with
+no `THREE.Clock` and no `setAnimationLoop`, it holds the loop only while
+something is genuinely converging, and it returns before drawing when the
+section is off screen. A rendering library is not a licence to bring its own
+clock.
+
+### `faith/`
+
+`Summit.tsx` and `Summit.css`: the scene at the bottom of `Faith.tsx` — three
+smooth ridges, the moon low behind them, and the page's own `CrossGlyph`
+standing on the crest with the disc directly behind it. It is the sixth beat of
+the walk the home page takes, and where the hero's moon ends up five sections
+later.
+
+**The ridges are authored SVG rather than art from the kit**, and the kit's own
+README now records the exclusion from the other end: the faceted low-poly
+mountains are the hero's language and the wrong texture for smooth layered
+hills. The cross is `CrossGlyph` rather than `faith/hillside-cross` for the
+same kind of reason plus a harder one — that artwork carries its own hill and
+its own cross, which would be a second structural anchor in a section that is
+allowed one.
+
+Read it for the pattern it demonstrates: **an alignment held by arithmetic**.
+Every number hangs off two custom properties on the section, so "the cross's
+foot is on the crest line", "the cross and the moon share one x" and "the whole
+cross is inside the disc" are true by construction at every width rather than
+at the width somebody happened to open. Nothing in it is tuned per breakpoint,
+and `Summit.css` shows the working for each claim including the worst case.
+That is rule 6 — symmetry is structural, never hand-tuned — applied to a
+composition instead of to a pair of buttons.
+
+### `scene/`
+
+The shared vocabulary for the parallax art kit in `public/assets/parallax/`,
+for the shaped boundaries between sections, and for anything drawn rather than
+photographed: `ThemedArt` / `ThemedHeroArt` / `StillArt`, `Seam`, `Stage`,
+`Moon` and `Snow`. It was written **before** the sections that use it, so that
+seven of them would reach for the same primitives instead of each wrapping an
+`<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith` and
+`Outro` draw from it today — every section on the home page.
+
+Read [`scene/README.md`](scene/README.md) before you decorate anything. It
+carries the caller map, the reason there are three art components rather than
+one with a mode prop, the reason a seam cannot read `--tint-top`, the
+`overflow: clip` a stage needs on its section, and why two of its exports have
+no caller and are kept anyway.
 
 ---
 
@@ -119,9 +237,13 @@ beside it. In one component:
 - **One button per pack, in every state.** A pack sold three ways opens a
   chooser over the card rather than printing three buttons, and a pack already
   subscribed to opens its subscription panel from an explicit **Manage or
-  Cancel Plan** button of exactly the same size in exactly the same
-  place — measured 530×47 against its neighbour's Buy button.
-  The packs sit in a grid row and unequal action rows are visible immediately.
+  Cancel Plan** button of exactly the same size in exactly the same place —
+  **measured** against its neighbour's Buy button, not assumed to match. The
+  packs sit in a grid row and unequal action rows are visible immediately. (The
+  numbers from that measurement are recorded once, in §8 of
+  [`AGENTS.md`](../../AGENTS.md), because a size written down in two places is a
+  size that will eventually disagree with itself — and it did: this line used to
+  carry its own pair beside §8's, both presented as measured.)
 - Chips and cadence that **agree with the plan**. Printing `ONE-TIME · YOURS FOR
   GOOD` over a monthly subscription is the one mistake a shop may not make.
 - A **derived** saving, so `Save $22.88` cannot disagree with the two prices it

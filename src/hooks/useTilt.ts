@@ -7,7 +7,7 @@ const REST = 'perspective(1100px) rotateY(0deg) rotateX(0deg) translateY(0)'
  * Tilt toward the cursor, plus the two cursor-tracked custom properties the
  * spotlight and the pointer-lit border ring read.
  *
- * `soft` is the story-timeline variant: barely any tilt, long settle.
+ * `soft` is the Origin-timeline variant: barely any tilt, long settle.
  */
 export function useTilt<T extends HTMLElement>(soft = false) {
   const ref = useRef<T | null>(null)

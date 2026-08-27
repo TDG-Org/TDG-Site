@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
-import { Story } from './components/Story'
+import { Walk } from './components/Walk'
+import { Origin } from './components/Origin'
 import { Apps } from './components/Apps'
 import { Tools } from './components/Tools'
 import { Building } from './components/Building'
@@ -94,7 +95,7 @@ export default function App() {
     const hash = window.location.hash
     // Coming back from an app page, to the exact place the card was clicked
     // from. Only when the hash is the one that was left: somebody who leaves an
-    // app page by clicking Story in the nav is not returning to the list, and
+    // app page by clicking Origin in the nav is not returning to the list, and
     // this must not land on top of their anchor. See src/lib/route.ts.
     const y = takeOrigin(hash)
     if (y !== null) {
@@ -103,7 +104,40 @@ export default function App() {
     }
     const id = hash.replace(/^#/, '')
     if (!id || id.startsWith('/')) return
-    document.getElementById(id)?.scrollIntoView()
+    /*
+     * ONE legacy alias, and this is it.
+     *
+     * The Origin section was `#story` until the rename in 1.5.0 (August 2026).
+     * Bookmarks, shared links and anything linking in from off this site still
+     * carry the old fragment, and without this line they land at the top of the
+     * hero with a hash in the address bar that means nothing — the worst answer
+     * to "is there something here?", because it looks like the page simply
+     * failed to move.
+     *
+     * **The hash is deliberately NOT rewritten.** Rule 8 of AGENTS.md is that
+     * an unrecognised route renders home with the hash untouched, and the same
+     * instinct holds one level down: silently editing the address bar of
+     * somebody who followed their own bookmark is its own kind of surprise, and
+     * it would also quietly rewrite the link they are about to copy back out.
+     *
+     * Not a table. `story` is the only id this site has ever renamed, and a
+     * lookup map for one entry invites the next person to add a second without
+     * asking whether the old link was ever real. If a second id is ever
+     * renamed, write it here beside this one and say when.
+     *
+     * What it does NOT cover, deliberately: a hash edited to `#story` while
+     * this tab is ALREADY showing home. That is a hashchange and not a route
+     * change, so `same()` in lib/route.ts keeps the route object and nothing
+     * re-runs this — the same reason clicking `#apps` from `#origin` is the
+     * browser's scroll and not ours. Every way an old link actually arrives —
+     * a bookmark, a shared URL, an external link, a `#story` reached from the
+     * Store or an app page — is a document load or a real route change, and
+     * all of those come through here. Closing the last case would mean a
+     * hashchange listener of our own for one alias, which is more machinery
+     * than the alias is worth.
+     */
+    const target = id === 'story' ? 'origin' : id
+    document.getElementById(target)?.scrollIntoView()
   }, [route, showDev])
 
   return (
@@ -138,9 +172,22 @@ export default function App() {
       ) : (
         <main>
           <Hero />
-          <Story />
-          <Apps />
-          <Tools />
+          {/* Three sections, ONE backdrop. `Walk` is a wrapper rather than a
+              section of its own: it owns the sticky 3D stage that has to paint
+              behind all three, and the `margin-top: -100svh` that pulls this
+              half of the page up onto the pinned hero. Both of those used to
+              be `#origin`'s, and a `Stage` cannot outlive the section it is
+              declared in — see Walk.tsx and CONTRACT W in
+              internal/checklists/cabin-interior-spec.md.
+
+              The three children keep their own ids, their own copy and their
+              own place in the nav. Nothing about `#origin`'s document position
+              changed, so `takeOrigin` and the section anchors are untouched. */}
+          <Walk>
+            <Origin />
+            <Apps />
+            <Tools />
+          </Walk>
           <Building />
           <Faith />
           <Outro />

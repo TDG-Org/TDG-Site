@@ -18,7 +18,7 @@ import {
  * ## Why this is shared state rather than a `useState` per panel
  *
  * Expand All and Collapse All have to reach every section on screen, including
- * the nine inside a Developer console account detail: panels that page never
+ * the ten inside a Developer console account detail: panels that page never
  * renders directly and that mount and unmount as you click between people. So
  * each section registers its id here on mount, and the two buttons work from
  * that register rather than from a list somebody has to remember to update
