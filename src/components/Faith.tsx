@@ -1,7 +1,6 @@
 import { useHeroParallax, useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useSectionProgress } from '../hooks/useSectionProgress'
-import { CrossGlyph } from './CrossGlyph'
 import { Summit } from './faith/Summit'
 import { Seam } from './scene/Seam'
 import './Faith.css'
@@ -116,13 +115,21 @@ export function Faith() {
           hero and it arrives here, behind the cross, five sections later. */}
       <Summit progress={progress} />
 
-      <div ref={content} className="faith__content">
-        <div className="faith__cross-row">
-          <div className="faith__cross" aria-hidden="true">
-            <CrossGlyph variant="faith" />
-          </div>
-        </div>
+      {/* ── the lit glyph above the verse is GONE, and it is the owner's call ──
+          This section drew the cross TWICE: a lit `CrossGlyph` floating over
+          the copy, and the silhouette standing on the summit ridge in front of
+          the moon. The second one is the beat — it is the destination of a
+          six-section walk and the moment the page's one continuous thread
+          lands — and a second cross a few hundred pixels above it was competing
+          with the shot rather than introducing it. One cross, on the hill.
 
+          The copy takes the freed height as padding rather than moving up into
+          it, so the verse sits lower in the frame and reads against the sky
+          instead of against the glyph that used to be over it. `.faith__cross`
+          and `.faith__cross-row` are deleted from Faith.css in the same edit;
+          `CrossGlyph` is still imported by `faith/Summit.tsx`, which draws the
+          one that stayed. */}
+      <div ref={content} className="faith__content">
         <div className="kicker faith__kicker">
           <span className="kicker__num">05</span>
           <span className="kicker__rule" />

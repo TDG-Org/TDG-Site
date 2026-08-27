@@ -928,7 +928,39 @@
 .hero__rear-drift,
 .hero__mid-drift,
 .hero__ridge-drift {
-  opacity: var(--art-far);
+  opacity: calc(var(--art-far) * var(--hero-sink, 1));
+}
+
+/* ── --hero-sink: the terrain takes itself away, the sky does not ───────────
+   Written by Hero.tsx once a frame on the SECTION, so it inherits to every
+   layer in here from one style write. 1 while the hero is the shot, ramping to
+   0 across exactly the same `--origin-dissolve` the eclipse test uses, so the
+   silhouettes are gone at the instant the stage stops painting and the two can
+   never drift apart.
+
+   The site owner's report was "when i scroll onto the our story section, i
+   still see a mountain that is faint but still showing right in the middle of
+   the screen when it should've been fully faded away". They were right and it
+   was not the artwork: Contract D deliberately keeps the stage alive through
+   the whole of Origin's ramp so the ridges can carry down into the arriving
+   section instead of stopping on a ruled line, and for that whole ramp three
+   ranges went on painting at --art-far behind a band that is not yet opaque.
+   Making the band opaque sooner would put the seam back — the defect the owner
+   reported three passes running — so the ranges fade themselves instead.
+
+   **The sky is deliberately absent from every rule below.** It is a flat
+   gradient with no shape in it, so it cannot be mistaken for a mountain, and
+   it is the thing the dissolve is dissolving INTO — fading it would open the
+   join it exists to close. Same reasoning keeps `.hero__grain` and
+   `.hero__vignette` out: neither carries a silhouette.
+
+   The default of 1 is load-bearing. A browser that never runs the frame loop,
+   a background tab, and the reduced-motion identity all resolve `var(--hero-
+   sink, 1)` to the composed frame rather than to an invisible one.          */
+.hero__cloud-drift,
+.hero__pine-drift,
+.hero__branch-drift {
+  opacity: var(--hero-sink, 1);
 }
 
 /* ── the terrain ───────────────────────────────────────────────────────────
@@ -1370,7 +1402,7 @@
     var(--terrain-haze) calc(var(--art-rise) * 0.66),
     var(--terrain-haze) 100%
   );
-  opacity: var(--hero-valley-veil);
+  opacity: calc(var(--hero-valley-veil) * var(--hero-sink, 1));
   pointer-events: none;
   will-change: translate;
 }
@@ -1488,7 +1520,7 @@
   aspect-ratio: 2172 / 724;
   /* RIM 0.80 — the block above carries what the render did to 1.06 */
   bottom: calc(var(--art-rise) * 0.8 - var(--fog-top) * var(--weather-w) / 3);
-  opacity: var(--hero-weather-veil);
+  opacity: calc(var(--hero-weather-veil) * var(--hero-sink, 1));
   will-change: transform;
   /* 0% is the resting composition, which is what lets base.css's blanket
      `animation-play-state: paused` under reduced motion pin this at a frame
@@ -1630,6 +1662,20 @@
   /* 0.28 keeps the wisp off the disc's centre at rest — see above */
   bottom: calc(var(--moon-cy) + var(--moon-w) * 0.28 - var(--cloud-w) * 0.1723);
   opacity: var(--hero-cloud-veil);
+}
+
+/* The far wisp. Wider, lower, fainter and mirrored, so a reader cannot see it
+   is the same file twice: at 3.4 moon-widths against 2.6 it reads as further
+   away rather than as bigger, and `scaleX(-1)` puts its torn end on the other
+   side. `--hero-cloud-veil` is stepped down by a third here rather than given
+   its own token, because aerial perspective is a RATIO of the near layer's
+   alpha and a second literal would be one more number to keep in step by hand
+   the next time the near one moves. */
+.hero__cloud--far {
+  --cloud-w: calc(var(--moon-w) * 3.4);
+  transform: translateX(-50%) scaleX(-1);
+  bottom: calc(var(--moon-cy) - var(--moon-w) * 0.06 - var(--cloud-w) * 0.1723);
+  opacity: calc(var(--hero-cloud-veil) * 0.66);
 }
 
 /* ── the near foreground ───────────────────────────────────────────────────

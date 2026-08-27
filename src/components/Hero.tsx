@@ -342,6 +342,61 @@ const MOON_DRIFT = 0.44
  */
 const CLOUD_LIFT = 0.66
 const CLOUD_DRIFT = 0.3
+
+/**
+ * The SECOND wisp, and it exists because one cloud cannot show what a cloud is
+ * for.
+ *
+ * The site owner asked for "the clouds over the moon [to] move at different
+ * speeds than the moon when scrolling". The first one already did — 0.66
+ * against the disc's 0.90 — but a single object moving at its own rate is
+ * indistinguishable from an object at the wrong rate: there is nothing in the
+ * frame to compare it against except the moon it is crossing, so what a reader
+ * sees is one sprite lagging, not weather.
+ *
+ * Two at DIFFERENT rates fixes that, because the pair now separates from each
+ * other as well as from the disc. 0.42 is deliberately not halfway between the
+ * first wisp and the terrain: the three rates the eye can compare here are
+ * 0.90 (moon), 0.66 (near wisp) and 0.42 (far wisp), which are evenly spaced,
+ * so the far one falls behind the near one at the same rate the near one falls
+ * behind the moon. Anything closer to 0.66 and the two would read as one torn
+ * cloud rather than as two at different heights.
+ *
+ * It drifts LESS sideways than it falls, and less than the near wisp does, for
+ * the ordinary reason a farther object moves less across the frame.
+ */
+/**
+ * When the terrain starts taking itself away, and how long it takes, both as
+ * fractions of the viewport measured on Origin's TOP EDGE.
+ *
+ * The first version of this ran over `--origin-dissolve` — the same 0.78 of a
+ * viewport the eclipse test uses — on the reasoning that the ranges should be
+ * gone exactly when the stage stops painting. Measured on the live page it was
+ * far too slow: at Origin's top 130px above the viewport, with the reader
+ * looking straight at the story, the three ranges still resolved to opacity
+ * 0.293 behind a band that was itself only 18% opaque. The site owner reported
+ * the ghost a second time, and they were right — two linear ramps crossing each
+ * other leave their product visible right through the middle.
+ *
+ * **The ranges can go much earlier than the dissolve, and that is the insight.**
+ * What closed the seam was never the mountains carrying down past the boundary;
+ * it was Origin opening TRANSPARENT so the hero's SKY carries down, and the sky
+ * does not fade. So the silhouettes can be gone well before the band is opaque
+ * without any line coming back — which is why the ramp below is stated against
+ * the viewport rather than against `--origin-dissolve`, and why it finishes
+ * BEFORE the eclipse rather than with it.
+ *
+ * 0.35 -> -0.10 of a viewport: solid while Origin's top crosses the lower two
+ * thirds of the screen, which is the whole of the arrival the dissolve exists
+ * for, and at zero by the time that edge is 90px past the top of the frame.
+ * At the position the owner reported (top edge 130px above the frame) it now
+ * resolves to 1 — nothing of the hero's terrain is painted at all.
+ */
+const SINK_FROM = 0.35
+const SINK_SPAN = 0.45
+
+const CLOUD2_LIFT = 0.42
+const CLOUD2_DRIFT = 0.18
 /** How closely the bloom tracks the moon it is the glow of. Not 1: a glow
  *  welded to its source is a sticker with a second sticker on it, and the lag
  *  is what makes the light read as being in the air rather than on the disc.
@@ -451,6 +506,7 @@ export function Hero() {
   const frame = useRef<HTMLDivElement | null>(null)
   const moon = useRef<HTMLDivElement | null>(null)
   const cloud = useRef<HTMLDivElement | null>(null)
+  const cloud2 = useRef<HTMLDivElement | null>(null)
   const rear = useRef<HTMLDivElement | null>(null)
   const mid = useRef<HTMLDivElement | null>(null)
   const valley = useRef<HTMLDivElement | null>(null)
@@ -575,9 +631,11 @@ export function Hero() {
             fr.style.setProperty('--hero-blur', 'none')
           }
           if (sw !== null) {
+            host.style.setProperty('--hero-sink', '1')
             for (const el of [
               moon,
               cloud,
+              cloud2,
               rear,
               mid,
               valley,
@@ -642,6 +700,7 @@ export function Hero() {
       // The cloud is the one sky layer that is NOT a multiple of the moon's
       // offset — see CLOUD_LIFT for why an object may not take a light's terms.
       const cloudT = `${(-CLOUD_DRIFT * vh * e).toFixed(1)}px ${(-CLOUD_LIFT * vh * e).toFixed(1)}px`
+      const cloud2T = `${(-CLOUD2_DRIFT * vh * e).toFixed(1)}px ${(-CLOUD2_LIFT * vh * e).toFixed(1)}px`
       const rearT = `0 ${(-REAR_LIFT * vh * e).toFixed(1)}px`
       const midT = `0 ${(-MID_LIFT * vh * e).toFixed(1)}px`
       const valleyT = `0 ${(-VALLEY_LIFT * vh * e).toFixed(1)}px`
@@ -650,7 +709,25 @@ export function Hero() {
       const pineT = `${(px * PINE_POINT_X).toFixed(1)}px ${(-PINE_LIFT * vh * e + py * PINE_POINT_Y).toFixed(1)}px`
       const branchT = `0 ${(-BRANCH_LIFT * vh * e).toFixed(1)}px`
 
-      const scene = `${moonT}|${cloudT}|${bloomT}|${rearT}|${midT}|${valleyT}|${weatherT}|${ridgeT}|${pineT}|${branchT}|${shaftT}`
+      /* ── the terrain takes ITSELF away, and the sky does not ─────────────
+         Contract D keeps the stage painting through the whole of Origin's ramp
+         so the ridges carry down into the arriving section instead of stopping
+         on a ruled line. What it never did was take them away afterwards, so
+         for that whole ramp three ranges went on painting at --art-far behind a
+         band that is not yet opaque — which the site owner saw as "a mountain
+         that is faint but still showing right in the middle of the screen when
+         it should've been fully faded away", the hero's horizon ghosted across
+         the cabin's shot.
+
+         Making the band opaque sooner would put the seam back. So the ranges
+         fade on their own timer: this runs 0 -> 1 over exactly the same depth
+         the eclipse test above uses, `Hero.css` multiplies every silhouette's
+         opacity by (1 - it), and the two can never drift apart because they are
+         the same measurement. `-r.bottom` is how far Origin's top edge has
+         climbed past the top of the viewport. */
+      const sink = clamp01((SINK_FROM * vh - r.bottom) / (SINK_SPAN * vh))
+
+      const scene = `${moonT}|${cloudT}|${cloud2T}|${bloomT}|${rearT}|${midT}|${valleyT}|${weatherT}|${ridgeT}|${pineT}|${branchT}|${shaftT}|${sink.toFixed(3)}`
       const blur = out > 0.008 ? `blur(${(out * COPY_BLUR).toFixed(2)}px)` : 'none'
       const copy = `${(1 - out).toFixed(4)}|${blur}`
 
@@ -664,6 +741,7 @@ export function Hero() {
         if (sw !== null) {
           if (moon.current) moon.current.style.translate = moonT
           if (cloud.current) cloud.current.style.translate = cloudT
+          if (cloud2.current) cloud2.current.style.translate = cloud2T
           if (bloom.current) bloom.current.style.translate = bloomT
           if (rear.current) rear.current.style.translate = rearT
           if (mid.current) mid.current.style.translate = midT
@@ -673,6 +751,8 @@ export function Hero() {
           if (pine.current) pine.current.style.translate = pineT
           if (branch.current) branch.current.style.translate = branchT
           if (shafts.current) shafts.current.style.translate = shaftT
+          // Inherited, so one write reaches every layer inside the stage.
+          host.style.setProperty('--hero-sink', (1 - sink).toFixed(3))
         }
         if (cw !== null) {
           fr.style.setProperty('--hero-out', out.toFixed(4))
@@ -812,6 +892,13 @@ export function Hero() {
             rather than at a multiple of the moon's — CLOUD_LIFT above carries
             the argument, and Hero.css carries the geometry that starts it high
             on the disc so it has the whole face to cross. */}
+        {/* Two wisps, at 0.66 and 0.42 against the disc's 0.90 — see
+            CLOUD2_LIFT for why one was not enough. The far one is drawn FIRST
+            so the near one passes in front of it; both are behind the ranges,
+            which is what keeps them sky rather than fog. */}
+        <div ref={cloud2} className="hero__cloud-drift hero__cloud-drift--far">
+          <StillArt art="props/moon-cloud" className="hero__cloud hero__cloud--far" />
+        </div>
         <div ref={cloud} className="hero__cloud-drift">
           <StillArt art="props/moon-cloud" className="hero__cloud" />
         </div>

@@ -599,70 +599,28 @@
   will-change: translate;
 }
 
+/* ── the copy sits lower now, and the space is deliberate ──────────────────
+   A lit `CrossGlyph` used to stand over this block in a `.faith__cross-row`
+   that was 112px tall with 40px under it. Both are gone — the page draws one
+   cross now, the silhouette on the summit ridge in front of the moon, and the
+   owner asked for the second one to go and the text to come down.
+
+   The 152px does NOT simply stay as it was. Taken as blank margin it would
+   read as a hole where a thing used to be; spent as padding on the block it
+   pushes the verse down the frame, which is what the owner asked for and also
+   what the shot wants — the summit's crest and its moon are in the lower half
+   of this section, so copy that hangs higher leaves the two halves of the
+   composition looking at each other across a gap.
+
+   clamp, not the flat 152: the section's own padding is already a clamp, and a
+   fixed indent that is right at 1440 is a third of a phone's screen at 375. */
 .faith__content {
   position: relative;
   z-index: 2;
   max-width: 760px;
   margin: 0 auto;
+  padding-top: clamp(40px, 9vh, 132px);
   text-align: center;
-}
-
-.faith__cross-row {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 40px;
-}
-/* ── it is a mark, not a control, and it no longer pretends otherwise ──────
-   `Faith.tsx` renders this as `<div className="faith__cross" aria-hidden>`
-   with no `tabindex`, so it is decoration that a screen reader is explicitly
-   told to skip. It used to carry `:hover` and `:focus-visible` together, both
-   lifting it 4px and swapping the drop-shadow for a doubled --cross-glow, over
-   0.9s.
-
-   **The focus half could never fire.** `:focus-visible` needs a focusable
-   element, a `<div>` with no `tabindex` is not one, and nothing here ever gave
-   it one. It is the state `Origin.tsx` records removing from the opposite
-   direction — an `<article>` with `tabIndex={0}` that "looks focusable, takes
-   a tab stop, and does nothing at all" — except this one did not even take the
-   tab stop, so what it announced in the stylesheet was keyboard support that
-   was not there.
-
-   **The hover half fired, and should not have.** A 0.9s transform offered to
-   one class of visitor, a sighted mouse user, on an element that is inert,
-   unannounced and unreachable any other way. Every other `:hover` in this
-   folder is on a real control — a button, a link, a fold head, a row that
-   toggles — and rule 5's "custom-style every interactive element and every
-   state" has an inverse this was on the wrong side of.
-
-   **It also outran reduced motion.** `base.css` pauses every ANIMATION on the
-   page; it cannot touch a transition, which is exactly what a component's own
-   `prefers-reduced-motion` block is for, and this had none. So the one moving
-   thing in this section for a visitor who asked for less was a 0.9s lift on a
-   decoration. Deleting the state deletes that hole too, where a block would
-   only have patched it.
-
-   `pointer-events: none` is the positive half and the reason this cannot come
-   back by accident: it puts the cross in the same family as every other
-   decorative layer on the page — `Scene.css` declares it for all three art
-   components, `Stage` for the whole backdrop, `.faith__field` and
-   `.faith__rays` just below. Guardrail made structural instead of remembered.
-
-   Nothing about the resting cross moves. The `drop-shadow` that makes it read
-   was always unconditional and is untouched; what has gone is a state that
-   only a mouse could reach and only on something that does nothing.        */
-.faith__cross {
-  position: relative;
-  width: 60px;
-  height: 112px;
-  filter: drop-shadow(0 0 22px var(--glow));
-  pointer-events: none;
-}
-.faith__cross svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .kicker.faith__kicker {

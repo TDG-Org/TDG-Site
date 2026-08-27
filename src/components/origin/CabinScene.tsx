@@ -6473,9 +6473,45 @@ const ST_THRESH: Station = { p: [0.28, 2.05, -0.72], l: [-1.05, 1.5, -5.5] }
  * reading beat is; `CORNER` rounds both changes over about 450px. A drift a
  * tenth of this length would have been a hold with a rounding error on it.
  */
-const ST_ROOM: Station = { p: [-0.32, 2.03, -1.25], l: [-2.143, 1.18, -1.25] }
-const ST_ROOM_SET: Station = { p: [-0.72, 1.96, -1.5], l: [-1.65, 1.18, -1.5] }
-const ST_ROOM_END: Station = { p: [-1.16, 1.905, -1.6], l: [-1.965, 1.18, -1.6] }
+/* ── the three room stations FACE THE FIRE, and that is the owner's call ────
+ * They used to aim due WEST at y = 1.18, which is the table's own top surface
+ * (TABLE_Y), from an eye at 1.90-2.03 — a metre above it. That is a shot of a
+ * tabletop seen from above with the room behind the camera, and the owner
+ * reported it twice: "the camera facing the desk, instead just show a nice
+ * scene with the campfire and inside of cabin while showing edge of table with
+ * a paper on it".
+ *
+ * So the aim swings NORTH to the hearth. The firebox is at FIRE_X = -1.25 and
+ * FIRE_Z = FP_BZ + 0.34, and every `l` below points within a few centimetres of
+ * it, which makes the fire the subject of the frame and the room around it the
+ * picture. The eye drops to 1.74-1.84 — a standing person rather than someone
+ * leaning over a table — so the walls have height and the roofline is above the
+ * frame instead of the floor filling it.
+ *
+ * The aim sits at y 1.66-1.68, a few centimetres BELOW the eye rather than the
+ * half-metre a level shot would put there, and that is composition rather than
+ * physics: the card grid takes the middle 82% of the frame at this beat, so a
+ * hearth aimed at dead centre is a hearth behind four cards. Aiming a shade
+ * high drops the firebox and its light into the lower third, where the grid's
+ * floor and the gaps between its columns let it read.
+ *
+ * **The table did not move and it is still in shot.** It spans x -2.96..-0.97
+ * and z -0.1..-2.88; the eye sits EAST of it at x -0.10..-0.75 and drifts north
+ * past it, so its east edge and the paper on it enter the lower left of the
+ * frame as foreground and stay there for the whole beat. That is the "edge of
+ * table with a paper on it" half of the note, and it is what the image the
+ * owner is sending will land on — see PAPER_X0/PAPER_Z0 and the `sheet()` call
+ * they feed, which is deliberately ONE flat quad with its own colour constant
+ * so a texture can be dropped onto that face later without touching anything
+ * else. This file still loads zero textures, on purpose; its header argues it.
+ *
+ * The drift is west and slightly UP across the beat, ending 0.4m from
+ * ST_WINDOW's eye so the swing onto the west window is short and the speed
+ * curve does not have to spike to cover it.
+ */
+const ST_ROOM: Station = { p: [-0.1, 1.74, -0.8], l: [-1.05, 1.66, -5.9] }
+const ST_ROOM_SET: Station = { p: [-0.38, 1.78, -1.3], l: [-1.2, 1.66, -5.95] }
+const ST_ROOM_END: Station = { p: [-0.75, 1.84, -2.05], l: [-1.5, 1.68, -6] }
 
 /**
  * THE WINDOW. The west window is 1.66 wide and 1.26 tall centred at
