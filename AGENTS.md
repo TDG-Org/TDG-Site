@@ -20,7 +20,7 @@ The short version, if you read nothing else:
 | --- | --- |
 | **Stack** | React 19 · TypeScript 5.9 · Vite 7. Hand-written CSS, **no framework**, no CSS-in-JS, no component library. |
 | **Backend** | Supabase (`src/lib/supabase.ts`), shared with the other TDG apps. See `supabase/README.md`. |
-| **Hosting** | GitHub Pages, from `main`, at `/TDG-Site/`. Push to `main` deploys — see `.github/workflows/deploy.yml`. |
+| **Hosting** | GitHub Pages, from `main`, at `/TDG-Site/`. Deploy is manual-only (`workflow_dispatch`) as of 2026-08-27 — see `.github/workflows/deploy.yml`. |
 | **Router** | Hash routes, hand-rolled in `src/lib/route.ts`. No router library. |
 | **State** | React context and hooks. No Redux, Zustand, Jotai, React Query, or anything else. |
 | **Tests** | **There are none.** The typecheck and the build are the entire safety net. Read §7 before you claim anything works. |
@@ -531,13 +531,13 @@ Actions). Never create, edit, enable, or disable anything under
 file, not "just a small fix to a trigger," no exceptions. Never delete an
 Actions artifact or touch retention settings without being asked; checking
 usage is always free. Pushing to `main` is normal and stays covered by the
-rules above — `deploy.yml` runs on every push to `main` today, so a push and
-a deploy are currently the same event, and publishing is gated on one word:
-told **"release"** (or an equally explicit go-ahead, in that message), go
-ahead — don't ask twice, don't add ceremony. Absent that word, finishing a
-task never includes shipping it, and permission is per-release. If a task
-would naturally end with a publish or a workflow-file change: say so in one
-line and stop.
+rules above — `deploy.yml` is manual-only (`workflow_dispatch`) as of
+2026-08-27, so pushing no longer auto-publishes, and publishing is gated on
+one word: told **"release"** (or an equally explicit go-ahead, in that
+message), go run the deploy workflow — don't ask twice, don't add ceremony.
+Absent that word, finishing a task never includes shipping it, and
+permission is per-release. If a task would naturally end with a publish or a
+workflow-file change: say so in one line and stop.
 
 ---
 

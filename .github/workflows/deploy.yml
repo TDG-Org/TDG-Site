@@ -1,9 +1,13 @@
 name: Deploy to GitHub Pages
 
+# MANUAL ONLY, on purpose (changed 2026-08-27, mirrors MARANATHA's 2026-08-26
+# fix). The push trigger fired a full build-and-publish on every commit to
+# main, and pushing to main is this repo's normal workflow for every
+# ordinary change -- so every ordinary change was also a deploy, 63 of them
+# this month alone. To publish: Actions tab -> "Deploy to GitHub Pages" ->
+# Run workflow.
+
 on:
-  push:
-    branches: [main]
-  # so a deploy can be re-run from the Actions tab without an empty commit
   workflow_dispatch:
 
 permissions:
