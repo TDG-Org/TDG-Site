@@ -520,24 +520,13 @@ that app ships and nobody here will notice. Resolve a download's current release
 at runtime from the GitHub releases API, the way `makullveny-site` does — copy
 that pattern rather than pasting a number.
 
-**GitHub Actions & releases — ask first, every time.** Actions minutes AND
-Actions storage are shared org-wide across every TDG project — one repo can
-block Actions for all of them, and this repo has already contributed to it
-once (seven accumulated `github-pages` artifacts, ~125 MB, present when the
-org went over its 476.8 MB storage cap on 2026-08-26 and blocked every repo's
-Actions). Never create, edit, enable, or disable anything under
-`.github/workflows/`, and never run a workflow by hand
-(`workflow_dispatch`), without direct, in-the-moment permission — not a new
-file, not "just a small fix to a trigger," no exceptions. Never delete an
-Actions artifact or touch retention settings without being asked; checking
-usage is always free. Pushing to `main` is normal and stays covered by the
-rules above — `deploy.yml` is manual-only (`workflow_dispatch`) as of
-2026-08-27, so pushing no longer auto-publishes, and publishing is gated on
-one word: told **"release"** (or an equally explicit go-ahead, in that
-message), go run the deploy workflow — don't ask twice, don't add ceremony.
-Absent that word, finishing a task never includes shipping it, and
-permission is per-release. If a task would naturally end with a publish or a
-workflow-file change: say so in one line and stop.
+**GitHub Actions — one rule.** Never let a GitHub Actions workflow run, or
+touch a workflow file, without being told to do that exact thing, right
+then. No exceptions, nothing "routine." Build and test LOCALLY, always —
+that's what costs zero of the usage we already burned through once,
+org-wide, from workflows firing on their own. Only exception: told to make
+a release ("make a new release," "ship it") — do it immediately, no extra
+questions. Otherwise: don't run it, don't touch it, don't ask "should I."
 
 ---
 
