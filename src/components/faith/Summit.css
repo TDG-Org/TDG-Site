@@ -106,7 +106,20 @@
      move: the section's padding, the moon's box, its offset and its centring
      are all written in terms of these two. */
   --summit-disc-r: 0.98;
-  --summit-disc-c: 0.52;
+  /* 0.52 -> 0.78: how far the disc's CENTRE sits above the crest line, in
+     cross-heights. At 0.52 the disc hung 0.46 of its own radius BELOW the
+     crest, and the three ridge paths do not reach far enough down the frame to
+     cover all of that at every width — so a slice of the moon showed under the
+     hill, which the owner reported. At 0.78 the overhang is 0.20 of a radius,
+     which every ridge covers with margin at 320 through 1920.
+
+     It cannot simply go to 0.98 and tuck the disc exactly on the line: the
+     cross's foot is ON that line and its head reaches 1.00 cross-heights up, so
+     a disc centred at 0.98 with r 0.98 clears the cross's top by 0.96 rather
+     than the 0.34 the composition was solved for, and the moon stops being the
+     thing the cross stands in front of. 0.78 keeps the head 0.76 inside the
+     rim — still comfortably framed — while putting the bottom out of sight. */
+  --summit-disc-c: 0.78;
 
   /* How far the ridge box hangs BELOW the section's floor.
 

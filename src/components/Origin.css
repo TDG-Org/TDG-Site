@@ -1269,8 +1269,21 @@
      than as a flame moving inside glass, and at this alpha nobody would see
      it anyway. */
   .origin__lamp-halo {
+    /* 25.5% x 17%, and the vertical radius is the number that binds.
+       It was 40% x 26.667% and the top of the bloom was CUT: the gradient is
+       centred at 19% of the box's height, so any vertical radius past 19% runs
+       off the top edge and the browser simply stops painting there — a halo
+       with a straight line across its top, which is what the owner saw. 17%
+       leaves two per cent of margin at every width.
+
+       Horizontal follows from it rather than being chosen: the box is 2:3, so
+       rx = 1.5 x ry is what makes the bloom a CIRCLE rather than an ellipse
+       stretched across the pole — the same reason the tight halo above is
+       13% x 8.667%. That puts this one at 1.96x the tight one's radius instead
+       of 3x. Still unmistakably the bigger of the two, and it is the only size
+       that fits inside its own frame. */
     background-image: radial-gradient(
-      40% 26.667% at 50% 19%,
+      25.5% 17% at 50% 19%,
       var(--lamp-spill),
       transparent 100%
     );
