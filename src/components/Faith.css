@@ -55,33 +55,43 @@
    the new theme while the page around it crossed on the wave. A mask is an
    alpha channel and not a colour — the #000 paints nothing.
 
-   The stops are percentages of the section's own height, 1141px at 1440x900,
+   The stops are percentages of the section's own height, 1059px at 1440x900,
    and they describe a horizon rather than a band: nothing at the top, half
    strength through the verse, full from the summit's sky down to the crest
    line, and gone again before the floor.
 
        transparent  0%      the #building join, which carries no ink at all
-       transparent 12%      137px — below both bands at the boundary
-       0.28        30%      342px, the first air above the verse
-       0.5         52%      593px, level with the copy's last line
-       #000        72%      821px, the sky the moon sits in
-       #000        86%      981px, 160px above the floor — the crest line
+       transparent 12%      127px — below both bands at the boundary
+       0.28        31%      328px, the first air above the verse
+       0.5         57%      604px, level with the copy's last line
+       #000        70%      742px, the sky the moon sits in
+       #000        85%      900px, 158px above the floor — the crest line
        transparent 100%     the Outro join, which carries no ink at all
+
+   **Every one of those percentages moved this pass and none of the px did.**
+   The summit's clearance stopped reserving sky above a row of the moon's bloom
+   that paints nothing (faith/Summit.css carries the ablation), so the section
+   went from 1141px to 1059 with the copy, the crest and the disc all sitting
+   exactly where they sat above the FLOOR. A stop stated as a fraction of a box
+   whose height is a sum of other people's clamps is a stop that has to be
+   re-derived whenever one of them moves; this is that being done rather than
+   noticed later.
 
    **12% is the two seams, not padding.** `.faith__seam` is
    `clamp(44px, 5.5vw, 90px)` tall and `.faith__climb-drift` starts
    `clamp(38px, 4.6vw, 68px)` down and runs `clamp(28px, 3.6vw, 52px)`, so at
-   1440 the pair occupies 0..118px — 10.3% of the section. Both are painted a
-   fixed 6–8% off this band (--seam-step / --seam-step-2), which in light is a
-   step of 4.6 L*; shading the band under them would eat most of it and leave
-   the join looking softer than it is drawn. So the ramp starts below them.
+   1440 the pair occupies 0..118px — 11.1% of the section, where it was 10.3%
+   of the taller one. Both are painted a fixed 6–8% off this band (--seam-step
+   / --seam-step-2), which in light is a step of 4.6 L*; shading the band under
+   them would eat most of it and leave the join looking softer than it is
+   drawn. So the ramp starts below them.
 
-   **86% to 100% is hill, and it has to reach zero at the floor.** base.css
+   **85% to 100% is hill, and it has to reach zero at the floor.** base.css
    gives #faith a --tint-bot of --band-outro and the Outro paints --bg, so the
    last row of this section and the first row of the next are one token;
    anything with alpha on that line is a ruled line, which is the defect this
    section has already been sent back for twice. The three ridges are opaque and
-   painted in FRONT of this, so the whole of that 160px ramp is behind hill at
+   painted in FRONT of this, so the whole of that 159px ramp is behind hill at
    every x, and `.faith__floor` covers the last 34–56px with --band-outro on top
    of it besides.
 
@@ -99,20 +109,20 @@
     180deg,
     transparent 0%,
     transparent 12%,
-    rgba(0, 0, 0, 0.28) 30%,
-    rgba(0, 0, 0, 0.5) 52%,
-    #000 72%,
-    #000 86%,
+    rgba(0, 0, 0, 0.28) 31%,
+    rgba(0, 0, 0, 0.5) 57%,
+    #000 70%,
+    #000 85%,
     transparent 100%
   );
   mask-image: linear-gradient(
     180deg,
     transparent 0%,
     transparent 12%,
-    rgba(0, 0, 0, 0.28) 30%,
-    rgba(0, 0, 0, 0.5) 52%,
-    #000 72%,
-    #000 86%,
+    rgba(0, 0, 0, 0.28) 31%,
+    rgba(0, 0, 0, 0.5) 57%,
+    #000 70%,
+    #000 85%,
     transparent 100%
   );
   pointer-events: none;
@@ -126,15 +136,18 @@
    The summit needs sky. The clearance below the copy is now whatever the
    summit says it needs — faith/Summit.css derives --summit-clearance from the
    crest line, the cross's height and the disc's two ratios so that the moon's
-   BLOOM lands exactly --summit-air below the content's bottom edge at every
+   DISC lands exactly --summit-air below the content's bottom edge at every
    width. The section asks the scene how tall it has to be rather than the
    scene being trimmed to fit a padding somebody picked.
 
-   It grew by about 140px at 1440 this pass and that is the moon arriving at
-   its real size — the disc is 242.7px across here against the hero's 244.8,
-   which is the same object at the end of the walk as at the start of it. Read
-   the sum in Summit.css rather than this paragraph; it is the file that owns
-   the number and this one only spends it.
+   It is 1059px at 1440 where it was 1141, and the 82px came off the sum rather
+   than off the scene: the clearance used to reserve clear sky above the outer
+   edge of the moon's BLOOM, which is a row of zero alpha, and it reserves it
+   above the disc now with the bloom's measured readable reach folded into
+   --summit-air. The site owner's note was that the moon and the cross sat too
+   far down and wanted to be closer to the verse; that is the half of it this
+   file pays for. Read the sum in Summit.css rather than this paragraph; it is
+   the file that owns the number and this one only spends it.
 
    The fallback is --faith-pad-y, so a build that somehow lost Summit.css gets
    the old symmetrical section rather than no padding at all.               */
@@ -383,25 +396,6 @@
     rgba(0, 0, 0, var(--seam-fade)) 50%,
     transparent 100%
   );
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Every hook in this section resolves to a zero translate at motionIntensity
-     0, so all four layers rest exactly where this stylesheet composed them —
-     visible, still, and the slot of sky at its resting width. The hint would be
-     a promoted layer paid for and never used.
-
-     It listed only the two bands until this pass. `.faith__blob` and
-     `.faith__rays` carry the same `will-change: translate` and the same two
-     hooks behind it, and were being promoted for a drift that never happens —
-     `useHeroParallax` writes `hero.top * factor * mi`, which is exactly 0 here,
-     and `useParallax` snaps to the identity rather than easing to it. */
-  .faith__seam-drift,
-  .faith__climb-drift,
-  .faith__blob,
-  .faith__rays {
-    will-change: auto;
-  }
 }
 
 /* ── the join at the top: three readings, and what each of them settled ────
@@ -697,6 +691,40 @@
   font: 400 16.5px/1.7 var(--font-body);
   color: var(--muted);
   text-wrap: pretty;
+}
+
+/* ── the four promoted layers, un-promoted ─────────────────────────────────
+   Every hook in this section resolves to a zero translate at motionIntensity
+   0, so all four layers rest exactly where this stylesheet composed them —
+   visible, still, and the slot of sky at its resting width. The hint would be
+   a promoted layer paid for and never used.
+
+   It listed only the two bands until a previous pass, when `.faith__blob` and
+   `.faith__rays` were added: they carry the same `will-change: translate` and
+   the same two hooks behind it, and were being promoted for a drift that never
+   happens — `useHeroParallax` writes `hero.top * factor * mi`, which is exactly
+   0 here, and `useParallax` snaps to the identity rather than easing to it.
+
+   **And for two of the four it did nothing at all, because of where the block
+   sat.** It was declared immediately after `.faith__climb`, three hundred
+   lines ABOVE `.faith__rays` and `.faith__blob`. A media query adds no
+   specificity, so `will-change: translate` further down the file simply won the
+   cascade and both layers stayed promoted with the preference on. Measured
+   under `prefers-reduced-motion: reduce` at 1440x900, all three parked
+   positions and both themes: `will-change` computed to `translate` on
+   `.faith__blob` and `.faith__rays` and to `auto` on the two bands — the two
+   the block happened to be declared after.
+
+   So the block moved to the end of the file rather than growing an
+   `!important`. It is the last cascade-ordered rule here, which is what makes
+   its four selectors mean the same thing as each other.                     */
+@media (prefers-reduced-motion: reduce) {
+  .faith__seam-drift,
+  .faith__climb-drift,
+  .faith__blob,
+  .faith__rays {
+    will-change: auto;
+  }
 }
 
 /* This file's print block is gone with the --seam-lift backfill it existed

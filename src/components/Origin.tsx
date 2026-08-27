@@ -38,7 +38,70 @@ import './Origin.css'
 const LAMP_POINT_X = 10
 
 /**
- * How far outside the viewport the lamppost's pointer tick stops writing, px.
+ * ── the lamppost's rise, and why it is not `useParallax` ──────────────────
+ *
+ * How far BELOW its resting line the lamp stands before the rise, px, and how
+ * much scroll the rise takes as a fraction of the viewport.
+ *
+ * The site owner asked for the same treatment the hero's tall pine is
+ * getting: the prop rises as the reader scrolls and its foot **comes to rest**
+ * on the line where Origin's heading starts. "Comes to rest" is the half that
+ * rules out `useParallax`, which is an unbounded lag — it passes through its
+ * identity at the one scroll where the layer's centre meets the viewport's and
+ * keeps travelling after it, so the foot would cross the heading's line rather
+ * than land on it, and would still be climbing while the reader read. This is
+ * a clamped ramp instead: the lamp starts LAMP_RISE below its composed
+ * position, climbs to it, and does not move again. After the ramp the foot
+ * cannot bob, because nothing writes to it.
+ *
+ * The ramp is measured off Origin's own top edge and both ends are fractions
+ * of the viewport, so it holds at every height: it opens when that edge
+ * reaches the fold and closes 0.40 of a viewport later. At 1440x900 that is
+ * scroll 270 to 630, and at 630 the heading sits at viewport 706 — arriving.
+ * So the last of the climb is on screen with the words it lands under, and the
+ * lamp is standing still by the time the heading is comfortably read.
+ *
+ * ── the two numbers, and what each is bounded by ──────────────────────────
+ *
+ * **48, because that is what the fold allows.** At scroll 0 the lamp sits the
+ * whole rise below its resting frame, and its resting frame is already 135.6px
+ * lower than the old plant. Measured at 1440x900: the lit glass' bottom edge
+ * lands at viewport `851.7 + LAMP_RISE`, so 48 is the largest rise that keeps
+ * the whole of the lit pane above the 900px fold on the first screen. Past it
+ * the hero's corner loses the lantern rather than merely lowering it, and a
+ * light source cut in half by the fold is worse than either whole state.
+ *
+ * **0.40 of a viewport, because that is what makes 48px read as NEAR.** The
+ * two together are a rate: 48px of travel against 360px of scroll is 0.133,
+ * which is just past `props/pine-row`'s 0.13 — so the lamp is the fastest
+ * thing at this boundary and therefore the nearest, which is what it is. Spend
+ * the same 48px over 0.55 of a viewport instead and the rate falls to 0.097,
+ * behind the row, and a lamp standing in front of a wood would be travelling
+ * slower than the wood.
+ */
+const LAMP_RISE = 48
+const LAMP_RISE_SPAN = 0.4
+
+/**
+ * How far outside the viewport the lamppost's tick stops writing, px, and how
+ * far above its section's own top edge the lamppost is allowed to reach.
+ *
+ * ── the second number, which this guard was missing ───────────────────────
+ * The lamppost escapes UPWARD out of #origin through that section's
+ * `overflow-clip-margin: 130svh`, so the section's top edge is NOT the top of
+ * the thing being guarded. At scroll 0 the section's rect begins 1170px down a
+ * 900px window and the lantern is on screen — so a guard that only asked
+ * `r.top > vh + margin` refused to write for the whole of the first 150px of
+ * scroll and then wrote the full rise on one frame. Nothing showed while the
+ * tick only carried the pointer, because with the cursor still there was no
+ * value to write; the rise made it a 48px jump on a lamp the reader is looking
+ * at.
+ *
+ * 1.3 is that clip margin, in the same units the rect is in. It is Origin.css's
+ * own number for how far this section's ink may reach above itself, and the
+ * lamppost is the thing the margin was added for.
+ *
+ * ── the first number ──────────────────────────────────────────────────────
  *
  * 120, the number `scene/Stage.tsx` and `faith/Summit.tsx` already guard on,
  * because this is the same question they answer: an `onFrame` subscriber
@@ -58,6 +121,7 @@ const LAMP_POINT_X = 10
  * is no lerp on this element.
  */
 const LAMP_MARGIN = 120
+const LAMP_ESCAPE = 1.3
 
 /**
  * ── the depth ladder ──────────────────────────────────────────────────────
@@ -69,15 +133,27 @@ const LAMP_MARGIN = 120
  * that differ in SIGN is a place.
  *
  *   +0.18  the blob        the sky glow behind everything (unchanged)
- *   +0.05  the valley mist the haze lying against the hero's ridges
- *   +0.02  the far trees   the pine pair standing behind the boundary
- *   -0.11  the near trees  the pine grove, cropped by the right frame edge
+ *   +0.06  the far tops    `landscapes/far-treeline`, the hazed horizon
+ *   +0.02  the mist bank   `atmosphere/mist-bank`, the air between the planes
+ *   -0.13  the near row    `props/pine-row`, cropped by BOTH frame edges
  *
- * Sixteen times between the fastest and the slowest, and the pair that
- * actually builds the boundary — the far trees at +0.02 and the near ones at
- * -0.11 — open and close by 0.13 of relative travel against each other, which
- * is what makes a reader scrolling past find a second treeline behind the
- * first rather than finding a line.
+ * Nine times between the fastest and the slowest, and the pair that actually
+ * builds the boundary — the mist at +0.02 and the row standing in front of it
+ * at -0.13 — open and close by 0.15 of relative travel against each other,
+ * because the signs are opposite and relative travel is therefore a SUM. That
+ * is what makes a reader scrolling past find a wood with air in it rather than
+ * finding a line.
+ *
+ * **Three of those four rungs are new art and the fourth moved.** The row used
+ * to be `props/pine-pair` at +0.02 and `props/pine-grove` at -0.11, one of
+ * them mirrored and pushed off the right edge to fake a row out of two trees;
+ * `props/pine-row` is the piece the kit drew for exactly that job. The mist
+ * used to be a CSS gradient band standing in for art that did not exist —
+ * `atmosphere/mist-bank` is that art, and its alpha reaches zero on all four
+ * edges, so it can lie straight across the boundary with nothing to hide.
+ * `landscapes/far-treeline` is the plane behind the row, and it arrives with
+ * its own aerial haze already painted in, which is the depth cue no factor can
+ * buy.
  *
  * **The ladder is one rung shorter than it was, and the rung that went is the
  * -0.07 nightfall.** It was the moving half of `.origin__sink`, the fade this
@@ -87,13 +163,17 @@ const LAMP_MARGIN = 120
  * left on this ladder is at the section's TOP, which is the one edge of Origin
  * that is still a join between two different pictures.
  *
- * The lamppost and its light are deliberately NOT on this ladder: they answer
- * the pointer and nothing else, because the pole is a thing standing on the
- * ground and ground does not drift. See the lamp effect below.
+ * The lamppost is deliberately NOT on this ladder, and it is not still either.
+ * It answers the pointer on one axis and rides a CLAMPED rise on the other —
+ * a lag with no end would drift its foot off the ground for as long as the
+ * reader kept scrolling, and a foot that leaves the ground is the one way to
+ * lose the illusion this whole arrangement exists to build. The snow bank it
+ * stands in takes the identical rise from the identical subscriber, so the two
+ * cannot come apart. See the lamp effect below.
  */
-const HAZE_FACTOR = 0.05
-const FAR_TREE_FACTOR = 0.02
-const NEAR_TREE_FACTOR = -0.11
+const FAR_TOPS_FACTOR = 0.06
+const MIST_FACTOR = 0.02
+const NEAR_ROW_FACTOR = -0.13
 
 /**
  * One chapter of the timeline, as a disclosure.
@@ -205,45 +285,81 @@ export function Origin() {
   const section = useRef<HTMLElement | null>(null)
   const rail = useRef<HTMLDivElement | null>(null)
   const lamp = useRef<HTMLDivElement | null>(null)
+  const ground = useRef<HTMLDivElement | null>(null)
   const blob = useParallax<HTMLDivElement>(0.18)
-  const haze = useParallax<HTMLDivElement>(HAZE_FACTOR)
   const intro = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('wipe', 0)
   const pointer = usePointer()
 
   /*
-   * The lamppost answers the mouse, and only on one axis.
+   * The lamppost answers the mouse on one axis and the scroll on the other,
+   * and the two are different KINDS of motion on purpose.
    *
    * Horizontally it is a near object sliding against a far horizon, which is
-   * the whole point of a mouse parallax. VERTICALLY it is a thing standing on
-   * the ground — and a foot that bobs 5px off the snow every time the cursor
+   * the whole point of a mouse parallax. VERTICALLY it does not answer the
+   * pointer at all — a foot that bobs 5px off the snow every time the cursor
    * moves is the one way to lose the illusion this entire arrangement exists
-   * to build. So there is no y term at all.
+   * to build. What the y term carries instead is the rise: a clamped ramp that
+   * lands the foot on the line where Origin's heading starts and then stops
+   * writing. See LAMP_RISE.
    *
-   * **This wrapper now carries five layers, not one.** The lamp's warm light —
-   * its pool on the snow, the cone of lit air, the halo and the lantern's own
-   * core — are children of this element for exactly this reason: one writer of
-   * `translate`, on the box all five share, so the light cannot come off the
-   * lantern however far the pointer pulls it. Origin.css has the geometry they
-   * all read from.
+   * **The snow takes the same y, from this same subscriber.** That is the
+   * whole of the answer to "the foot must not leave the ground": the lamp and
+   * the drift it is planted in are two elements with one writer each and one
+   * number between them, so they cannot come apart on a fast scroll the way
+   * two independent lerps would. The drift does NOT take the pointer's x — the
+   * 10px of sideways slide against the ground is the parallax itself, and it
+   * is the behaviour this section already shipped.
    *
-   * The rect guard is new; see LAMP_MARGIN for why a tick that already
-   * suppresses a repeated string still wanted one. `.origin__lamp-drift` is
-   * `inset: 0`, so its rect IS the section's rect — this is the section check
-   * the house rule asks for, not a second box.
+   * **The wrapper carries four layers now, not five.** The lamp's warm light —
+   * its pool on the snow, the halo and the lantern's own core — are children
+   * of this element for exactly this reason: one writer of `translate`, on the
+   * box they all share, so the light cannot come off the lantern however far
+   * the pointer pulls it or however high the rise takes it. (The fifth was
+   * `.origin__lamp-spill`, the cone of lit air falling down the pole. It is
+   * deleted — see Origin.css.)
+   *
+   * **The rect is the SECTION's and it has to be, now that this wrapper
+   * moves.** `.origin__lamp-drift` is `inset: 0`, so its own rect used to BE
+   * the section's rect and reading it here was free; with a translate written
+   * to it that rect includes the very number this tick is about to compute,
+   * which is a loop. The section's own ref is the same box without the
+   * feedback, and it is still the section check the house rule asks for rather
+   * than a second box. See LAMP_MARGIN for why a tick that already suppresses
+   * a repeated string wants a guard at all.
    */
   useEffect(() => {
     const el = lamp.current
-    if (!el) return
+    const floor = ground.current
+    const box = section.current
+    if (!el || !box) return
     let painted = ''
+    // The drift's own last value, kept apart from the lamp's. The lamp's
+    // string changes on every pixel of pointer travel and the drift's does
+    // not, so one shared guard would have handed the browser an identical
+    // `translate` to recalculate on the snow for the whole of a mouse gesture.
+    let paintedFloor = ''
     return onFrame(({ vh, mi }) => {
-      const r = el.getBoundingClientRect()
-      if (r.bottom < -LAMP_MARGIN || r.top > vh + LAMP_MARGIN) return
-      const next = mi === 0 ? '' : `${(pointer.x * LAMP_POINT_X).toFixed(1)}px 0`
-      if (next === painted) return
+      const r = box.getBoundingClientRect()
+      if (r.bottom < -LAMP_MARGIN || r.top > (1 + LAMP_ESCAPE) * vh + LAMP_MARGIN) return
+      // 0 while Origin's top edge is still below the fold, 1 once it has
+      // climbed LAMP_RISE_SPAN of a viewport past it. Both ends are fractions
+      // of vh, so the ramp is the same gesture at every window height.
+      const risen = mi === 0 ? 1 : clamp01((vh - r.top) / (LAMP_RISE_SPAN * vh))
+      // `''` at mi 0 hands both elements back to their own composed position,
+      // which is where the art kit's reduced-motion rule asks them to rest —
+      // and the ramp's identity IS that position, because it ends at zero.
+      const y = (LAMP_RISE * (1 - risen)).toFixed(1)
+      const next = mi === 0 ? '' : `${(pointer.x * LAMP_POINT_X).toFixed(1)}px ${y}px`
+      const nextFloor = mi === 0 ? '' : `0 ${y}px`
+      if (next === painted && nextFloor === paintedFloor) return
+      const wrote = next !== painted
+      const wroteFloor = nextFloor !== paintedFloor
       painted = next
+      paintedFloor = nextFloor
       return () => {
-        el.style.translate = next
+        if (wrote) el.style.translate = next
+        if (floor && wroteFloor) floor.style.translate = nextFloor
       }
     })
   }, [pointer])
@@ -300,27 +416,51 @@ export function Origin() {
         <div ref={blob} className="blob origin__blob" />
       </div>
 
-      {/* ── the valley's mist ─────────────────────────────────────────
-          Aerial perspective, and it is the cheapest depth cue there is: a
-          band of THIS section's own ink lying against the hero's ridges,
-          above the boundary, so the mountains pale into the air Origin
-          arrives in rather than being cut off by it.
+      {/* ── the farthest tree plane ───────────────────────────────────────
+          `landscapes/far-treeline`: a pale band of small conifer tops standing
+          in mist the ARTWORK paints, not a mask. It is its own band and not a
+          layer inside the treeline below, and that is a z-order requirement
+          rather than tidiness — the mist bank sits BETWEEN these two planes on
+          the depth ladder, so it has to be painted between them too. Sharing a
+          wrapper would put the air behind the horizon it is supposed to be in
+          front of. Origin.css has the geometry. */}
+      <div className="origin__tops" aria-hidden="true">
+        <ThemedArt
+          art="landscapes/far-treeline"
+          className="origin__tops-art"
+          factor={FAR_TOPS_FACTOR}
+        />
+      </div>
 
-          It is `--band-origin` and not `--terrain-haze` even though the haze
-          token is what the hero draws under each ridge. That token is the
-          ridge's FOOT — the colour a ridge stops on — and Hero.css already
-          spends it there. What this band is doing is the other half of the
-          same idea from below: it is the arriving section's air, which is the
-          band, and tokens.css records that --band-origin was DERIVED from
-          exactly that foot ink at this band's own lightness. One ink, and it
-          is right in both themes for one reason: over a night sky it darkens
-          the ridge toward the valley floor, over a pale one it pales it toward
-          the mist, which is what aerial perspective does in each.
+      {/* ── the valley's mist, and it is a body of fog now rather than a wash
+          A CSS band used to be here: `--band-origin` ramped transparent ->
+          band -> transparent across the boundary, doing aerial perspective by
+          arithmetic because there was no piece of art that could. There is
+          now. `atmosphere/mist-bank` is drawn with its alpha reaching zero on
+          ALL FOUR edges, which is the property the whole layer turns on: a
+          band of colour has to be faded at both ends by a mask that has to be
+          re-derived every time the box moves, and a piece of art that is
+          already edge-free can simply be laid across the boundary with nothing
+          to hide.
 
-          It drifts FASTER than the treeline standing in it (+0.05 against
-          +0.02), because it is further away, and a positive factor lags the
-          page. See the depth ladder above. */}
-      <div ref={haze} className="origin__haze" aria-hidden="true" />
+          What is gained is that fog now has SHAPE. The band paled the ridge
+          evenly at every x, which is the one thing real air does not do; this
+          piece is thicker in some places than others and has torn edges, so
+          the hero's peaks come through it in some columns and are lost in
+          others. That is the depth cue the band could only imitate.
+
+          Two of them at two depths is what the CSS band could never be at all:
+          this one lies at +0.02, in FRONT of the far tops behind it and behind
+          the near row in front of it, so the wood has air inside it rather
+          than air in front of it. See the depth ladder above.
+
+          The wrapper is a band with its own `overflow: clip`, for the reason
+          `.origin__ground` below records measuring: the art is wider than the
+          viewport on purpose, and the section's 130svh clip margin opens the
+          sides as well as the top. */}
+      <div className="origin__mist" aria-hidden="true">
+        <ThemedArt art="atmosphere/mist-bank" className="origin__mist-art" factor={MIST_FACTOR} />
+      </div>
 
       {/* ── the treeline, and it is the thing that welds the two bands ──
           The site owner's report: "have the trees overlap well with the hero
@@ -336,30 +476,28 @@ export function Origin() {
           in the hero's mountains, trunks in Origin's snow, one prop standing
           on both sides of a boundary — which is a weld no gradient can make.
 
-          Two silhouettes at two depths and not one: `props/pine-grove` is the
-          NEAR plane, mirrored and pushed off the right edge so the frame CROPS
-          it, and `props/pine-pair` is the far one behind and left of it,
-          smaller and at --art-far.
+          ── it is a real row now, and that is the whole of this edit ────────
+          It used to be `props/pine-pair` behind `props/pine-grove`, the grove
+          mirrored with `scaleX(-1)` and pushed a third of its own width off
+          the right-hand edge, both of them crowded into the right quarter of
+          the frame. That was two trees pretending to be a wood, and the
+          pretence is what put both of them on one side: the kit says of both
+          that they must never stand beside the lamppost.
 
-          **That assignment is the other way round from the obvious one, and it
-          was decided off a render rather than off the file names.** The pair is
-          drawn in flat facets, which is the hero's voice, so putting it near
-          looked like the right call — and on screen its -dark artwork is a mid
-          slate that composites LIGHTER than this section's near-black sky, so a
-          490px pine at the frame edge read as one more pale triangle among the
-          ridge's pale triangles. The grove is the darker, painterly file, and
-          near-black-on-near-black is what a foreground conifer is supposed to
-          be. Swapped, the near tree reads as a tree and the pair does the job
-          flat facets are actually good at, which is being far away.
+          `props/pine-row` is the piece the kit drew for this. Five to seven
+          conifers of different heights, ink from the first column of the file
+          to the last, so it runs off BOTH frame edges and the wood has no ends
+          — and a row with no ends does not have to be kept away from the pole,
+          because it is not a prop standing next to it, it is the treeline the
+          pole stands in front of. `landscapes/far-treeline` goes behind it: a
+          pale band of distant tops with its own aerial haze painted in, which
+          is a depth cue no parallax factor can buy.
 
-          The kit says the grove is "a richer edge anchor for one later
-          section" and says of both that they must never stand beside the
-          lamppost — so both are on the RIGHT, and the pole keeps the left edge
-          to itself.
-
-          Both are on the right for a second reason: Origin's reading column
-          ends at 994px inside a 1430px section, so a tree at the frame edge is
-          a tree nothing has to be read through.
+          The row's trunks are cropped by its own bottom edge, which is how the
+          kit drew it, and the snow bank below is what buries them — the same
+          job it already did for the grove. Origin.css carries the mask that
+          finishes the join and the vertical anchors, both derived from the
+          files' own alpha.
 
           Invisible at scroll 0 by arithmetic, not by luck. Origin's top edge
           sits at 130svh and the fold at 100svh, so there are 30svh to spend;
@@ -367,8 +505,11 @@ export function Origin() {
           --tl-rise is capped at 17svh, which leaves better than 5svh of
           clearance at every viewport height. Origin.css has the working. */}
       <div className="origin__treeline" aria-hidden="true">
-        <ThemedArt art="props/pine-pair" className="origin__tree--far" factor={FAR_TREE_FACTOR} />
-        <ThemedArt art="props/pine-grove" className="origin__tree--near" factor={NEAR_TREE_FACTOR} />
+        {/* `origin__pines` and not `origin__row`: `.origin__row` is a chapter
+            of the timeline below and has been since this section was written.
+            One class name, two meanings, is a stylesheet that breaks on a
+            selector nobody looked twice at. */}
+        <ThemedArt art="props/pine-row" className="origin__pines" factor={NEAR_ROW_FACTOR} />
       </div>
 
       {/* ── the ground, and it crosses the boundary ───────────────────
@@ -387,8 +528,19 @@ export function Origin() {
           The wrapper is a band centred on the boundary with its own
           `overflow: clip`, so the drift's own width (it runs off both edges,
           the way the art kit asks a floor to) cannot leak through the
-          section's clip margin and put a horizontal scrollbar on the page. */}
-      <div className="origin__ground" aria-hidden="true">
+          section's clip margin and put a horizontal scrollbar on the page.
+
+          ── and it rides the lamppost's rise ───────────────────────────────
+          The ref is why this element is not a plain `<div>` any more. The
+          lamp's foot now lands on the line where Origin's heading starts, and
+          it CLIMBS to that line as the reader scrolls — so the drift takes the
+          identical y from the identical `onFrame` subscriber, because a foot
+          that rises 72px out of a snow bank that stayed put is the exact bob
+          this section's own comments have been guarding against since the pole
+          was planted. It is written on the BAND rather than on the artwork
+          inside it, so the clip travels with the thing it is clipping and the
+          drift's own bottom edge cannot slide out from under it. */}
+      <div ref={ground} className="origin__ground" aria-hidden="true">
         <StillArt art="landscapes/snow-bank" className="origin__snow" />
       </div>
 
@@ -404,39 +556,53 @@ export function Origin() {
           and over the hero's stage (0), while Hero.css gives up the hero's own
           stacking context so .hero__frame's z-index 5 can still be above BOTH.
           That is what keeps the pole behind the wordmark, the tagline, the
-          CTAs, the model and the bottom strip while its foot is planted 30px
+          CTAs, the model and the bottom strip while its foot is planted deep
           inside Origin's snow.
 
           Origin.css has the sizing, the two clearances it is solved against,
           and the measured table.
 
-          ── and now it is lit ─────────────────────────────────────────
+          ── and its foot is on the heading's line now ──────────────────
+          It used to be planted 30px inside Origin's top edge. It now comes to
+          rest on the line where Origin's heading starts, and it climbs to that
+          line as the reader scrolls — the same treatment the hero's tall pine
+          is getting on the other side of the frame. LAMP_RISE above carries
+          the ramp; Origin.css carries --lamp-plant, what the deeper plant
+          costs at scroll 0, and the two clearances re-derived against it.
+
+          ── and it is lit, by a lamp rather than by a smear ────────────
           The artwork draws a lit lantern and nothing on the page ever answered
           it. The site owner asked for "some colour, a bit transparent,
           lighting to the pole where the light should come from, to have a bit
           more warmth and glow", and this is the one warm source in a cold blue
           valley, which is what makes the valley read as cold.
 
-          Four layers, because a lamp is four intensities at four distances,
-          and four compositable radial gradients rather than one box-shadow or
-          one filter: a shadow cannot be an ellipse on the ground and a filter
-          would repaint the whole pole every frame it breathed.
+          **Three layers, not four.** There was a `.origin__lamp-spill`: an
+          ellipse of lit air with a vertical radius of 79% of the artwork's
+          frame, falling from the glass to the foot. On the page it read as a
+          long warm OVAL smeared down the pole, and the site owner is right
+          that it should not be there — "the glow from the pole should be a
+          circle not an oval, just have the circle glow at the top where the
+          light should only be coming out of, not the rest of the pole". The
+          physics agrees with the eye: a lantern is a point source, so the glow
+          around it is a DISC, and a pole is a dark object standing in that
+          light rather than a thing that glows along its length.
 
-          They are SIBLINGS of the pole inside the drift wrapper, so all five
+          They are SIBLINGS of the pole inside the drift wrapper, so all four
           boxes share one `left`/`top`/`width`/`aspect-ratio` and the light can
-          never come off the lantern however far the pointer pulls it. The pool
-          is drawn BEFORE the pole and the other three after, which is the
-          whole of the z-order between them: the snow is lit under the foot,
-          and the glass, the halo and the lit air are in front of the ironwork.
+          never come off the lantern however far the pointer pulls it or how
+          far the rise takes it. The pool is drawn BEFORE the pole and the
+          other two after, which is the whole of the z-order between them: the
+          snow is lit under the foot, and the glass and its halo are in front
+          of the ironwork.
 
-          Origin.css carries where each gradient sits inside that shared box,
-          and the re-measured clearance table — three of the four are inside
-          the same ink budget the artwork already spends, so --lamp-fit did not
-          have to move. */}
+          Origin.css carries where each gradient sits inside that shared box
+          and the re-measured clearance table — all three are inside the same
+          ink budget the artwork already spends, so --lamp-fit did not have to
+          move. */}
       <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
         <span className="origin__lamp-pool" />
         <StillArt art="hero/lamppost-left" className="origin__lamp" />
-        <span className="origin__lamp-spill" />
         <span className="origin__lamp-glow" />
         <span className="origin__lamp-core" />
       </div>

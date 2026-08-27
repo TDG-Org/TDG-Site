@@ -59,14 +59,17 @@ const PointCloud = lazy(() =>
  * of a 900px window across an entire beat, and on a 1440px-tall screen it is
  * 4%.
  *
+ *   near branch -0.120 vh (DOWN)        the bough over the nav — see below
  *   rear ridge   0.045 vh up            the far range, all but welded to the sky
- *   valley haze  0.090 vh up            the basin between the two ranges
- *   weather      0.135 vh up            fog crossing the basin — see Hero.css
+ *   mid ridge    0.095 vh up            the third faceted range — see below
+ *   valley haze  0.125 vh up            the basin IN FRONT of the mid range
+ *   valley fog   0.155 vh up            the fog bank crossing it — see Hero.css
  *   main ridge   0.220 vh up            the horizon
+ *   moon cloud   0.660 vh up, 0.30 left one wisp, slower than the disc it crosses
+ *   tall pine    0.880 vh up            the near foreground — see below
  *   moon         0.900 vh up, 0.44 left the page's connecting thread
  *   bloom        0.86 x the moon        the moon's own glow, lagging slightly
  *   air          0.58 x the moon        the lit sky, lagging further
- *   tall pine   -0.090 vh (DOWN)        the near foreground — see below
  *   lamppost     1.0     — it is not in here at all. It belongs to #origin,
  *                          stands on Origin's ground and therefore travels at
  *                          exactly page rate. See Origin.tsx.
@@ -74,13 +77,18 @@ const PointCloud = lazy(() =>
  * Three properties of that table are the whole point and none survives being
  * "tidied" toward the middle:
  *
- * **The spread is an order of magnitude.** Fastest terrain to slowest is
- * 0.220 / 0.045 = 4.9x, and against the pine it is 0.310vh of RELATIVE travel
- * — 279px at 1440x900 — because the pine moves the other way and relative
- * travel is then the sum rather than the difference. Across the whole frame
- * it is the moon's 0.900 against the rear range's 0.045, which is 20:1. Two
- * layers 20% apart read as one layer; these visibly slide against each other
- * in the valleys.
+ * **The spread is an order of magnitude, and it is a SUM at both ends.**
+ * Fastest terrain to slowest is 0.220 / 0.045 = 4.9x. The pine now travels
+ * WITH the page rather than against it — the owner asked for it to rise, and
+ * the target that fixed the magnitude is in PINE_LIFT — so the trick that used
+ * to buy the near/far separation moved to the BRANCH, which is the layer that
+ * now goes the other way at -0.120. Relative travel: pine against ridge
+ * 0.660vh (594px at 1440x900, where the old negative pine managed 0.310vh);
+ * branch against pine 1.000vh, because those two are moving apart. Across the
+ * whole frame it is the moon's 0.900 against the branch's -0.120, which is
+ * 1.020vh of relative travel between the top and the bottom of the depth
+ * ladder. Two layers 20% apart read as one layer; these visibly slide against
+ * each other in the valleys.
  *
  * **The light lags its own source, at two rates.** The moon is at 1, the
  * bloom on the disc at 0.86 and the lit air at 0.58, so what a reader sees is
@@ -93,7 +101,7 @@ const PointCloud = lazy(() =>
  * after the copy has dissolved (the copy is gone at 23.1% of the pin, where
  * the eased moon has spent only 15% of its travel).
  *
- * ── one rect, seven layers ─────────────────────────────────────────────────
+ * ── one rect, eleven layers ────────────────────────────────────────────────
  * All of it comes off ONE `getBoundingClientRect` per frame, on `.hero__above`
  * — the box whose height is the pin's travel and whose bottom edge is the
  * seam. `useSectionProgress` was the obvious driver and is not used here: its
@@ -146,44 +154,125 @@ const RIDGE_LIFT = 0.22
  */
 const REAR_LIFT = 0.045
 /**
- * The basin haze between the two ranges — a third terrain plane, added this
- * pass. Between the two rates on purpose: it is nearer than the far range and
- * further than the near one, so it slides against both.
+ * The THIRD faceted range, `landscapes/mountain-ridge-mid`, placed this pass.
+ *
+ * `.hero__valley` — the basin gradient below — was standing in for exactly this
+ * plane: it was doing the aerial perspective and carrying a velocity, but it
+ * had no silhouette, so the frame had two ranges and a wash between them rather
+ * than three ranges. The wash stays (it is this plane's AIR, and it is the
+ * belt-and-braces ground under the near range's lifting foot); what is new is
+ * that the plane now has an edge you can read.
+ *
+ * 0.095 is 2.1x the far range and 0.43x the near one — as near the geometric
+ * middle of 0.045 and 0.220 as a two-decimal number gets. The rear/mid ratio is
+ * the one to watch, because REAR_LIFT's own comment dismisses 2.15:1 as "inside
+ * the range where two layers read as one thickness of mountain". That was true
+ * of two ranges with NOTHING between them; there are two haze planes between
+ * these two now, and 0.05vh of differential is 45px at 1440x900 across the pin.
  */
-const VALLEY_LIFT = 0.09
+const MID_LIFT = 0.095
 /**
- * The fog crossing the basin — a FOURTH terrain rate, added this pass to fill
- * the viewport of pinned scenery the copy leaves behind after the first 30svh
- * of the runway. Between the basin's 0.09 and the ridge's 0.22 because that is
- * where it sits in the DOM and therefore in depth: in front of the basin plane
- * and behind the near silhouette, so it slides against both. Hero.css carries
- * its geometry and the horizontal drift it also has, which is a compositor
- * `transform` rather than a second writer of this element's `translate`.
+ * The basin haze — the air in front of the mid range.
+ *
+ * It was 0.09, which is where the mid range now is, and it had to move: it sits
+ * in FRONT of that silhouette in the DOM, and a layer drawn in front of another
+ * one while travelling slower than it is a depth cue pointing the wrong way.
+ * 0.125 keeps it between the plane behind it and the fog in front of it.
  */
-const WEATHER_LIFT = 0.135
+const VALLEY_LIFT = 0.125
 /**
- * The near foreground, as a fraction of the viewport height — and it is
- * NEGATIVE, which is the single cheapest depth this section buys.
+ * The fog bank crossing the basin — `landscapes/valley-fog`, placed this pass
+ * over the single CSS ellipse that used to stand here.
  *
- * The paragraph that used to be here defended a small POSITIVE number, and it
- * was defending a constraint that no longer exists: "a lift big enough to be
- * convincing lifts its cut base into view". That was true when the pine's base
- * sat a little under the floor. It has two answers now. The tree is much
- * bigger and hangs far further below the frame (Hero.css), and — the part that
- * settles it — a layer that moves DOWN while the page moves up can never bring
- * its own cut base up at all. The binding position for the base is scroll
- * zero, and at scroll zero the base is 322px below the floor at 1440x900.
+ * 0.135 -> 0.155 for the same reason the basin moved: everything in this part
+ * of the ladder shifted up by one plane when the mid range took 0.095. It is
+ * still between the basin behind it and the near silhouette in front of it,
+ * which is where it sits in the DOM. Hero.css carries its geometry and the
+ * horizontal drift it also has, which is a compositor `transform` on the art
+ * itself rather than a second writer of the wrapper's `translate`.
+ */
+const WEATHER_LIFT = 0.155
+/**
+ * The near foreground, as a fraction of the viewport height. It was -0.09 and
+ * it is now +0.88, and the magnitude is not a taste judgement — it is SOLVED,
+ * against a target the site owner named.
  *
- * What that buys: relative to the main ridge the pine now travels
- * 0.22 + 0.09 = 0.31vh, because a layer moving against the page adds to its
- * neighbour's travel instead of subtracting from it. The same 0.31vh spent as
- * a positive lift would have needed the pine to travel 0.53vh — half a screen
- * — to read the same, and that really would have pulled its base up.
+ * ── the note ──────────────────────────────────────────────────────────────
+ * "when scrolling down, it should be moving up a bit more, the root or bottom
+ * of the tree should stop where the header of the our story section starts."
+ * The tree used to travel DOWN, so its cut base was never on screen at all and
+ * there was nothing to plant.
  *
- * It still answers the MOUSE hardest of anything in the frame (58px against
+ * ── why "stop" is a real word here and not a metaphor ─────────────────────
+ * The stage is pinned for the whole 130svh of `.hero__above` and then TRACKS.
+ * #origin is pulled up onto the hero's last 100svh, so from the end of the pin
+ * onward the stage and Origin travel together at page rate — whatever the
+ * pine's base is level with at that instant, it stays level with until the
+ * hero stops painting 0.78vh later. So landing the base on Origin's heading at
+ * the end of the pin is landing it there for the whole rest of the beat.
+ *
+ * ── the geometry, and it fixes the magnitude rather than leaving it to taste ─
+ * Read off the live DOM at scroll = 130svh: `#origin .origin__heading`'s top is
+ * at y 165.6 at 1440x900, 166.0 at 1920x1080, 151.2 at 1280x800 and 135.0 at
+ * 1100x900. It tracks viewport WIDTH (Origin's shell padding clamps on vw) and
+ * is all but flat in viewport height.
+ *
+ * With `d` = how far the pine's box hangs below the frame's floor at rest, and
+ * the art's ink running to 0.9993 of the box in both themes so the box's bottom
+ * IS the base:
+ *
+ *   base at the end of the pin = vh + d - PINE_LIFT x vh
+ *
+ * The base must not be ABOVE the floor at rest — a near tree whose cut base
+ * floats in mid-air over the mountains is the sticker this section spent two
+ * passes removing — so d >= 0, which alone forces
+ *
+ *   PINE_LIFT >= 1 - heading/vh = 0.816 at 1440x900.
+ *
+ * That is the whole answer to "why so much": the base starts under the frame
+ * and has to finish a sixth of a screen from the top of it, which is most of a
+ * viewport of travel however the rest is arranged. 0.88 leaves d = 57.6px of
+ * crop at rest at 1440x900 (27.0px at 1100x900, the narrowest this is drawn
+ * at), and it keeps the MOON the fastest thing in the frame at 0.90, which is
+ * a decision this file has made twice and did not want to give up for a pine.
+ * Hero.css solves `bottom` from the same equation and carries the readings.
+ *
+ * ── what it costs, and where the depth went instead ───────────────────────
+ * Flipping the sign gives up the trick the negative number was bought for: a
+ * layer travelling against the page adds to its neighbour's travel instead of
+ * subtracting from it. Relative to the main ridge the pine used to manage
+ * 0.22 + 0.09 = 0.31vh. It is now 0.88 - 0.22 = 0.66vh — 594px at 1440x900,
+ * more than twice what the negative rate bought — because the magnitude went up
+ * by nearly ten times, so the separation survived the sign change with room to
+ * spare. The SUM trick itself moved to BRANCH_LIFT below, which is the layer
+ * that now goes the other way.
+ *
+ * It still answers the MOUSE hardest of anything in the frame (48px against
  * the moon's 13), which is the other half of what makes it read as near.
  */
-const PINE_LIFT = -0.09
+const PINE_LIFT = 0.88
+/**
+ * `props/near-branch` — the bough entering from the top-left, placed this pass,
+ * and the only layer in the frame that moves AGAINST the page.
+ *
+ * The hero had one near prop and nothing at all in its top half. This is the
+ * second, at the opposite corner, and it takes over the job PINE_LIFT's
+ * negative sign used to do: relative travel is a SUM rather than a difference,
+ * so against the pine it is 0.88 + 0.12 = 1.00vh and against the main ridge
+ * 0.34vh. Nothing else in the section can buy a whole viewport of relative
+ * travel for one number.
+ *
+ * -0.12 rather than something larger because the branch DESCENDS into the
+ * frame as it goes, and everything it descends toward is copy: at 1440x900 its
+ * ink ends 46px above `.hero__inner`'s top edge at rest, and by the moment the
+ * copy is fully dissolved (out = 1 at 30svh, where the scenery's eased progress
+ * is only 0.135) it has come down 14.6px of that. The rest of the descent
+ * happens over an empty frame. Hero.css carries the clearance table.
+ *
+ * It takes NO pointer offset, and that is deliberate rather than forgotten —
+ * see the amplitudes below, where the three-responder rule is argued.
+ */
+const BRANCH_LIFT = -0.12
 /**
  * The moon's exit: up this much of the viewport, and left this much of it.
  *
@@ -233,6 +322,26 @@ const PINE_LIFT = -0.09
  */
 const MOON_LIFT = 0.9
 const MOON_DRIFT = 0.44
+/**
+ * `props/moon-cloud` — one torn wisp, placed this pass, and the reason it is a
+ * LIFT/DRIFT pair rather than a follow factor like the bloom and the air.
+ *
+ * The bloom and the lit sky are the moon's own light, so they take the moon's
+ * offset scaled: light on the air has no direction its source does not give it,
+ * and a scalar multiple is the only form that cannot disagree with it. A cloud
+ * is not light. It is an object at its own distance in the same sky, and what
+ * makes the moon's exit read as SKY rather than as a sprite translating is that
+ * the two paths are not parallel — the wisp rises less and drifts less, so over
+ * the pin it slides 0.24vh DOWN and 0.14vh RIGHT relative to the disc. At
+ * 1440x900 that is 216px down against a 216px disc: the wisp crosses the whole
+ * face and clears the lower limb, rather than sitting on it like a decal.
+ *
+ * 0.66 is between the disc's 0.90 and the lit air's 0.522 (AIR_FOLLOW x
+ * MOON_LIFT), which is where the brief asks for it and is also where a cloud
+ * belongs: nearer than the sky's own glow, further than the object it crosses.
+ */
+const CLOUD_LIFT = 0.66
+const CLOUD_DRIFT = 0.3
 /** How closely the bloom tracks the moon it is the glow of. Not 1: a glow
  *  welded to its source is a sticker with a second sticker on it, and the lag
  *  is what makes the light read as being in the air rather than on the disc.
@@ -259,30 +368,40 @@ const COPY_BLUR = 6.5
 
 /* Pointer amplitudes, in px, at the extremes of the viewport.
  *
- * THREE layers respond and no more, and that half is unchanged. `usePointer`
- * is damped and shared, so the cost of a fourth is not the reason — the reason
+ * THREE layers respond and no more, and that half is unchanged — including
+ * through a pass that added THREE new layers, one of which (`near-branch`) is
+ * the nearest thing in the frame and is the obvious candidate for a fourth.
+ * `usePointer` is damped and shared, so the cost is not the reason — the reason
  * is that everything moving with the mouse is seasickness, and depth reads
  * from a DIFFERENCE. The pine is near and moves like it; the moon is far; the
- * ridges, the valley and the sky do not answer the mouse at all, which is what
- * makes the pine look near. (The bloom is not a fourth responder: it is the
- * moon's own light and takes the moon's terms scaled by BLOOM_FOLLOW, so it
- * cannot disagree with the thing it is coming from.) The lamppost's own amount
- * is in Origin.css/Origin.tsx, because the lamppost lives in that section.
+ * ridges, the valley, the fog, the cloud, the branch and the sky do not answer
+ * the mouse at all, which is what makes the pine look near. (The bloom is not a
+ * fourth responder: it is the moon's own light and takes the moon's terms
+ * scaled by BLOOM_FOLLOW, so it cannot disagree with the thing it is coming
+ * from.) The branch's depth is bought instead with the one cue the pine gave
+ * up — a negative scroll rate — and with two cropped edges. The lamppost's own
+ * amount is in Origin.css/Origin.tsx, because the lamppost lives in that
+ * section.
  *
- * The magnitudes doubled this pass and the MOON'S SIGN FLIPPED, which is the
- * more interesting half. A far layer drifting the OTHER way from a near one is
- * what a real pair of eyes reports when the head moves, and it makes the
- * relative travel the sum rather than the difference: 58 + 13 = 71px across
- * the frame, where the old pair managed 26 - 7 = 19px. The spread was right
- * before and the magnitudes were timid.
+ * The MOON'S SIGN is opposite the pine's, which is the interesting half. A far
+ * layer drifting the OTHER way from a near one is what a real pair of eyes
+ * reports when the head moves, and it makes the relative travel the sum rather
+ * than the difference: 48 + 13 = 61px across the frame, where the pair before
+ * last managed 26 - 7 = 19px.
  *
- * 58px is a twelfth of the pine's own width, which is the ceiling: past that
- * the tree starts to read as sliding across the frame rather than as being
- * nearer than it. The crop is 202px at 1440x900 — it shrank when the tree was
- * widened and un-cropped this pass — so even the full amplitude cannot pull the
- * tree's right edge into the frame. */
-const PINE_POINT_X = 58
-const PINE_POINT_Y = 27
+ * Both pine numbers came DOWN this pass and neither is a new judgement.
+ * X: 58 -> 48, because 58 was "a twelfth of the pine's own width" and the tree
+ * is narrower now — a twelfth of 576px at 1440x900 is exactly 48. Past that ceiling
+ * the tree reads as sliding across the frame rather than as being nearer than
+ * it. The crop is 164.7px of INK off the right edge at 1440x900, so even the full
+ * amplitude cannot pull the tree's right edge into the frame.
+ * Y: 27 -> 21, which is the same twelfth scaled by the old pair's own 0.47
+ * ratio, minus a little. The extra is bought for a new reason: the pine's base
+ * is a composed LINE now (PINE_LIFT), and this amplitude is the amount a mouse
+ * in the corner of the window can smear it by. +/-21px against a heading 118.8px
+ * tall is a wobble; +/-27px was starting to be a miss. */
+const PINE_POINT_X = 48
+const PINE_POINT_Y = 21
 const MOON_POINT_X = -13
 const MOON_POINT_Y = -6
 
@@ -331,11 +450,14 @@ export function Hero() {
   const above = useRef<HTMLDivElement | null>(null)
   const frame = useRef<HTMLDivElement | null>(null)
   const moon = useRef<HTMLDivElement | null>(null)
+  const cloud = useRef<HTMLDivElement | null>(null)
   const rear = useRef<HTMLDivElement | null>(null)
+  const mid = useRef<HTMLDivElement | null>(null)
   const valley = useRef<HTMLDivElement | null>(null)
   const weather = useRef<HTMLDivElement | null>(null)
   const ridge = useRef<HTMLDivElement | null>(null)
   const pine = useRef<HTMLDivElement | null>(null)
+  const branch = useRef<HTMLDivElement | null>(null)
   const shafts = useRef<HTMLDivElement | null>(null)
   const bloom = useRef<HTMLDivElement | null>(null)
   const pointer = usePointer()
@@ -453,7 +575,19 @@ export function Hero() {
             fr.style.setProperty('--hero-blur', 'none')
           }
           if (sw !== null) {
-            for (const el of [moon, rear, valley, weather, ridge, pine, shafts, bloom]) {
+            for (const el of [
+              moon,
+              cloud,
+              rear,
+              mid,
+              valley,
+              weather,
+              ridge,
+              pine,
+              branch,
+              shafts,
+              bloom,
+            ]) {
               if (el.current) el.current.style.translate = ''
             }
           }
@@ -505,13 +639,18 @@ export function Hero() {
       const moonT = `${moonX.toFixed(1)}px ${moonY.toFixed(1)}px`
       const bloomT = `${(moonX * BLOOM_FOLLOW).toFixed(1)}px ${(moonY * BLOOM_FOLLOW).toFixed(1)}px`
       const shaftT = `${(moonX * AIR_FOLLOW).toFixed(1)}px ${(moonY * AIR_FOLLOW).toFixed(1)}px`
+      // The cloud is the one sky layer that is NOT a multiple of the moon's
+      // offset — see CLOUD_LIFT for why an object may not take a light's terms.
+      const cloudT = `${(-CLOUD_DRIFT * vh * e).toFixed(1)}px ${(-CLOUD_LIFT * vh * e).toFixed(1)}px`
       const rearT = `0 ${(-REAR_LIFT * vh * e).toFixed(1)}px`
+      const midT = `0 ${(-MID_LIFT * vh * e).toFixed(1)}px`
       const valleyT = `0 ${(-VALLEY_LIFT * vh * e).toFixed(1)}px`
       const weatherT = `0 ${(-WEATHER_LIFT * vh * e).toFixed(1)}px`
       const ridgeT = `0 ${(-RIDGE_LIFT * vh * e).toFixed(1)}px`
       const pineT = `${(px * PINE_POINT_X).toFixed(1)}px ${(-PINE_LIFT * vh * e + py * PINE_POINT_Y).toFixed(1)}px`
+      const branchT = `0 ${(-BRANCH_LIFT * vh * e).toFixed(1)}px`
 
-      const scene = `${moonT}|${bloomT}|${rearT}|${valleyT}|${weatherT}|${ridgeT}|${pineT}|${shaftT}`
+      const scene = `${moonT}|${cloudT}|${bloomT}|${rearT}|${midT}|${valleyT}|${weatherT}|${ridgeT}|${pineT}|${branchT}|${shaftT}`
       const blur = out > 0.008 ? `blur(${(out * COPY_BLUR).toFixed(2)}px)` : 'none'
       const copy = `${(1 - out).toFixed(4)}|${blur}`
 
@@ -524,12 +663,15 @@ export function Hero() {
       return () => {
         if (sw !== null) {
           if (moon.current) moon.current.style.translate = moonT
+          if (cloud.current) cloud.current.style.translate = cloudT
           if (bloom.current) bloom.current.style.translate = bloomT
           if (rear.current) rear.current.style.translate = rearT
+          if (mid.current) mid.current.style.translate = midT
           if (valley.current) valley.current.style.translate = valleyT
           if (weather.current) weather.current.style.translate = weatherT
           if (ridge.current) ridge.current.style.translate = ridgeT
           if (pine.current) pine.current.style.translate = pineT
+          if (branch.current) branch.current.style.translate = branchT
           if (shafts.current) shafts.current.style.translate = shaftT
         }
         if (cw !== null) {
@@ -550,9 +692,25 @@ export function Hero() {
           Everything in here is pinned by `Stage`. Back to front, which is DOM
           order inside one stacking context at z-index 0:
 
-            sky · lit air · moon · rear haze + rear ridge · basin haze ·
-            weather · ridge haze + main ridge · dust · bloom · tall pine ·
-            grain · vignette
+            sky · lit air · moon · moon cloud · rear haze + rear ridge ·
+            mid ridge · basin haze · valley fog · ridge haze + main ridge ·
+            dust · bloom · tall pine · near branch · grain · vignette
+
+          Four of those are new this pass and all four were asked for by name:
+          `landscapes/mountain-ridge-mid`, `props/moon-cloud`,
+          `landscapes/valley-fog` (which replaced the single CSS ellipse
+          `.hero__weather` used to be) and `props/near-branch`. What each one is
+          for is argued at its own rate constant above and at its own block in
+          Hero.css; what belongs here is only where each sits in the stack, and
+          two of those positions are load-bearing:
+
+          the CLOUD is in FRONT of the disc, because a wisp behind a moon is a
+          wisp nobody can see cross it, and crossing it is the entire job;
+
+          the BRANCH is the last thing before the grain, in front of even the
+          pine, because it is the nearest object in the frame — a bough at the
+          camera rather than a tree in the middle distance — and it is the only
+          layer here allowed to overlap the nav.
 
           Each range is a haze and a file inside ONE wrapper at ONE opacity.
           A cutout has a hard alpha edge where its ink runs out, and both
@@ -576,19 +734,12 @@ export function Hero() {
 
           The moon is BEHIND the ridges and in front of the sky, which is what
           "resting on the horizon" has to mean. `--moon-bite` in Hero.css says
-          how much of the disc the ridge takes and it is 0.08 — a sliver at the
-          bottom, where the ridge's ink is thickest and darkest — because the
-          ranges are drawn at `--art-far` (0.5 dark, 0.36 light) and anything
-          behind them shows through. With the disc's centre on the skyline,
-          which is where it used to be, the mountains' facets were visible
-          across the whole lower half of the disc.
-
-          The number went DOWN and the cut got DEEPER, which is the whole of
-          this pass's answer to "re-check that the ridge still cuts its lower
-          limb". The old 0.18 was a fraction of a skyline computed the wrong
-          way; measured on the rendered frame it was worth 4px in dark and a
-          moon floating 35px clear of the range in light. Hero.css's
-          --moon-drop block carries the diff-the-render method and the table.
+          how much of the disc the ridge takes and it is 0.17 this pass, against
+          0.08 before it — the site owner asked for "the mountains covering
+          15-20% of the bottom of the moon". Hero.css's --moon-bite block
+          carries what that is worth on the RENDERED frame in both themes,
+          which is the only currency this number has ever been true in: the
+          reading it replaced said 0.18 and measured four pixels.
 
           **A second frosted ball was reported this pass and it is NOT this
           one, and the difference is worth writing down because the obvious
@@ -609,19 +760,23 @@ export function Hero() {
           motion in this section that is still running when the reader arrives
           in the next one.
 
-          The basin haze (`.hero__valley`) is new and it is doing three jobs
-          that would otherwise need three layers: it is the aerial perspective
-          between the two ranges (guardrail: a distant plane is separated from
-          a near one by HAZE, not by size), it is the ground the main ridge can
-          lift 0.22vh off without ever showing bare sky under its foot, and it
-          is a third terrain velocity so the two ranges have something to slide
-          against besides each other.
+          The basin haze (`.hero__valley`) has two jobs left of the three it
+          was written for. It is the aerial perspective between the ranges
+          (guardrail: a distant plane is separated from a near one by HAZE, not
+          by size), and it is the ground the main ridge can lift 0.22vh off
+          without ever showing bare sky under its foot. The third — "a third
+          terrain velocity so the two ranges have something to slide against
+          besides each other" — is what it was standing in for, and the mid
+          range has it now, with a silhouette attached.
 
           The tall pine is the near foreground and it sits AFTER the atmosphere
           on purpose: a near silhouette should be in front of the haze, not
-          behind it. It is cropped by the frame at the RIGHT edge — never by
-          the bottom, which is what made it read as a sticker — alone, with no
-          other pine family anywhere near it.
+          behind it. It is cropped by the frame at the RIGHT edge and, at rest,
+          by the bottom — the base clears the floor as the reader scrolls,
+          which is the whole of the owner's note about where the tree is
+          planted (PINE_LIFT). It is alone, with no other pine family anywhere
+          near it: the branch above it is a bough at the camera, not a second
+          tree in the same middle distance.
 
           Nothing here recolours a pixel: -dark and -light are separate
           artwork, and the opacity is an --art-* token per theme. */}
@@ -653,6 +808,14 @@ export function Hero() {
           <Moon className="hero__moon" />
         </div>
 
+        {/* One torn wisp, in front of the disc and travelling at its own rate
+            rather than at a multiple of the moon's — CLOUD_LIFT above carries
+            the argument, and Hero.css carries the geometry that starts it high
+            on the disc so it has the whole face to cross. */}
+        <div ref={cloud} className="hero__cloud-drift">
+          <StillArt art="props/moon-cloud" className="hero__cloud" />
+        </div>
+
         {/* The haze is FIRST so the silhouette paints over it, and it is
             inside the wrapper so it rides the same `translate` and cannot
             drift away from the range it belongs to. --art-far now lives on
@@ -664,6 +827,18 @@ export function Hero() {
           <StillArt art="landscapes/mountain-ridge-rear" className="hero__rear" />
         </div>
 
+        {/* The third range, and it carries NO haze — which is the one thing
+            worth saying here, because the two ranges above it each carry one.
+            This artwork's ink is drawn far higher inside its box than theirs
+            is (head 0.268 against 0.162 and 0.109), so at every viewport this
+            is drawn at its ragged bottom edge sits below the frame's floor and
+            below the basin plane in front of it. A haze whose whole job is to
+            hide a cut nobody can reach is a layer paid for and never seen.
+            Hero.css has the arithmetic and the worst case. */}
+        <div ref={mid} className="hero__mid-drift">
+          <StillArt art="landscapes/mountain-ridge-mid" className="hero__mid" />
+        </div>
+
         {/* The basin. One gradient in the near range's own foot ink, anchored
             to the frame's floor and running a long way below it, so nothing it
             does can be a horizontal edge: its top stop is transparent and its
@@ -671,15 +846,22 @@ export function Hero() {
             it sits between the two ranges rather than behind both. */}
         <div ref={valley} className="hero__valley" />
 
-        {/* Weather, crossing the basin — one edgeless ellipse of the near
-            range's own haze ink, drifting sideways on a 74s compositor
-            transform while the scroll lifts it at a fourth terrain rate. It is
-            HERE, between the basin plane and the near silhouette, because that
-            is where it is in depth: it thickens the far range behind it and is
-            occluded by the ridge in front of it, which is what fog in a valley
-            does. Hero.css carries the geometry and why its horizontal drift
-            cannot be a second writer of this element's `translate`. */}
-        <div ref={weather} className="hero__weather" />
+        {/* Weather, crossing the basin. It was one CSS ellipse of the near
+            range's own haze ink; it is `landscapes/valley-fog` now — a painted
+            bank with a shape, which is what the ellipse was standing in for and
+            could not be. It is HERE, between the basin plane and the near
+            silhouette, because that is where it is in depth: it thickens the
+            ranges behind it and is occluded by the ridge in front of it, which
+            is what fog in a valley does.
+
+            TWO elements where there used to be one, and that is the whole
+            reason this is a wrapper: the scroll rate is written to
+            `translate` from the loop above and the 74s sideways drift is a
+            compositor `transform`, and one element gets one writer of each.
+            The wrapper takes the translate; the art takes the transform. */}
+        <div ref={weather} className="hero__weather">
+          <StillArt art="landscapes/valley-fog" className="hero__weather-art" />
+        </div>
 
         <div ref={ridge} className="hero__ridge-drift">
           <div className="hero__ridge-haze" />
@@ -692,6 +874,15 @@ export function Hero() {
 
         <div ref={pine} className="hero__pine-drift">
           <StillArt art="props/tall-pine" className="hero__pine" />
+        </div>
+
+        {/* The nearest thing in the frame: a bough entering from the TOP-LEFT,
+            cropped by two edges, moving DOWN while everything else moves up.
+            It is the only layer in this section allowed over the nav — the nav
+            carries its own veil — and it is held clear of the copy column by
+            measurement rather than by hope; Hero.css has that table. */}
+        <div ref={branch} className="hero__branch-drift">
+          <StillArt art="props/near-branch" className="hero__branch" />
         </div>
 
         <div className="hero__grain" />
@@ -757,7 +948,15 @@ export function Hero() {
           <div className="hero__strip">
             <div className="hero__strip-inner">
               <div className="hero__meta">
-                <span>Est. 2016</span>
+                {/* NOT "Est. 2016", and the correction came from the owner.
+                    2016 is the year the three letters became a Black Ops II
+                    clan tag — CHAPTERS[1] in content.ts says so — and before
+                    that they were a Minecraft server two kids ran. The work
+                    this page is about starts at chapter 05, in 2024. A founding
+                    year in the strip claimed nine years of building that did
+                    not happen, and it was the first thing under the wordmark.
+                    The slot is the "who" of who / what / why, so it says who. */}
+                <span>Two brothers</span>
                 <span className="hero__meta-div" />
                 <span>Apps · Tools · Games</span>
                 <span className="hero__meta-div" />

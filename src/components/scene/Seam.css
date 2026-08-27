@@ -38,12 +38,22 @@
    `top: 0` are the same line — so an unflipped rising band is drawn entirely
    ABOVE its wrapper and the join clips every pixel of it away.
 
-   It is a class rather than two lines in each caller because three boundaries
-   now want it: `#apps` hangs a fir line rising into Origin's clearing and the
-   Outro hangs the hill's foot rising into `#faith`. `Faith.css` still writes
-   the same two declarations by hand at `.faith__climb` with the same reasoning
-   beside them; that file is not this pass's to edit, and it should adopt this
-   class the next time somebody is in it.                                    */
+   It is a class rather than two lines in each caller because more than one
+   boundary wants it. **Ask the DOM rather than this paragraph for how many:**
+   `grep -rn 'scene__seam--rise' src/` is the answer and it has been wrong here
+   twice. This line used to name three — `#apps`' fir line, the Outro's stair
+   and `#faith`'s rising range — and two of those three were not true even when
+   it was written: the Outro's band was `edge="top"` (its stair is a raster now
+   and it draws no `Seam` at all), and `Faith.css` writes the same two
+   declarations by hand at `.faith__climb`, with the same reasoning beside
+   them, rather than reaching for this.
+
+   So it may well have no caller as you read it, and it is kept for the reason
+   `Seam.tsx` keeps `steps`: the failure it prevents is silent and total, and a
+   boundary that re-derives the fix is a boundary that gets it slightly
+   different. `.faith__climb` is the one place that could adopt it today; it
+   was left alone this pass because the two declarations there are correct and
+   their comment is the long version of this one.                            */
 .scene__seam--rise {
   top: 0;
   bottom: auto;

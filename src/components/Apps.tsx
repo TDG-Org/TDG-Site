@@ -113,9 +113,14 @@ export function Apps() {
      paints over the shot is light on the air, drifting a tenth as fast as the
      page. Standard: one light source, with somewhere for the light to fall.
 
-     `.apps__dots` takes no hook at all and never did. It is `.texture`, a
-     lattice at the page's own scale rather than an object at a distance, and a
-     texture that slid against the picture behind it would read as a scrim. */
+     `.apps__dots` used to be drawn beside it and is deleted this pass. It was
+     `.texture` — a repeating-radial lattice, rings 76px apart — and the
+     argument for keeping it over the cabin was that a lattice at the page's
+     own scale reads as the page's grain sitting on the glass. The render
+     disproved it: at scroll 2400 it is faint concentric circles painted across
+     the interior wall, because a section inside `.walk` paints ABOVE the stage
+     and there is no wall in a photograph that has rings on it. Apps.css has
+     the rest, including why it could not simply be moved behind the canvas. */
   const blob = useParallax<HTMLDivElement>(0.01)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const more = useReveal<HTMLDivElement>('scale', 2)
@@ -134,10 +139,9 @@ export function Apps() {
           out of the section's clip MARGIN — that margin is gone with the
           treeline that needed it, so the section is back to `.section`'s own
           `overflow: hidden` and this box is the aria and pointer wrapper the
-          two layers left inside it still want. `.origin__clip` is the same
+          one layer left inside it still wants. `.origin__clip` is the same
           idea one section up. */}
       <div className="apps__clip" aria-hidden="true">
-        <div className="texture apps__dots" />
         <div ref={blob} className="blob apps__blob" />
       </div>
 

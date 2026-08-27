@@ -75,15 +75,15 @@
   background-color: transparent;
 }
 
-/* The box `.apps__dots` and `.apps__blob` live in: `aria-hidden` and
-   `pointer-events: none` in one place rather than two. It used to be the box
-   that stopped the floor art escaping through the section's clip MARGIN; the
-   margin went with the treeline that needed it, so the section is back to
-   `.section`'s own `overflow: hidden` and this is a plain wrapper now. It
-   keeps `overflow: clip` anyway — `hidden` would make it a scroll container
-   for no reason, and `.origin__clip` and `.tools__clip` are the same box in
-   the two sections either side of this one. `inset: 0` is the section's
-   PADDING box, which is what every percentage in here resolves against. */
+/* The box `.apps__blob` lives in: `aria-hidden` and `pointer-events: none` in
+   one place rather than two. It used to be the box that stopped the floor art
+   escaping through the section's clip MARGIN; the margin went with the
+   treeline that needed it, so the section is back to `.section`'s own
+   `overflow: hidden` and this is a plain wrapper now. It keeps `overflow:
+   clip` anyway — `hidden` would make it a scroll container for no reason, and
+   `.origin__clip` and `.tools__clip` are the same box in the two sections
+   either side of this one. `inset: 0` is the section's PADDING box, which is
+   what every percentage in here resolves against. */
 .apps__clip {
   position: absolute;
   inset: 0;
@@ -91,20 +91,34 @@
   pointer-events: none;
 }
 
-/* The lattice, and it is the section's own grain rather than a layer at a
-   depth — see Apps.tsx. Over a cabin interior it reads as the page's texture
-   sitting on the glass, which is what `.origin__grid` already does over the
-   same canvas one section up. */
-.apps__dots {
-  opacity: 0.72;
-  background-image: repeating-radial-gradient(
-    circle at 86% 10%,
-    var(--border) 0 1px,
-    transparent 1px 76px
-  );
-  -webkit-mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
-  mask-image: radial-gradient(92% 86% at 86% 10%, #000, transparent 78%);
-}
+/* ── `.apps__dots` is DELETED, and the render is the reason ────────────────
+   It was `.texture` carrying `repeating-radial-gradient(circle at 86% 10%,
+   var(--border) 0 1px, transparent 1px 76px)` under a radial mask — a lattice
+   of concentric rings 76px apart, at 0.72, over the whole section.
+
+   The argument for keeping it when this section moved indoors was that a
+   lattice at the page's own scale reads as the page's grain sitting on the
+   glass rather than as an object at a distance. It does not. Caught in the
+   renders of this pass at scroll 2400 in both themes: faint concentric
+   circles drawn across the cabin's interior wall, which is a ring pattern on a
+   photograph of a room and reads as exactly that. There is no viewing distance
+   at which a wall has rings on it.
+
+   **It could not be moved behind the canvas, and that is worth writing down
+   because it is the obvious fix.** Every section inside `.walk` is a
+   positioned sibling of the stage painted later in tree order, so this layer
+   is above the canvas by construction. `z-index: -1` would not put it under
+   the canvas either: `.walk` deliberately establishes no stacking context, so
+   a negative index here resolves in the ROOT order — behind `.walk`'s own
+   background band as well as behind the stage, which is not "under the canvas"
+   but "gone". And there is no stretch of this section where the camera is
+   outside the cabin to keep it on: `#apps` is the table beat end to end.
+
+   So the section's one remaining decorative layer is `.apps__blob`, which is
+   light on the air and is the one thing that is still true over an interior.
+   `.origin__grid` is a different layer in a different file and one section up,
+   where the camera spends most of its run outdoors; nothing here decides
+   anything about it.                                                        */
 
 /* Up and to the LEFT, which is where the fire is once the camera has turned
    toward the table — so this is the room's light on the air rather than a sky

@@ -636,6 +636,94 @@
   opacity: var(--art-near);
 }
 
+/* ── the frost on the west window ──────────────────────────────────────────
+   `props/window-frost`, the piece the cabin builder asked the kit for because
+   a scene with zero textures and zero image loads cannot draw frost on its own
+   glass. Walk.tsx has the fade and why this is a full-frame layer rather than
+   a prop at a position; this file has the two boxes and the ink.
+
+   ── two boxes, for the reason the snow has two ──────────────────────────
+   The wrapper owns `opacity`, written from the frame loop as the dolly closes
+   on the glass. The image owns `--art-near`, the kit's own opacity for the
+   layer closest to the reader — and nothing is closer than the pane the camera
+   is pressed against. Two opacities on one element would be two writers; these
+   multiply, which is what is wanted: the frost arrives AT the density it was
+   composed at rather than towards it.
+
+   ── it starts at zero, and that is the safe direction ──────────────────
+   The tick sets this every frame the page moves, but the first paint happens
+   before any frame runs and a background tab may never run one at all. At 0
+   the failure is a window with no frost on it; at the browser's default 1 it
+   is a frosted pane over the whole walk, Origin's chapters included. The tick
+   writes over this within a frame of the reader touching the page.
+
+   ── `object-fit: cover`, and what it costs ─────────────────────────────
+   The artwork is 1000x667 and the frame it has to fill is whatever the reader's
+   window is. `fill` would stretch faceted crystal by the aspect difference —
+   1.5 to 1.6 at 1440x900 is not much, 1.5 to 0.46 at 375x812 is a smear.
+   `cover` keeps every facet its own shape and crops the middle instead, which
+   is the part the artwork deliberately leaves empty: the middle 60% is clear.
+   At 375x812 it crops 421px off each side, and because the crystal grows from
+   each corner INWARD, what a narrow frame's corner shows is a slightly thicker
+   part of the same bloom. There is no width at which a corner stops being a
+   corner.
+
+   No `mix-blend-mode` and no filter. The kit ships -dark and -light as
+   separate drawings for exactly this — pale blue crystal against a dark room,
+   near-white crystal against a bright one — and a blend mode would be this
+   file deciding that again, worse, in one theme.
+
+   ── what it is worth as INK, measured, because it was asked ─────────────
+   It was hoped this layer would lift the tools cards' contrast as well as look
+   right. **It does not, and it cannot**, and the reason is in the artwork's own
+   brief: the kit was asked for a piece whose middle 60% is almost clear so
+   that it would not sit behind the reading area — and the reading area is
+   exactly where `#tools`' two cards and its head are.
+
+   Ablated on the rendered page (this rule forced to `display: none`, the same
+   frame measured twice) at five scroll positions through the tools grid at
+   1440x900 and four at 375x812, both themes, sampling each text node's own
+   line boxes rather than its element box:
+
+     rows compared                          162 at 1440, 46 at 375
+     rows the frost changed by >=0.05        4 at 1440, 0 at 375
+     the four, worst first
+       dark  #tools .kicker__num   s5150   17.61 -> 13.95   (floor 4.5)
+       dark  #tools .tools__index  s5150    8.54 ->  7.55
+       dark  #tools .tools__cta    s5000   12.32 -> 11.37
+       light #tools .kicker__num   s5150   17.61 -> 17.12
+
+   Every one of the four is a cost rather than a gain, and every one of them
+   still clears its floor by more than three times. A pale layer cannot lift a
+   contrast in either theme here: dark's risk is a backdrop that is too bright
+   for near-white type, and light's is the same window seen through near-black
+   type, so brightening the edges of the frame can only ever help one of them
+   and this artwork brightens both.
+
+   What it costs the PICTURE is the number worth watching, and it is small: at
+   scroll 5000 in dark it lifts the frame's mean pixel by 3.2 levels (54.2 ->
+   57.4) and its 98th percentile by 19.8 (124.1 -> 143.9). The comparison to
+   keep is the plates this file replaced last pass, which lifted the mean by 24
+   levels in dark and 39 in light — an eighth of that, and spent on a drawn
+   object at the frame's edge rather than on a wash across the middle.
+
+   The worst contrast anywhere over the walk with this layer on is 6.96:1
+   (`#tools .tools__index`, dark, scroll 5000) against a 4.5 floor, and 8.02:1
+   against the 3.0 large-text floor.                                        */
+.walk__frost {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.walk__frost-art {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: var(--art-near);
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* The overlap is scroll that exists only so the hero can be climbed over
      while it holds still, and at motionIntensity 0 the hero is one screen tall

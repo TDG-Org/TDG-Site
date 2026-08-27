@@ -802,7 +802,39 @@
    Full width and no overhang — `left: 0; width: 100%` — because a layer that
    ran off the edges here would have to be caught by something, and the fog's
    own art is already full-bleed in x. Nothing recolours a pixel; the -dark and
-   -light files are separate drawings.                                        */
+   -light files are separate drawings.
+
+   ## `atmosphere/mist-bank` was weighed for this and for the floor fog, and
+   ## neither one takes it
+
+   The kit gained an edge-free mist this pass, and the case for it here is a
+   good one on its face: the slice table above exists to keep `fog-veil`'s hard
+   bottom edge out of the box, and a piece with no edges would not need it.
+   Read off the real alpha at 8/255, both pieces, dark:
+
+       fog-veil    ink y 0.388..0.919, x 0.000..0.999, alpha 199 at the LEFT
+                   frame column and 193 at the right — a full-bleed BAND
+       mist-bank   ink y 0.180..0.750, x 0.013..0.985, alpha 9 at both frame
+                   columns, and 9 -> 47 over the first 40px — a free-floating
+                   BLOB with soft ends
+
+   That last line is the whole answer. Both of this section's fog layers are
+   full-width: `.building__fog` is `left: -2%; width: 104%` and this one is
+   `left: 0; width: 100%`, and this one in particular is the half of a crossing
+   band that has to dissolve #tools' floor across the ENTIRE width of the page.
+   Stretch a blob to 100% and its two soft ends are a varying alpha at the two
+   places the join is least forgiving, which is a boundary that closes in the
+   middle and opens at the edges — a worse defect than the one being fixed, and
+   at the one join on this page that has never measured zero.
+
+   And the slice table is not a workaround. It is how a 3:1 file is placed in a
+   6:1 box at all; `object-fit: cover` would still be here with an edge-free
+   piece, and the rows would still have to be computed. What the table proves
+   is that the file's hard edge is never in the box, which is a property of the
+   placement rather than a patch on the art.
+
+   `mist-bank` stays a spare, and the kit's own README says an unplaced piece
+   is not a bug.                                                              */
 .building__mist {
   left: 0;
   width: 100%;

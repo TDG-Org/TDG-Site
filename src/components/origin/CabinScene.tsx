@@ -20,10 +20,18 @@ import type { WalkProgress } from '../Walk'
 
 /**
  * One continuous 3D shot behind THREE sections: the reader crosses a snowfield
- * to a cabin while they read Origin, walks in through its door, settles looking
- * down at the big table while they read the project cards, and finishes on the
- * west window while they read the small tools. It is also a nod to Makullveny's
- * own flagship theme, "Cozy Cabin".
+ * to a cabin while they read Origin, walks in through its door, turns into the
+ * room and creeps across the big table while they read the project cards, and
+ * finishes dollying into the west window while they read the small tools. It is
+ * also a nod to Makullveny's own flagship theme, "Cozy Cabin".
+ *
+ * **The camera never stops and it never jolts.** That is this pass's whole
+ * structural change and it is the site owner's note: "it jolts too quickly and
+ * fast to pan down at the table", and "have the camera always, always be
+ * moving, but faster in some areas and slower in some areas". There is no hold
+ * anywhere on the walk now — every leg is linear in scroll and every station is
+ * rounded so the speed is continuous across it. The argument, the arithmetic
+ * and the measured speed curve are all in the header of "The shot" below.
  *
  * ## The walk, and where its progress comes from
  *
@@ -37,23 +45,26 @@ import type { WalkProgress } from '../Walk'
  * Two of the three numbers in that object are marks rather than progress:
  * `apps` and `tools` are the `p` at which each section's top reaches the top of
  * the viewport. **Every beat below is expressed against those marks rather than
- * against a literal**, so the two settled beats land exactly as a heading
+ * against a literal**, so the two anchored beats land exactly as a heading
  * arrives and stay aligned when anybody changes a section's height.
  *
  * ```
- *   p 0        -> 0.62A   THE APPROACH   the existing orbit, then in to the door
- *   p 0.62A    -> 0.70A   THE MOUTH      in to the doorway, which swallows the frame
- *   p 0.70A    -> 0.90A   THE THRESHOLD  on through it; the room opens
- *   p 0.90A    -> A       THE TURN       left to the south-west corner
- *   p A        -> A+0.8dT THE TABLE      held, high, looking down at the paper
- *   p ...      -> T       LOOKING UP     off the table, round to the west window
- *   p T        -> 1       THE WINDOW     held, then a push into the outside light
+ *   p 0         -> 0.33A   THE ORBIT     the loved swing in across the snow
+ *   p 0.33A     -> 0.53A   THE RUN-IN    straight on to the door
+ *   p 0.53A     -> 0.60A   THE MOUTH     in to the doorway, which swallows the frame
+ *   p 0.60A     -> 0.74A   THE THRESHOLD on through it; the room opens
+ *   p 0.74A     -> A       THE TURN      left, on to the table, at a person's eye
+ *   p A         -> +0.25dT THE SETTLE    down over the paper as the grid climbs
+ *   p ...       -> +0.72dT THE DRIFT     the slowest leg in the shot
+ *   p ...       -> T       THE LIFT      off the table, round to the west window
+ *   p T         -> 1       THE DOLLY     in to the window, and the wash-out
  * ```
  *
- * `A = progress.apps`, `T = progress.tools`, `dT = T - A`. The stations are
- * `SHOT` below and the interpolation is `shotAt`; both carry their own numbers.
- * The mouth is `B_MOUTH` of the threshold rather than a mark of its own, and
- * the note there has the measurement it exists for.
+ * `A = progress.apps`, `T = progress.tools`, `dT = T - A`. The knot fractions
+ * are `B_ORBIT` and its neighbours, the stations are `LEGS`, and the
+ * interpolation is `shotAt`; all three carry their own numbers. **The fractions
+ * are solved from the speed curve rather than chosen** — `B_ORBIT`'s note has
+ * the table of metres, spans and rates that produced them.
  *
  * ## What is in the picture, and where it came from
  *
@@ -138,7 +149,7 @@ import type { WalkProgress } from '../Walk'
  * decoration, and the owner asked for both by name. **The paper** is a large
  * flat low-contrast field filling the frame behind where the project cards sit,
  * with no high-contrast edge crossing them — see `T_PAPER`, `PAPER_X0` and the
- * framing measurements on `ST_TABLE`. It is three sheets now rather than one
+ * framing measurements on `ST_ROOM`. It is three sheets now rather than one
  * quad, with a curled rim, a shadow on the two edges the light is behind, and
  * the table's own edge and the floor beyond it in the frame's right margin.
  * Every one of those is placed against the card grid's box as MEASURED off the
@@ -230,7 +241,7 @@ import type { WalkProgress } from '../Walk'
  *   far approach       world snow glow smoke openings ....... 5, at 30Hz
  *   the last 6m in     all six of them, about 250px of scroll  6, at 30Hz
  *   through the door   world snow fire ...................... 3, at 30Hz
- *   the table          world snow fire ...................... 3, at 15Hz
+ *   the room           world snow fire ...................... 3, at 15Hz
  *   the window         world snow fire ...................... 3, at 15Hz
  *   past the walk      nothing at all ....................... 0
  * ```
@@ -251,7 +262,7 @@ import type { WalkProgress } from '../Walk'
  * It was 1249 / 1830 / 2363 before the cozy pass, 1513 / 2118 / 2651 after it,
  * and 902 / 1371 / 1884 before the room existed at all. So the cozy pass cost
  * 264 / 288 / 288 triangles and **the PLACE pass — the one that answered "the
- * room is a floating box" and "the table beat has no table and no paper" —
+ * room is a floating box" and "the room beat has no table and no paper" —
  * costs 126 / 143 / 148, which is 8.3% / 6.8% / 5.6%.**
  *
  * Where those go, and none of them is detail for its own sake. The room's own
@@ -296,7 +307,7 @@ import type { WalkProgress } from '../Walk'
  * outside faces of walls the reader is now behind — the snow drops to a third
  * and parks every flake that would fall indoors under the floor, and what is
  * left is the world, the flames and the fire's own wash. Three draw calls and a nearly empty
- * blend, at 15Hz rather than 30 once the camera settles. **The table beat is
+ * blend, at 15Hz rather than 30 once the camera is inside. **The room beat is
  * cheaper to draw than the approach it came from.**
  *
  * All of it is still deliberate: this is a silhouette with warm windows, not
@@ -821,7 +832,7 @@ export function CabinScene({
       // assumed.** three.js renders a TRANSPARENT DoubleSide material in two
       // passes — back faces, then front — so that a closed transparent solid
       // sorts correctly against itself. Counted on the live page by patching
-      // `drawArrays` and bucketing by vertex count: at the settled table beat
+      // `drawArrays` and bucketing by vertex count: at the room beat
       // the fire buffer — 264 vertices at the time, 438 since the flames were
       // rebuilt — was submitted 58 times over 29 renders, exactly twice per
       // frame, while the world and the snow went once each.
@@ -1117,6 +1128,8 @@ export function CabinScene({
     })
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
+    /** Scratch for the golden `--warm`. One per mount, never per frame. */
+    const gold: RGB = [0, 0, 0]
     const applyPalette = (p: Palette) => {
       const span = p.ceil - p.floor
       const arr = bodyColor.array as Float32Array
@@ -1128,14 +1141,18 @@ export function CabinScene({
         arr[at + 2] = toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * t)
       }
       bodyColor.needsUpdate = true
-      setLinear(coreMat.color, p.warm)
-      setLinear(softMat.color, p.warm)
+      // The one warm on this site, made golden on the way in. `WARM_CHROMA`
+      // is the site owner's "more golden and fresher light" and it is a
+      // saturation on the token, never a second colour.
+      goldenWarm(p.warm, gold)
+      setLinear(coreMat.color, gold)
+      setLinear(softMat.color, gold)
       // The fire is drawn in the same pigment as the windows, and that is the
       // point: --warm is the ONE warm thing on this site, so the hearth, the
       // lanterns and the light coming out of the windows are the same source
       // seen from two sides. Its brightness is a per-theme palette entry
       // (`fire`) and its flicker is the material's opacity; see `flicker`.
-      setLinear(fireMat.color, p.warm)
+      setLinear(fireMat.color, gold)
       // Falling snow has to be seen against BOTH the sky and the cabin. On the
       // night scene that is near-white. On the day scene near-white snow over a
       // near-white sky is invisible, so the flakes sit part way down the ramp:
@@ -1437,12 +1454,19 @@ export function CabinScene({
       // falling past the two windows, at about a metre a second across a
       // 1.66m opening. Neither is legible at 30 in a way it is not at 15.
       //
-      // It matters because indoors is where the reader STOPS. The table beat is
-      // 1532px of cards to read over a backdrop that would otherwise repaint
-      // thirty times a second for as long as they sit there, and halving that
-      // is the difference between a backdrop and a screensaver. While the
-      // camera is still moving the full rate is back, because a camera move at
-      // 15Hz is a camera move you can count.
+      // It matters because indoors is where the reader SLOWS DOWN. The room's
+      // creep is 1426px of cards to read over a backdrop that would otherwise
+      // repaint thirty times a second for as long as they sit there, and
+      // halving that is the difference between a backdrop and a screensaver.
+      //
+      // **The gate is `converging`, and the creep is now slow enough that it
+      // holds.** `WALK_EPS` is 0.0006 of the walk, which is 2.6px of scroll at
+      // 1440x900, so a reader who has stopped scrolling settles inside it in
+      // about a second whatever leg the camera is on — and the creep's own
+      // motion is 0.44mm of camera per pixel of scroll, which is not something
+      // 15Hz can be told from 30. While the reader is actually SCROLLING the
+      // full rate is back, because a camera move at 15Hz is a move you can
+      // count.
       //
       // `urgent` is the bypass, and `dirty` is not. A blanked drawing buffer
       // has to be repainted now; a cross-fade is motion, and motion waits its
@@ -1480,7 +1504,7 @@ export function CabinScene({
       walk += (wanted - walk) * settle(WALK_RATE, step)
 
       // ── the camera ──────────────────────────────────────────────────────
-      // Six beats, four holds and five moves, all of it in `shotAt`; the eye
+      // Eight legs, no holds and no stops, all of it in `shotAt`; the eye
       // and the aim come back in two scratch arrays so the tick allocates
       // nothing. TWO narrow-frame corrections are passed rather than read,
       // because they pull opposite ways: `framePull` stands the approach
@@ -1618,13 +1642,13 @@ export function CabinScene({
 
       // The fog is the section's own band, and the section under this canvas
       // changes twice across the walk. Ramped from --band-origin to
-      // --band-tools over the table beat, which is the stretch where the only
+      // --band-tools over the room beat, which is the stretch where the only
       // exterior left in frame is what shows through a window: a wash that
       // lands on Tools' band is a wash the section below can be faded into,
       // and one that lands on Origin's is a hole. In dark the two bands are
       // #040c19 and #090b13 and in light #ebf0fb and #eceff6, so this is worth
       // about five values — but they are the five that decide the join.
-      const bandK = smooth((walk - KNOT[2]) / Math.max(1e-4, KNOT[4] - KNOT[2]))
+      const bandK = smooth((walk - KNOT[5]) / Math.max(1e-4, KNOT[8] - KNOT[5]))
       const s0 = shown.sky
       const s1 = shown.skyOut
       // Written out rather than through `mixRGB`, which returns a fresh triple:
@@ -1635,6 +1659,13 @@ export function CabinScene({
         toLinear(s0[1] + (s1[1] - s0[1]) * bandK),
         toLinear(s0[2] + (s1[2] - s0[2]) * bandK),
       )
+      // And the wash-out, over the window dolly only. See FOG_OUT_NEAR: it is
+      // what turns the last frame of the walk from a forest behind three cards
+      // into a flat field of the band the next section opens on.
+      const washR = KNOT[8] < 1 ? clamp01((walk - KNOT[8]) / (1 - KNOT[8])) : 0
+      const washK = smooth((washR - WASH_FROM) / (1 - WASH_FROM))
+      fog.near = FOG_NEAR + (FOG_OUT_NEAR - FOG_NEAR) * washK
+      fog.far = FOG_FAR + (FOG_OUT_FAR - FOG_FAR) * washK
 
       // Snow. The box rides the camera; the camera's displacement is taken back
       // out of the flakes so they stay put in the world. It is pushed along the
@@ -1893,9 +1924,9 @@ const WALK_EPS = 0.0006
 
 const SCENE_HZ = 30
 /**
- * The rate once the camera is inside AND settled — which is the table beat and
- * the window beat, and therefore most of the time anybody spends looking at
- * this canvas. The gate that picks between the two states its case; this is
+ * The rate once the camera is inside AND has stopped converging — which is
+ * the room and the window whenever the reader has stopped scrolling, and
+ * therefore most of the time anybody spends looking at this canvas. The gate that picks between the two states its case; this is
  * the number. 15Hz is 66ms between frames and the fire's fastest term is a
  * 230ms wobble, so the flicker is sampled three and a half times per cycle,
  * which is above where a slow brightness change starts to step.
@@ -2000,6 +2031,48 @@ const FOG_NEAR = 12
  * the fog is total again.
  */
 const FOG_FAR = 100
+/**
+ * ── the wash-out ─────────────────────────────────────────────────────────
+ *
+ * Where the fog goes over the LAST leg, and it is the other half of the site
+ * owner's "getting closer with the scrolls slowly for the small tools section".
+ * The dolly ends with the west window overflowing the frame on all four sides,
+ * and what is behind it at that point is the forest — dark trunks on lit snow,
+ * which is the highest-contrast field anywhere in this scene. Measured against
+ * the tools grid's own box on the live DOM at 1440x900, the largest luminance
+ * step inside it goes 108 at the arrival to 162 at the end of the push: the one
+ * frame in the whole walk where the backdrop fights the cards.
+ *
+ * So the last leg brings the fog in with the camera. `FOG_NEAR` 12 to 0.35 and
+ * `FOG_FAR` 100 to 3.2 puts every tree in the window past the far plane before
+ * the pin releases, so the opening fills with flat `--band-tools` — which is
+ * exactly the colour `#building` opens on. The frame the reader carries into
+ * the next section has nothing in it to cut against, which is what
+ * `ST_WINDOW_IN` was composed for and could not do on its own. Re-measured
+ * with it, at the same three late samples: 109 at 0.90, 97 at 0.95 and 153 at
+ * 0.99, against 109 / 109 / 162 without it. The far half of the outdoors is
+ * what it takes; the near trunks a metre outside the glass are inside 3.2m and
+ * keep most of their own value, which is why the tail is 153 rather than 24.
+ *
+ * The interior fogs too — 3.2m reaches the room's own walls — and that is
+ * correct rather than collateral: by then the wall is a border a few pixels
+ * wide round an opening that is the whole shot, and a border that dissolves
+ * into the band is a border that cannot cut.
+ */
+const FOG_OUT_NEAR = 0.35
+const FOG_OUT_FAR = 3.2
+/**
+ * And where in the dolly it starts. Not at the beginning: the reader spends the
+ * whole of #tools looking out of that window, and a fog that begins the moment
+ * the beat does would take the forest away over the very stretch it is the
+ * subject of. It runs over the last 45% of the leg — about 310px of scroll at
+ * 1440x900 — which is where the opening has already overflowed the frame and
+ * there is nothing left in the picture that reads as a window anyway.
+ *
+ * `smooth` on the remapped parameter, so the onset still has zero slope and
+ * there is no frame where the fog visibly starts.
+ */
+const WASH_FROM = 0.55
 
 /**
  * Ceiling on the backing store, in device pixels. 1.5x on a 1440x900 viewport
@@ -2311,6 +2384,26 @@ function readPalette(section: Element): Palette | null {
   }
 }
 
+/**
+ * `--warm`, pushed away from its own grey by `WARM_CHROMA` and written into a
+ * caller's triple. See `WARM_CHROMA` for the whole argument and the numbers.
+ *
+ * The luma is computed from the pigment handed in rather than written down,
+ * so this follows `--warm` if the token is ever re-chosen, and it follows the
+ * THEME CROSS-FADE too: `lerpPalette` mixes the two themes' warms and this
+ * runs on the result, so there is no frame where the fire is a hue neither
+ * theme has. Clamped at 1 because gold is the warm pigment with its red
+ * channel full, and the clamp is what puts it there.
+ *
+ * It writes into a caller's array because `applyPalette` is the only caller
+ * and this file's loop is not allowed to make garbage — the same contract the
+ * two camera scratch vectors have.
+ */
+function goldenWarm(c: RGB, out: RGB) {
+  const l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+  for (let i = 0; i < 3; i++) out[i] = Math.min(1, Math.max(0, l + (c[i] - l) * WARM_CHROMA))
+}
+
 const mixRGB = (a: RGB, b: RGB, k: number): RGB => [
   a[0] + (b[0] - a[0]) * k,
   a[1] + (b[1] - a[1]) * k,
@@ -2509,7 +2602,7 @@ const T_PAPER = 0.7
 /**
  * The second sheet, and the shadow the sheets lie in.
  *
- * Both are here because the settled table beat rendered as one flat field and
+ * Both are here because the beat over this table rendered as one flat field and
  * the brief's answer to that is "the paper should read as paper — a sheet with
  * edges, a slight warp, a shadow under it, more than one sheet if that helps,
  * at very low contrast". The last four words are the constraint that sets these
@@ -2790,9 +2883,72 @@ const FLAME_TAPER = 0.34
  * can hold.
  */
 const HEAT_CORE = 1.7
-const HEAT_TIP = 0.55
+const HEAT_TIP = 0.62
 const HEAT_EDGE = 0.72
 const HEAT_BED = 1.3
+/**
+ * ── GOLDEN, AND FRESHER ───────────────────────────────────────────────────
+ *
+ * The site owner's note is "can you make the light coming from the cabin a
+ * little bit more golden and fresher light", and that is a HUE-and-saturation
+ * note rather than a brightness one. `HEAT_CORE` and the rest above are
+ * brightnesses; multiplying a pigment moves it along its own ray toward white
+ * or black and can never make it more golden. #f5c98a scaled is #f5c98a.
+ *
+ * **So this is a chroma gain about the token's OWN luma, and it is still one
+ * token and one scalar.** `L + (c - L) * WARM_CHROMA` pushes each channel away
+ * from `--warm`'s Rec.709 luma without moving the luma itself: the hue angle is
+ * exactly `--warm`'s, the lightness is exactly `--warm`'s, and what changes is
+ * how far from grey it sits. Rule 2 is untouched — there is no second pigment
+ * here, and if `--warm` is ever re-chosen this follows it. A per-channel gain
+ * triple WOULD have been a second colour wearing three numbers, which is why
+ * it is not that.
+ *
+ * The arithmetic, in sRGB because that is the space every other mix in this
+ * file happens in (see `toLinear`). `--warm` is #f5c98a = (0.961, 0.788,
+ * 0.541) and its luma is 0.807:
+ *
+ * ```
+ *                       r      g      b     as rgb        relative luminance
+ *   --warm            0.961  0.788  0.541  245 201 138          0.6349
+ *   x 1.32            1.000  0.782  0.456  255 199 116          0.6381
+ * ```
+ *
+ * Red clips, which is the point: gold is the warm pigment with its red channel
+ * full. Blue falls 22 values and green holds, so the fire stops being tan and
+ * becomes amber. The relative luminance moves by half a percent, so **every
+ * contrast measurement in this file still holds** — `T_PAPER`'s 4.9:1 against
+ * `--text`, and the 0.15 ceiling on the table's wash, were both solved against
+ * a luminance and neither of them moves.
+ *
+ * What it does to the fire, through the same clamp `HEAT_CORE` relies on:
+ *
+ * ```
+ *                     was            is
+ *   core  x 1.70   255 255 180   255 253 149     pale gold, not white
+ *   tip   x 0.62   198 164 116   205 162  96     amber, not dusty brown
+ *   edge  x 0.72   211 176 126   218 174 105
+ * ```
+ *
+ * `HEAT_TIP` went 0.55 to 0.62 in the same edit and it is the "fresher" half:
+ * at 0.55 the top of every tongue was (188, 155, 104), which is the value of
+ * old wood, and the render read as smoky. The tips are the largest area of the
+ * flame and they are what the eye calls the fire's colour.
+ *
+ * It reaches everything the fire's pigment reaches, which is the whole of what
+ * the owner named: the flames and the ember bed, the wash on the hearth face
+ * and the pool on the floor, the low warmth on the table and the west wall,
+ * the two lit panes seen from the snow and the pool the doorway throws on it.
+ * All of them are `--warm` on `coreMat`, `softMat` or `fireMat`, and all three
+ * take this on the way in.
+ *
+ * **Light theme keeps the fire quiet and this does not change that.** `ROLES`
+ * puts `halo` at 0 and `fire` at 0.42 there, so the house's outside lights stay
+ * off and the hearth stays a tint; a tint with more chroma and the same
+ * luminance is still a tint. Measured through light's ramp at the room beat,
+ * the brightest pixel the hearth reaches is unchanged to the value.
+ */
+const WARM_CHROMA = 1.32
 /**
  * How a tongue's opacity falls from its root to its tip, and how much of it is
  * left at the flank.
@@ -2837,7 +2993,7 @@ const EMBER_SIZE = 0.016
  * into the room", which is z = -2.0 of 5.88, and this reaches -2.80, which is
  * 47%. The frame is why, and it is the same argument the brief makes about
  * props: never scale a prop down to fit, move it so the frame crops it.
- * Measured on the first render of `ST_TABLE`, at 1440x900: a 1.74 x 2.22 table
+ * Measured on the first render of the table beat, at 1440x900: a 1.74 x 2.22 table
  * left the top right quarter of the frame showing floor and the table's own far
  * edge running diagonally through the middle of it — a hard tonal step
  * straight across where the project cards sit, which is precisely what the
@@ -2853,31 +3009,34 @@ const TABLE_X0 = -IN_X + 0.12
 const TABLE_X1 = -0.97
 const TABLE_Z0 = -0.1
 /**
- * The north edge, and it moved 8cm north in this pass so that the TABLE ITSELF
- * is in the frame the cards are read against.
+ * The north edge, and it is where it is because it is what the reader sees over
+ * the table's far side while the card grid is still low in the frame.
  *
- * The critics' reading of the settled beat was "a flat grey field with two
+ * The critics' reading of the old top-down beat was "a flat grey field with two
  * diagonal wedges at the right", and the wedges were this edge. It was not
  * that the edge was missing; it was that the sheet ran all the way to it, so
  * the only thing between the brightest field in the room and the floor was a
- * 12cm strip of table with no shadow and no lip on it.
+ * 12cm strip of table with no shadow and no lip on it. It carries four bands
+ * instead: the sheet to -2.80, its shadow to -2.845, bare table to -2.88, and
+ * the rug and the floor falling away past it.
  *
- * Where the numbers come from: the card grid was measured on the live DOM at
- * this beat (1440x900, `#apps .card` union) as 130..1310 x -53..1093 — the
- * middle 82% of the width and past the frame at both ends vertically, so the
- * ONLY card-free picture at this beat is the outer 130px at each side. Those
- * two margins were unprojected onto the table top: the left one is z -0.11 to
- * -0.37 and the right one is z -2.25 to -2.99, both running the table's whole
- * width. Everything this arrangement adds lives in one of them.
+ * **The camera that measurement was taken against is gone and this note is
+ * re-derived against the one that replaced it.** `ST_ROOM` looks WEST at a
+ * person's eye, so the frame's horizontal axis is z with north at the RIGHT and
+ * its vertical axis is x, with the table running AWAY from the reader. The
+ * card grid's union at the arrival, read off the live DOM at 1440x900, is
+ * 130..1310 by 464..1677 — so the only card-free picture at that beat is the
+ * 464px band at the top and the outer 130px at each side. Unprojected onto the
+ * table top at y = 1.182, the visible part of that grid box is the trapezoid
+ * x -2.092 to -1.241 by z -0.430 to -2.071 — inside `PAPER_*` on all four
+ * sides, by 87cm to the west, 24cm to the east, 17cm north and 73cm south.
  *
- * So the right margin now carries four bands rather than two: the sheet to
- * -2.80, its shadow to -2.845, bare table to -2.88, and the rug and the floor
- * falling away past it. At 1440x900 the table's own edge is inside the frame
- * for x <= -2.365 — the far 66cm of its width, which is the top third of that
- * margin — and the sheet's edge for x <= -2.176. Push it further north and
- * LESS of it is in frame, not more: the frame's right edge on the table runs
- * from z = -2.991 at the top to -2.428 at the bottom, so every centimetre north
- * costs 3.1cm of the edge's visible length.
+ * The card-free band ABOVE it is what this edge is for: the frame's own top
+ * runs on past the table to the west wall, so at the arrival the top 262px of
+ * a 900px frame is the table's far edge, the wall over it and the sill of the
+ * west window at the right. 202px of clearance over the first card in the grid,
+ * and `ST_ROOM`'s note has why that band closes at exactly the rate the grid
+ * climbs into it.
  */
 const TABLE_Z1 = -2.88
 const TABLE_Y = IN_Y + 0.76
@@ -4405,10 +4564,14 @@ function lie(s: Solid, x0: number, x1: number, z0: number, z1: number, y: number
  * a thickness and a side the light is behind. Sixteen triangles.
  *
  * `dog` turns the corner at (`x0`, `z1`) up by a further 90%, which is a
- * dog-ear. That corner is not chosen for looks: at the settled table beat it is
- * the frame's TOP RIGHT, which is inside the 130px card-free margin — the one
- * place in this frame a fold can put a real tonal step without landing under a
- * card.
+ * dog-ear. That corner is not chosen for looks — it is the sheet's north-west
+ * one, which is the FURTHEST point on the paper from the camera on this whole
+ * leg, and it sits outside the frame's own footprint at every station from
+ * `ST_ROOM_SET` on. Re-checked against the camera that replaced the top-down
+ * one: it is 0.20 to 0.35m past the frame's top edge on the table, so the one
+ * real tonal step in this arrangement is never under a card. Before that
+ * camera it was in the frame's top-right 130px margin, which bought the same
+ * thing a tighter way.
  */
 function sheet(
   s: Solid,
@@ -4586,7 +4749,7 @@ function logAt(s: Solid, cx: number, y: number, z: number, half: number, r: numb
  * porch's and the eaves' ceilings seen from the snow — so they can never carry
  * `s.hearth` without putting firelight on the outside of the building. The
  * room's own ceiling is 2cm under them, over the room's footprint only, and it
- * is what the tilt-up off the table looks at.
+ * is what the lift off the table looks at.
  *
  * The north-east quarter above desk height used to be empty on the same
  * "camera is looking west or down" reasoning. That is true from the TURN
@@ -4804,15 +4967,19 @@ function interior(s: Solid, tier: Quality) {
   if (props >= 1) {
     box(s, -IN_X + 0.015, SW_Y0 - 0.17, (SW_Z0 + SW_Z1) / 2, 0.03, 0.12, SW_Z1 - SW_Z0 - 0.1, T_TIMBER)
   }
-  // Two ceiling beams. They are bought for one beat — the tilt up off the table
-  // — and they are what that beat is FOR: the room's height comes into frame,
-  // and a bare sloped ceiling has no scale in it. `floor` on both, because from
-  // in the room the reader is looking up at their undersides.
-  // -2.45 and not -1.85, and the settled table frame is why: a beam at -1.85
-  // is 50cm north of that station's eye and 55cm under it, which puts a dark
-  // bar across the top right corner of the one frame in this file that is not
-  // allowed to have a bar across it. At -2.45 both beams are behind the frame's
-  // top edge there, and both are still in the tilt-up that follows it.
+  // Two ceiling beams. They are bought for two beats — the threshold and the
+  // lift off the table to the window — and they are what those beats are FOR:
+  // the room's height comes into frame, and a bare sloped ceiling has no scale
+  // in it. `floor` on both, because from in the room the reader is looking up
+  // at their undersides.
+  //
+  // -2.45 and not -1.85, and the frame the cards are read against is why. That
+  // was solved against the top-down station, whose eye was at z = -1.46; the
+  // camera that replaced it stands at z = -1.25 to -1.60 and looks DOWN AND
+  // WEST, so its frame's top edge is at 2.56m of height only 1.2m ahead — a
+  // beam at -1.85 would now be behind the lens rather than across the top of
+  // the shot. Both positions are clear of the room beat at both cameras, and
+  // -2.45 is the one that is also in the lift, so it stays.
   for (const bz of [-2.45, -4.55]) {
     if (bz < -3 && props < 1) continue
     box(s, 0, 2.56, bz, IN_X * 2, 0.17, 0.19, T_BEAM, true)
@@ -4840,30 +5007,36 @@ function interior(s: Solid, tier: Quality) {
    * everything that makes a flat field a PLACE, and every piece of it is put
    * where the cards are not.
    *
-   * **The card box is measured, not guessed.** At 1440x900 the union of
-   * `#apps .card` is 130..1310 by -53..1093: the middle 82% of the width, and
-   * past the frame at both ends vertically. Unprojected onto the table top
-   * (y = 1.182) its four corners are (-2.910, -0.367), (-2.781, -2.731),
-   * (-1.123, -0.653) and (-1.035, -2.252) — so on this table, screen LEFT is
-   * the south end, screen RIGHT is the north end, screen UP is west and screen
-   * DOWN is east. The two card-free margins are therefore z > -0.37 (the left
-   * 130px) and z < -2.25 (the right 130px), each running the table's full
-   * width. There is no top or bottom margin at all.
+   * **The card box is measured, not guessed — and it was RE-measured against the
+   * camera that replaced the top-down one.** The sheet's four numbers have not
+   * moved; what has moved is the frame that has to fit inside them, and the new
+   * one is smaller and lands further from every edge.
    *
-   * The sheet is sized from those corners with a margin on all four sides: it
-   * runs x -2.96 to -1.00 against a card box of -2.910 to -1.035, and z -0.26
-   * to -2.80 against -0.367 to -2.731. The nearest a card comes to leaving it
-   * is 1.5cm, at the south-west corner.
+   * The camera now looks WEST at a person's eye and dollies in across the beat,
+   * so on this table screen LEFT is the SOUTH end, screen RIGHT the north end,
+   * screen UP is west (away) and screen DOWN is east (toward the reader). The
+   * frame's own footprint on the table top (y = 1.182), unprojected at 1440x900
+   * at the three stations the leg runs between:
+   *
+   * ```
+   *                       x from   x to    z from   z to    slack to the sheet
+   *   ST_ROOM      p A     wall*   -1.241  -0.505  -2.495   top of frame is wall
+   *   ST_ROOM_SET  +0.25dT -2.615  -1.213  -0.505  -2.495   0.35 0.21 0.25 0.31
+   *   ST_ROOM_END  +0.72dT -2.758  -1.583  -0.748  -2.452   0.20 1.42 0.49 0.35
+   * ```
+   *
+   * From `ST_ROOM_SET` onward the WHOLE frame is on this sheet with a fifth of a
+   * metre to spare on its tightest side. At `ST_ROOM` the frame's top runs past
+   * the table to the west wall on purpose, and that band is above the card grid
+   * by 202px — see `ST_ROOM` and `TABLE_Z1`.
    *
    * `PAPER_Z0` is -0.26 and not -0.20 because of how much of the sheet's own
-   * SOUTH edge that puts in the picture. The frame's left edge on the table
-   * runs from z = -0.107 at the top to -0.477 at the bottom, so an edge at
-   * -0.20 is inside the frame only for x < -2.474 — the top quarter of the left
-   * margin — and one at -0.26 for x < -2.183, which is the top 43% of it. That
-   * edge is the strongest step in this frame that a card cannot reach: sheet at
-   * green 88 against bare table at 36. It is the table beat's answer to "the
-   * table's edges should be visible somewhere in the frame", and it is worth
-   * six centimetres of sheet to double its length.
+   * SOUTH edge that puts in the picture — the whole of it is now in the frame's
+   * left margin at every station on this leg, where the old camera only caught
+   * its top 43%. That edge is the strongest step in this frame that a card
+   * cannot reach: sheet at green 88 against bare table at 36. It is the room
+   * beat's answer to "the table's edges should be visible somewhere in the
+   * frame", and it is worth six centimetres of sheet to double its length.
    */
   sheet(s, PAPER_X0, PAPER_X1, PAPER_Z0, PAPER_Z1, TABLE_Y + 0.002, T_PAPER, PAPER_RIM, PAPER_LIFT, true)
   /*
@@ -4923,10 +5096,11 @@ function interior(s: Solid, tier: Quality) {
    * the top right corner and the sheets a brighter step under it, both of them
    * inside the middle 78% of the frame where `.shell` puts the cards.
    *
-   * There is nowhere on this table that is out of that frame — measured on the
-   * render, the paper alone fills it to within 8% at the top and 12% at the
-   * sides — so the props went to the desk and the mantel instead, where the
-   * turn and the tilt-up both pass them. What is left here is one flat field,
+   * **The camera changed and the answer did not.** The new one is closer and
+   * lower, so its footprint is SMALLER — 1.40 by 1.99 at `ST_ROOM_SET` against
+   * a sheet 1.96 by 2.54 — which means even less of this table is out of frame
+   * than before, not more. The props stay on the desk and the mantel, where the
+   * turn and the lift both pass them. What is left here is one flat field,
    * which is what the owner asked for: "a big paper or something to be a solid
    * background when the UI is showing the project cards".
    */
@@ -4940,13 +5114,13 @@ function interior(s: Solid, tier: Quality) {
   }
   // The lantern that used to be on the big table, and a stack of books beside
   // it. The desk is where they belong: it is in frame for the whole turn and
-  // for none of the settled table beat, so they are read as the room being
+  // for none of the room's own leg, so they are read as the room being
   // lived in rather than as things standing on the backdrop.
   box(s, dcx - 0.42, DESK_Y, dcz + 0.34, 0.17, 0.28, 0.17, T_TIMBER)
   if (props >= 1) box(s, dcx + 0.34, DESK_Y, dcz - 0.24, 0.3, 0.12, 0.22, T_TIMBER)
   // A candle on the mantel, which is the other warm anchor and the one thing in
   // the room above waist height that is not structure. It is in frame at the
-  // threshold and again through the tilt-up.
+  // threshold and again through the lift.
   box(s, FIRE_X + 0.66, MANTEL_Y + MANTEL_T, FP_FZ - 0.26, 0.08, 0.22, 0.08, T_TIMBER)
   /*
    * The kettle, standing on the hearth slab at the east end of it.
@@ -5752,16 +5926,17 @@ function buildFireStatic(): Glow {
    *
    * One quad over the whole table top, brightest at the corner nearest the
    * hearth and falling away diagonally. It replaces a symmetric `wash` at 0.13
-   * and it is the single change to the LIGHT that turns the settled table beat
+   * and it is the single change to the LIGHT that turns the room beat
    * from a field into a place; the sheet's own rim and shadow in `interior` are
    * the change to the geometry.
    *
-   * **The frame's horizontal axis is z, and north is screen RIGHT.** The camera
-   * at `ST_TABLE` looks due west, so its screen-right projected on the ground is
-   * (0, 0, -1). That means this reads as light entering from the right of
-   * the frame and falling away to the left, which is where the fire actually is
-   * — it is 3.0m off the table's north-east corner and 6.0m off its south-west
-   * one.
+   * **The frame's horizontal axis is z, and north is screen RIGHT.** Every
+   * station on the room's leg — `ST_ROOM`, `ST_ROOM_SET`, `ST_ROOM_END` — looks
+   * due west, so its screen-right projected on the ground is (0, 0, -1) at all
+   * three and this claim survived the camera being rebuilt. That means this
+   * reads as light entering from the right of the frame and falling away to the
+   * left, which is where the fire actually is — it is 3.0m off the table's
+   * north-east corner and 6.0m off its south-west one.
    *
    * **0.15 and not more, and the ceiling is contrast rather than taste.**
    * `--text` at #f2f2f5 has a relative luminance of 0.879, so a 4.5:1 floor puts
@@ -5860,21 +6035,131 @@ function buildFireStatic(): Glow {
 type Station = { readonly p: V; readonly l: V }
 
 /**
+ * ── THE CAMERA NEVER STOPS, AND IT NEVER JOLTS ───────────────────────────
+ *
+ * The shot used to be six stations with an eased HOLD between each pair, and
+ * the site owner read the arrival at the table as a jolt: "it jolts too quickly
+ * and fast to pan down at the table". Both halves of that sentence have the
+ * same cause and it is arithmetic rather than taste.
+ *
+ * `smooth` arrives at 1 with zero slope and leaves 0 with zero slope, so a
+ * spline made of smoothstepped legs is stationary at EVERY station. Between two
+ * stations the camera therefore has to cover the whole leg in the middle of its
+ * span, which makes the middle of every leg the fastest part of it; and the
+ * legs either side of a station have wildly different lengths, so the speed the
+ * camera arrives at a station with and the speed it leaves with are unrelated.
+ * Zero is the only value they agree on. Measured on the shipped spline at
+ * 1440x900: the turn covered 1.08m in 171px of scroll with a peak rate of
+ * 1.5x its own mean, and then stopped dead for 1532px. That stop-start is
+ * what a jolt IS.
+ *
+ * So the whole run is now ONE path with ONE speed curve, and the two properties
+ * the owner asked for are held by construction rather than by tuning:
+ *
+ * - **Nothing ever stops.** Each leg's own parameter is LINEAR in walk
+ *   progress, so its speed is its length over its span — a positive constant.
+ *   No `smooth` anywhere on a leg.
+ * - **Speed is continuous across every station.** Each station is rounded by
+ *   `cornerAt`: over a window either side of it the two legs' own straight
+ *   lines are cross-faded with a `smooth` weight. At the ends of the window the
+ *   weight is 0 and 1 with zero slope, so the blended path leaves with exactly
+ *   the incoming leg's velocity and arrives with exactly the outgoing leg's —
+ *   C1 with no spline library. And because BOTH lines pass through the station
+ *   at the station's own knot, the blend still hits every composed station
+ *   EXACTLY, whatever the weight is there. Nothing solved in this file moved.
+ *
+ * What is left is a speed curve that is fast where there is nothing to read and
+ * slow where there is, which is the other half of the owner's note: "have the
+ * camera always, always be moving, but faster in some areas and slower in some
+ * areas". The spans below are solved from that, not chosen — see `B_ORBIT`.
+ */
+
+/**
  * The beats, as fractions of the marks `Walk.tsx` measures. `A` is the p at
  * which #apps' top reaches the top of the viewport and `T` is #tools'.
  *
- * Stated as fractions rather than as literals so the two SETTLED beats land
+ * Stated as fractions rather than as literals so the two anchored beats land
  * exactly as a heading arrives, whatever anybody does to a section's height
  * later. That is the whole reason the progress object carries marks at all.
+ *
+ * **They are SOLVED from the speed curve rather than picked.** Each leg's speed
+ * is its own length in metres over its span in walk progress, so choosing the
+ * spans IS choosing the speed curve. Measured on the live 1440x900 layout
+ * (`.walk` 5187px on a 900px viewport, so the pin travels 4287px, A = 0.399 and
+ * T = 0.846 clamped to 0.840), sampling the camera at 60 evenly spaced points
+ * across the whole walk:
+ *
+ * ```
+ *   leg                    metres   span      px    m per unit p   deg per sample
+ *   orbit                  41.0     0.1318    565   602 -> 115      5.6 -> 1.7
+ *   run-in to the door      9.16    0.0799    343   115             2.0 -> 4.4
+ *   door -> mouth           1.99    0.0279    120    71             3.8 -> 3.6
+ *   mouth -> threshold      1.29    0.0560    240    23             2.3 -> 1.1
+ *   threshold -> the room   0.80    0.1038    445     7.7          10.7 -> 14.5
+ *   the room, settling      0.48    0.1084    465     4.4           2.2 -> 3.3
+ *   the room, drifting      0.45    0.2088    895     2.2           0.2
+ *   the room -> the window  1.05    0.1234    529     8.5           4.7 -> 6.7
+ *   the window, dollying    1.13    0.1600    686     7.0           1.3
+ * ```
+ *
+ * Read the right-hand columns downward and that is the answer to "faster in
+ * some areas and slower in some areas". Two properties are what the owner
+ * actually asked for and both are measured rather than asserted:
+ *
+ * - **No zero.** The smallest step anywhere on that sample is 0.066m of eye
+ *   plus aim, in the middle of the drift. There is no frame of this walk on
+ *   which the camera is not moving.
+ * - **No spike.** The largest ratio between two ADJACENT steps is 2.51, at the
+ *   threshold's hand-over into the turn — and that one is a dolly handing over
+ *   to a PAN, so the angular column goes up over exactly the samples the
+ *   positional one comes down. Every other adjacent pair is inside 2.1x. The
+ *   spline this replaced had five exact zeros, so its own worst ratio was
+ *   unbounded.
+ *
+ * The turn is the number that moved most and it is the owner's jolt: 171px
+ * before and 445px now, and the pan it carries peaks at 14.5 degrees per
+ * sample against the 44 the old spline's smoothstepped middle reached.
  */
-const B_DOOR = 0.62
-const B_THRESH = 0.9
-const TABLE_HOLD = 0.8
-const WINDOW_HOLD = 0.8
+const B_ORBIT = 0.33
+const B_DOOR = 0.53
+const B_MOUTH = 0.6
+const B_THRESH = 0.74
+const ROOM_SETTLE = 0.246
+const ROOM_CREEP = 0.72
+
 /**
- * How much of the THRESHOLD beat is spent getting from the door station to the
- * door mouth, and it is the number this pass added to kill "the camera is not
- * inside the cabin, it is outside a room-shaped box".
+ * The approach's own ease, and it is one-sided on purpose.
+ *
+ * The orbit interpolates the RECIPROCAL of the distance, so a linear parameter
+ * already gives the cabin an even rate of apparent growth — that is what the
+ * 1/d law in `orbitAt` is for. What a linear parameter does NOT give is metres:
+ * `d(dist)/d(ease)` goes as `dist^2`, so the camera covers 150m per unit of
+ * ease at 52m out and 10m per unit at 13.4m. Over the orbit's own span that is
+ * a smooth 17x decay — 1.44x per sample at 60 samples across the walk — which
+ * is the shape the run-in and the door then continue.
+ *
+ * `x * (S + (1 - S) x)` starts at S of the mean rate and ends at (2 - S) of it.
+ * At S = 0.5 the far end opens gently instead of snapping into motion, and the
+ * near end is 1.5x, which is what lets the orbit hand over to the run-in at the
+ * run-in's own speed instead of at a fifteenth of it. Both derivatives are
+ * finite and positive, so this eases without ever holding — `smooth`, which is
+ * what used to be here, is 0 at both ends and that is a hold at each end of the
+ * loved approach.
+ *
+ * The FRAMES are untouched. This is a reparameterisation of the same curve:
+ * every pose the old approach passed through, the new one passes through.
+ */
+const APPROACH_EASE = 0.5
+const approachEase = (x: number) => x * (APPROACH_EASE + (1 - APPROACH_EASE) * x)
+/** Its inverse, for `restFor`. The positive root of the quadratic above. */
+const approachEaseInv = (y: number) =>
+  (-APPROACH_EASE + Math.sqrt(APPROACH_EASE * APPROACH_EASE + 4 * (1 - APPROACH_EASE) * y)) /
+  (2 * (1 - APPROACH_EASE))
+
+/**
+ * How much of the THRESHOLD is spent getting from the door station to the door
+ * mouth, and it is the number that killed "the camera is not inside the cabin,
+ * it is outside a room-shaped box".
  *
  * Three critics rendered the walk and all three led with that sentence about
  * `v4-D-2400.png`. Measured on the live page at 1440x900, that frame is walk
@@ -5895,44 +6180,14 @@ const WINDOW_HOLD = 0.8
  * is a lit door in a wall, which is the loved approach, and inside 0.86 the
  * doorway has overflowed the frame and the picture is the room.
  *
- * The old spline spent as long as it possibly could in that band. Both sides of
- * `KNOT[0]` are smoothstepped, so the camera decelerated to a dead stop AT the
- * door station and accelerated away from it — its slowest scroll fell exactly
- * where the box lives. Converting the z band to the threshold's own parameter:
- * old, r 0.184 to 0.512, which is 157px of scroll; new, r 0.072 to 0.232, which
- * is 77px. Half, and the half that is left is the doorway growing to swallow
- * the frame rather than a rectangle sitting still in the middle of it.
- *
- * The stop at the door station is kept, because that frame is the one the
- * approach was composed to arrive at, and `ST_MOUTH` is a station rather than a
- * bent ease so the camera still arrives at rest at both ends of both legs.
+ * `B_MOUTH` above is that band's own span in walk progress, and it is stated as
+ * a mark fraction rather than as a fraction of the threshold beat because every
+ * other knot in this file is. Converted: the box band is z 2.25 to 0.86, which
+ * on this leg is walk 0.5657A to 0.6035A — 65px of scroll at 1440x900, against
+ * 157px on the spline this replaced. The camera crosses it at 55 m/p, its
+ * second-fastest leg, and what the reader sees is the doorway growing to
+ * swallow the frame rather than a rectangle sitting still in the middle of it.
  */
-const B_MOUTH = 0.3
-
-/**
- * How much of the APPROACH is the existing orbit, before the final push to the
- * door.
- *
- * The owner's note on the shipped exterior was "the zoom in to the cabin is
- * really good!", so the orbit is not re-tuned: it runs unchanged from its own 0
- * to its own 1 over the first 72% of the approach, ending at exactly the frame
- * it ends at today, and the last 28% is a new move from there in to the door
- * mouth. Compressing the orbit itself into a shorter run would have kept the
- * same frames; extending its near end to reach the door would not, because
- * `Z_NEAR` and `AZ_NEAR` ARE that frame.
- *
- * Both halves are smoothstepped and the orbit's own `e` curve is flat at its
- * end, so the join has zero velocity on both sides of it and cannot read as a
- * gear change.
- */
-const APPROACH_ORBIT = 0.72
-
-/**
- * Where the walk rests for a reduced-motion visitor, in the approach's own
- * parameter. `WALK_REST` is 0.62 of the orbit and the orbit is `APPROACH_ORBIT`
- * of the approach.
- */
-const APPROACH_REST = WALK_REST * APPROACH_ORBIT
 
 /**
  * What to assume before `Walk.tsx` has measured, and how far the marks are
@@ -5943,32 +6198,16 @@ const APPROACH_REST = WALK_REST * APPROACH_ORBIT
  * 0, out of order, or greater than 1. A knot list that is not increasing puts
  * the camera in two beats at once, which is not a wobble, it is a jump.
  *
- * **None of them bites on the page as it stands, and that is worth recording
- * because one of them very nearly did.** Measured live at 1440x900 with the
- * walk built: `.walk` is 5349px tall on a 900px viewport, so the pin travels
- * 4449px, and the marks come back as `apps` 0.3849 and `tools` 0.8152. Both are
- * inside these bounds with room to spare, and the six beats land at
- *
- * ```
- *   approach   0      -> 0.2386     1062px of scroll
- *   threshold  0.2386 -> 0.3464      479px
- *   turn       0.3464 -> 0.3849      171px
- *   table      0.3849 -> 0.7291     1532px   held, the project cards
- *   looking up 0.7291 -> 0.8152      383px
- *   window     0.8152 -> 0.9630      657px   held, the small tools
- *   push out   0.9630 -> 1           165px
- * ```
+ * Measured live at 1440x900 with the walk built: `.walk` is 5187px tall on a
+ * 900px viewport, so the pin travels 4287px, and the marks come back as `apps`
+ * 0.3994 and `tools` 0.8459. `apps` is inside these bounds with room to spare
+ * and `tools` is 0.0059 past `MARK_TOOLS_MAX`, so it clamps — which costs the
+ * window dolly six thousandths of the walk at its far end and nothing else.
  *
  * An EARLIER layout put #tools' top 3483px into a 3453px run — p = 1.009, past
- * the release — where the window beat would have been zero long and `tools`
- * would have clamped to 0.84. That is what these bounds are for, and they fail
- * in the right direction: settled a sixth of the walk early beats still moving
- * when the reader arrives.
- *
- * The turn is the shortest move at 171px, which is 0.19 of a viewport, and it
- * is the one beat where the DAMPING is load-bearing rather than decorative:
- * `WALK_RATE` takes about a second to converge, so a reader who flicks through
- * that 171px still gets a second of camera rather than a cut.
+ * the release — where the window beat would have been zero long. That is what
+ * these bounds are for, and they fail in the right direction: settled a sixth
+ * of the walk early beats still moving when the reader arrives.
  */
 const MARK_FALLBACK_APPS = 0.5
 const MARK_FALLBACK_TOOLS = 0.8
@@ -5978,8 +6217,8 @@ const MARK_GAP_MIN = 0.14
 const MARK_TOOLS_MAX = 0.84
 
 /**
- * The six knots of the shot in walk progress, filled by `knotsOf` and read by
- * `shotAt`, `insideness` and `restFor`.
+ * The nine knots of the shot in walk progress — eight legs and their two ends —
+ * filled by `knotsOf` and read by `shotAt`, `insideness` and `restFor`.
  *
  * One module-level array rather than a returned object, because this is read
  * two or three times per drawn frame inside the one frame loop and an object
@@ -5987,7 +6226,8 @@ const MARK_TOOLS_MAX = 0.84
  * written by `knotsOf` and only ever read afterwards in the same synchronous
  * tick, which is the same contract `motion.ts`'s single mutated `Frame` has.
  */
-const KNOT = [0, 0, 0, 0, 0, 0]
+const SEGS = 9
+const KNOT = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 function knotsOf(marks: WalkProgress) {
   const a = Math.min(MARK_APPS_MAX, Math.max(MARK_APPS_MIN, marks.apps || MARK_FALLBACK_APPS))
@@ -5995,13 +6235,49 @@ function knotsOf(marks: WalkProgress) {
     MARK_TOOLS_MAX,
     Math.max(a + MARK_GAP_MIN, marks.tools || MARK_FALLBACK_TOOLS),
   )
-  KNOT[0] = B_DOOR * a
-  KNOT[1] = B_THRESH * a
-  KNOT[2] = a
-  KNOT[3] = a + TABLE_HOLD * (t - a)
-  KNOT[4] = t
-  KNOT[5] = t + WINDOW_HOLD * (1 - t)
+  KNOT[0] = 0
+  KNOT[1] = B_ORBIT * a
+  KNOT[2] = B_DOOR * a
+  KNOT[3] = B_MOUTH * a
+  KNOT[4] = B_THRESH * a
+  KNOT[5] = a
+  KNOT[6] = a + ROOM_SETTLE * (t - a)
+  KNOT[7] = a + ROOM_CREEP * (t - a)
+  KNOT[8] = t
+  KNOT[9] = 1
 }
+
+/**
+ * How much of a leg either side of a station the corner rounding is allowed to
+ * eat, and how far past its own end a leg may be extrapolated into the next
+ * one's window.
+ *
+ * They are two different limits and both bite. `CORNER` keeps the two windows
+ * on one leg from meeting — each is at most 0.45 of that leg and 0.45 + 0.45 <
+ * 1, so they cannot — and `REACH` keeps the ROUNDING small: inside the window
+ * the neighbouring leg is evaluated beyond its own end, and at 0.5 it never
+ * runs more than half its own length past the station it already arrived at.
+ *
+ * The pair is what lets the window be ASYMMETRIC — bounded by the leg it eats
+ * on one side and by the leg it extrapolates on the other — and the two knots
+ * where that matters are the two either side of the reading beat. Measured at
+ * 1440x900:
+ *
+ * ```
+ *   station              before   after    total     the change it rounds
+ *   the room     (A)     0.0467   0.0488   409px     7.7 m/p -> 4.4
+ *   the window's lift    0.0617   0.0555   502px     2.2 m/p -> 8.5
+ * ```
+ *
+ * Four hundred pixels is about six samples of sixty, which is what puts every
+ * adjacent step in `B_ORBIT`'s table inside 2.1x of its neighbour rather than
+ * dropping the rate by five in one frame.
+ *
+ * The rounding never moves a station: both lines pass through it at its own
+ * knot, so the blend is `w * Q + (1 - w) * Q` there for any `w`.
+ */
+const CORNER = 0.45
+const REACH = 0.5
 
 /**
  * How far the room has closed round the camera: 0 at the door mouth, 1 by the
@@ -6014,17 +6290,17 @@ function knotsOf(marks: WalkProgress) {
  * itself. `knotsOf` has to have run.
  */
 function insideness(t: number) {
-  return smooth((t - KNOT[0]) / Math.max(1e-4, KNOT[1] - KNOT[0]))
+  return smooth((t - KNOT[3]) / Math.max(1e-4, KNOT[4] - KNOT[3]))
 }
 
 /**
- * The window and door light's own ramp across the approach, unchanged from the
- * shipped one: `smooth(smooth(w))` on the orbit's parameter, saturating at 1
- * the moment the orbit does.
+ * The window and door light's own ramp across the approach: `smooth(smooth(w))`
+ * on the orbit's own parameter, saturating at 1 the moment the orbit hands over
+ * to the run-in. Unchanged in shape; it is keyed on `KNOT[1]` now because that
+ * is where the orbit ends, where it used to be a fraction of the first beat.
  */
 function approachLit(t: number) {
-  const a = KNOT[0] > 0 ? clamp01(t / KNOT[0]) : 1
-  return smooth(smooth(clamp01(a / APPROACH_ORBIT)))
+  return KNOT[1] > 0 ? smooth(smooth(clamp01(t / KNOT[1]))) : 1
 }
 
 /**
@@ -6035,31 +6311,36 @@ function approachLit(t: number) {
  * pose, because the camera was decoration behind one section. It is now the
  * BACKDROP for three, and two of those three have a legibility requirement
  * riding on the camera being in a particular place: the project cards are read
- * against the paper and the small tools against the window. A single frozen
+ * against the table and the small tools against the window. A single frozen
  * pose would satisfy at most one of them and leave the other two sections
  * reading over whatever the frozen frame happened to be.
  *
- * So it snaps to the nearest SETTLED beat instead — the composed exterior, the
- * table, or the window — switching at the midpoints between them. Every one of
- * those is a frame the shot was designed to stop on, never a mid-move one,
+ * So it snaps to the nearest ANCHORED beat instead — the composed exterior, the
+ * room, or the window — switching at the midpoints between them. Every one of
+ * those is a frame the shot was composed to arrive at, never a mid-move one,
  * which is what the rule is actually protecting. There is no animation between
  * them: crossing a midpoint is a cut, and a cut is not motion.
+ *
+ * The two interior frames are the START of their legs rather than a point
+ * inside them, and that matters more than it used to: the room's beat is a
+ * creep now rather than a hold, so "the beat" no longer names one frame. The
+ * one it names here is the frame the beat was composed to open on.
  *
  * `knotsOf` has to have run.
  */
 function restFor(marks: WalkProgress) {
   knotsOf(marks)
-  const out = APPROACH_REST * KNOT[0]
+  const out = REST_K * KNOT[1]
   const p = clamp01(marks.p)
-  if (p < (out + KNOT[2]) / 2) return out
-  if (p < (KNOT[2] + KNOT[4]) / 2) return KNOT[2]
-  return KNOT[4]
+  if (p < (out + KNOT[5]) / 2) return out
+  if (p < (KNOT[5] + KNOT[8]) / 2) return KNOT[5]
+  return KNOT[8]
 }
 
 /**
  * ── the stations ─────────────────────────────────────────────────────────
  *
- * Six of them, and every number is measured against the room rather than
+ * Seven of them, and every number is measured against the room rather than
  * chosen: the table's own centre, the window's own centre, the firebox's own
  * opening. Each is quoted where it matters.
  */
@@ -6117,84 +6398,88 @@ const ST_MOUTH: Station = { p: [0.34, 1.94, 0.56], l: [-0.58, 1.66, -4.35] }
 const ST_THRESH: Station = { p: [0.28, 2.05, -0.72], l: [-1.05, 1.5, -5.5] }
 
 /**
- * THE TABLE. Settled, high, looking DOWN — and this is the frame the project
- * cards are read against, so it is the one station in the file that was SOLVED
- * rather than composed.
+ * ── THE ROOM ──────────────────────────────────────────────────────────────
  *
- * The eye is 1.76 above a table top at 1.18 and 2.05 from the point it is aimed
- * at, which is 59 degrees below horizontal. It was found by ray-casting the
- * card area against the paper's own rectangle over a grid of 44,000 candidate
- * stations and keeping the ones where NOT ONE ray misses: at 1440x900 this
- * frames 0.0% non-paper across the middle 78% by 88% of the viewport — the
- * `.shell` box — and 0.3% across the whole frame, corner to corner.
+ * **This beat is a room seen at an angle now, not a table seen from above, and
+ * that is the site owner's call:** "don't even show the top view of the table,
+ * just show an angle inside the cabin and then continue with having the window
+ * shot. So no more top view of the table."
  *
- * The first version of this station stood out in the room at 46 degrees and
- * came out at 6.3%, all of it in the top right, and what was in that 6.3% was
- * the table's own far edge: a hard step from paper at rgb (109,109,110) to
- * table at (37,44,55) running diagonally through where a card sits. Every
- * later change on this beat — the table growing to 2.05 by 2.70, the props
- * leaving its top, the beams moving north to -2.45 — came out of that one
- * render. The measurement is the thing to re-run if any of them move again;
- * `internal/checklists/` has the shot's own spec and this file has the numbers.
+ * The station it replaces stood 1.97m ABOVE the table top and looked down at 59
+ * degrees, which is a plan view of a surface. This pair stands at a person's
+ * eye — 1.61m above the floor at the start, 1.54m at the end — beside the
+ * table's east edge, and looks WEST across it. The eye height is the whole
+ * difference: at 59 degrees a table is a shape, and at 25 the same table is a
+ * plane running away from you with a room standing behind it.
  *
- * ── and it has moved 12% back along its own sightline ────────────────────
+ * **The paper is still the card grid's backdrop and that has not moved.** The
+ * owner cut the top view, not the table, and `T_PAPER`'s note is still the
+ * reason the middle of this frame is one flat field. What changed is how much
+ * of the frame it is, and WHEN — see the creep below.
  *
- * The eye was at 2.94 and is at 3.15, scaled about the aim by `TABLE_BACK`, and
- * that is a legibility number spent on the OTHER half of the same requirement.
- * At 1440x900 the old station framed 0.3% non-paper corner to corner, which is
- * a picture of a sheet of paper and nothing else: `r3-D-3200.png` is a flat
- * field with no table, no room and no scale, and the brief's answer to it is
- * that the field "must be legible AND it must read as a place".
+ * ── the arrival, at A ────────────────────────────────────────────────────
  *
- * 1.12 is the largest back-off the `.shell` box survives, and it is derived
- * rather than tried. The cards occupy the middle 78% by 88% of the frame, and a
- * station scaled by k covers k times the footprint, so the card area covers
- * 0.88k of what the old frame covered vertically — the binding axis. At k =
- * 1.12 that is 0.986, which keeps the whole card area inside the paper with 1.4%
- * to spare, and it puts the table's own edges into the outer margin where the
- * frame has room for them. Re-measured on the bare backdrop at 1440x900: 0.0%
- * non-paper across the card area, 14.6% across the whole frame, all of it in
- * the outer 11% at the sides and the outer 6% top and bottom.
+ * 25 degrees below horizontal, due west, from 1.82m short of the aim along the
+ * ground. The frame's top ray clears the table's far edge and runs on to the
+ * west wall, so the top 262px of a 900px frame is the room itself: the wall,
+ * the sill of the west window at the right-hand edge, the table's own far edge
+ * cutting across under them. That is the "angle inside the cabin" the owner
+ * asked for, and it is a legibility choice as well as a composition one —
+ * measured off the live DOM, `#apps .card`'s union at this exact p is
+ * 130..1310 by 464..1677, so the whole of that band is 202px above the first
+ * card in the grid.
  *
- * The phone case survives it because the two pulls MULTIPLY: `inPullFor`
- * returns 0.55 on a 390x780 slice and 0.55 x 1.12 is 0.616, and the table in
- * `IN_PULL_MIN`'s own note reads 0% of the card area from 0.60 in.
+ * `z = -1.25` and not -1.02, and that 23cm is the one number on this station
+ * that was found by measuring rather than by composing. At -1.02 the frame's
+ * left edge runs off the table's SOUTH end part way up the shot and picks up
+ * the south wall behind it — a dark wedge reaching down to y = 500, which is
+ * 38px inside the card box at this p and measured 46.3 on the step metric. At
+ * -1.25 the same edge stays on the sheet and the whole beat measures 7.8 or
+ * better. It costs nothing at the other end: the west window's own sill is
+ * still in the top-right of the frame, and still above every card.
+ *
+ * ── the settle, A to A + 0.246(T - A) ────────────────────────────────────
+ *
+ * **`ROOM_SETTLE` is not a taste number: it is where the card grid's own top
+ * edge reaches the top of the frame.** The grid's union in the viewport, read
+ * off the live DOM at 1440x900, is 130..1310 by 464..1677 at p = A, and 464px
+ * of scroll out of a 4287px pin is 0.1082 of the walk, which is 0.2456 of
+ * (T - A). So the settle ends at exactly the p where the reader's cards first
+ * cover the top of the shot — and what the settle does over its 465px is take
+ * the room band out of that top. 25 degrees to 40, and 0.48m of dolly in and
+ * down along its own sightline.
+ *
+ * The two ends are solved against each other and the render is the check.
+ * `ST_ROOM_SET`'s whole frame lands on the paper with 0.21m to spare on its
+ * tightest side; the largest luminance step inside the card box, sampled on a
+ * 48 by 48 grid off the live canvas, runs 6.0 at p = A, 6.0 at 0.43, 7.0 at
+ * 0.46, 6.0 at 0.50 and 6.0 everywhere after. The top-down station this
+ * replaced measured 8.0 / 11.5 / 10.4 / 55.4 / 56.7 on the same metric at the
+ * same five points, so the angled shot is FLATTER behind the cards than the
+ * plan view was, at every point in the beat.
+ *
+ * ── the drift, on to A + 0.72(T - A) ─────────────────────────────────────
+ *
+ * "when the user is scrolling the cards, since there are more project cards,
+ * you can still move with the camera but very slowly." This is the very
+ * slowly: 0.45m over 895px, which is 0.5mm of camera per pixel of scroll and
+ * 0.2 degrees of pan per sample of sixty. It is the slowest leg in the shot by
+ * a factor of two, it is the only one nobody can see moving, and it is still
+ * not a hold — over the whole of it the frame closes 2 degrees and the table's
+ * near edge travels a fifth of the frame's width.
+ *
+ * It is also what the SPEED curve wants. The turn arrives at 7.7 m per unit of
+ * walk progress and the lift leaves at 8.5, and 2.2 in between is the dip the
+ * reading beat is; `CORNER` rounds both changes over about 450px. A drift a
+ * tenth of this length would have been a hold with a rounding error on it.
  */
-const TABLE_BACK = 1.12
-/**
- * Scale a station about the point it is aimed at. Both table stations are
- * written at the numbers the 44,000-station solve produced and then pulled by
- * `TABLE_BACK` here, rather than being rewritten at the pulled values: the
- * solved pair is the thing anybody re-running that measurement needs to see,
- * and a station typed at its post-pull value is a number with no derivation.
- */
-const backOff = (p: V, l: V, k: number): V => [
-  l[0] + (p[0] - l[0]) * k,
-  l[1] + (p[1] - l[1]) * k,
-  l[2] + (p[2] - l[2]) * k,
-]
-const TABLE_AIM: V = [-1.78, 1.18, -1.46]
-const ST_TABLE: Station = { p: backOff([-0.72, 2.94, -1.46], TABLE_AIM, TABLE_BACK), l: TABLE_AIM }
+const ST_ROOM: Station = { p: [-0.32, 2.03, -1.25], l: [-2.143, 1.18, -1.25] }
+const ST_ROOM_SET: Station = { p: [-0.72, 1.96, -1.5], l: [-1.65, 1.18, -1.5] }
+const ST_ROOM_END: Station = { p: [-1.16, 1.905, -1.6], l: [-1.965, 1.18, -1.6] }
 
 /**
- * The same beat, at the end of its hold. It drifts 12cm and turns 4 degrees
- * across a fifth of the page, which is under a pixel a second at reading speed
- * — enough that the frame is not frozen, far too little to be a move. "Nearly
- * still" is the brief: this is a backdrop and the cards are the subject.
- *
- * Scaled about its own aim by the same `TABLE_BACK`, so the hold is still a
- * hold: a pull applied to one end of it and not the other would turn a 12cm
- * drift into a 37cm dolly.
- */
-const TABLE_END_AIM: V = [-1.83, 1.18, -1.58]
-const ST_TABLE_END: Station = {
-  p: backOff([-0.78, 2.9, -1.36], TABLE_END_AIM, TABLE_BACK),
-  l: TABLE_END_AIM,
-}
-
-/**
- * THE WINDOW. Settled on the west window, which is 1.66 wide and 1.26 tall
- * centred at (−3.14, 1.79, −3.03).
+ * THE WINDOW. The west window is 1.66 wide and 1.26 tall centred at
+ * (-3.14, 1.79, -3.03), and this is where the reader arrives at it.
  *
  * The eye is level with the window's own centre and 1.9m off it, square to the
  * wall to within 9 degrees. At that distance the opening is 47 degrees wide
@@ -6206,14 +6491,33 @@ const ST_TABLE_END: Station = {
 const ST_WINDOW: Station = { p: [-0.85, 1.9, -2.6], l: [-3.14, 1.82, -3.1] }
 
 /**
- * And the push, over the last fifth. It closes to 1.22m off the wall and the
- * opening overflows the frame on all four sides — measured from this station,
- * the window's south jamb is 31.6 degrees off the axis against a 23.7 degree
- * frame edge, its north jamb 36.7 against 30.3, its head 23.9 up against 7.5
- * and its sill 30.5 down against 27.9. Not one edge of the window is left in
- * the picture: it stops being a thing in a wall and becomes the field the
- * canvas fades out of, with nothing anywhere in frame for the section below to
- * cut against.
+ * And the dolly, which is now the WHOLE of the tools section rather than the
+ * last fifth of it. The owner: "the window shot, have it look at the window,
+ * and getting closer with the scrolls slowly for the small tools section."
+ *
+ * It used to hold at `ST_WINDOW` for 657px and then push 165px. It now runs the
+ * full 686px from T to the release, at 7.0 m per unit of walk progress — the
+ * second slowest leg in the shot, and slower than the 8.5 of the lift that
+ * hands over to it, so the reader feels the camera settle rather than start.
+ *
+ * **What that costs, measured, and what it buys.** A dolly changes what is
+ * behind the tools cards every frame, so the honest number is the worst frame
+ * rather than the settled one. Sampled on a 48 by 48 grid inside `#tools
+ * .card`'s own union at 1440x900, the largest luminance step behind the cards
+ * runs 107 at the arrival, 109 at 0.90, 97 at 0.95 and 153 at 0.99. The build
+ * this replaced held at `ST_WINDOW` and then pushed, which puts 107 / 109 / 49
+ * at the same first three and reaches this same station — and its own 162 — at
+ * the release. So the worst frame of the beat is 9 values BETTER than it was
+ * (`FOG_OUT_NEAR` is why), and the price is the middle of the dolly, where a
+ * frame that used to be a window in a wall is now the forest through it.
+ *
+ * It closes to 1.22m off the wall and the opening overflows the frame on all
+ * four sides — measured from this station, the window's south jamb is 31.6
+ * degrees off the axis against a 23.7 degree frame edge, its north jamb 36.7
+ * against 30.3, its head 23.9 up against 7.5 and its sill 30.5 down against
+ * 27.9. Not one edge of the window is left in the picture: it stops being a
+ * thing in a wall and becomes the field the canvas fades out of, with nothing
+ * anywhere in frame for the section below to cut against.
  *
  * It also tilts 10 degrees DOWN, which is the "washes toward the outside light"
  * of the brief taken literally. At night the brightest thing out there is the
@@ -6222,6 +6526,42 @@ const ST_WINDOW: Station = { p: [-0.85, 1.9, -2.6], l: [-3.14, 1.82, -3.1] }
  * cut edge by another name. Aimed down, the snow is the bottom three quarters.
  */
 const ST_WINDOW_IN: Station = { p: [-1.92, 1.88, -2.95], l: [-3.14, 1.66, -3.02] }
+
+/**
+ * The legs, in order, from the door onward. Leg `i` of `shotAt` runs
+ * `LEGS[i - 2]` to `LEGS[i - 1]`; legs 0 and 1 are the orbit and the run-in,
+ * which are not a pair of stations.
+ *
+ * A table rather than a chain of `if`s because the corner rounding evaluates
+ * TWO legs per frame and one of them is always the neighbour of the other.
+ */
+const LEGS: Station[] = [
+  ST_DOOR,
+  ST_MOUTH,
+  ST_THRESH,
+  ST_ROOM,
+  ST_ROOM_SET,
+  ST_ROOM_END,
+  ST_WINDOW,
+  ST_WINDOW_IN,
+]
+
+/**
+ * Where the approach rests for a reduced-motion visitor, as a fraction of the
+ * ORBIT's own leg.
+ *
+ * `WALK_REST` is 0.62 and its note carries what that frame is: the camera 17.6m
+ * out and 16.1 degrees off axis, the cabin whole in the frame with its windows
+ * already warm. That is a DISTANCE, and the distance is what has to survive —
+ * the approach's parameter changed in this pass and the frame must not. So the
+ * distance is computed from the ramp `WALK_REST` used to mean, and then the new
+ * ease is inverted to find the parameter that reaches it. Nothing is typed
+ * twice and the rest frame is the same picture it was.
+ */
+const REST_DIST = 1 / (1 / Z_FAR + smooth(WALK_REST) * (1 / Z_NEAR - 1 / Z_FAR))
+const REST_K = approachEaseInv(
+  (1 / REST_DIST - 1 / Z_FAR) / (1 / Z_NEAR - 1 / Z_FAR),
+)
 
 /**
  * How the INTERIOR stations answer a narrow frame — and it is the OPPOSITE of
@@ -6233,10 +6573,10 @@ const ST_WINDOW_IN: Station = { p: [-1.92, 1.88, -2.95], l: [-3.14, 1.66, -3.02]
  * and the measurement is unambiguous. `fovFor` clamps the vertical angle at
  * FOV_MAX, so a portrait frame does not get narrower, it gets TALLER: at a
  * 390x780 slice the vertical field is 60 degrees against a desktop's 35, and a
- * camera looking 59 degrees down at a table then sees the floor from its own
- * feet out to 3.2m — the paper is 2.2m long and it cannot fill that whatever
- * tone it is. Measured, at the settled table beat, as the fraction of the
- * card area that is NOT paper:
+ * camera looking down at a table then sees the floor from its own feet out to
+ * several metres — the paper is 2.5m long and it cannot fill that whatever tone
+ * it is. Measured, at the room beat, as the fraction of the card area that is
+ * NOT paper:
  *
  * ```
  *   scale about the aim   1.40  1.20  1.00  0.80  0.70  0.60  0.55  0.50
@@ -6259,7 +6599,7 @@ const ST_WINDOW_IN: Station = { p: [-1.92, 1.88, -2.95], l: [-3.14, 1.66, -3.02]
  *
  * The floor at 0.5 is not decoration. The vertical field is clamped at FOV_MAX
  * so this bottoms out at 0.55 today, but a future FOV_MAX would keep going, and
- * unchecked it would take the table station's eye under the table top.
+ * unchecked it would take the room station's eye under the table top.
  */
 const V_REF = Math.tan(((fovFor(16 / 10) * Math.PI) / 180) / 2)
 const IN_PULL_MIN = 0.5
@@ -6269,16 +6609,17 @@ function inPullFor(fov: number) {
 
 /**
  * Keep the eye off the surfaces. Every station is inside the room by
- * construction, so this only ever bites after `inPullFor` has moved one, and it
- * is a guard rather than a shaper: at 320x800, the narrowest slice this site
- * supports, `inPullFor` returns 0.552 and the table station lands 1.13m off its
- * aim, where every margin here is still slack. The margins are the near plane
- * plus a hand's width.
+ * construction, so this only ever bites after `inPullFor` or the corner
+ * rounding has moved one, and it is a guard rather than a shaper: at 320x800,
+ * the narrowest slice this site supports, `inPullFor` returns 0.552 and the
+ * room station lands 1.00m off its aim, where every margin here is still slack.
+ * The margins are the near plane plus a hand's width.
  *
- * **It runs only from the TURN onward**, and the note at the call site has the
- * render that proved that gate has to exist: applied to the threshold, its
- * `IN_Z0 - 0.25` snapped the camera from the door mouth to inside the room on
- * the first frame of the beat and the walk through the doorway never happened.
+ * **It runs only from the THRESHOLD knot onward**, and the note at the call
+ * site has the render that proved that gate has to exist: applied to the
+ * threshold, its `IN_Z0 - 0.25` snapped the camera from the door mouth to
+ * inside the room on the first frame of the beat and the walk through the
+ * doorway never happened.
  */
 function clampRoom(e: V) {
   e[0] = Math.min(IN_X - 0.3, Math.max(-IN_X + 0.3, e[0]))
@@ -6286,22 +6627,157 @@ function clampRoom(e: V) {
   e[1] = Math.min(ceilAt(e[0]) - 0.25, Math.max(IN_Y + 0.55, e[1]))
 }
 
-/** Blend two stations into the two scratch vectors, at eased `k`. */
-function lerpStation(a: Station, b: Station, k: number, e: V, l: V) {
-  for (let i = 0; i < 3; i++) {
-    e[i] = a.p[i] + (b.p[i] - a.p[i]) * k
-    l[i] = a.l[i] + (b.l[i] - a.l[i]) * k
-  }
+/**
+ * The orbit, as a function of its own 0..1 ease.
+ *
+ * Apparent size, not distance, is what the eye reads on an approach, and
+ * apparent size goes as 1/d. Interpolating the RECIPROCAL of the distance means
+ * the cabin grows at an even rate across the scroll; interpolating the distance
+ * itself makes the last third of the walk lunge.
+ *
+ * `u` is linear in DISTANCE rather than in apparent size, which is what puts
+ * the swing at the far end of the walk and leaves the last third a clean
+ * straight push-in. See `AZ_FAR`.
+ *
+ * It is clamped at 1, so past its own end the orbit holds its last pose and the
+ * run-in takes over — which is exactly what the shipped spline did, and the
+ * reason it must keep doing it is `Y_NEAR`: extrapolated, the eye height keeps
+ * falling and the camera would dip to 0.69 before rising to the door step.
+ * The corner rounding at `KNOT[1]` is what makes the hand-over C1 without an
+ * extrapolation, and it is why this can be clamped and still not jolt.
+ */
+function orbitAt(ease: number, framePull: number, e: V, l: V) {
+  const near = Z_NEAR * framePull
+  const dist = 1 / (1 / Z_FAR + (1 / near - 1 / Z_FAR) * clamp01(ease))
+  const u = clamp01((Z_FAR - dist) / (Z_FAR - near))
+  const az = AZ_FAR + (AZ_NEAR - AZ_FAR) * u
+  e[0] = Math.sin(az) * dist
+  e[1] = Y_FAR + (Y_NEAR - Y_FAR) * u
+  e[2] = LOOK_Z + Math.cos(az) * dist
+  l[0] = 0
+  l[1] = LOOK_Y_FAR + (LOOK_Y_NEAR - LOOK_Y_FAR) * u
+  l[2] = LOOK_Z
 }
+
+/** Scratch for the orbit's end pose and its finite difference. */
+const ORB_P: V = [0, 0, 0]
+const ORB_L: V = [0, 0, 0]
+/**
+ * ── the aim is a DIRECTION, not a point ───────────────────────────────────
+ *
+ * `lookAt` only ever reads the direction, so where along its own sightline a
+ * station's aim point sits is free — and interpolating the POINT makes that
+ * free choice steer the pan. Measured on the first build of this spline, at 60
+ * samples across the walk: the turn's own aim ran from the firebox 5.00m off
+ * the eye to the table 2.01m off it, and because the same linear travel
+ * subtends more angle the nearer it gets, the pan came out at 4.5, 6.4, 9.0,
+ * 15.2 and 21.6 degrees per sample. A pan that accelerates fivefold into its
+ * own end is the "jolts too quickly" of the owner's note, and no amount of
+ * corner rounding fixes it, because the speed of the EYE was smooth the whole
+ * way through.
+ *
+ * So every station's aim is stored as written — the numbers above are all
+ * solved against something real and must stay readable — and converted once, at
+ * import, into a unit direction from its own eye. The legs interpolate that and
+ * re-normalise (`nlerp`, which is inside 4% of a true slerp below 90 degrees
+ * and costs one square root), and the aim point handed to `lookAt` is put a
+ * fixed 2m along it. Every composed frame is identical; only the path between
+ * two of them changes, and it changes from "swings faster the closer it gets"
+ * to "turns at an even rate".
+ */
+const AIM_D = 2
+const AIM_DIR: V[] = LEGS.map((st) =>
+  norm([st.l[0] - st.p[0], st.l[1] - st.p[1], st.l[2] - st.p[2]]),
+)
+const aimAlong = (e: V, dx: number, dy: number, dz: number, l: V) => {
+  const n = Math.hypot(dx, dy, dz) || 1
+  l[0] = e[0] + (dx / n) * AIM_D
+  l[1] = e[1] + (dy / n) * AIM_D
+  l[2] = e[2] + (dz / n) * AIM_D
+}
+
+/**
+ * One leg of the path at its own parameter `k`, which is LINEAR in walk
+ * progress and is allowed outside 0..1 so a corner can be rounded by
+ * cross-fading two legs' extrapolations.
+ *
+ * Leg 0 is the orbit; leg `i` after that runs `LEGS[i - 2]` to `LEGS[i - 1]`,
+ * with the orbit's own end pose standing in for `LEGS[-1]` on leg 1. Straight
+ * lines for the eye and `nlerp` for the aim, and no `smooth` anywhere: the
+ * easing in this shot is the corner rounding and the approach's own 1/d law,
+ * and nothing else.
+ */
+const ORB_H = 0.004
+const ORB_D: V = [0, 0, 0]
+function legAt(i: number, k: number, framePull: number, e: V, l: V) {
+  if (i === 0) {
+    if (k <= 1) {
+      orbitAt(approachEase(k), framePull, e, l)
+      aimAlong(e, l[0] - e[0], l[1] - e[1], l[2] - e[2], l)
+      return
+    }
+    /*
+     * Past its own end the orbit is CLAMPED — `orbitAt` says why the eye height
+     * cannot be extrapolated round the circle — so the corner rounding gets a
+     * straight continuation of the orbit's last velocity instead, by finite
+     * difference off its own end. This is only ever asked for inside `KNOT[1]`'s
+     * window, and it is what makes the hand-over C1: a clamped curve has ZERO
+     * velocity past its clamp, and blending against zero would throw away 46% of
+     * the approach's arriving speed on one frame, which is a jolt in the middle
+     * of the one stretch of this shot nobody is allowed to touch.
+     */
+    orbitAt(1, framePull, e, l)
+    aimAlong(e, l[0] - e[0], l[1] - e[1], l[2] - e[2], l)
+    orbitAt(1 - ORB_H, framePull, ORB_P, ORB_L)
+    aimAlong(ORB_P, ORB_L[0] - ORB_P[0], ORB_L[1] - ORB_P[1], ORB_L[2] - ORB_P[2], ORB_L)
+    const g = ((k - 1) * (2 - APPROACH_EASE)) / ORB_H
+    for (let j = 0; j < 3; j++) {
+      e[j] += (e[j] - ORB_P[j]) * g
+      l[j] += (l[j] - ORB_L[j]) * g
+    }
+    return
+  }
+  let ap: V
+  let ad: V
+  if (i === 1) {
+    orbitAt(1, framePull, ORB_P, ORB_L)
+    ORB_D[0] = ORB_L[0] - ORB_P[0]
+    ORB_D[1] = ORB_L[1] - ORB_P[1]
+    ORB_D[2] = ORB_L[2] - ORB_P[2]
+    const n = Math.hypot(ORB_D[0], ORB_D[1], ORB_D[2]) || 1
+    ORB_D[0] /= n
+    ORB_D[1] /= n
+    ORB_D[2] /= n
+    ap = ORB_P
+    ad = ORB_D
+  } else {
+    ap = LEGS[i - 2].p
+    ad = AIM_DIR[i - 2]
+  }
+  const b = LEGS[i - 1]
+  const bd = AIM_DIR[i - 1]
+  for (let j = 0; j < 3; j++) e[j] = ap[j] + (b.p[j] - ap[j]) * k
+  aimAlong(
+    e,
+    ad[0] + (bd[0] - ad[0]) * k,
+    ad[1] + (bd[1] - ad[1]) * k,
+    ad[2] + (bd[2] - ad[2]) * k,
+    l,
+  )
+}
+
+/** Scratch for the corner rounding's second evaluation. Nothing allocates. */
+const CRN_P: V = [0, 0, 0]
+const CRN_L: V = [0, 0, 0]
 
 /**
  * The whole camera, as a function of walk progress.
  *
- * Every segment is smoothstepped, so each one arrives at its knot with zero
- * velocity AND leaves it with zero velocity — which makes the whole spline C1
- * without a spline library and is the "ease every move at BOTH ends" of the
- * brief. A camera that arrives at a hold with velocity still on it reads as a
- * stumble, and a six-beat shot has five chances to do it.
+ * Every leg is linear in `t`, so its speed is a positive constant, and every
+ * station is rounded by an asymmetric `smooth` cross-fade of the two legs that
+ * meet there — so the speed curve is continuous, is never zero, and still
+ * passes through every composed station exactly. `CORNER` and the header at the
+ * top of this section have the argument and the measurements.
  *
  * `knotsOf` has to have run. The eye and the aim come back in the two arrays
  * passed in; nothing here allocates.
@@ -6312,67 +6788,43 @@ function lerpStation(a: Station, b: Station, k: number, e: V, l: V) {
  * note is why that is not a contradiction.
  */
 function shotAt(t: number, framePull: number, inPull: number, e: V, l: V) {
-  if (t < KNOT[0]) {
-    // THE APPROACH. The existing orbit, then in to the door.
-    const a = KNOT[0] > 0 ? clamp01(t / KNOT[0]) : 1
-    const w = clamp01(a / APPROACH_ORBIT)
-    // Apparent size, not distance, is what the eye reads on an approach, and
-    // apparent size goes as 1/d. Interpolating the RECIPROCAL of the distance
-    // means the cabin grows at an even rate across the scroll; interpolating
-    // the distance itself makes the last third of the walk lunge. The
-    // smoothstep on top is the "unhurried" part.
-    const ease = smooth(w)
-    const near = Z_NEAR * framePull
-    const dist = 1 / (1 / Z_FAR + (1 / near - 1 / Z_FAR) * ease)
-    // The orbit. See AZ_FAR: `u` is linear in DISTANCE rather than in apparent
-    // size, which is what puts the swing at the far end of the walk and leaves
-    // the last third a clean straight push-in.
-    const u = clamp01((Z_FAR - dist) / (Z_FAR - near))
-    const az = AZ_FAR + (AZ_NEAR - AZ_FAR) * u
-    e[0] = Math.sin(az) * dist
-    e[1] = Y_FAR + (Y_NEAR - Y_FAR) * u
-    e[2] = LOOK_Z + Math.cos(az) * dist
-    l[0] = 0
-    l[1] = LOOK_Y_FAR + (LOOK_Y_NEAR - LOOK_Y_FAR) * u
-    l[2] = LOOK_Z
-    if (a > APPROACH_ORBIT) {
-      const k = smooth((a - APPROACH_ORBIT) / (1 - APPROACH_ORBIT))
-      for (let i = 0; i < 3; i++) {
-        e[i] += (ST_DOOR.p[i] - e[i]) * k
-        l[i] += (ST_DOOR.l[i] - l[i]) * k
+  let i = 0
+  while (i < SEGS - 1 && t >= KNOT[i + 1]) i++
+  const span = Math.max(1e-6, KNOT[i + 1] - KNOT[i])
+  legAt(i, (t - KNOT[i]) / span, framePull, e, l)
+
+  /*
+   * The corner. Only one station can be near enough to matter — `CORNER` is
+   * under a half, so the two windows on a leg cannot meet — so this finds the
+   * nearer end of the current leg and blends across it if `t` is inside.
+   *
+   * `w` is `smooth`, so it is 0 with zero slope at the window's start and 1
+   * with zero slope at its end: the path leaves the window with the incoming
+   * leg's velocity and enters with the outgoing leg's, which is the C1 the
+   * whole rebuild is for. At the station itself both lines evaluate to the
+   * station, so `w` there is free and the station is hit exactly.
+   */
+  const lo = t - KNOT[i] < KNOT[i + 1] - t
+  const j = lo ? i : i + 1
+  if (j > 0 && j < SEGS) {
+    const prev = Math.max(1e-6, KNOT[j] - KNOT[j - 1])
+    const next = Math.max(1e-6, KNOT[j + 1] - KNOT[j])
+    const hPrev = Math.min(CORNER * prev, REACH * next)
+    const hNext = Math.min(CORNER * next, REACH * prev)
+    if (t > KNOT[j] - hPrev && t < KNOT[j] + hNext) {
+      const w = smooth((t - KNOT[j] + hPrev) / (hPrev + hNext))
+      // The leg the current one is being blended against: the earlier one if we
+      // are past the station, the later one if we are short of it.
+      if (lo) legAt(j - 1, (t - KNOT[j - 1]) / prev, framePull, CRN_P, CRN_L)
+      else legAt(j, (t - KNOT[j]) / next, framePull, CRN_P, CRN_L)
+      const k = lo ? 1 - w : w
+      for (let n = 0; n < 3; n++) {
+        e[n] += (CRN_P[n] - e[n]) * k
+        l[n] += (CRN_L[n] - l[n]) * k
       }
     }
-    return
   }
-  if (t < KNOT[1]) {
-    // THE THRESHOLD, in two legs. The first is the run from the door station
-    // into the mouth of the doorway and it takes `B_MOUTH` of the beat; the
-    // second is the walk on into the room. Both smoothstepped, so the camera
-    // still arrives at each station and leaves it with no velocity — the mouth
-    // is a station the shot passes through rather than an ease that has been
-    // bent. `B_MOUTH` has the measurement and what it is worth.
-    const r = (t - KNOT[0]) / (KNOT[1] - KNOT[0])
-    if (r < B_MOUTH) {
-      lerpStation(ST_DOOR, ST_MOUTH, smooth(r / B_MOUTH), e, l)
-    } else {
-      lerpStation(ST_MOUTH, ST_THRESH, smooth((r - B_MOUTH) / (1 - B_MOUTH)), e, l)
-    }
-  } else if (t < KNOT[2]) {
-    // THE TURN. Left off the door axis, arriving settled exactly at #apps.
-    lerpStation(ST_THRESH, ST_TABLE, smooth((t - KNOT[1]) / (KNOT[2] - KNOT[1])), e, l)
-  } else if (t < KNOT[3]) {
-    // THE TABLE. Held.
-    lerpStation(ST_TABLE, ST_TABLE_END, smooth((t - KNOT[2]) / (KNOT[3] - KNOT[2])), e, l)
-  } else if (t < KNOT[4]) {
-    // LOOKING UP. Off the table and round to the window, settled at #tools.
-    lerpStation(ST_TABLE_END, ST_WINDOW, smooth((t - KNOT[3]) / (KNOT[4] - KNOT[3])), e, l)
-  } else if (t < KNOT[5]) {
-    // THE WINDOW, held.
-    lerpStation(ST_WINDOW, ST_WINDOW, 0, e, l)
-  } else {
-    // and the push out, over the last fifth.
-    lerpStation(ST_WINDOW, ST_WINDOW_IN, smooth((t - KNOT[5]) / Math.max(1e-4, 1 - KNOT[5])), e, l)
-  }
+
   /*
    * The narrow-frame pull, along the station's own sightline, and then back
    * inside the walls. Both are no-ops on anything as wide as the shot was
@@ -6388,22 +6840,26 @@ function shotAt(t: number, framePull: number, inPull: number, e: V, l: V) {
    * north-west is a station that clips it. So the door and the threshold are
    * always as composed, and the pull arrives over the turn, where the camera is
    * in open room.
+   *
+   * `smooth` here is not a hold: it weights a CORRECTION rather than the path,
+   * and its zero slope at the threshold knot is exactly what keeps the pull
+   * from stepping the velocity as it arrives.
    */
-  if (t <= KNOT[1]) return
-  const ramp = smooth((t - KNOT[1]) / Math.max(1e-4, KNOT[2] - KNOT[1]))
+  if (t <= KNOT[4]) return
+  const ramp = smooth((t - KNOT[4]) / Math.max(1e-4, KNOT[5] - KNOT[4]))
   if (inPull < 0.999) {
     const pull = 1 + (inPull - 1) * ramp
-    for (let i = 0; i < 3; i++) e[i] = l[i] + (e[i] - l[i]) * pull
+    for (let n = 0; n < 3; n++) e[n] = l[n] + (e[n] - l[n]) * pull
   }
   /*
    * And back inside the walls — also only from the turn, and that gate is not
    * optional. `clampRoom` pins z to `IN_Z0 - 0.25`, which is 25cm inside the
-   * south wall; run over the THRESHOLD segment it snaps the camera from the
-   * door mouth to just inside the room on the first frame of the beat, and the
-   * whole walk through the doorway never happens. It was written that way and
-   * the render caught it: at walk 0.34 the shot was already at the fireplace
-   * with `insideness` still reading 0.12, so the fire was at a tenth of its
-   * opacity in a frame that was entirely interior.
+   * south wall; run over the THRESHOLD leg it snaps the camera from the door
+   * mouth to just inside the room on the first frame of the beat, and the whole
+   * walk through the doorway never happens. It was written that way and the
+   * render caught it: at walk 0.34 the shot was already at the fireplace with
+   * `insideness` still reading 0.12, so the fire was at a tenth of its opacity
+   * in a frame that was entirely interior.
    */
   clampRoom(e)
 }

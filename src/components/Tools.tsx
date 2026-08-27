@@ -29,7 +29,7 @@ import './Tools.css'
  * answer.** The join into `#building` is real, it is the end of the walk, and
  * it is where the 3D washes out into the outside light: the bridge, the water,
  * the boulders and the neon band are what the reader steps out into. Every one
- * of them stays.
+ * of them stays, and this pass adds the fence the owner asked for to them.
  */
 
 /** How far the nearest layer slides with the cursor, in px at full deflection. */
@@ -197,9 +197,10 @@ export function Tools() {
           The camera has settled on the west window and the small tools are
           read against its light; then it pushes toward the glass and the frame
           washes out into the outside. THIS is what is outside: a stone
-          footbridge over water, a bench on the far bank, a near shore of
-          boulders with reeds at its waterline, and the retro-neon band beyond
-          them, handing the page to `#building`.
+          footbridge over water, a bench on the far bank, a near shore with a
+          three-rail fence running out of frame, boulders and reeds at its
+          waterline, and the retro-neon band beyond them, handing the page to
+          `#building`.
 
           That is the whole reason this floor survived the pass that deleted
           `#apps`' floor and both of this section's own boundary layers. It is
@@ -286,6 +287,32 @@ export function Tools() {
             beside an anchor. `StillArt` for the same reason as the bench, and
             after the spray so it is crisp where the bench is hazed. */}
         <StillArt art="props/bushes-reeds" className="tools__reeds" />
+        {/* The fence along the near shore — the piece the site owner asked for
+            by name in the same sentence that asked for the bench, and which
+            did not exist in the kit until this pass. "maybe instead of a tree
+            in that section and in that corner, have the fence! or the park
+            seat!" The bench answered the second half; this is the first.
+
+            It runs off BOTH side edges of the frame and its feet are below the
+            section's bottom edge at every width, so it is cropped on three
+            sides and ends in mid-air on none. That is the whole reason it is
+            wider than the viewport rather than a fence-shaped object placed in
+            a gap: this artwork's perspective is strong enough that any box
+            small enough to fit between two props would be a model of a fence
+            rather than a fence.
+
+            `StillArt`, and this is the third layer at this floor to decline a
+            factor for the same reason the bench and the reeds do — a thing
+            standing on the ground does not drift, because ground does not.
+            Tools.css has the arithmetic and the two numbers this one is solved
+            from.
+
+            AFTER the reeds and BEFORE the boulders, which is the whole of the
+            depth between the three: the reeds are down at the water, the fence
+            is up the bank in front of them, and the rocks are underfoot in
+            front of both. Everything here is z-index auto, so DOM order is the
+            only thing saying so. */}
+        <StillArt art="props/fence-rail" className="tools__fence" />
         {/* The sway box is the boulders' own box, not the section: see useSway.
             One writer per element — pointer here, scroll on the <img> inside. */}
         <div ref={sway} className="tools__rocks-sway">

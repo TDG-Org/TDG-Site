@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'rea
 import { clamp01, onFrame } from '../lib/motion'
 import { Snow } from './scene/Snow'
 import { Stage } from './scene/Stage'
+import { StillArt } from './scene/ThemedArt'
 import './Walk.css'
 
 /**
@@ -111,6 +112,43 @@ const FLAKES_FADE_FROM = 0.6
 const FLAKES_FADE_TO = 0.92
 
 /**
+ * ── when the frost arrives on the glass ───────────────────────────────────
+ * Both are fractions of the run that is LEFT after the `tools` mark — `tools`
+ * is the p at which `#tools`' top edge reaches the top of the viewport, so the
+ * mark is the frame the tools heading arrives and 1 is the pin releasing.
+ * FROST_LEAD is measured BACKWARD from the mark and FROST_FULL forward.
+ * Fractions of a live mark rather than absolute p values, for the reason
+ * FLAKES_FADE_FROM gives: the camera's beats are anchored to the same marks
+ * and a literal would drift away from them the day anybody changed a section's
+ * height — which is a live risk here, because the cabin builder is repacing
+ * this camera in the same pass.
+ *
+ * `props/window-frost` is the one thing a texture-free WebGL scene cannot draw
+ * for itself, and the cabin builder asked for it by name. It is not an object
+ * in the room — it is the GLASS, so it is a DOM layer over the whole canvas
+ * rather than a prop at a place in it, and it has no position to get wrong
+ * when the camera underneath moves.
+ *
+ * **What the ramp actually tracks is how much of the frame is window**, which
+ * is why it starts before the mark rather than on it. The camera spends the
+ * beat before `tools` panning up off the table toward the west wall, and the
+ * window is already growing in frame across the whole of it; a layer that only
+ * began once `#tools` arrived would be frost appearing on a pane the reader
+ * has already been looking at for a viewport. At 1440x900 the ramp runs scroll
+ * 4467 -> 5160 against a `#tools` that starts at 4797, whose heading is at
+ * 5249 and whose first card row is at 5376 — so the frost arrives while the
+ * cards are still coming up from the bottom of the screen and is fully on
+ * before any of them is settled enough to read.
+ *
+ * **It is not a legibility device and it was measured not to be.** The kit's
+ * own brief for this piece asked for the middle 60% to be clear so that it
+ * would NOT sit behind the reading area, and that is exactly where the tools
+ * cards are. `.walk__frost` in Walk.css carries the ablation.
+ */
+const FROST_LEAD = 0.5
+const FROST_FULL = 0.55
+
+/**
  * Where the camera is along the walk, and where the two sections it settles on
  * begin. `Walk` computes it once a frame and hands it to `CabinScene`.
  *
@@ -205,6 +243,7 @@ export type WalkProgress = {
 export function Walk({ children }: { children: ReactNode }) {
   const walk = useRef<HTMLDivElement | null>(null)
   const flakes = useRef<HTMLDivElement | null>(null)
+  const frost = useRef<HTMLDivElement | null>(null)
   const [cabin, setCabin] = useState(false)
 
   /*
@@ -308,7 +347,8 @@ export function Walk({ children }: { children: ReactNode }) {
     if (!el) return
     let lastH = -1
     let lastVh = -1
-    let painted = ''
+    let paintedFlakes = ''
+    let paintedFrost = ''
 
     const markOf = (id: string, top: number, run: number) => {
       const s = el.querySelector(id)
@@ -337,24 +377,59 @@ export function Walk({ children }: { children: ReactNode }) {
     return onFrame(({ vh, mi }) => {
       read(vh)
 
-      // The near snow's fade, folded into this subscriber rather than given
-      // one of its own: it needs `p` and nothing else, and a second subscriber
-      // would be a second rect for a number this one already has.
+      // The two scroll-linked opacities of this backdrop, folded into this
+      // subscriber rather than given one each: both need `p` and a mark and
+      // nothing else, and a subscriber of their own would be a second and a
+      // third rect for numbers this one already has. One element, one writer
+      // still holds — these are two elements and this tick is the only thing
+      // that writes to either.
+      const snowEl = flakes.current
+      const frostEl = frost.current
+      const { p, apps, tools } = state.current
+
+      // The near snow, out by the doorway. At mi 0 the inline value is CLEARED
+      // rather than set to something, so the layer rests at the `--art-near`
+      // its stylesheet gives it — the frame it was composed at, visible and
+      // still, which is what the art kit asks for and what `CabinScene`'s own
+      // WALK_REST leaves behind it.
+      const snowFrom = apps * FLAKES_FADE_FROM
+      const snowSpan = Math.max(0.001, apps * FLAKES_FADE_TO - snowFrom)
+      const nextSnow = mi === 0 ? '' : (1 - clamp01((p - snowFrom) / snowSpan)).toFixed(3)
+
+      // The frost on the window. Its identity at mi 0 is NOT this layer's CSS
+      // rest the way the snow's is, because there is no one frame it was
+      // composed at: the same layer is wrong over the table and right against
+      // the glass. So it snaps, and it snaps ON THE MARK THE CAMERA USES —
+      // `CabinScene`'s `restFor` parks at the composed window station for
+      // `p >= (apps + tools) / 2` and at the room's for anything below it, so
+      // testing the same midpoint here means the glass is frosted exactly when
+      // the camera is at the glass. Both are composed frames; neither is a
+      // frozen mid-move one, and neither knows anything about the other beyond
+      // the two marks this file already hands down.
       //
-      // At mi 0 the inline value is cleared rather than set to something, so
-      // the layer rests at the `--art-near` its stylesheet gives it — the
-      // frame it was composed at, visible and still, which is what the art kit
-      // asks for and what `CabinScene`'s own WALK_REST leaves behind it.
-      const el2 = flakes.current
-      if (!el2) return
-      const { p, apps } = state.current
-      const from = apps * FLAKES_FADE_FROM
-      const span = Math.max(0.001, apps * FLAKES_FADE_TO - from)
-      const next = mi === 0 ? '' : (1 - clamp01((p - from) / span)).toFixed(3)
-      if (next === painted) return
-      painted = next
+      // `tools > 0` is the guard and it is not defensive noise: `markOf`
+      // returns 0 for a section it cannot find, and every expression below
+      // measures BACKWARD from that mark — so a `Walk` rendered without a
+      // `#tools` inside it would put `frostFrom` at -0.5 and open the page on
+      // a half-frosted hero. No `#tools`, no window, no frost.
+      const run = Math.max(0.001, 1 - tools)
+      const frostFrom = tools - run * FROST_LEAD
+      const frostSpan = Math.max(0.001, run * (FROST_LEAD + FROST_FULL))
+      const nextFrost =
+        tools <= 0
+          ? '0'
+          : mi === 0
+            ? p >= (apps + tools) / 2
+              ? '1'
+              : '0'
+            : clamp01((p - frostFrom) / frostSpan).toFixed(3)
+
+      if (nextSnow === paintedFlakes && nextFrost === paintedFrost) return
+      paintedFlakes = nextSnow
+      paintedFrost = nextFrost
       return () => {
-        el2.style.opacity = next
+        if (snowEl) snowEl.style.opacity = nextSnow
+        if (frostEl) frostEl.style.opacity = nextFrost
       }
     })
   }, [])
@@ -423,6 +498,39 @@ export function Walk({ children }: { children: ReactNode }) {
             and a visitor whose browser refuses WebGL gets this. */}
         <div ref={flakes} className="walk__flakes">
           <Snow className="walk__flakes-canvas" density={NEAR_SNOW} />
+        </div>
+
+        {/* The frost on the cabin's west window, and the last thing in the
+            stage because it is the nearest thing in the shot — it is not a
+            prop standing somewhere in the room, it is the GLASS the camera
+            ends up against.
+
+            That is why it is a full-frame DOM layer and not something placed
+            at the window's screen position: the cabin builder is repacing this
+            camera, and a layer pinned to where the opening happens to project
+            would be wrong the moment the dolly changed. A vignette that is
+            clear through the middle 60% has nothing to line up with.
+
+            INSIDE the stage, which buys the same four things the snow gets
+            from being here: the stage's mask, so the frost washes out into
+            `#building` on exactly the band the canvas does rather than
+            floating over Tools' landscape; the pin, so it is viewport-locked
+            the way glass in front of your face is; `data-covered`, so it
+            stops painting off screen; and `aria-hidden` + `pointer-events:
+            none` + the floor of the stacking order, so it is never between
+            the reader and a card.
+
+            `StillArt` and not `ThemedArt`: this layer has no distance to
+            drift against — it is at zero distance — and the two files are
+            separate artwork, which is the whole reason the frost can be pale
+            cold crystal in dark and near-white in light without a filter.
+
+            The wrapper exists because `StillArt` takes no ref and the fade
+            needs an element to write `opacity` to. One writer per element:
+            this box owns `opacity`, the image inside owns the kit's own
+            `--art-near`. */}
+        <div ref={frost} className="walk__frost">
+          <StillArt art="props/window-frost" className="walk__frost-art" />
         </div>
       </Stage>
 

@@ -34,6 +34,47 @@ import './Summit.css'
  * turns anything narrow into a spike — which is why every crest below is a
  * broad dome and there is not one sharp feature in any of the three.
  *
+ * ## And `landscapes/far-range-soft`, which was drawn for the far one
+ *
+ * The kit gained a piece this pass that is exactly what `RIDGES.far` is:
+ * smooth rounded hills, no facets, a wide 1600x533 frame, described as
+ * "ultra-distant smooth hills for a bright-disc composition". It was read
+ * before it was declined, and three of the four objections above do not apply
+ * to it at all — it is smooth, it is the right shape, and it is the right
+ * depth. What it cannot do is the job this particular layer has:
+ *
+ * - **Its top edge is a hard alpha edge, and the far ridge's whole purpose
+ *   this pass is that it does not have one.** Read off the real alpha: the
+ *   first row with any ink in it is 62.9% down the frame in dark and 45.4% in
+ *   light, and full opacity is two rows below that in dark and one in light.
+ *   The "top already hazed" it was commissioned with is TONAL — the hills are
+ *   painted pale at the crest — and the alpha under it is a cut.
+ *   `Summit.css`'s `.faith__ridge--far` carries a 47/53/63 fade in the layer's
+ *   own ink for precisely this: the disc is 1.96 cross-heights across and the
+ *   far range crosses its lower limb for most of the drift, and a crisp line
+ *   laid over a bright disc is the one defect the whole pass exists to remove.
+ *   Placing the raster means adding that same mask back on top of it, at which
+ *   point it has bought nothing.
+ * - **It cannot ride the theme wave, and this layer's colour is the section's
+ *   own band.** The three ridges are `color-mix(var(--band-faith), var(--text))`
+ *   through `currentColor`, so they are correct in both themes by construction
+ *   and they cross on the wave for free. A raster is two fixed drawings whose
+ *   `src` swaps on `data-theme`; every other art layer on the page accepts
+ *   that because it is a prop standing IN a band, and this one would be a
+ *   fixed blue-grey standing in for the band itself.
+ * - **The two themes do not put the horizon in the same place.** Dark's first
+ *   ink is at 62.9% of the frame and light's at 45.4% — 93 rows of a 533-row
+ *   file apart. One CSS box therefore lands the crest at two different heights
+ *   depending on the theme, so making the cross's foot sit on it would need a
+ *   per-theme offset as well as a per-theme mask. `transitions/stone-stair` has
+ *   the same problem in its aspect ratio and Outro.css pays a custom property
+ *   for it; this layer is load-bearing geometry rather than a prop beside some,
+ *   and it should not.
+ *
+ * None of that is a fault in the art. It is a piece drawn for a section that
+ * paints its terrain from a raster, and this one paints it from its own band.
+ * It stays a spare; the kit's README says an unplaced piece is not a bug.
+ *
  * ## Why `CrossGlyph` and not `faith/hillside-cross`
  *
  * The kit's own Faith piece was read before this was decided. It is a
@@ -117,7 +158,10 @@ import './Summit.css'
  *   other.
  * - **The cross and the moon share one x.** Both are positioned at
  *   `--summit-x` of the same box, and the crest's apex is authored at that
- *   same fraction of the viewBox (0.62 x 1440 = 892.8).
+ *   same fraction of the viewBox (0.68 x 1440 = 979.2). Those two numbers are
+ *   one decision in two places: `RIDGES.crest` below carries the second half
+ *   and the scaling that moved it when the site owner asked for the group to
+ *   sit further right.
  * - **The whole cross is inside the moon's disc.** The disc's radius is
  *   `--summit-disc-r` cross-heights and its centre sits `--summit-disc-c`
  *   above the crest — 0.98 and 0.52 today — so the disc's top clears the
@@ -280,13 +324,30 @@ const RIDGES = {
      ink, which is the aerial perspective the composition was missing and the
      reason this range finally has something to read against. */
   far: 'M0 400 L0 236 C150 231 250 206 396 202 C530 198 626 236 772 240 C900 243 1010 214 1150 208 C1268 203 1352 226 1440 242 L1440 400 Z',
-  /* The summit. One broad dome with its apex at (892.8, 100) — 0.62 of the
+  /* The summit. One broad dome with its apex at (979.2, 100) — 0.68 of the
      width, the same fraction `--summit-x` puts the cross and the moon at. The
      control points either side of the apex are both horizontal and both 64.8
      units out, so the crest is smooth through the one point that matters and
-     stays smooth after a 3.84x horizontal squeeze at 375px. */
+     stays smooth after a 3.84x horizontal squeeze at 375px.
+
+     **The apex was at 892.8 (0.62) and moved with `--summit-x`, in the same
+     edit, because the two are one decision.** The site owner asked for the
+     moon and the cross a little further right; moving the custom property
+     alone would have walked the cross off the top of the hill, since this
+     literal is the only thing that says where the hill's top is.
+
+     It is not a translate of the old dome — the flanks are different lengths
+     now, so each was scaled about the apex rather than slid: every x left of
+     the apex by 892.8 / 979.2 = 1.09677 and every x right of it by
+     547.2 / 460.8 = 0.84211, y untouched. That keeps the profile's shape
+     (a long shallow left rise, a shorter steeper right fall) instead of
+     compressing the whole hill toward one edge, and it keeps both flanks
+     monotonic. Measured against the far range behind it, whose apex is at
+     y = 202: the crest crosses that line at x 705 and x 1175, so the far
+     range still shows for the left 49% and the right 18% of the width, where
+     it showed for 51% and 22% before. */
   crest:
-    'M0 400 L0 368 C118 362 246 348 368 314 C500 275 604 231 700 168 C762 127 828 100 892.8 100 C957.6 100 1012 124 1074 172 C1176 251 1290 318 1440 352 L1440 400 Z',
+    'M0 400 L0 368 C129.4 362 269.8 348 403.6 314 C548.4 275 662.5 231 767.7 168 C835.5 127 914.4 100 979.2 100 C1044 100 1079.6 124 1131.8 172 C1217.7 251 1313.7 318 1440 352 L1440 400 Z',
   /* The ground. A low swell at each edge dipping away in the middle, so it
      reads as foreground crossing IN FRONT of the crest hill's flanks rather
      than as a fourth line competing with them. It carries no drift at all —

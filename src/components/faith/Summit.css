@@ -25,10 +25,31 @@
   /* Where the crest peaks, as a fraction of the section's width. Right of
      centre, like the reference, and far enough off it that the summit cross
      never stacks directly under the CrossGlyph at the top of the content.
-     The crest path's apex is authored at 0.62 x 1440 = 892.8 in its own
+     The crest path's apex is authored at 0.68 x 1440 = 979.2 in its own
      viewBox, so this value and that number are one decision in two places —
-     change either and change both. */
-  --summit-x: 62%;
+     change either and change both.
+
+     **It was 62% and the site owner asked for the moon and the cross "a
+     little bit more to the right".** Moving this alone would have slid the
+     cross off the top of the hill, because the apex is a literal in
+     `Summit.tsx`'s path; both moved in one edit, and `RIDGES.crest` there
+     carries the re-authored flanks and the arithmetic that scaled them.
+
+     68 and not further, and the bound is the moon rather than taste. The
+     moon's BOX is 3.92 cross-heights wide and the disc is half of that, so at
+     the narrow end — where `--summit-cross-h` is pinned to its 66px floor and
+     the disc is 129.4px across — the disc's right limb sits at
+
+         320px    0.68 x 320 + 64.7 = 282.3     37.7px inside the frame
+         375px    0.68 x 375 + 64.7 = 319.7     55.3px inside
+
+     and the bloom around it hangs off the right the way it already did at 62%
+     (13px at 375 then, 9px now). A whole disc with air beside it is the
+     picture; the bloom running to the frame is not a boundary and nothing on
+     the other side of it can disagree. At 70% the 320px column loses 11px of
+     that margin, which is where the disc starts to read as leaning on the
+     edge. */
+  --summit-x: 68%;
 
   /* The crest line, above the section's floor. 11vw between a phone floor and
      a 168px ceiling: the hill has to be tall enough to read as a summit and
@@ -125,35 +146,79 @@
      visible ends are at 38.0 and 54.7; at 375, 18.0 against 18.0 and 26.3. */
   --summit-foot: clamp(18px, 2.2vw, 38px);
 
-  /* Clear sky between the moon's BLOOM and the last line of the copy.
+  /* Clear sky between the moon's DISC and the last line of the copy.
 
-     **This used to be measured to the DISC and paid for the bloom out of a
-     table, and the table is gone on purpose.** It ran five rows deep, one of
-     them had been wrong for two passes, and it had to be re-derived by hand
-     every time either clamp moved — which is exactly the kind of claim nobody
-     re-derives, so it silently stops being true. The bloom is now inside
-     --summit-clearance's own arithmetic instead (see below), which means this
-     value has one job left and it is a simple one:
+     ## Why it is measured to the disc again, and what pays for the bloom
+
+     The site owner's note on this section was that the moon and the cross sit
+     "too far down" and want to be "a little closer to the text". Measured at
+     1440x900 with the section's floor parked at the viewport's bottom, the
+     copy's last line ended at y 362 and the disc's top limb did not begin
+     until y 561 — 199px of band between them, on a section 1141px tall that
+     has never fitted in a viewport. That is the hole he is describing.
+
+     Raising --summit-crest cannot close it, and the arithmetic is worth
+     stating because it is the obvious move: --summit-clearance contains the
+     crest, so the section's FLOOR moves down by exactly as much as the crest
+     moves up and the distance from the copy to the disc is unchanged. All a
+     taller crest buys is a taller hill in a taller section. The only two terms
+     in that distance are this one and --summit-cross-h:
+
+        copy's bottom -> disc's top  =  clearance - (crest + (c + r)h)
+
+     ## So the sum reserves the bloom's READABLE reach, not its geometry
+
+     The version this replaces reserved to the bloom's outermost pixel —
+     crest + (c + 2r)h — and that pixel has alpha ZERO by construction:
+     `Moon.tsx`'s halo is a userSpaceOnUse radial that is 0.30 of --glow at
+     0.68 of the box radius and 0 at 1.00. Reserving clear sky above a row
+     that paints nothing is 0.98 cross-heights of nothing, which at 1440 is
+     121px of the 199.
+
+     Ablated and measured rather than derived from the stops: the summit
+     parked as above, `.faith__moon-disc` hidden and shown, one column straight
+     up from the disc's centre, the difference read in CIE L*. Distances from
+     the disc's centre in cross-heights, both themes:
+
+                              dark      light
+        bloom under 2.0 L*    1.787h    1.755h
+        bloom under 1.0 L*    1.852h    1.852h
+        bloom under 0.5 L*    1.884h    1.852h
+
+     The disc's own top is at 1.00h (c + r = 0.52 + 0.98), so **0.90 of a cross
+     height above the disc is where the bloom stops being readable in either
+     theme** — the 0.5 L* row in dark, past it in light. That is this value,
+     and it is stated in cross-heights rather than in vw so the claim holds at
+     every width instead of at the one it was measured at.
+
+     ## The second requirement: the DISC may never reach the copy
+
+     The moon drifts, so the clearance has to survive the drift:
 
         --summit-air > (MOON_RISE / 2 + MOON_PY) x k
 
-     the moon's worst UPWARD drift, so that the bloom's outermost pixel cannot
-     be pushed over the verse by the scroll. MOON_RISE is 88 and MOON_PY is 6
-     in `Summit.tsx`, and k is the motion scale that file applies,
-     clamp(0.5, width / 1440, 1.1) — so the requirement is 50k, which is 25px
-     at 375, 50 at 1440 and 55 from 1584 up.
+     MOON_RISE is 88 and MOON_PY is 6 in `Summit.tsx`, and k is the motion
+     scale that file applies, clamp(0.5, width / 1440, 1.1), so the requirement
+     is 50k. Against 0.9h:
 
-     5vw between 64 and 78 clears that everywhere with room to spare, and the
-     margin is what a reader actually sees as sky: 39px at 375, 22px at 1440,
-     23px from 1584 up. Quoted at the viewport width; the scale is taken off
-     the SECTION's width, which is a scrollbar narrower, so every figure here
-     is conservative by about a tenth of a pixel.
+        320 / 375    59.4 vs 25.0        1440    111.5 vs 50.0
+        768          59.4 vs 26.7        1920    115.2 vs 55.0
+       1024          79.3 vs 35.6
 
-     It is smaller than the 70–104 it replaced and the section is nonetheless
-     140px taller at 1440, because the bloom it used to be quietly absorbing is
-     now stated. That is the trade this rewrite is: one number that means what
-     its name says, and the geometry it used to hide moved into the sum. */
-  --summit-air: clamp(64px, 5vw, 78px);
+     — a factor of 2.1 or better everywhere, and it is a floor twice over,
+     because the frames where the copy and the moon are both on screen are the
+     middle of `p` rather than its ends: at 1440x900 the copy's bottom edge does
+     not come on screen until p 0.308, where the moon has risen 16.9px of its
+     44 — a third of the excursion the requirement above is written against.
+
+     What crosses the copy's own bottom edge at rest is therefore the bloom at
+     under half a unit of luminance, which is beneath the step a reader can see
+     on a soft field — and this section already paints `.faith__blob`, a --glow
+     radial at 0.7 opacity, directly behind the verse.
+
+     Measured after: the copy-to-disc band is 111px at 1440 where it was 199,
+     and the section is 1059px rather than 1141. */
+  --summit-air: calc(var(--summit-cross-h) * 0.9);
 
   /* ── the two derived lengths ───────────────────────────────────────────
      The crest path's apex is at viewBox y = 100 of 400, so it sits three
@@ -196,29 +261,39 @@
 
   /* How much room the summit needs under the copy.
 
-     The tallest thing in the scene with any alpha in it at all is the moon's
-     BLOOM, and it is what this sum is written against — the disc used to be,
-     with the bloom paid for out of a table above --summit-air that had to be
-     re-derived by hand whenever a clamp moved.
-
-     `Moon.tsx`'s geometry is a disc of radius 25 in a 100 viewBox, so the
-     bloom's radius is exactly twice the disc's. Everything follows:
+     The tallest thing in the scene a reader can actually SEE is the moon's
+     disc, and it is what this sum is written against. `Moon.tsx`'s geometry is
+     a disc of radius 25 in a 100 viewBox, so the bloom's radius is exactly
+     twice the disc's, and everything follows:
 
         disc centre = crest + c              c = --summit-disc-c = 0.52
         disc top    = crest + c + r          r = --summit-disc-r = 0.98
-        bloom top   = crest + c + 2r         = crest + 2.48 cross-heights
+                                             = crest + 1.50 cross-heights
+        bloom edge  = crest + c + 2r         = crest + 2.48 cross-heights
 
-     so the bloom's outermost pixel is exactly --summit-air below the content's
-     bottom edge at every width, without measuring a line of type — the same
-     trick the old hillside used, one layer up, now applied to the right edge
-     of the right object. Worst-case drift eats 50px of that air at 1440 (half
-     the moon's rise plus its pointer y, scaled by the same k the amplitudes
-     are), against an air of 72. At 1440 that puts the disc's top 344px above
-     the section's floor and the copy's bottom edge at 537px, of which the top
-     121px is bloom rather than empty band. */
+     so the DISC's top limb is exactly --summit-air below the content's bottom
+     edge at every width, without measuring a line of type — the same trick the
+     old hillside used, one layer up, applied to the highest edge of the right
+     object.
+
+     **The bloom is not in the sum, and that is the site owner's note being
+     answered rather than an omission.** It used to be: the third line above
+     was the term, which reserved clear sky above a row whose alpha is zero and
+     bought 0.98 cross-heights — 121px at 1440 — of nothing between the verse
+     and the moon. --summit-air carries the ablation that says where the bloom
+     actually stops being readable (0.90 cross-heights above the disc, in both
+     themes) and is set to exactly that, so the outer bloom now lies in the
+     air rather than under it and the band between the two closed from 199px to
+     111 at 1440.
+
+     Worst-case drift eats 50px of that air at 1440 (half the moon's rise plus
+     its pointer y, scaled by the same k the amplitudes are), against an air of
+     111.5 — and the frames where both the copy and the moon are on screen
+     spend at most 18px of it. At 1440 the disc's top sits 344px above the
+     section's floor and the copy's bottom edge at 456px, all of it band. */
   --summit-clearance: calc(
     var(--summit-crest) + var(--summit-cross-h) *
-      (var(--summit-disc-c) + var(--summit-disc-r) * 2) + var(--summit-air)
+      (var(--summit-disc-c) + var(--summit-disc-r)) + var(--summit-air)
   );
 
   /* ── the inks ──────────────────────────────────────────────────────────
@@ -316,6 +391,20 @@
      measurement moved from 78.3 / 9.1 / 9.76:1 to 78.3 / 6.4 / 10.28:1. A wider
      pool of an ink that is 0.3 L* off its own band cannot do more than that,
      which is the point: dark never needed it.
+
+     **Re-read after the group moved right and up this pass**, because
+     `.faith__dusk`'s stops are fractions of a section that got 82px shorter and
+     the disc now sits at a different row of that ramp. Nothing in this block
+     was changed for it; the same measurement, same definitions, same parked
+     frame:
+
+         light   disc L* 95.41   sky L* 73.85   ratio 1.819:1
+         dark    disc L* 85.27   sky L*  6.33   ratio 12.55:1
+
+     Both moved the right way and neither ink needed re-solving — the disc is a
+     translucent white over the sky, so it reads brighter wherever the ramp
+     behind it is less deep, and 70% is a little higher up the ramp than 72%
+     was on a taller box.
 
      **The two shadings carry it together and neither could alone.** This pool
      is pinned vertically by the section's floor — the sum under
@@ -450,6 +539,31 @@
    Re-do this before changing MOON_RISE, CREST_RISE, MOON_PY, MOON_PX,
    --summit-disc-r or --summit-disc-c.
 
+   ## Re-read from the live boxes after the group moved, this pass
+
+   None of the six inputs above changed — `--summit-x` is horizontal and
+   --summit-air is not in this sum at all — so the table is arithmetic that
+   still holds. It was re-measured anyway, because a proof nobody re-runs is a
+   proof that quietly stops being true. Every width, both themes, the section's
+   floor parked at the viewport's bottom, reading the eight extreme points of
+   `CrossGlyph`'s own path (stem x 16.6..25.4 and crossbar y 26.5..35.3 of its
+   42x100 viewBox) against the disc's live centre and radius:
+
+       width   cross-h   disc r   worst point   inside   in cross-heights
+        320     66.00     64.68     foot         30.31        0.459
+        375     66.00     64.68     foot         29.97        0.454
+        768     66.05     64.73     foot         28.28        0.428
+       1024     88.06     86.30     foot         40.01        0.454
+       1440    123.83    121.36     top          58.57        0.473
+       1920    128.00    125.44     top          59.94        0.468
+
+   Positive at every width, in both themes, and flat in cross-heights to within
+   a twentieth — which is the motion scale doing its job. The other two claims
+   read at the same time: the cross's foot against the crest path's own apex is
+   0.00px at 320, 375 and 1920 and ±0.01 elsewhere, and the disc's lower limb
+   sits 28.3 to 62.7px BELOW the crest line at every width, so the tuck behind
+   the hill survives too.
+
    opacity 1, and no --art-* token. Those are the art KIT's opacities — numbers
    that multiply a raster already drawn at the right value. This is drawn from
    tokens that carry their own alpha per theme, so the disc is already
@@ -510,11 +624,16 @@
    radii to reach nothing. That last figure is the one the width buys: at
    a = 3.6h the same fade was over by 3.0 radii and the render showed a ring.
 
-   The element is 1139px wide at 1440 inside a 1440px frame. At 375px it is
-   607px wide and runs off both, which costs nothing: the left edge lands where
-   the alpha is already zero, and on the right the wash simply continues to the
-   frame — a frame is not a boundary and there is nothing beyond it for a step
-   to be measured against.
+   The element is 1139px wide at 1440, centred on --summit-x, so since that
+   moved to 68% it spans x 410..1549 and hangs 109px off the right of the
+   frame. At 375px it is 607px wide and runs off both. Neither costs anything,
+   and the reason is in the mask rather than in the width: the normalised
+   radius at the right frame is sqrt((460.8/569.7)^2 + 0.3514^2) = 0.882 at the
+   disc's own height, past the `transparent 84%` stop, so the pool is at zero
+   alpha there before the frame reaches it. Along the pool's own midline it is
+   0.10 alpha at that edge, which is 0.7 L* in light and 0.03 in dark — and a
+   frame is not a boundary, so there is nothing beyond it for even that to be
+   measured against.
 
    A child of .faith__moon rather than a sibling, so it takes the moon's
    translate without a second style write per frame — and so it cannot slide
@@ -529,7 +648,9 @@
    the outer thirds and -10, -13, -4.6 in dark and +17, +21, +21, +19, +12 in
    light across x = 720 to 1120 — which was exactly the width this element had
    at the time (4.4 cross-heights, 545px), centred on --summit-x. Nothing else
-   on the page was that shape. It is 7.2 cross-heights now; what keeps the
+   on the page was that shape. (Those columns are read at --summit-x = 62%,
+   which is where it stood for that reading; add 86px to every x in this
+   paragraph to find the same window at 68%.) It is 7.2 cross-heights now; what keeps the
    floor clear is the sum below, which is written in the HEIGHT and the lift
    and is untouched by the width.
 
@@ -605,7 +726,9 @@
    Measured, at 1440x900 with the floor parked at viewport y = 400 and the
    one-pixel luminance step read at fifteen columns across the width: nothing
    at all in the outer thirds and -8.1, -11.8, -2.8 across x = 820 to 1020 in
-   DARK, which is the disc's own width centred on --summit-x. Dark only,
+   DARK, which is the disc's own width centred on --summit-x — read while that
+   was 62%; the same window is x 858..1101 at the 68% it is now, and the strip
+   below is full width, so nothing about the repair moved with it. Dark only,
    because --moon-halo is a blue-white glow over a near-black band there and
    plain white over a near-white one in light, where the same cut has nothing
    to show.
@@ -858,9 +981,16 @@
    stray onto the band above the ridge where a pale pool would read as fog.
 
    2 cross-heights wide against 0.62 tall, because moonlight over a broad dome
-   spreads sideways. At 1440 that is 248 x 77px, and the ridge falls away only
-   45px over the 181px either side of the apex, so the pool stays on the hill
-   with room at every width.
+   spreads sideways. At 1440 that is 248 x 77px, spanning x 855..1103 around
+   the apex at 979.2. Evaluated on the re-authored crest path, the hill's
+   surface at those two x sits 25 viewBox units below the apex on the left and
+   50 on the right — 16px and 31px once 400 units are squeezed into the band's
+   251.5px — against a pool 77px deep. So it is on the hill at both edges, with
+   the smaller margin on the right because that flank is the shorter and
+   therefore the steeper of the two. (The same two readings on the old path,
+   with the apex at 892.8, were 30 units left and 35 right — 19px and 22px.
+   Moving --summit-x to 68% shortened the right flank by 16% and steepened it
+   by about the same, which is where the 31 comes from.)
 
    background-color under a mask rather than a radial-gradient, for the reason
    .faith__moon-sky records: only the flat colour crosses on the theme wave. */

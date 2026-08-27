@@ -25,21 +25,18 @@
      further from the band than the ground itself, so it reads as the floor
      being LIT rather than as a second band lying on it. */
   --outro-pool-ink: color-mix(in srgb, var(--band-outro) 84%, var(--text));
-  /* The nosing on each tread of the stair. A bigger step than either of the
-     above — 14% against 11% and 16% — because it is a 4–12px strip rather than
-     a 300px band, and a thin line needs more separation than a wash before it
-     is seen at all.
-
-     Toward --text like everything else in these files, and the READING flips
-     with the theme while the declaration does not: in dark it is paler than
-     the tread above it, which is the next tread down catching the light; in
-     light it is darker, which is the riser's own shadow. Both are what a stair
-     looks like, and the art kit's two inks already work that way — its light
-     set is "paler mist and silver with a narrow graphite line". */
-  --outro-tread-ink: color-mix(in srgb, var(--band-outro) 86%, var(--text));
 }
 
-/* ── and the light theme takes a bigger step of all three ──────────────────
+/* There was a third ink here, `--outro-tread-ink`, and it is gone with the
+   thing it painted. It was the lit nosing under each tread of the `steps`
+   Seam — a second copy of the same silhouette a few pixels lower, in a colour
+   one step further from the band, because a `Seam` is a flat fill and a stair
+   needs two tones. `transitions/stone-stair` arrives with its own facets, its
+   own lit treads and its own shadowed risers painted into the art, so the
+   whole construction is a raster now and there is nothing left for a token to
+   colour. See `.outro__stair`. */
+
+/* ── and the light theme takes a bigger step of both ───────────────────────
    The paragraph above is right that both operands carry the theme, and it was
    wrong about what that buys. A fixed percentage toward --text is a fixed step
    in L*, and a fixed step in L* is NOT a fixed contrast ratio: 11% of --text
@@ -53,21 +50,20 @@
 
        --outro-ground-ink   84%   L* 84.2   1.40:1   the floor under both props
        --outro-pool-ink     78%   L* 79.3   1.61:1   where the afterglow lands
-       --outro-tread-ink    74%   L* 76.0   1.77:1   the nosing on each tread
 
-   They were 89 / 84 / 86, which is L* 88.2 / 84.2 / 85.8 and 1.26 / 1.40 /
-   1.34 — the whole set inside a third of a stop of each other and of the band.
+   They were 89 / 84, which is L* 88.2 / 84.2 and 1.26 / 1.40 — both inside a
+   third of a stop of each other and of the band.
 
-   Dark is untouched at 89 / 84 / 86, where the same three measure L* 12.8 /
-   18.4 / 16.2 against a band of 2.0, which is 1.25 / 1.46 / 1.37. The ORDER is
-   the same in both — the pool is a step past the ground and the nosing a step
-   past the pool — and so is the reading: in dark the mix goes pale and lights
-   the floor, in light it goes dark and shades it.
+   Dark is untouched at 89 / 84, where the same two measure L* 12.8 / 18.4
+   against a band of 2.0, which is 1.25 / 1.46. The ORDER is the same in both —
+   the pool is a step past the ground — and so is the reading: in dark the mix
+   goes pale and lights the floor, in light it goes dark and shades it.
 
-   The tread is the one that moves furthest, and it is the thinnest thing here:
-   4–12px of strip between two silhouettes. At 86% it was 11.1 L* off the band
-   and reading as a hairline; at 74% it is 20.9 off it and reads as a lit
-   nosing. See --outro-tread-lip below for the height that pairs with it.
+   (A third, `--outro-tread-ink`, sat between them at 86% / 74% and painted the
+   lit nosing of the `steps` Seam. It went out with that seam, and the note
+   above the block records why. Its 74% is kept in this paragraph's history
+   only because the ratios it was solved against are the same two the pair
+   above still uses.)
 
    The two props keep their own separation through this, which was the thing to
    check rather than assume: `garden-arch` and `stepping-stones` are drawn as
@@ -78,7 +74,6 @@
 :root[data-theme='light'] {
   --outro-ground-ink: color-mix(in srgb, var(--band-outro) 84%, var(--text));
   --outro-pool-ink: color-mix(in srgb, var(--band-outro) 78%, var(--text));
-  --outro-tread-ink: color-mix(in srgb, var(--band-outro) 74%, var(--text));
 }
 
 .section.outro {
@@ -183,21 +178,51 @@
      34 is kept rather than rewritten as 27, because it is what the box takes
      once the page is wide enough to give it the room — 1816px up. */
   --outro-stone-w: min(clamp(220px, 34vw, 580px), var(--outro-prop-cap));
+  /* The lantern in the arch's opening, as a fraction of the arch rather than
+     of the viewport, so the two cannot drift apart at any width. 30% is solved
+     against the arch's own gap, measured at 43.6% of its frame at the rows the
+     lantern occupies — see `.outro__lantern`. */
+  --outro-lantern-w: calc(var(--outro-arch-w) * 0.3);
   --outro-stone-bottom: clamp(10px, 3vw, 60px);
-  /* How far below the terrace the lit nosing sits. It IS the visible height of
-     that strip, so it is read at the band's scale rather than the section's:
-     11.5px at 1440 against a 79px band, 4px at 375 against a 44px one — both
-     about a seventh of the band.
 
-     It was 6px and that was too little to do the job it exists for. At a
-     seventh, every tread is TWO tones — a plate and a lit edge under it — and
-     six of those read as cut stone. At a twentieth they are one tone with a
-     hairline, and a wide flat plate of one tone on a near-black page is what
-     made the old orthogonal terrace read as a loading placeholder in the first
-     place. The nosing cannot collide with the tread below it however large it
-     gets, because the two are at different x: what it draws is the strip
-     between one silhouette and the same silhouette `lip` px lower. */
-  --outro-tread-lip: clamp(4px, 0.8vw, 12px);
+  /* ── the stair ──────────────────────────────────────────────────────────
+     The box `transitions/stone-stair` is drawn into. See `.outro__stair` for
+     the placement, the mask and the join reading; these are the three numbers
+     the rest of that rule is written out of.
+
+     --outro-stair-h    the box's height, and the only thing sized in vw
+     --outro-stair-rise how far its TOP sits above the join
+     --outro-stair-out  how far its near end runs off the left of the page
+
+     The height leads because the artwork is 3:1 and this boundary is not: at
+     the full width of the page the stair would be 480px tall at 1440 and would
+     run straight through the makers note, so what is available vertically is
+     what decides how wide it can be. 17vw between 150 and 260 gives a box
+     735px wide at 1440, 523 at 1024 and 450 at 375 — where the frame is only
+     375 across, so a phone gets a stair that runs off both edges, which is the
+     one width at which this piece behaves like the full-width band it
+     replaced. */
+  --outro-stair-h: clamp(150px, 17vw, 260px);
+  /* A tenth of the box, so the crossing scales with the art rather than being
+     a constant that means something different at each width. At 1440 it is
+     24.5px above the join and the ink that reaches it is the fourth tread,
+     which is mid-object rather than an edge — the whole point of crossing with
+     a raster instead of a silhouette. */
+  --outro-stair-rise: calc(var(--outro-stair-h) * 0.1);
+  /* The near end off the page. `transitions/stone-stair`'s ink stops 3% short
+     of its own left edge and ramps in over another 4%, so a stair that ended
+     inside the frame would end in a soft nothing; running it off means the
+     tread the reader is standing on is cut by the frame, which is what a path
+     does. 6vw is 86px at 1440 — 12% of the box — and 19px at 320, where the
+     box is already 130px wider than the viewport. */
+  --outro-stair-out: clamp(12px, 6vw, 110px);
+  /* Room above and below the stair inside its clip box, so the drift has
+     somewhere to happen that is not the clip's own edge. +0.03 moves the layer
+     by at most (vh + h)/2 x 0.03 while any of it is on screen — 14.4px at
+     375x812, 17.2px at 1440x900 and 24.7px on a 1400px-tall window — and
+     2.2vw between 18 and 34 clears every one of those. Without it the wrapper
+     would cut the top landing at exactly the moment the layer climbs. */
+  --outro-stair-slack: clamp(18px, 2.2vw, 34px);
   /* The bloom over the crest. Deep enough to join the stair's plane to the
      ground's: the stair ends 79px below the join and the ground begins 288px
      up from the bottom, so at 1440 this reaches 374px of a 571px section and
@@ -268,6 +293,20 @@
      cropped. The air also belongs here on its own account: this is the last
      thing before the GitHub strip and the footer. */
   padding: clamp(88px, 11vw, 168px) var(--outro-pad-x);
+
+  /* The stair's own frame, dark. Not a colour, so rule 2 does not reach it —
+     but it is per-theme and it is declared in both themes in the same edit
+     like one, because the alternative is a stair that is 11% flatter in one of
+     them. `.outro__stair` carries the two file sizes and why this is the one
+     piece in the kit that needs it. */
+  --outro-stair-ar: 1000 / 333;
+}
+
+/* The light artwork is 2060x763 where the dark is 2172x724, so it is a
+   different frame rather than a different palette of the same one. Stated
+   beside its twin. */
+[data-theme='light'] .section.outro {
+  --outro-stair-ar: 1000 / 370;
 }
 
 /* ── the air that crosses the boundary ─────────────────────────────────────
@@ -338,12 +377,21 @@
 
    ## Where the bloom sits
 
-   `at 70% 0%` — the moon stands at 62% of the width on the Faith summit above,
-   and 70% is that carried a little further right, which is the half of this
-   section the copy does not use: the copy's box ends at `50% + 270px`, so a
-   core at 70% of 1440 is 18px clear of it. It hangs over the SHALLOW end of
-   the stair, which descends to the left, so the light is at the top of the run
-   and the gate is at the bottom of it.
+   `at 70% 0%` — the moon stands at `--summit-x` of the width on the Faith
+   summit above, which is the half of this section the copy does not use: the
+   copy's box ends at `50% + 270px`, so a core at 70% of 1440 is 18px clear of
+   it. It hangs over the far, shallow end of the stair, which descends to the
+   left, so the light is at the top of the run and the gate is at the bottom of
+   it.
+
+   **The two used to be 8 points apart and they are 2 now**, and that is the
+   summit moving rather than this rule: `--summit-x` was 62% when the 70 was
+   picked, and the site owner asked for the moon and the cross further right,
+   so it is 68%. 70 was already the value that meant "the moon's light, carried
+   a little further right" — it now means "very nearly under it", which is a
+   better reading of the same idea and needed no edit. If --summit-x ever goes
+   past 70 this line is the one that has to follow it, because a bloom to the
+   LEFT of the object making it is a light source pointing the wrong way.
 
    `left: 0; right: 0` and not an overhang. The section's clip margin is 114px
    and an 8% overhang would be 115px at 1440 — one pixel over, at exactly the
@@ -436,151 +484,170 @@
     linear-gradient(180deg, transparent 0%, var(--outro-ground-ink) 62%, transparent 100%);
 }
 
-/* Same wrapper trick as Tools.css — see there for why the drift is on a
-   wrapper and why it carries no height.
+/* ── the stair across the join ─────────────────────────────────────────────
+   `transitions/stone-stair` — a cut-stone stair in perspective descending
+   LEFT, in the kit from the beginning and drawn by nothing until now.
+   Outro.tsx has the beat and what it replaces; this is the geometry, the mask
+   and the three things the mask has to be true of.
 
-   The colour is on the wrapper rather than on the `<svg>`, which is a fix
-   rather than plumbing: base.css's `transition: var(--t-theme)` list covers
-   `div` and not `svg` or `path`, so this seam used to SNAP to the new theme
-   while the page around it crossed on the wave. On a div, `color` transitions
-   and the svg inherits the animated value, which `currentColor` then resolves
-   against.
+   ## What the silhouette actually is
 
-   No `::before` here, so this wrapper spends no `--seam-lift`, and that is the
-   one thing this boundary does not need — see the mask below. (The token is on
-   `:root` since it was promoted out of four section stylesheets, so it reaches
-   this element and simply has no backfill to size. Absence is the missing
-   pseudo-element, not a missing declaration.) */
-.outro__seam-drift {
+   Read off the real alpha at 8/255 in the `.webp` the site loads, sampled
+   every twentieth column, as fractions of the file's own frame:
+
+       x     0.05  0.15  0.25  0.35  0.45  0.55  0.65  0.75  0.85  0.90
+       top   .607  .562  .438  .405  .294  .267  .171  .087  .072  .072
+       bot   .793  .871  .859  .895  .946  .826  .811  .643  .369  .261
+
+   — nothing at all outside x 0.03..0.94, a top edge that climbs steadily from
+   0.61 at the near end to 0.07 at the far one, and the deepest ink at x 0.45.
+   That descending top edge is what makes ONE vertical mask do the aerial
+   perspective as well as the join, which is exactly what the `steps` seam it
+   replaces was built on; the difference is that the tones inside the shape are
+   now painted rather than faked with a second copy of the same path.
+
+   ## Why it is a prop and not a band
+
+   The artwork is 3:1. A stair drawn across the whole page would be 480px tall
+   at 1440 and would run through the makers note, and cropping it to a band
+   with `object-fit` cuts treads off — the near tread is the biggest thing in
+   the file and the one a reader stands on. So the height comes first
+   (--outro-stair-h) and the width follows it, and what crosses the whole width
+   of this boundary is still `.outro__air`, which is a gradient and always was.
+   That is the same division of labour this join has had since it was written:
+   the air closes it, the shape gives it a beat.
+
+   ## Where it sits
+
+   `right: calc(100% - w + out)` puts the box's LEFT edge --outro-stair-out off
+   the page — the near tread cut by the frame, which is what a path does — so
+   the box runs from `-out` to `w - out`: -86..649 at 1440, -61..461 at 1024
+   and -23..386 at 375. The far end is inside the frame from about 620 up and
+   off it below that, where `.outro__stair-clip` takes it.
+
+   Its box therefore reaches across the copy's own column, and what keeps it
+   off the words is that the crossing is ABOVE them. The box's bottom sits at
+   `h - rise` = 0.9h below the join — 220px at 1440 against a `padding-top` of
+   158 — and the ink still present in that last 62px is the rows below 0.747 of
+   the box, which the table above puts at x 0.05..0.65 of it: section x -86..391
+   at 1440, against a copy box that starts at `50% - 270px` = 450 and a heading
+   whose ink starts at 513.
+
+   That margin is tightest where the copy's block is narrowest and the stair is
+   still at its desktop height. Taking the heading at its rendered 8.3 x its own
+   font-size and the stair's lowest ink at 0.65 of its box:
+
+       width    stair ink to    heading ink from    clear
+        800         217              255             38
+        900         245              286             41
+       1024         278              326             48
+       1200         326              393             67
+       1440         391              513            122
+
+   Below 800 the copy has no gutters at all, and the media query at the foot of
+   this file takes the stair's height down instead of trusting a 38px margin
+   that is not there — see it for the arithmetic and for what was tried first.
+
+   The arch is drawn AFTER this, inside `.outro__clip`, so it stands in front
+   of the steps where the two overlap. That is the reading the beat wants and
+   the reason the stair is not tidied around it.
+
+   ## The mask, and what the drift costs
+
+   `transparent 0 -> 0.20 at 15% -> 0.55 at 28% -> #000 at 44%`, then out again
+   `#000 82% -> --seam-fade 92% -> transparent 100%`. Against the table above:
+
+       far end   ink top 0.072-0.087   alpha 0.10-0.12   drawn in haze
+       middle    ink top 0.267-0.294   alpha 0.53-0.59   half strength
+       near end  ink top 0.562-0.607   alpha 1.00        solid
+       base      ink bot 0.79-0.95     alpha 1.00-0.22   dissolves into band
+
+   so the run recedes by itself, and its lower rocks go out into the band
+   rather than ending on a silhouette 160px above `.outro__ground`.
+
+   **The join is inside the ramp rather than on an edge, at every scroll
+   position.** The box's top is --outro-stair-rise above the join, a tenth of
+   its own height, so at rest the join sits at 10% of the mask — alpha 0.13 —
+   and the only ink that reaches it is the far treads, where the silhouette's
+   own top edge is a diagonal.
+
+   +0.03 moves this layer by at most (vh + h)/2 x 0.03 while any of it is on
+   screen, 17px at 1440x900 and 25px on a 1400px-tall window, and it goes both
+   ways: UP while the boundary is below the viewport's centre and DOWN once it
+   is above it. Up, the join walks to 17% of the mask (alpha 0.25) at 1440x900
+   and 20% (0.34) on the tall window. Down, it walks off the top of the box
+   entirely — the excursion exceeds --outro-stair-rise at 1400 — and the
+   boundary carries nothing at all. Both ends are safe for the same reason: the
+   mask's own first stop is `transparent 0`, so the box's top edge has no ink
+   on it to expose whichever way it travels.
+
+   A varying alpha over a diagonal is a boundary being crossed; a constant one
+   over a horizontal is the ruled line this page keeps removing.
+
+   ## Two aspect ratios, and why that is not a mistake here
+
+   `stone-stair-dark.png` is 2172x724 and `stone-stair-light.png` is 2060x763 —
+   3.000 against 2.700, so the two themes are not the same frame. Every other
+   themed pair in the kit is (`garden-arch` and `stepping-stones` both state one
+   ratio and both are exact), and this rule would rather not be the exception,
+   but stating one of them stretches the other by 11% and a stair with 11%
+   flatter treads reads as a ramp. So the ratio is a per-theme custom property
+   until the art is re-rendered on one frame; it is not a colour, so rule 2 does
+   not reach it, and it is declared in both themes in the same edit like one.
+   The re-render is in this pass's report as a request.
+
+   --art-far: it is the farthest object in the section and the one thing in it
+   that belongs to the section above as much as to this one. */
+/* The clip, and nothing else. `left: 0; right: 0` is the whole point: this
+   section's own `overflow-clip-margin: 114px` opens every edge, not just the
+   top one the air band needs, so a layer wide enough to run off the left runs
+   off the right too. Measured at 320x812 before the media query below landed:
+   `document.scrollWidth` 431 against a `clientWidth` of 320, which is a
+   horizontal scrollbar on a phone. This box takes the frame back, and it keeps
+   taking it whatever the three clamps below do next.
+
+   It is --outro-stair-slack taller than the stair at both ends and the stair
+   sits that far down inside it, so the +0.03 drift moves within the box rather
+   than into its edge. `overflow: clip` rather than `hidden` so it is not a
+   scroll container, and no clip margin of its own — the section's is what lets
+   this box start above the join in the first place. */
+.outro__stair-clip {
   position: absolute;
-  top: 0;
   left: 0;
   right: 0;
-  height: 0;
-  color: var(--seam-fill);
+  top: calc(-1 * var(--outro-stair-rise) - var(--outro-stair-slack));
+  height: calc(var(--outro-stair-h) + var(--outro-stair-slack) * 2);
+  overflow: clip;
   pointer-events: none;
-  will-change: translate;
 }
-/* --seam-fill: this section's own --band-outro, stepped --seam-step toward
-   --text by base.css. A band worn flat would be invisible here — a boundary
-   is exactly where two bands are equal — and that step is what fixes it.
-
-   This was var(--band-foot) for a while, on two arguments that have both
-   since been closed and so are not worth keeping as history: that a band worn
-   flat painted the section on itself, and that this particular boundary did
-   not meet. Faith's floor used to reach past a whole section to the footer's
-   band; it is --band-outro now, and the two sides meet like every other pair.
-   --band-foot today is just the footer's colour, borrowed from two sections
-   down for no reason at all.
-
-   So this seam is here for the beat, which was always the better reason. It
-   is where the walk ends — Faith's hillside above it, the arch below it, and
-   a flat closing block that would otherwise simply start. `steps` is the path
-   climbing out, and a silhouette is what turns "Faith stopped" into "you
-   stepped through".
-
-   ## It dissolves at BOTH ends, and it is the only band on the page that does
-
-   Fifth of the five joins, and the fifth distinct idea: #apps hangs a canopy at
-   two depths, #tools draws one clean waterline, #building has no hard edge in
-   it at all, #faith opens a pass — and here the shape is not present at the
-   boundary and fades in below it. The two bands meet on an identical value
-   (base.css keeps every boundary that way, and Faith's --tint-bot is literally
-   --band-outro), so with nothing painted on the join there is nothing at all to
-   find: the terrace materialises thirty per cent of a band down, holds, and is
-   gone again before the copy. You step off the hill onto flat ground.
-
-   That is also why this is the one boundary that needs no --seam-lift. Every
-   other `Seam` on this page carries a straight horizontal top edge — the path
-   is solid from y = 0 down to its silhouette — and its drift slides that edge
-   clear of the join and draws a line across the page. +0.03 would put it 13.5px
-   down on a 900px viewport. With `transparent` as the first stop there is no
-   edge there for the drift to expose, in either direction, at any scroll
-   position: the fix is in the mask rather than beside it. Apps.css carries the
-   general derivation.
-
-   ## The stops, and the render that moved them
-
-   They are placed against the SHAPE, and the shape changed this pass, so they
-   changed with it. The old `steps` ran y 16..76 of its 120 viewBox — every
-   tread level, the shallowest only 13% of the band down — under a mask that
-   went from `transparent 0` to `#000 26%`. A level tread under a level alpha
-   ramp gives a rectangle whose top edge is the ramp and whose bottom edge is
-   the tread, and six of them shared one top edge at 26% of the band. The
-   render of this boundary is a row of flat grey rectangles stepping across the
-   whole width, which reads as UI that failed to load. Seam.tsx carries the
-   diagnosis and the redrawn path.
-
-   The new silhouette descends monotonically and occupies 7.5% to 83.3% of the
-   band, which is what lets one mask do the aerial perspective as well as the
-   dissolve. Five stops over that spread:
-
-       transparent  0     the join, so the boundary itself carries nothing
-       0.18        14%    the far landing, barely there
-       0.55        30%    the far treads, half strength
-       #000        50%    solid from here down
-       --seam-fade 86%    the page's dissolve rate, through the near tread
-       transparent 100%   closed at the band's own bottom edge
-
-   Read left to right that is a stone stair whose near end is solid and whose
-   far end is drawn in haze, with nothing painted on the boundary — and the
-   knee at 50% is not a line across the page, because ink only exists below it
-   where the silhouette is deeper than 50%, which is the left 44% of the width.
-
-   A mask is an alpha channel, not a colour: the #000 paints nothing.
-
-   (The `color` this rule used to carry is on the wrapper above now, where it
-   rides the theme wave instead of snapping.) */
-.outro__seam {
+.outro__stair {
+  top: var(--outro-stair-slack);
+  right: calc(100% - var(--outro-stair-h) * var(--outro-stair-ar) + var(--outro-stair-out));
+  height: var(--outro-stair-h);
+  width: calc(var(--outro-stair-h) * var(--outro-stair-ar));
+  opacity: var(--art-far);
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0,
-    rgba(0, 0, 0, 0.18) 14%,
-    rgba(0, 0, 0, 0.55) 30%,
-    #000 50%,
-    rgba(0, 0, 0, var(--seam-fade)) 86%,
+    rgba(0, 0, 0, 0.2) 15%,
+    rgba(0, 0, 0, 0.55) 28%,
+    #000 44%,
+    #000 82%,
+    rgba(0, 0, 0, var(--seam-fade)) 92%,
     transparent 100%
   );
   mask-image: linear-gradient(
     180deg,
     transparent 0,
-    rgba(0, 0, 0, 0.18) 14%,
-    rgba(0, 0, 0, 0.55) 30%,
-    #000 50%,
-    rgba(0, 0, 0, var(--seam-fade)) 86%,
+    rgba(0, 0, 0, 0.2) 15%,
+    rgba(0, 0, 0, 0.55) 28%,
+    #000 44%,
+    #000 82%,
+    rgba(0, 0, 0, var(--seam-fade)) 92%,
     transparent 100%
   );
-}
-
-/* ── the lit nosing ────────────────────────────────────────────────────────
-   The same `steps` path, `--outro-tread-lip` lower and a step further from the
-   band, painted BEHIND the terrace. What survives is the strip between the two
-   silhouettes: under every tread, under every chamfer, and nothing beside a
-   riser, because a vertical edge shifted straight down exposes nothing of
-   itself. That is precisely where the next tread's top surface would be, so
-   the layer is a light on the stair rather than an outline of it.
-
-   It is what turns the run from a flat fill with a stepped edge into cut
-   stone. The other two things this boundary needed — the dissolve and the haze
-   — are the mask above and `.outro__afterglow`; this is the third.
-
-   The offset is `top` on a zero-height wrapper and never a transform, because
-   `useParallax` owns `style.translate` on `.outro__seam-drift` and both bands
-   hang off that one wrapper: one hook, one writer, and the nosing cannot
-   separate from its tread however far the band drifts.
-
-   The colour is on this wrapper rather than on the `<svg>` for the reason the
-   drift wrapper above carries its own: base.css transitions `color` on a `div`
-   and not on an `svg`, so a colour set on the shape would snap to the new
-   theme while the page crossed on the wave.                                 */
-.outro__tread {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--outro-tread-lip);
-  height: 0;
-  color: var(--outro-tread-ink);
-  pointer-events: none;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
 /* ── the threshold ─────────────────────────────────────────────────────────
@@ -635,6 +702,115 @@
 
    The glow around the stones is painted into the file's own alpha. No
    drop-shadow, no blur, no filter here. */
+/* ── the light beyond the gate ─────────────────────────────────────────────
+   `props/lantern-post`, standing in the arch's own opening. Outro.tsx has the
+   beat; this is the fit, and the fit is the whole difficulty, because the
+   opening is not very wide.
+
+   ## What the opening is
+
+   Measured off `garden-arch`'s real alpha at 8/255, reading the transparent
+   RUN across a row rather than the ink extent of a column — the column form of
+   this measurement conflates the arch's inner curve with the gap and reports
+   it 15 points too narrow. As fractions of the 1000x1500 frame, dark then
+   light, at the rows the lantern actually occupies:
+
+       y 0.70    0.258 .. 0.745   (48.7%)      0.274 .. 0.730   (45.6%)
+       y 0.83    0.285 .. 0.721   (43.6%)      0.277 .. 0.728   (45.1%)
+
+   — centred on 0.50 to within three thousandths, and opening from y 0.14 at
+   the crown downward. The narrowest of those four is 43.6%, which is 171px at
+   1440 where the arch is 392.7.
+
+   The lantern is 30% of the arch's width, so the fit scales with it rather
+   than being true at 1440 and nowhere else, and its own ink runs x
+   0.128..0.875 of its frame — what is actually drawn is 0.747 x 0.30 = 22.4%
+   of the arch. Against the 43.6%:
+
+       1440   ink 88px inside a gap of 171   41px of daylight each side
+       1024   ink 43px inside 83             20px each side
+        840   ink 22px inside 44             11px each side
+
+   840 is where the arch is hidden and this goes with it — see the media query
+   — so that row is the floor rather than a width anyone will see.
+
+   ## It takes no hook at all, and that is the depth cue
+
+   `StillArt`, so it travels with the section exactly while the arch in front
+   of it drifts -0.09. A layer that moves LESS against the page is farther
+   away, which is what a thing seen through a gate is, and it costs no
+   subscriber. What has to be checked is the pair rather than the frame: 0.09
+   of relative travel is (vh + h)/2 x 0.09, 48px on a 900px viewport and 71 on
+   a 1400px one, all of it vertical. The gap opens at y 0.14 of the arch's
+   frame — 164px below this section's top at 1440 — and the lantern's own ink
+   starts 326px below that, so the arch can slide 71px either way and the
+   lantern is still well inside it. Nothing here can be pushed out sideways,
+   because `useParallax` never writes an x.
+
+   ## Its base
+
+   The file's rock is cut by its own frame — the ink runs to y 0.999 — so it
+   has a straight bottom edge and needs something to stop on. It is NOT bedded
+   below the section's floor the way the arch is: the arch is 626px tall and
+   can afford to lose 100, and this would lose two thirds of itself. So the
+   bottom 18% of the box dissolves instead, at the same --seam-fade rate every
+   other dissolve on this page uses, and the rock goes into `.outro__ground`
+   rather than ending on a line.
+
+   --art-mid rather than --art-far: it is a light source, and its glow is
+   painted into its own alpha at the artist's own strength. Nothing here
+   filters or recolours a pixel.
+
+   ## `props/gate-post-pair` was drawn for this section and is not placed
+
+   The kit describes it as "an open threshold before the garden arch", so it
+   was read before it was declined, and there are three reasons rather than a
+   preference:
+
+   - **It is drawn full-bleed.** Read off the real alpha at 8/255, both themes:
+     the ink runs x 0.000..0.999 and the alpha of the FRAME's own first and
+     last columns is 255. Each post is cut by the file's own edge at full
+     opacity, so the piece only works in a box at least as wide as the
+     viewport. Anything narrower shows a stone post sliced down its side, which
+     is the exact fragment `--outro-prop-cap` was added to remove from the
+     stepping stones.
+   - **At a box that wide the gap lands around the copy.** The transparent
+     centre is roughly 45% of the frame, so at 1440 the two posts would stand
+     either side of "Brothers, one calling." — a content container framed by
+     two pieces of architecture, which is the one thing the kit says a
+     threshold must never look like it is doing.
+   - **This section already has its threshold.** Guardrail 8 allows one
+     structural anchor per section and the arch is it. A second stone gateway
+     400px from the first is not a threshold before a threshold at this scale;
+     it is two gates in a 571px band.
+
+   It stays a spare. The stair above is not a fourth object by the same count —
+   it is a transition, it stands where the `steps` seam stood, and it replaced
+   a layer rather than joining one. */
+.outro__lantern {
+  right: calc(
+    var(--outro-copy-inset) + var(--outro-arch-gap) +
+      (var(--outro-arch-w) - var(--outro-lantern-w)) / 2
+  );
+  bottom: clamp(6px, 1vw, 18px);
+  width: var(--outro-lantern-w);
+  /* 1000x1500 is the .webp the site loads, not the 1024x1536 PNG source, and
+     both themes share it — unlike `transitions/stone-stair`, which does not.
+     Stated because this is a lazy image and a `height: auto` box measures zero
+     until it arrives. */
+  aspect-ratio: 1000 / 1500;
+  opacity: var(--art-mid);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    transparent 0,
+    rgba(0, 0, 0, var(--seam-fade)) 8%,
+    #000 18%
+  );
+  mask-image: linear-gradient(to top, transparent 0, rgba(0, 0, 0, var(--seam-fade)) 8%, #000 18%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
 .outro__arch {
   right: calc(var(--outro-copy-inset) + var(--outro-arch-gap));
   bottom: -100px;
@@ -711,6 +887,47 @@
   opacity: var(--art-near);
 }
 
+/* ── the one width band where the copy has no gutters ──────────────────────
+   `.outro__makers` is centred in a block that is `min(880px, the frame)`, so
+   below about 800px the copy has no gutters left and its ink runs the full
+   width of the page. The stair's box has to clear it outright there — it
+   cannot slip past on the left the way it does at 1440 — and what it has to
+   clear it in is this section's own `padding-top`, a flat 88px until 11vw
+   reaches it at 800:
+
+       box bottom below the join  =  h - rise  =  0.9h
+       room                       =  padding-top - a gap
+       so at 88px of padding         h <= (88 - 12) / 0.9  =  84.4
+
+   **84px was tried and it is the wrong trade.** Rendered at 320x812 the stair
+   at that height is 252px wide with its whole mask spread over 84px of it, and
+   the boundary reads as having nothing on it — which is worse than the `steps`
+   seam this replaced, at the one width where a reader meets every join at full
+   size. A cue that has to be looked for is not a cue.
+
+   So the room moves instead of the stair. 140px of padding-top through this
+   band gives `h <= (140 - 12) / 0.9 = 142`, and 136 takes it with 5.6px in
+   hand: a stair 408px wide, 128% of a 320px frame and 109% of a 375px one,
+   running off BOTH edges with its far end at a tenth of an alpha where
+   `.outro__stair-clip` takes it. That is the same picture the wide layout gets,
+   at the size that can least afford a thinner one.
+
+   The extra 52px of padding costs 52px of section height below 800, and what
+   it buys besides the stair is air between the join and the kicker. Measured
+   at 320x812 before any of this: the stair's box bottom sat 136px below the
+   join against a kicker at 88 and a heading at 124, so both were reading over
+   cut stone. Nothing on this site puts copy over art.
+
+   Above 800 the padding grows with the viewport and the copy gets its gutters
+   back, so the desktop height applies and what is left is an overlap with the
+   copy's BOX rather than its ink — `.outro__stair` carries that arithmetic. */
+@media (max-width: 799px) {
+  .section.outro {
+    padding-top: 140px;
+    --outro-stair-h: 136px;
+  }
+}
+
 @media (max-width: 839px) {
   /* --outro-prop-cap is a fraction of the viewport, so the WHOLE arch shrinks
      with it rather than the frame eating its left leg: 129px at 900, 110px at
@@ -725,10 +942,23 @@
      take the identical cap on the other side, so it runs out at exactly the
      same place. Below 840 the path would be one stone in a 100px gutter.
 
-     The ground band and the air band both stay. Both are gradients, both cost
-     nothing, and the boundary needs dissolving at 320px exactly as much as it
-     does at 1920 — the seam carries the shape of it at every width. */
+     The lantern goes because it has nowhere to be: it is placed and sized from
+     --outro-arch-w and it is seen through the arch's own opening, so without
+     the arch it is a lamp floating in a gutter rather than a light beyond a
+     gate. One `display: none`, not a second breakpoint to keep in step.
+
+     The STAIR stays, and so do the ground and air bands. The stair is the
+     boundary's own shape rather than a prop in the section, and a boundary
+     needs a beat at 320px exactly as much as it does at 1920. It gives ground
+     instead: the rule above shortens it to 84px through this whole band, which
+     is 252px wide — 79% of a 320px frame and 67% of a 375px one, still running
+     off the left edge with its far end dissolving inside the right.
+
+     Both bands are gradients and cost nothing, and the join needs dissolving
+     at every width — which is what `.outro__air` does, with or without a shape
+     on top of it. */
   .outro__arch,
+  .outro__lantern,
   .outro__stones {
     display: none;
   }
@@ -795,8 +1025,12 @@
   }
   /* useParallax resolves to a zero translate at motionIntensity 0, so all four
      layers rest exactly where they composed — visible and still — and the
-     compositor hints would be promoted layers paid for and never used. */
-  .outro__seam-drift,
+     compositor hint would be a promoted layer paid for and never used.
+
+     One selector where there were two: `.outro__seam-drift` has gone with the
+     seam, and the stair that replaced it is a `.scene__art--moves`, which
+     `scene/Scene.css` already drops the hint from in its own reduced-motion
+     block. The arch and the stones have always been covered that way. */
   .outro__air {
     will-change: auto;
   }

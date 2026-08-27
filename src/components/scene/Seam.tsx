@@ -34,11 +34,26 @@ const SHAPES: Record<SeamShape, string> = {
   /* one long lazy S across the whole width */
   wave: 'M0 0 L0 30 C420 92 1020 4 1440 54 L1440 0 Z',
   /* ── a stone stair in perspective, descending to the left ─────────────────
-     This was a blocky terrace — `H210 V40 H420 V24 H620 V64 …`, every edge
-     orthogonal, no diagonal in it at all, and the treads stepping up and down
-     around a mean. Rendered at the Outro boundary it did not read as ground.
-     It read as UI that had failed to load: a row of flat grey rectangles
-     stepping across the whole width.
+     **Nothing draws this today, and that is the end of a two-pass argument
+     rather than an oversight.** It is kept for the same reason the kit keeps
+     an unplaced piece: the set of six is a vocabulary, and a shape deleted
+     because its one caller changed its mind is a shape the next boundary
+     re-invents slightly differently.
+
+     The Outro drew it, and drew a second copy of it a few pixels lower for the
+     lit nosing, because a `Seam` is a flat fill and a stair is entirely made
+     of two tones — the lit tread and the riser in shadow under it. The site
+     owner read the render as a staircase of grey rectangles, which is what a
+     one-tone stair is. `transitions/stone-stair` stands on that boundary now:
+     real facets, real risers, one element instead of three. `Outro.css`'s
+     `.outro__stair` carries that argument from the other end.
+
+     What the redraw below fixed is still worth keeping, because it is a lesson
+     about masks rather than about this shape. It was a blocky terrace —
+     `H210 V40 H420 V24 H620 V64 …`, every edge orthogonal, no diagonal in it
+     at all, and the treads stepping up and down around a mean. Rendered at the
+     Outro boundary it did not read as ground. It read as UI that had failed to
+     load: a row of flat grey rectangles stepping across the whole width.
 
      Two things made it that, and both are fixed by the path rather than by
      the fill.
@@ -74,7 +89,8 @@ const SHAPES: Record<SeamShape, string> = {
      `props/garden-arch` stands in that gutter, so the run comes down toward
      the gate and the light hangs over the shallow end. The near tread is 300
      units and is cut by the frame; the far one runs out at the right edge as a
-     landing.                                                                */
+     landing. The raster that took its place descends the same way, for the
+     same reason.                                                            */
   steps:
     'M0 0 L0 100 L300 94 L336 88 L336 74 L596 69 L628 64 L628 52 L850 48 L878 44 L878 34 L1064 31 L1088 28 L1088 20 L1244 18 L1264 16 L1264 10 L1440 9 L1440 0 Z',
   /* ── a conifer treeline: eleven firs of four depths on one baseline ───────

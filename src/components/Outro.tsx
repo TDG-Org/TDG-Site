@@ -2,8 +2,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { GITHUB_ORG } from '../data/content'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
-import { Seam } from './scene/Seam'
-import { ThemedArt } from './scene/ThemedArt'
+import { StillArt, ThemedArt } from './scene/ThemedArt'
 import './Outro.css'
 
 /** The makers note and the GitHub card that close the page before the footer. */
@@ -15,22 +14,37 @@ export function Outro() {
      more slowly than the page and sits at the back, and a negative one moves
      against it and comes forward.
 
-        +0.015 the air     this section's own ink rising into #faith's hillside
-        +0.030 the seam    the terrace fading in below the join
-        -0.090 the arch    the threshold you walk through
-        -0.130 the stones  the path arriving at it, nearest, on the ground
+        +0.015 the air      this section's own ink rising into #faith's hillside
+        +0.030 the stair    the cut stone you come down, crossing the join
+         0.000 the lantern  the light on the far side of the gate
+        -0.090 the arch     the threshold you walk through
+        -0.130 the stones   the path arriving at it, nearest, on the ground
 
      Slowest to fastest is 0.015 to 0.13, nearly nine times, against two layers
-     0.045 apart before this pass. Two positives and two negatives, so the ends
-     of the ladder travel 0.145 of the page APART — relative travel between two
-     layers going opposite ways is the SUM of their factors, which is why the
-     sign is worth more here than the magnitude.
+     0.045 apart before this pass. Two positives and two negatives with a zero
+     between them, so the ends of the ladder travel 0.145 of the page APART —
+     relative travel between two layers going opposite ways is the SUM of their
+     factors, which is why the sign is worth more here than the magnitude.
+
+     The lantern's zero is the same choice `.outro__ground` makes and for a
+     related reason: it is the only object here that is seen THROUGH another
+     one, so the pair that matters is it and the arch rather than it and the
+     frame, and 0.09 of relative travel is what has to fit inside the arch's
+     own opening. Outro.css does that sum. A hook would also be a frame
+     subscriber bought for a layer whose whole job is to sit still at the end
+     of the walk.
+
+     +0.030 is the rung the `steps` Seam used to hold and the stair inherits it
+     unchanged: it stands at the far end of the walk, above and behind the arch,
+     so it is the second-slowest thing here. It is also the one layer that
+     crosses the boundary, and a crossing layer's factor is a budget as well as
+     a depth — Outro.css's `.outro__stair` carries what 0.03 is worth in pixels
+     and what the mask has to absorb because of it.
 
      `.outro__ground` takes no hook at all, deliberately: it is the ground the
      arch stands on rather than an object on it, and a floor that slides
      against the things standing on it is a rug. */
   const air = useParallax<HTMLDivElement>(0.015)
-  const seam = useParallax<HTMLDivElement>(0.03)
 
   return (
     <>
@@ -52,12 +66,22 @@ export function Outro() {
               on `.outro`. The strip is that section's sibling, not its child,
               so it inherits none of them.
 
-            `steps` is the path climbing out. It is the only orthogonal shape
-            of the five, which suits a threshold made of stone — and it is the
-            only band on the page that dissolves at BOTH ends, so nothing at
-            all is painted on the join itself and the terrace fades in below
-            it. Outro.css argues that, and says why this is the one boundary
-            that needs no `--seam-lift`.
+            `transitions/stone-stair` is the path climbing out, and it is the
+            REAL one: this boundary spent two passes faking a cut-stone stair
+            with `Seam`'s `steps` silhouette, a flat band of `--seam-fill` in
+            six orthogonal treads. The site owner read the render of it exactly
+            as it is drawn — a staircase of grey rectangles — and he was right
+            twice over, because a silhouette has one tone by construction and a
+            stair is entirely made of the second one: the lit tread and the
+            riser in shadow under it. `.outro__tread` existed to fake that
+            second tone out of the same path drawn a few pixels lower, which is
+            three layers and one colour doing the work of one layer with real
+            facets in it.
+
+            So the seam and its nosing are gone and the artwork stands here
+            instead, descending LEFT toward the arch, running off the left of
+            the page at its near end and dissolving into haze at its far one.
+            Outro.css has the geometry, the mask and the join reading.
 
             **The arch cannot cross this boundary, and that was computed rather
             than left open.** A layer that belongs to both sections is the
@@ -108,21 +132,30 @@ export function Outro() {
             Behind the terrace on purpose: the light is BEYOND the crest, and
             drawing it first is what makes the stone read in front of it.   */}
         <div className="outro__afterglow" aria-hidden="true" />
-        <div ref={seam} className="outro__seam-drift" aria-hidden="true">
-          {/* The lit nosing on every tread, and it is the same path a few
-              pixels lower rather than a second drawing. What shows is the
-              strip between the two silhouettes — under each tread and under
-              each chamfer, and nothing at all beside a riser, because a
-              vertical edge shifted straight down exposes nothing. That is
-              exactly where a stair's next tread top catches the light.
+        {/* The stair, outside `.outro__clip` on purpose: it is the one thing
+            here allowed above the join, so it takes the section's own clip
+            margin the way `.outro__air` does. Drawn before the clip, so the
+            arch inside it stands in FRONT of the steps — which is the reading
+            the beat wants, and the reason the stair may run behind the arch's
+            crown without being tidied around it.
 
-              Both bands hang off ONE drift wrapper, so there is one hook and
-              one writer of `style.translate` between them; the offset is
-              `top` on this box and never a transform. */}
-          <div className="outro__tread">
-            <Seam shape="steps" edge="top" className="outro__seam" />
-          </div>
-          <Seam shape="steps" edge="top" className="outro__seam" />
+            The box around it is a clip and only a clip, and it is here because
+            the section cannot do the job: `overflow-clip-margin` opens EVERY
+            edge by 114px, so a layer wide enough to run off the left also runs
+            off the right, and at 320x812 the stair's far end reached x 431 —
+            `document.scrollWidth` 431 against a `clientWidth` of 320, which is
+            a horizontal scrollbar on a phone.
+
+            Outro.css shortens the stair below 800px as well, for a different
+            reason (the copy has no gutters down there and the run has to clear
+            it), and that alone takes today's numbers back inside the frame at
+            every width. This box is what makes staying inside it a property of
+            the BOX rather than of three clamps continuing to agree.
+            `.building__over` is the same element one section up, with the same
+            two jobs: let a layer cross the join vertically, and keep it inside
+            the frame horizontally. */}
+        <div className="outro__stair-clip" aria-hidden="true">
+          <ThemedArt art="transitions/stone-stair" className="outro__stair" factor={0.03} />
         </div>
 
         {/* Everything that has to be cut at this section's own edges. The
@@ -131,11 +164,38 @@ export function Outro() {
             equally — so without this box the arch, which is bedded 100px below
             the floor, would stand on top of the GitHub strip. */}
         <div className="outro__clip" aria-hidden="true">
-          {/* The ground the last two things on this walk stand on. It is also
-              what fills the right-hand half of this section, which the render
-              showed as several hundred pixels of flat black beside a single
-              arch. Air is only air when something is happening in it. */}
+          {/* The ground the last three things on this walk stand on — the
+              lantern, the arch and the path. It is also what fills the
+              right-hand half of this section, which the render showed as
+              several hundred pixels of flat black beside a single arch. Air is
+              only air when something is happening in it. */}
           <div className="outro__ground" />
+          {/* ── the light beyond the gate ─────────────────────────────────
+              `props/lantern-post`, drawn BEFORE the arch so the arch's stone
+              is in front of it and the gap between its two columns is what you
+              see it through. The kit calls it "a small final-beat light
+              source", and this section's only light until now was a gradient:
+              `.outro__afterglow` is the moon carried over from Faith and
+              `.outro__ground`'s pool is where that lands, so the whole beat was
+              lit by something outside the frame.
+
+              A lantern standing in the middle of the section with the arch
+              beside it would be a second object competing with the one
+              structural anchor guardrail 8 allows. Seen THROUGH the arch it is
+              not a second anchor at all — it is the reason the threshold is
+              worth walking through, and it puts the one warm note on the page
+              on the far side of the gate rather than in front of it.
+
+              Its glow is painted into its own alpha. No filter, no shadow, and
+              nothing here recolours a pixel.
+
+              `StillArt`, so it takes no hook and no frame subscriber: a layer
+              that moves LESS against the page is farther away, and travelling
+              with the section exactly is as far as this ladder goes. What that
+              costs is 0.09 of relative travel against the arch in front of it,
+              and Outro.css checks that against the opening it has to stay
+              inside rather than against the frame. */}
+          <StillArt art="props/lantern-post" className="outro__lantern" />
           {/* The arch: 29vw wide and taller than the makers note, where it
               used to be 216px tucked in a gutter, and the room for that came
               from this section's own padding rather than from the copy — see

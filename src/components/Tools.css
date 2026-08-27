@@ -212,13 +212,47 @@
   --tools-reeds-w: clamp(180px, 22vw, 380px);
   --tools-reeds-clear: clamp(170px, 17vw, 280px);
 
+  /* The fence, and it is the one layer here that is not sized to a gap and not
+     solved from the top of the scene band. See the rule at the bottom of this
+     file for both, and for why a box that fits inside the frame cannot be made
+     to work with this artwork at all.
+
+     --tools-fence-bleed is 14vw and not the 3vw a bleed usually wants, because
+     it is doing a second job: the artwork's near post stands at x 0.10 of its
+     own frame, so the post lands at `0.10 x (100vw + 2 x bleed) − bleed`, which
+     is off the left edge for any bleed over 0.125 x 100vw and on it for any
+     bleed under. At 3vw the post came down on top of `#building`'s wayfinding
+     post, which crosses up over this join — caught in the render at 1440x900
+     as one confused stack of two flat-capped objects. At 14vw it is 18px past
+     the frame at 1440 and the fence enters the picture as rails, which is also
+     the stronger reading of the piece: the post it hangs from is out there
+     past the edge. The relation is scale-free, so it holds at every width;
+     the 280px cap only gives way past about 2000px, where the post comes back
+     as a sliver at the frame's own edge.
+
+     --tools-fence-cap is how far above the SECTION's bottom edge that near
+     post's cap sits in the -dark drawing — 151px at 1440x900, read off the live
+     box, against the boulders' 115px ink top. The other four props here are placed from the TOP
+     of the scene band because their ink top is the thing to put somewhere;
+     this one's whole base is below the section's bottom edge at every width,
+     so the thing to place is the top of it and the edge to measure from is the
+     one that crops it.
+
+     It cannot go much lower, and that is measured rather than judged: the
+     artwork's own top line dips to y 0.3326 between the first and second posts,
+     and at any cap below ~0.093 x 100vw that dip passes under the section's
+     bottom edge and the fence is drawn in two pieces with a hole in the middle.
+     10.5vw keeps 16px of rail over the join at the dip's worst column. */
+  --tools-fence-bleed: clamp(40px, 14vw, 280px);
+  --tools-fence-cap: clamp(70px, 10.5vw, 280px);
+
   padding-top: var(--tools-lead);
   padding-bottom: calc(var(--tools-wash) + var(--tools-scene));
   background-color: transparent;
 }
 
 /* The box the scene layer lives in: `aria-hidden` and `pointer-events: none`
-   in one place rather than nine. `clip` rather than `hidden` so it is not a
+   in one place rather than ten. `clip` rather than `hidden` so it is not a
    scroll container for no reason, and `inset: 0` is the section's PADDING box,
    which is what every percentage in here was already resolving against. */
 .tools__clip {
@@ -494,11 +528,12 @@
 /* ── the scene layer, and it is all at the FLOOR now ───────────────────
    The end of the walk: the camera pushes toward the window, the frame washes
    to the outside light, and this is what is out there — a stone footbridge
-   over water, a bench on the far bank, a near shore of boulders with reeds at
-   its waterline, two bands of haze between them, and the retro-neon band
-   beyond. Origin, three sections up, is already a path of stepping stones, and
-   the kit's README is explicit that the footbridge and the stepping stones are
-   used instead of each other; three sections is what buys them both a place.
+   over water, a bench on the far bank, a near shore with a three-rail fence
+   running out of both edges of the frame, boulders and reeds at its waterline,
+   two bands of haze between them, and the retro-neon band beyond. Origin,
+   three sections up, is already a path of stepping stones, and the kit's
+   README is explicit that the footbridge and the stepping stones are used
+   instead of each other; three sections is what buys them both a place.
 
    **And it is the payoff for the wash rather than decoration under it.** Until
    this pass the canvas was still opaque here, so every layer below was drawn
@@ -509,19 +544,29 @@
    Guardrail 8 of the kit is unmoved: one structural anchor plus low foliage
    and fog. The footbridge is still the only anchor here — a bench is the kit's
    own "compact lower-corner accent", reeds are the "optional low foliage" the
-   guardrail names, and haze is fog by another name.
+   guardrail names, the fence is the kit's own "perspective cue" and lies on
+   the ground the way the Outro's stepping stones do, and haze is fog by
+   another name.
 
-   ── and the piece that is still a spare, said plainly ────────────────────
-   `props/canopy-tree` is not placed and should stay unplaced. It is the last
-   unplaced piece with an outdoor Intent, and there are exactly two pieces of
-   outdoor ground left on the page's walk. This one already has four
-   silhouettes at three depths; a broadleaf here is a fifth prop in the one
-   composition guardrail 8 names as the thing not to build. The other is
+   ── and the pieces that are still spares, said plainly ───────────────────
+   `props/canopy-tree` is not placed and should stay unplaced. There are
+   exactly two pieces of outdoor ground left on the page's walk. This one now
+   has five silhouettes at four depths; a broadleaf here is a sixth prop in the
+   one composition guardrail 8 names as the thing not to build. The other is
    Origin's boundary, which carries `pine-grove` and `pine-pair` at two depths
    plus a snow bank, and where the kit says in as many words that a tree must
    never stand beside the lamppost — which is the only corner of it that is
    free. A kit is allowed spares; the README's own opening says so, and says
    that an unplaced piece is not a reason to go and find somewhere to put it.
+
+   `props/reed-clump-tall` is the second spare and it is a closer call, because
+   its Intent — "one vertical foliage accent, cropped through its bottom edge"
+   — is a real description of what a flat 331px band could use. It stays a
+   spare for the reason the fence stopped being one: the band now has a layer
+   whose whole job is to break the horizontal, and it does it across the entire
+   width rather than at one point. A tall reed clump beside `bushes-reeds` is
+   also the same family twice in one composition, which is exactly what the
+   kit's own note about `pine-row` warns against.
 
    ── the two layers that are gone, and why they had to go ─────────────────
    `.tools__seam-drift` — a `wave` Seam at this section's top edge with a
@@ -669,7 +714,20 @@
    the bridge's own opacity, because the bench is standing in the bridge's
    plane.                                                                     */
 .tools__bench {
-  right: clamp(220px, 29vw, 520px);
+  /* 40vw, moved this pass from 29vw, and it is the fence that moved it. The
+     fence's second post stands at x 0.65 of its own box, which resolves to
+     x 996 at 1440x900 — the exact 158px the bench used to occupy, and in the
+     render the post covered the bench completely. Both numbers are fractions
+     of the viewport, so one value clears the post at every width: read off the
+     live boxes at 700 / 900 / 1024 / 1440 / 1920, the bench's right edge lands
+     84 / 83 / 95 / 132 / 109px short of that post.
+
+     At 700px it does overlap the reeds' box by 44px on its left, and that is
+     the right way round rather than a clash: the reeds are drawn after it, so
+     the clump passes in FRONT of the bench, which is a near cover over a far
+     one. It has not changed depth or height — every number in the table below
+     is vertical and none of them moved. */
+  right: clamp(300px, 40vw, 700px);
   width: var(--tools-bench-w);
   /* Stated rather than inherited, for the reason the bridge states it: these
      are lazy images, and until one arrives `naturalWidth` is 0 and a
@@ -806,6 +864,117 @@
   opacity: var(--art-mid);
 }
 
+/* ── the fence along the near shore ────────────────────────────────────────
+   `props/fence-rail`. The site owner asked for it two passes ago — "maybe
+   instead of a tree in that section and in that corner, have the fence! or the
+   park seat!" — and the kit did not have one; it does now, and this is the only
+   outdoor ground left on the walk, so this is where it goes.
+
+   ## It is not a second structural anchor
+
+   Guardrail 8 allows one anchor per section plus low foliage and ground. The
+   anchor here is still the footbridge. The kit's own Intent for this piece is
+   "a perspective cue beside a bench or path, running lower-left to upper-right
+   and out of frame" — a cue, not a structure, and it is the same clause that
+   lets `stepping-stones` lie on the Outro's floor beside the arch: a path on
+   the ground is not a second threshold.
+
+   ## Why it is a NEAR object and why the box is wider than the viewport
+
+   Two measurements decide the whole placement, both taken off the real alpha
+   of the files the site loads (threshold 24/255, 1000x439 in both themes).
+
+   **One: this artwork's ground plane is a near one.** Its base line climbs
+   from y 0.998 of its own frame at the near end to 0.262 at the far end, which
+   is 0.323 of the artwork's WIDTH in height. Laid across a 1440px frame that
+   is a ground plane rising 465px from the bottom of the picture — against the
+   bank the other props here stand on, which is 36px deep on screen between
+   `.tools__shore`'s top at 63px and `.tools__horizon` at 99px. Thirteen times
+   too steep. So this piece cannot be a fence line ALONG the far bank at the
+   bench's distance; it is a fence running away from the camera on the near
+   shore, and its feet belong below the picture. The 151px of near post that is
+   in frame is the top of a post whose own ink is 672px tall.
+
+   **Two: both of its ends have to be cropped by the frame, so the box cannot
+   be narrower than the frame.** The near end runs off the left edge of its own
+   file and the far end off the right, at full or near-full alpha in both —
+   the extreme side columns peak at 255 and 255 in dark and 255 and 203 in
+   light — so a box that ended inside the picture would put a ruled vertical
+   cut through three rails, which is the one thing no boundary here may be. The
+   only other way to end the far end is to shrink the whole piece until it sits
+   between two props, and that is a model of a fence rather than a fence: the
+   standard this pass is graded against says props are cropped by the frame,
+   not shrunk to fit.
+
+   So the box runs --tools-fence-bleed past BOTH side edges and its whole base
+   sits below the section's own bottom edge: the fence is cropped on three
+   sides and ends in mid-air on none. Its far end still lands on the bank —
+   measured at 1440x900 the dark drawing's far base sits 74px above the join,
+   between the shore's 63 and the horizon's 99, which is the same strip the
+   bench's feet stand in.
+
+   ## The one number, and what the two drawings do with it
+
+       element height = w / 2.2779 = 0.4390w
+
+   `bottom: cap − 0.366w` and 0.366 is `(1 − 0.1663) x 0.4390` — the -dark
+   file's near post, whose cap is at y 0.1663 of the frame. The two terms
+   cancel to exactly --tools-fence-cap above the section's bottom edge for that
+   post, at every width, whatever `w` resolves to. At 1440x900 the box comes out
+   1843 x 809 at left -202, and its own bottom edge lands 523px below that join
+   — everything down there is clipped by `.tools__clip`.
+
+   **The two files are separate artwork here in geometry as well as ink, and
+   one box is still right.** Their BASE lines agree — 0.9977 at the near end in
+   both — and the base is the thing that has to, because it is where the fence
+   meets the ground. What differs is the near post: 0.1663 of the frame down in
+   dark, 0.0114 in light, so the light drawing's post is 0.155 of the file
+   taller and its cap stands 126px higher — 277px above the join at 1440x900
+   against the dark drawing's 151. Their far ends differ the same way and in
+   the same direction — dark's base is at 0.262 of the frame at f 0.95 and
+   light's at 0.620 — so the dark fence stays above the join across the whole
+   width and the light one dips below it at about x 1050 of 1440. Both are a fence cropped by the frame; one runs further
+   before the ground takes it. A per-theme `bottom` would make the two
+   identical and would be tuning one file to look like the other, which is the
+   thing the kit's separate-artwork rule exists to stop.
+
+   ## Still, and after the reeds
+
+   `StillArt`, and it is the third layer at this floor to decline a factor. At
+   the boulders' -0.15 this box would move ±118px against a fence whose visible
+   ink is 152px tall — the fence would swim through the shore line — and the
+   ladder's argument is the one Origin makes about the lamppost and this file
+   already makes twice: a thing standing on the ground does not drift, because
+   ground does not. The section's four rates are untouched, so the spread is
+   still 0.012 to 0.15 and the relative travel between the blob and the
+   boulders is still the 0.162 SUM.
+
+   Drawn after `.tools__spray` and after the reeds, so it is crisp where the
+   bench is hazed, and before the boulders, so the rocks pass in front of it.
+   `--art-near`: it is the near plane's ink, it is a dark faceted mass in dark
+   exactly as the boulders are, and in light it is the same pale silver the
+   bench and the bridge are drawn in.                                        */
+.tools__fence {
+  /* `100vw` and not `100%`: a percentage inside the `bottom` calc below would
+     resolve against the containing block's HEIGHT, which is the section, and
+     would make the whole expression nonsense. Walk.css warns off `100vw` for
+     its plates and that warning does not reach here — it is about a box
+     escaping a clip MARGIN and putting a scrollbar on the document. This
+     section has no clip margin any more and `.tools__clip` is `overflow:
+     clip`, so the classic-scrollbar overshoot is trimmed and only ever makes
+     the crop deeper. */
+  --tools-fence-w: calc(100vw + 2 * var(--tools-fence-bleed));
+
+  left: calc(-1 * var(--tools-fence-bleed));
+  width: var(--tools-fence-w);
+  /* 1000x439 is the .webp the site loads; stated rather than measured off the
+     image for the reason the bridge states it — these are lazy, and until one
+     arrives `naturalWidth` is 0 and a height:auto box measures 0. */
+  aspect-ratio: 1000 / 439;
+  bottom: calc(var(--tools-fence-cap) - var(--tools-fence-w) * 0.366);
+  opacity: var(--art-near);
+}
+
 /* ── the shore: the far bank's colour coming across the water ──────────────
    The last thing drawn inside the clip, and the thing that removes the ruled
    line at this section's bottom edge. Everything at this floor is cropped by
@@ -853,14 +1022,23 @@
    anchor, and in the mobile scene band below it is 233px wide with its whole
    ink visible.
 
-   **The bench and the reeds come off here too, and for two different
-   reasons.** The bench is named in guardrail 7 of the kit — "at max-width
-   640px, hide the peripheral lamppost and bench" — so it is the kit's own
-   floor rather than a judgement. The reeds are arithmetic: --tools-reeds-clear
-   sits on its 170px floor below 1000px while the scene band drops to 130, so
-   the ink top computes to 40px BELOW the section's bottom edge and the whole
-   clump is cropped away. A layer that resolves to nothing is a layer that
-   should say so rather than be paid for.
+   **The bench, the reeds and the fence come off here too, and for two
+   different reasons.** The bench is named in guardrail 7 of the kit — "at
+   max-width 640px, hide the peripheral lamppost and bench" — so it is the
+   kit's own floor rather than a judgement. The reeds are arithmetic:
+   --tools-reeds-clear sits on its 170px floor below 1000px while the scene
+   band drops to 130, so the ink top computes to 40px BELOW the section's
+   bottom edge and the whole clump is cropped away. A layer that resolves to
+   nothing is a layer that should say so rather than be paid for.
+
+   **The fence comes off for the boulders' reason rather than either of
+   those**, and it is the same measurement one prop over: it does not vanish
+   here, it takes the section. At 375px the band is 130px, the bridge's ink
+   runs 1 to 74px above the section's bottom edge, and the fence — whose cap
+   sits on its own 70px floor — runs 0 to 88px across the whole width. That is
+   the bridge's entire ink under three rails. The bridge is the beat and the
+   anchor at this size, and the fence could only be made to fit by shrinking
+   it, which is the one thing the rule above refuses.
 
    The two haze bands stay. They are gradients, they cost nothing, and the
    bottom edge needs dissolving at 320px exactly as much as it does at 1920.
@@ -900,7 +1078,8 @@
   }
   .tools__rocks-sway,
   .tools__bench,
-  .tools__reeds {
+  .tools__reeds,
+  .tools__fence {
     display: none;
   }
 }
