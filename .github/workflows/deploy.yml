@@ -8,6 +8,7 @@ name: Deploy to GitHub Pages
 # Run workflow.
 
 on:
+  # Manual only — run from the Actions tab when you're ready to publish.
   workflow_dispatch:
 
 permissions:

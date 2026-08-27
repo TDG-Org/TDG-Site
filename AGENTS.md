@@ -505,9 +505,10 @@ Commit messages here are a sentence about what changed and why, not a
 commit.** It is the only file that carries the number — read it there rather
 than from this sentence, which is the kind of copy that goes stale silently and
 did: it named `1.0.0` for four releases after that stopped being true.
-Push to `main` deploys, so on this repo the version is the only durable marker
-of which content went live when — nothing on the page prints it and no build
-step reads it, which means skipping the bump fails silently and forever. Patch
+Deploys are manual (run `.github/workflows/deploy.yml` from the Actions tab),
+but the version is still the only durable marker of which content went live
+when — nothing on the page prints it and no build step reads it, which means
+skipping the bump fails silently and forever. Patch
 for copy, a fix, an image, small polish; minor for a new page, app entry,
 section, component, or Supabase-backed feature; major for a change to the site's
 structure or to a shape stored in Supabase that the other TDG apps share.
