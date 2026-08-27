@@ -240,11 +240,14 @@ cancel — `tdg-site-billing` acts on that id alone, so a fake one would be a
 Cancel button reaching into a live Stripe account for something that was never
 there.
 
-The consequence is visible rather than hidden. On the Store, a developer with
-**Developer Mode** on still gets the Manage Subscription panel over a hand-made
-subscription, with a line at the top saying it is a preview and that its actions
-will refuse. A customer never sees that button, because the card only draws it
-for a grant with a real subscription behind it.
+The consequence is visible rather than permission-gated. On the Store, every
+account holding a current subscription-shaped grant gets **Manage or Cancel
+Plan**, whether that account is a Developer or not. A hand-made grant opens the
+same panel with **Billing Link Missing** above its rows, because there is no
+Stripe id for an action to reach. Turning Developer on or off changes the
+Developer console only; it never adds or removes a customer billing control.
+The catalogue remains the other half of the boundary: a one-time Theme Pack
+ignores impossible subscription-shaped metadata and never grows this panel.
 
 **`Ended` makes the pack leave.** Writing it drops the pack out of
 `owned_packs` immediately, which is `<app>_packs_in_force()` doing its job and

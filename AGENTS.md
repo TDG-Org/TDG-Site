@@ -294,10 +294,14 @@ padding, and the site's ghost and buy paddings made them 241px and 249px.
 
 **Every standing gets a face**, including the awkward ones: renewing, ending on
 a date, in a free trial, behind on a payment, lapsed, and a `kind` this site has
-not been taught to read. And `Manage or Cancel Plan` is drawn only when there is
-a live Stripe subscription behind it — a pack granted by hand from `#/dev` has
-none — because a button that can only ever fail is worse than no button, and
-`storeAnswers.ts` says out loud why it is missing.
+not been taught to read. `Manage or Cancel Plan` is drawn for every current
+subscription standing and every account, never according to Developer
+permission. If the grant has no live Stripe subscription behind it — which is
+what a pack granted by hand from `#/dev` looks like — the panel says **Billing
+Link Missing** before its actions. The entrance stays visible so a broken
+billing link cannot also hide the only cancellation route. A catalogue item
+sold only once never gets that panel, even if stale data gives it an impossible
+subscription-shaped grant.
 
 ### 12. The security boundary is in Postgres, and only in Postgres.
 
