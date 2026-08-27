@@ -499,6 +499,25 @@ that app ships and nobody here will notice. Resolve a download's current release
 at runtime from the GitHub releases API, the way `makullveny-site` does — copy
 that pattern rather than pasting a number.
 
+**GitHub Actions & releases — ask first, every time.** Actions minutes AND
+Actions storage are shared org-wide across every TDG project — one repo can
+block Actions for all of them, and this repo has already contributed to it
+once (seven accumulated `github-pages` artifacts, ~125 MB, present when the
+org went over its 476.8 MB storage cap on 2026-08-26 and blocked every repo's
+Actions). Never create, edit, enable, or disable anything under
+`.github/workflows/`, and never run a workflow by hand
+(`workflow_dispatch`), without direct, in-the-moment permission — not a new
+file, not "just a small fix to a trigger," no exceptions. Never delete an
+Actions artifact or touch retention settings without being asked; checking
+usage is always free. Pushing to `main` is normal and stays covered by the
+rules above — `deploy.yml` runs on every push to `main` today, so a push and
+a deploy are currently the same event, and publishing is gated on one word:
+told **"release"** (or an equally explicit go-ahead, in that message), go
+ahead — don't ask twice, don't add ceremony. Absent that word, finishing a
+task never includes shipping it, and permission is per-release. If a task
+would naturally end with a publish or a workflow-file change: say so in one
+line and stop.
+
 ---
 
 ## 7 · What "done" means here
