@@ -771,22 +771,23 @@
   color: var(--faint);
 }
 
-/* Only a TDG developer with Developer Mode on ever sees this, and it says so.
-   Accent rather than warm: nothing is wrong, this is a preview of a panel that
-   has no live subscription behind it yet. */
-.store__devnote {
+/* A current subscription entitlement with no Stripe id is inconsistent money
+   data, whoever owns the account. Keep the cancellation entrance visible, then
+   name the broken link before its actions instead of hiding it behind a
+   Developer-only preview. */
+.store__billing-note {
   margin: 0 0 11px;
   padding: 9px 11px;
   border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  background-color: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--warm) 42%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 8%, transparent);
   font: 400 11.5px/1.5 var(--font-body);
   color: var(--muted);
   transition: var(--t-theme);
 }
-.store__devnote strong {
+.store__billing-note strong {
   font-weight: 600;
-  color: var(--text);
+  color: var(--warm);
 }
 .store__note--quiet {
   opacity: 0.8;

@@ -20,7 +20,7 @@ If you are about to type a sentence a visitor will read into a `.tsx` file under
 | `about.ts` | The About page, in the same block vocabulary as an app page. |
 | `pageBlocks.ts` | The block types a folded page is built from. Small on purpose. |
 | `store.ts` | **The shop catalogue: what is sold, what it costs, and the live Stripe links.** Read its header before touching a number. |
-| `storeAnswers.ts` | The Store's prose — the whole money side, and not one amount in it. |
+| `storeAnswers.ts` | The Store's prose — the whole money side, the shared **Billing Link Missing** notice, and not one amount in it. |
 
 ## `pageBlocks.ts` is a vocabulary, and it stays small
 

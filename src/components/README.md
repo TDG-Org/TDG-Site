@@ -146,13 +146,14 @@ beside it. In one component:
   rather than folded under it because a refund policy you find afterwards is one
   you never agreed to. Its long form is the `refunds` section of
   `storeAnswers.ts`; change one and change the other.
-- A **developer preview**. With Developer Mode on and `is_admin` true, Manage
-  Plan is drawn over a grant that has no Stripe subscription behind it, with a
-  line at the top saying so and that its actions will refuse. It reveals and
-  grants nothing — both halves are the same pair the Developer tab already uses
-  — and it exists because there is not one live subscription on the project yet,
-  so the whole subscription surface would otherwise be unreachable. `#/dev`'s **Held
-  As** dropdown is what puts an account into each state.
+- A **permission-independent subscription entrance**. Every current recurring
+  standing draws **Manage or Cancel Plan** for its account holder; making that
+  person a Developer cannot add it and removing Developer cannot take it away.
+  When the entitlement has no Stripe subscription id, the same panel opens with
+  **Billing Link Missing** above its rows. `#/dev`'s **Held As** dropdown is what
+  creates those hand-made states, but it never controls who can see the Store
+  panel. One-time catalogue items remain perpetual even if old data gives one an
+  impossible subscription-shaped grant.
 
 **These two panels deliberately do NOT use `useModal`.** That hook locks the
 page's scroll, traps Tab and takes the focus, all of which a full-screen dialog

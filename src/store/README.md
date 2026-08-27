@@ -54,9 +54,17 @@ looks like, and it renders as a real state saying exactly what is known, because
 **a state a reader can reach and cannot read is a bug**.
 
 `manageable` is false for a subscription grant with no `subscriptionId` on it —
-which is what a pack granted by hand from `#/dev` looks like. The card draws no
-Manage or Cancel Plan button there, because a button that can only ever fail is
-worse than no button, and `storeAnswers.ts` says out loud why it is missing.
+which is what a pack granted by hand from `#/dev` looks like. That flag answers
+whether a Stripe action has an id to act on; it does not answer whether the
+account holder may open the management panel. Every current subscription
+standing draws **Manage or Cancel Plan** for every account. A missing id is
+named inside it as **Billing Link Missing**, so broken billing data is visible
+without Developer permission controlling a customer-facing cancellation route.
+
+The catalogue is the authority on whether a pack can recur. `Store.tsx` ignores
+subscription-shaped metadata on a one-time pack, so an old malformed Theme Pack
+grant cannot grow subscription controls or describe a one-time purchase as
+renewing.
 
 ## Changing and cancelling
 

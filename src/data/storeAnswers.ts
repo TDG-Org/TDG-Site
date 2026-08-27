@@ -59,6 +59,17 @@ import type { PageSection } from './pageBlocks'
  * revoked pack leaves), `src/dev/README.md` and `src/dev/AccountDetail.tsx` (a
  * pack can be granted or revoked by hand, and both land in the ledger).
  */
+/**
+ * The warning shared by the live management panel and its troubleshooting
+ * answer. Kept once because an account must not be told two different stories
+ * about the same missing Stripe link depending on which part of the Store it
+ * is reading.
+ */
+export const STORE_BILLING_LINK_NOTICE = {
+  name: 'Billing Link Missing',
+  text: 'This account is marked as subscribed, but no Stripe subscription is attached. If our team granted the pack, there is no recurring payment to cancel. If you are being charged, tell us so we can repair the billing record and stop it.',
+} as const
+
 export const STORE_ANSWERS: PageSection[] = [
   {
     id: 'what',
@@ -270,8 +281,8 @@ export const STORE_ANSWERS: PageSection[] = [
             text: 'There is no way to own a pack twice, so the second payment bought nothing at all. That is not a refund and the no-refunds line does not cover it: it is money we should not have taken, and we send it back. Write to us with both receipts.',
           },
           {
-            name: 'Manage or Cancel Plan is not on the card',
-            text: 'That button only appears when there is a live Stripe subscription behind it. A pack bought outright has nothing to renew, and a pack we put on your account by hand has no payment attached to it at all — both of those say so on the card instead. If you are being charged for something and cannot see the button, that is worth telling us, and we can stop the payment ourselves the day you write.',
+            name: `The panel says ${STORE_BILLING_LINK_NOTICE.name}`,
+            text: `${STORE_BILLING_LINK_NOTICE.text} The management button stays on every current subscription entitlement, for every account; Developer permission does not control it. A pack bought outright still has nothing to renew and correctly has no subscription panel.`,
           },
           {
             name: 'Cancelling would not go through',

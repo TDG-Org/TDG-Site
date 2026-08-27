@@ -5,7 +5,6 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
-import { useDevMode } from '../dev/devMode'
 import { useOwnedPacks } from '../store/useOwnedPacks'
 import {
   formatDay,
@@ -20,7 +19,7 @@ import { appHash, rememberOrigin, storeShelfId } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { iconForPage } from '../data/appPages'
 import { Fold, FoldControls } from './Folded'
-import { STORE_ANSWERS } from '../data/storeAnswers'
+import { STORE_ANSWERS, STORE_BILLING_LINK_NOTICE } from '../data/storeAnswers'
 import {
   STORE_APPS,
   annualSavingCents,
@@ -254,7 +253,6 @@ function PackCard({
   index,
   state,
   grant,
-  devView,
   onBuy,
   onSignIn,
   onCheck,
@@ -268,16 +266,6 @@ function PackCard({
   state: CardState
   /** How this account holds it, when the app records that. Null when it does not. */
   grant: PackGrant | null
-  /**
-   * Is a TDG developer looking at this, with Developer Mode switched on?
-   *
-   * It reveals one thing and grants nothing — the subscription panel over a
-   * grant that has no Stripe subscription behind it, which is what every
-   * hand-made grant is and what every grant on this project is today. Without
-   * it the whole subscription surface is unreachable until the first real
-   * subscriber exists, which is a state nobody has looked at on the money path.
-   */
-  devView: boolean
   onBuy: (plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -293,8 +281,14 @@ function PackCard({
   const saving = multiPlan ? annualSavingCents(plans) : null
   const lifetimePlan = plans.find((plan) => plan.id === 'lifetime') ?? null
 
-  /** What this account's own grant says about this pack, in the card's words. */
-  const standing = standingOfGrant(grant)
+  /**
+   * What this account's own grant says about this pack, in the card's words.
+   *
+   * The catalogue decides whether a pack can recur. An old or malformed grant
+   * must never turn a one-time Theme Pack into a subscription merely because
+   * its stored object says `kind: subscription`.
+   */
+  const standing = standingOfGrant(subscription ? grant : null)
 
   /**
    * Is a chooser open over this card, and which one?
@@ -329,32 +323,32 @@ function PackCard({
   const shown = justChanged ?? standing
 
   /**
-   * Is Manage or Cancel Plan drawn ONLY because a developer asked to see it?
+   * Every current subscription standing gets the same management entrance.
    *
-   * `standing.manageable` stays honest and needs a real Stripe subscription
-   * id, because a customer offered a button that can only ever fail is worse
-   * off than one who is told plainly why there is no button. A developer with
-   * Developer Mode on gets it anyway, and the panel says at the top what it is
-   * and that its actions will refuse — a preview, labelled as one, rather than
-   * a control that quietly does nothing.
+   * This used to fall back to Developer Mode when `subscriptionId` was absent,
+   * which made the button appear and disappear when an ordinary account was
+   * promoted. Visibility is about what the account holds, never its permission.
+   * `manageable` still says whether Stripe actions have a real id to act on;
+   * the panel names a missing link instead of hiding the whole cancellation
+   * surface. The catalogue check keeps one-time packs out even if stale data
+   * gives one an impossible subscription-shaped grant.
    */
-  const devOnly =
-    !standing.manageable &&
-    devView &&
+  const canManage =
+    subscription &&
     (shown.kind === 'active' ||
       shown.kind === 'ending' ||
       shown.kind === 'trial' ||
       shown.kind === 'dunning')
-  const canManage = shown.manageable || devOnly
+  const billingLinkMissing = canManage && !shown.manageable
 
   // A chooser belongs to the state that opened it and to nothing else. A card
   // that flips to Waiting mid-choice must not leave one hanging over the wait,
   // and a card whose wait times out must not find one still open underneath.
   //
-  // `manageable` is in here for the same reason one level down: a re-read that
-  // lands a lapsed or hand-granted standing takes the subscription button away,
-  // and a panel left open with nothing behind it would be a dialog the reader
-  // cannot get back to and cannot act in.
+  // `canManage` is in here for the same reason one level down: a re-read that
+  // lands a lapsed standing takes the subscription button away, and a panel
+  // left open with nothing behind it would be a dialog the reader cannot get
+  // back to and cannot act in.
   useEffect(() => {
     if ((state.kind !== 'buy' && state.kind !== 'owned') || (state.kind === 'owned' && !canManage)) {
       setChoosing(false)
@@ -545,10 +539,9 @@ function PackCard({
               them is a subscription they have to email us about, and "email us
               to cancel" is a dark pattern however politely it is worded.
 
-              Drawn only when there is genuinely something behind it: a pack
-              granted by hand from `#/dev` is a subscription with no Stripe
-              subscription to act on, and a button that can only ever fail is
-              worse than no button.
+              Drawn for every current subscription standing, regardless of the
+              account's Developer permission. A missing Stripe link is named
+              inside the panel; it never hides the cancellation entrance.
             */}
             {canManage && (
               <button
@@ -574,13 +567,13 @@ function PackCard({
                 onClose={() => closeChooser()}
               >
                 {/* Said before the rows rather than after them, because it
-                    changes what every row below means. Only a developer with
-                    Developer Mode on can reach this. */}
-                {devOnly && (
-                  <p className="store__devnote">
-                    <strong>Developer view.</strong> This grant has no Stripe subscription behind
-                    it, so every action here will refuse. It is drawn so the panel can be looked
-                    at before there is a real subscriber.
+                    changes what every row below means. This is an entitlement
+                    integrity warning for the account holder, not a developer
+                    preview and never permission-gated. */}
+                {billingLinkMissing && (
+                  <p className="store__billing-note">
+                    <strong>{STORE_BILLING_LINK_NOTICE.name}.</strong>{' '}
+                    {STORE_BILLING_LINK_NOTICE.text}
                   </p>
                 )}
                 {step.at === 'menu' && (
@@ -874,7 +867,6 @@ function AppSection({
   app,
   cardState,
   grantFor,
-  devView,
   onBuy,
   onSignIn,
   onCheck,
@@ -882,7 +874,6 @@ function AppSection({
   app: StoreApp
   cardState: (app: StoreApp, pack: StorePack) => CardState
   grantFor: (appId: string, packId: string) => PackGrant | null
-  devView: boolean
   onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
   onSignIn: () => void
   onCheck: () => void
@@ -941,7 +932,6 @@ function AppSection({
             index={i}
             state={cardState(app, pack)}
             grant={grantFor(app.id, pack.id)}
-            devView={devView}
             onBuy={(plan) => onBuy(app, pack, plan)}
             onSignIn={onSignIn}
             onCheck={onCheck}
@@ -955,16 +945,6 @@ function AppSection({
 export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { status, user, profile } = useAuth()
   const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
-  /**
-   * A TDG developer, with the Developer Mode switch on.
-   *
-   * Both halves, and neither is a permission. `is_admin` is the same column
-   * Postgres re-checks on every privileged call, and Developer Mode is a
-   * per-browser preference about chrome — so this reveals a preview and grants
-   * nothing, exactly like the Developer tab it sits beside. A copy of this site
-   * with both forced true shows one extra panel whose buttons all refuse.
-   */
-  const devView = useDevMode() && profile?.is_admin === true
   const blob = useParallax<HTMLDivElement>(-0.12)
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const how = useReveal<HTMLDivElement>('scale', 1)
@@ -1123,7 +1103,6 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
             app={app}
             cardState={cardState}
             grantFor={grantFor}
-            devView={devView}
             onBuy={buy}
             onSignIn={onOpenAuth}
             onCheck={refresh}

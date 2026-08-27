@@ -84,12 +84,12 @@ export type PackStanding = {
   /** When the paid-for period runs out. Null when there is no clock. */
   endsAt: Date | null
   /**
-   * Is there a live Stripe subscription behind this that can be changed?
+   * Is there a live Stripe subscription id behind this that can be changed?
    *
-   * False for a perpetual grant, for a lapsed one, and — importantly — for a
-   * subscription grant with no `subscriptionId` on it, which is what a pack
-   * granted by hand from `#/dev` looks like. Offering to cancel something with
-   * no handle to cancel would be a button that can only ever fail.
+   * False for a perpetual grant, for a lapsed one, and for a subscription grant
+   * with no `subscriptionId` on it, which is what a pack granted by hand from
+   * `#/dev` looks like. This controls whether a billing action has a handle; it
+   * does NOT control whether the account holder can see the management panel.
    */
   manageable: boolean
   /** Is it set to stop at the end of the period? Drives Cancel vs Resume. */
