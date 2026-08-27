@@ -118,8 +118,9 @@ beside it. In one component:
   so the card never resizes between them.
 - **One button per pack, in every state.** A pack sold three ways opens a
   chooser over the card rather than printing three buttons, and a pack already
-  subscribed to opens a *manage* panel from a button of exactly the same size in
-  exactly the same place — measured 530×47 against its neighbour's Buy button.
+  subscribed to opens its subscription panel from an explicit **Manage or
+  Cancel Plan** button of exactly the same size in exactly the same
+  place — measured 530×47 against its neighbour's Buy button.
   The packs sit in a grid row and unequal action rows are visible immediately.
 - Chips and cadence that **agree with the plan**. Printing `ONE-TIME · YOURS FOR
   GOOD` over a monthly subscription is the one mistake a shop may not make.
@@ -150,7 +151,7 @@ beside it. In one component:
   line at the top saying so and that its actions will refuse. It reveals and
   grants nothing — both halves are the same pair the Developer tab already uses
   — and it exists because there is not one live subscription on the project yet,
-  so the whole manage surface would otherwise be unreachable. `#/dev`'s **Held
+  so the whole subscription surface would otherwise be unreachable. `#/dev`'s **Held
   As** dropdown is what puts an account into each state.
 
 **These two panels deliberately do NOT use `useModal`.** That hook locks the

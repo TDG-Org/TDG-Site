@@ -75,7 +75,7 @@ permissions the webhook does not:
 | Verb | Stripe permission |
 | --- | --- |
 | Change Plan · Payment & Receipts | **Billing Portal — write** |
-| Cancel Plan · Resume Plan | **Subscriptions — write** |
+| Cancel Subscription · Resume Subscription | **Subscriptions — write** |
 
 A key without one answers `more_permissions_required`, which this function tells
 apart from every other refusal on purpose: it logs it at ERROR level naming the

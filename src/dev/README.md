@@ -241,7 +241,7 @@ Cancel button reaching into a live Stripe account for something that was never
 there.
 
 The consequence is visible rather than hidden. On the Store, a developer with
-**Developer Mode** on still gets the Manage Plan panel over a hand-made
+**Developer Mode** on still gets the Manage Subscription panel over a hand-made
 subscription, with a line at the top saying it is a preview and that its actions
 will refuse. A customer never sees that button, because the card only draws it
 for a grant with a real subscription behind it.

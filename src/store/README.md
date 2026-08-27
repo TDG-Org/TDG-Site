@@ -55,8 +55,8 @@ looks like, and it renders as a real state saying exactly what is known, because
 
 `manageable` is false for a subscription grant with no `subscriptionId` on it —
 which is what a pack granted by hand from `#/dev` looks like. The card draws no
-Manage Plan button there, because a button that can only ever fail is worse than
-no button, and `storeAnswers.ts` says out loud why it is missing.
+Manage or Cancel Plan button there, because a button that can only ever fail is
+worse than no button, and `storeAnswers.ts` says out loud why it is missing.
 
 ## Changing and cancelling
 

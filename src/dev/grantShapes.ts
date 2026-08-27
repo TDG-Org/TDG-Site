@@ -57,7 +57,7 @@ export const GRANT_SHAPES: readonly GrantShape[] = [
   {
     id: 'active',
     label: 'Subscribed',
-    what: 'Paying and renewing. The card names the renewal date and offers Manage Plan.',
+    what: 'Paying and renewing. The card names the renewal date and offers Manage or Cancel Plan.',
     kind: 'subscription',
     status: 'active',
     days: 30,
