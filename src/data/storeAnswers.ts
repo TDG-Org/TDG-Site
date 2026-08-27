@@ -199,7 +199,7 @@ export const STORE_ANSWERS: PageSection[] = [
       },
       {
         kind: 'note',
-        text: 'The rule you can hold us to: if a card does not say it renews, it does not renew — and if it does, you can stop it from that card in two presses, keep everything you have paid for, and never be charged again.',
+        text: 'The rule you can hold us to: if a card does not say it renews, it does not renew — and if it does, you can stop it from that card in three presses, keep everything you have paid for, and never be charged again.',
       },
     ],
   },
@@ -308,7 +308,7 @@ export const STORE_ANSWERS: PageSection[] = [
         items: [
           {
             name: 'Cancel instead, if it renews',
-            text: 'A plan can be stopped from its own card the moment you want it stopped, and you keep every part of it until the end of the period you have already paid for. Nothing further is charged after that. That is the thing to reach for rather than a refund, and it is two presses.',
+            text: 'A plan can be stopped from its own card the moment you want it stopped, and you keep every part of it until the end of the period you have already paid for. Nothing further is charged after that. That is the thing to reach for rather than a refund, and it is three presses.',
           },
           {
             name: 'A payment that bought nothing is not a refund',
