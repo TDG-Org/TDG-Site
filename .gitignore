@@ -91,5 +91,20 @@ logs/
 npm-debug.log*
 .scratch/
 
+# An assistant's request body for the Supabase management API, written to the
+# repo root instead of held in memory. There is no Supabase CLI and no
+# service-role key on this machine, so the only route to DDL on tdg-core is
+# POST /v1/projects/<ref>/database/query with the SQL as a JSON field — and
+# `{"q": "<the whole migration>"}` is that body, saved to a file. It reappears
+# on the next apply, which is why this is an ignore rather than a delete.
+#
+# It carries no credential: the bearer token is a header at call time and the
+# file has one key. It is ignored because it is 26KB of duplicated SQL sitting
+# where a reflex `git add -A` would take it, and this repo has had exactly that
+# happen — 850 lines of a concurrent session's half-built console went into a
+# commit about the Store. **The real fix is to write it to the session
+# scratchpad under %TEMP%, not here**; this line only stops it landing.
+/x.json
+
 # DevFleet Logbook version history
 .devfleet/logbook/.history/
