@@ -49,12 +49,19 @@ definitions are the largest thing on the page and none of it is needed to paint
 the hero. All four ship as `assets/<hash>.js` — `vite.config.ts` says why the
 names are anonymous.
 
-**Scroll restoration lives in one effect in `App.tsx`.** A page change scrolls
-`instant`, never smooth: the document's own `scroll-behavior: smooth` makes
-arriving at the Store from halfway down the home page look like the new page
-sliding up under you rather than like opening a page. Returning from an app page
-lands back at the exact scroll position the card was clicked from, and only when
-the hash is the one that was left — see `lib/route.ts`.
+**Where the page lands is decided in two effects in `App.tsx`, over
+`lib/route.ts` and `lib/anchors.ts`.** A page change scrolls `instant`, never
+smooth: the document's own `scroll-behavior: smooth` makes arriving at the Store
+from halfway down the home page look like the new page sliding up under you
+rather than like opening a page. Returning from an app page lands back at the
+exact scroll position the card was clicked from, and only when the hash is the
+one that was left — see `lib/route.ts`.
+
+A **section anchor** lands on that section's heading, clear of the fixed nav,
+whether it arrives as a shared link, a bookmark or a nav click on the page you
+are already reading — never on the section's box top, which on the cabin walk is
+up to 452px of camera padding above the heading. See
+[`lib/README.md`](lib/README.md) for why that is JS and not `scroll-margin-top`.
 
 ## The folders
 

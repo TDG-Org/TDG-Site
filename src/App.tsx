@@ -17,6 +17,7 @@ import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 import { arriveAt, useRoute } from './lib/route'
+import { landOnAnchor, scrollToAnchor, sectionIdFromHash } from './lib/anchors'
 
 /**
  * The Developer console, in its own chunk.
@@ -118,43 +119,54 @@ export default function App() {
       window.scrollTo({ top: back, behavior: 'instant' })
       return
     }
-    const id = hash.replace(/^#/, '')
-    if (!id || id.startsWith('/')) return
     /*
-     * ONE legacy alias, and this is it.
+     * A page opened AT a section is simply THERE, so `instant` — the document's
+     * own `scroll-behavior: smooth` would otherwise slide the whole page up
+     * under the reader, which is what opening a page must not look like.
      *
-     * The Origin section was `#story` until the rename in 1.5.0 (August 2026).
-     * Bookmarks, shared links and anything linking in from off this site still
-     * carry the old fragment, and without this line they land at the top of the
-     * hero with a hash in the address bar that means nothing — the worst answer
-     * to "is there something here?", because it looks like the page simply
-     * failed to move.
-     *
-     * **The hash is deliberately NOT rewritten.** Rule 8 of AGENTS.md is that
-     * an unrecognised route renders home with the hash untouched, and the same
-     * instinct holds one level down: silently editing the address bar of
+     * `sectionIdFromHash` resolves the one legacy alias this site has, `#story`
+     * → `#origin`, and `scrollToAnchor` decides the landing. **The hash itself
+     * is deliberately NOT rewritten**: rule 8 of AGENTS.md is that an
+     * unrecognised route renders home with the hash untouched, and the same
+     * instinct holds one level down — silently editing the address bar of
      * somebody who followed their own bookmark is its own kind of surprise, and
-     * it would also quietly rewrite the link they are about to copy back out.
-     *
-     * Not a table. `story` is the only id this site has ever renamed, and a
-     * lookup map for one entry invites the next person to add a second without
-     * asking whether the old link was ever real. If a second id is ever
-     * renamed, write it here beside this one and say when.
-     *
-     * What it does NOT cover, deliberately: a hash edited to `#story` while
-     * this tab is ALREADY showing home. That is a hashchange and not a route
-     * change, so `same()` in lib/route.ts keeps the route object and nothing
-     * re-runs this — the same reason clicking `#apps` from `#origin` is the
-     * browser's scroll and not ours. Every way an old link actually arrives —
-     * a bookmark, a shared URL, an external link, a `#story` reached from the
-     * Store or an app page — is a document load or a real route change, and
-     * all of those come through here. Closing the last case would mean a
-     * hashchange listener of our own for one alias, which is more machinery
-     * than the alias is worth.
+     * it would quietly rewrite the link they are about to copy back out.
      */
-    const target = id === 'story' ? 'origin' : id
-    document.getElementById(target)?.scrollIntoView()
+    const id = sectionIdFromHash(hash)
+    if (!id) return
+    // Not one scroll but a landing that survives the page finishing loading —
+    // see `landOnAnchor`. It hands back a cleanup because a reader who routes
+    // away mid-load must not be pulled back to a section they have left.
+    return landOnAnchor(id) ?? undefined
   }, [route, showDev])
+
+  /*
+   * The same landing, for an anchor followed WITHOUT a route change.
+   *
+   * Clicking `#apps` in the nav while already reading the home page is a
+   * hashchange and not a route change — `same()` in lib/route.ts keeps the
+   * route object on purpose, so the effect above does not re-run and the scroll
+   * was the browser's own. That is exactly the scroll this change exists to
+   * replace: it lands the section's BOX top, which on the cabin walk is up to
+   * 452px of camera padding above the heading somebody clicked for.
+   *
+   * `smooth`, unlike the arrival above: the reader is already on this page and
+   * a jump would lose them the sense of where they went. Not a scroll listener
+   * — rule 9 forbids those, and this fires once per anchor followed.
+   *
+   * It also closes the one case the alias note above used to exclude: a hash
+   * edited to `#story` while the tab is already showing home now resolves like
+   * every other way of arriving at it, because the listener that was "more
+   * machinery than the alias is worth" is here anyway for the headings.
+   */
+  useEffect(() => {
+    const onHash = () => {
+      const id = sectionIdFromHash(window.location.hash)
+      if (id) scrollToAnchor(id, 'smooth')
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   return (
     <div className="page">

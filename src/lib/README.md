@@ -8,6 +8,7 @@ change one.
 | File | What it is |
 | --- | --- |
 | `route.ts` | The hash router. |
+| `anchors.ts` | Where `#apps` actually lands: the section's heading, clear of the nav. |
 | `motion.ts` | The one animation loop for the whole page. |
 | `sections.tsx` | Which collapsible sections are open. |
 | `supabase.ts` | The shared TDG Core client. |
@@ -89,6 +90,46 @@ Veditor" while standing on TDG Veditor.
 named, and what keeps the console out of everyone's way is that `App.tsx` renders
 home for a non-developer and every byte behind it comes from Postgres functions
 that refuse one. See [`../dev/README.md`](../dev/README.md).
+
+## `anchors.ts`
+
+**A section anchor lands on the section's HEADING, never on its box.** `#apps`
+is a link somebody sends somebody else, and the thing they meant is the Apps
+heading. The browser's own answer is the box top, and on this page the two are
+nowhere near each other: the three sections of the cabin walk carry the padding
+that holds the camera's beats, so the heading sits 308px inside `#apps` and
+452px inside `#tools` at 1440×900. Followed natively, the reader arrived on a
+third of a screen of empty band with the heading below the fold — and the first
+70px of whatever landed was under the fixed nav.
+
+**Not `scroll-margin-top`**, which is the CSS answer to exactly this, because
+the number it would need is negative and is not ours to write: it would be a
+fourth copy of a viewport-based clamp that `Apps.css` and `Tools.css` own and
+that §4 of [`AGENTS.md`](../../AGENTS.md) puts out of reach. It would go wrong
+silently at every width but the one it was measured at.
+
+**The landing element is found, not tabulated.** Every section opens with a
+`.kicker` — `base.css`'s primitive, rule 4 — so a section added tomorrow lands
+correctly without this file being opened. The hero has none and wants the top of
+the document, which is what falling back to the section itself and clamping at
+zero gives it. The nav's height comes from `--nav-h`, so a taller bar cannot
+quietly hide every heading again.
+
+**Two callers, two behaviours.** A page opened AT a section is `instant` — it is
+simply there. An anchor followed on the page you are already reading is
+`smooth`, and it is downgraded to `instant` for a reader who asked for less
+motion: `base.css` already sets `scroll-behavior: auto` in its reduced-motion
+block, but an explicit `behavior` on `scrollTo` **overrides that declaration
+rather than inheriting it**, so hardcoding `smooth` would put the motion back
+for exactly the people that rule was written for.
+
+**`landOnAnchor` keeps the landing while the page finishes loading.** A React
+effect runs long before the hero's canvases have sized and the fonts have
+swapped, and measured on a cold load of `/#apps` the heading was still near the
+top of the document at that moment — so the landing computed negative, clamped
+to zero, and the reader arrived at the hero. It lands again on `document.fonts.ready`
+and on `load`, and stops the moment it finds the page somewhere it did not leave
+it, because a reader who has scrolled owns the page.
 
 ## `motion.ts`
 
