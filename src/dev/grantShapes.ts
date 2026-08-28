@@ -135,3 +135,87 @@ export function shapeOfGrant(grant: PackGrant | null | undefined, owned: boolean
   const kind = standingOfGrant(grant).kind
   return kind === 'unknown' ? null : kind
 }
+
+/* ── one pack, one control ─────────────────────────────────────────────── */
+
+/**
+ * A pack's WHOLE state as a single value: not held at all, or the shape it is
+ * held in.
+ *
+ * ## Why `none` belongs in this list
+ *
+ * The console used to ask two questions about one pack — a switch for whether
+ * the account has it, and, only once that switch was on, a dropdown for how.
+ * Two controls for one fact, in a fixed order, with a wrong state in between:
+ * to make somebody a subscriber you first had to grant them the pack outright,
+ * which wrote a perpetual grant and a purchase-event row, and only then could
+ * you say what you actually meant. Turning it on was never what you wanted; it
+ * was a toll on the way to the thing you wanted.
+ *
+ * So ownership is not a separate question. It is the first entry of the same
+ * list, every choice is one write, and there is no order to get right.
+ *
+ * ## Why a one-time pack still gets a list of two
+ *
+ * Because the alternative is two different controls on one shelf — a switch on
+ * the Theme Pack and a dropdown on the Pro Export Pack, side by side, in a grid
+ * — and a reader would have to learn which packs work which way before they
+ * could read either. One control, whose options are whatever that pack can
+ * actually be, is the same idea `GRANT_SHAPES` already was: the states
+ * themselves, named the way the Store names them.
+ */
+export type HoldingId = 'none' | GrantShape['id']
+
+export type Holding = {
+  id: HoldingId
+  /** Title Case: it is the name of a state. */
+  label: string
+  /** Sentence case: what the Store card will say, so the picker previews itself. */
+  what: string
+}
+
+const NOT_HELD: Holding = {
+  id: 'none',
+  label: 'Not Owned',
+  what: 'The account does not have this pack, and the Store offers to sell it.',
+}
+
+/**
+ * The states THIS pack can be in.
+ *
+ * A pack the shop sells on a recurring plan gets the six shapes; a one-time
+ * pack gets the one it can be in, named the way a shelf names it. `Yours For
+ * Good` earns its longer name only where it has rented states to be told apart
+ * from — on a pack that is only ever bought once, that contrast does not exist
+ * and `Owned` is what the card says.
+ */
+export function holdingsFor(supportsSubscriptionStates: boolean): Holding[] {
+  if (!supportsSubscriptionStates) {
+    return [
+      NOT_HELD,
+      {
+        id: 'perpetual',
+        label: 'Owned',
+        what: 'Bought once and kept. There is no clock on it and nothing to renew.',
+      },
+    ]
+  }
+  return [NOT_HELD, ...GRANT_SHAPES.map((s) => ({ id: s.id, label: s.label, what: s.what }))]
+}
+
+/**
+ * Which of those states a pack is in right now.
+ *
+ * `null` means the account holds it in a shape this site has no reading for —
+ * `standingOfGrant`'s `unknown`, which by definition has no preset — and the
+ * control says so rather than silently showing the first option.
+ */
+export function holdingOf(
+  owned: boolean,
+  grant: PackGrant | null | undefined,
+  supportsSubscriptionStates: boolean,
+): HoldingId | null {
+  if (!owned) return 'none'
+  if (!supportsSubscriptionStates) return 'perpetual'
+  return shapeOfGrant(grant, owned)
+}

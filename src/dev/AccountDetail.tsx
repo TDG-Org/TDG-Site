@@ -6,13 +6,14 @@ import * as api from './api'
 // module. This console is one of its callers. See src/badges/README.md.
 import { adminSetBadge } from '../badges/api'
 import type { AdminBadge } from '../badges/types'
-import { grantNote, storeApps, type DevStoreApp } from './apps'
-import { GRANT_SHAPES, grantArgsFor, shapeOfGrant } from './grantShapes'
+import { grantNote, storeApps, type DevStoreApp, type DevStorePack } from './apps'
+import { GRANT_SHAPES, grantArgsFor, holdingOf, holdingsFor, type HoldingId } from './grantShapes'
 import {
   Button,
   Combo,
   Fact,
   Field,
+  HoldingTile,
   OwnTile,
   Panel,
   Select,
@@ -340,7 +341,10 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
     setStatus(a.core_status)
   }, [a.user_id, a.core_tier, a.core_status])
 
-  const dirty = tier !== a.core_tier || status !== a.core_status
+  // Same rule as Makullveny's: `free / past_due` is a status describing a
+  // subscription that is not there, and every account rests at active.
+  const statusToWrite = tier === 'free' ? 'active' : status
+  const dirty = tier !== a.core_tier || statusToWrite !== a.core_status
 
   return (
     <Panel
@@ -370,10 +374,18 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
               the box open on whoever you clicked next. */}
           <Combo key={a.user_id} value={tier} onChange={setTier} options={catalog.core_tiers} />
         </Field>
-        <Field label="Status" hint="Only 'active' actually unlocks anything today; the rest are for matching Stripe.">
+        <Field
+          label="Standing"
+          hint={
+            tier === 'free'
+              ? 'Only asked when there is a paid tier to be standing in. On free this is written as active, which is where every account rests.'
+              : "Only 'active' actually unlocks anything today; the rest are for matching Stripe."
+          }
+        >
           <Select
-            value={status}
+            value={statusToWrite}
             onChange={setStatus}
+            disabled={tier === 'free'}
             options={catalog.statuses.map((s) => ({ value: s, label: s }))}
           />
         </Field>
@@ -390,8 +402,8 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
           disabled={!dirty}
           busy={busy === 'core'}
           onClick={() =>
-            run('core', `Core subscription set to ${tier} / ${status}.`, () =>
-              api.setCoreSubscription(a.user_id, tier, status),
+            run('core', `Core subscription set to ${tier} / ${statusToWrite}.`, () =>
+              api.setCoreSubscription(a.user_id, tier, statusToWrite),
             )
           }
         >
@@ -721,22 +733,85 @@ function BadgesPanel({ account: a, badges, badgesState, badgesError, run, busy }
 
 /* ── Makullveny ────────────────────────────────────────────────────────── */
 
+/**
+ * Makullveny stores two different facts and one of them is a MIRROR of the
+ * other. This panel is the shape that came out of taking that seriously.
+ *
+ * ## The trap this replaced
+ *
+ * `mak_subscriptions` carries `tier` (free · candle · lantern · hearth) and
+ * `candle_purchased_at`. The panel offered a dropdown for the first and a
+ * switch for the second, with no relationship between them — so `candle`
+ * appeared in a list of subscription rungs, looking exactly like the thing that
+ * grants the bundle.
+ *
+ * It grants nothing. Makullveny's own `src/entitlements.js` unlocks every piece
+ * of Candle content — the five marketplace themes, the Journal, the Scroll, the
+ * raised capacity limits — on `candlePurchased || tier >= hearth`, and never on
+ * `tier === 'candle'`. Its comment says why: Candle is a one-time purchase, and
+ * ranking it inside TIER_ORDER would hand it to every Lantern subscriber
+ * because lantern(2) > candle(1).
+ *
+ * There is a live row on this project with `tier = 'candle'` and no flag: an
+ * account somebody believes they gave the bundle to, which has never had it.
+ * That row is what this panel was rebuilt from.
+ *
+ * ## The shape now
+ *
+ * Two axes, one control each, and neither can produce that row.
+ *
+ * **Candle Bundle** is one switch over `tdg_admin_set_mak_candle`, which writes
+ * the flag AND the tier mirror in one statement, the way the app's own Stripe
+ * webhook writes them.
+ *
+ * **Plan** offers only the rungs that are actually rent — Free, Lantern, Hearth
+ * — because `candle` is not a rung, it is how the ladder reports the bundle.
+ * Saving a plan of Free with the bundle on writes `candle`, which is
+ * `higherTier()` from the webhook, spelled out.
+ *
+ * **Standing** is only asked when there is a plan to have a standing, because
+ * `free / past_due` is a sentence about nothing.
+ */
 function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
-  const [tier, setTier] = useState(a.mak_tier)
+  const candle = a.mak_candle_purchased_at != null
+
+  /** The stored tier read as a PLAN: `candle` is the bundle's mirror, so the
+   *  subscription behind it is Free. */
+  const planOf = (tier: string) => (tier === 'lantern' || tier === 'hearth' ? tier : 'free')
+
+  const [plan, setPlan] = useState(planOf(a.mak_tier))
   const [status, setStatus] = useState(a.mak_status)
 
   useEffect(() => {
-    setTier(a.mak_tier)
+    setPlan(planOf(a.mak_tier))
     setStatus(a.mak_status)
   }, [a.user_id, a.mak_tier, a.mak_status])
 
-  const dirty = tier !== a.mak_tier || status !== a.mak_status
-  const candle = a.mak_candle_purchased_at != null
+  /** What actually goes in the column: the plan, or the bundle's mirror under
+   *  it. This is `higherTier(existing, 'candle')` from mak-stripe-webhook. */
+  const tierToWrite = plan !== 'free' ? plan : candle ? 'candle' : 'free'
+  // No plan means no standing to be in, and the resting row every account
+  // starts at is `active`. Writing anything else would be a status describing a
+  // subscription that is not there.
+  const statusToWrite = plan === 'free' ? 'active' : status
+
+  const dirty = tierToWrite !== a.mak_tier || statusToWrite !== a.mak_status
+
+  /** The row the old two-control panel could produce: the ladder says Candle,
+   *  the flag says no, and the app grants nothing. */
+  const brokenMirror = a.mak_tier === 'candle' && !candle
+
+  const PLANS = [
+    { value: 'free', label: 'No subscription' },
+    ...catalog.mak_tiers
+      .filter((t) => t === 'lantern' || t === 'hearth')
+      .map((t) => ({ value: t, label: prettyId(t) })),
+  ]
 
   return (
     <Panel
       title="Makullveny"
-      what="Makullveny's own ladder, separate from the core one. The app uses whichever of the two is higher."
+      what="Two separate things: a subscription the account rents, and the Candle bundle it owns outright. The app reads them on different axes, so they are two controls and neither implies the other."
       writes="public.mak_subscriptions"
       terms={[
         a.mak_tier,
@@ -749,22 +824,61 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       ]}
       right={<Tag tone={a.mak_tier === 'free' ? 'plain' : 'ok'}>{a.mak_tier.toUpperCase()}</Tag>}
     >
+      {brokenMirror && (
+        <p className="dev__warn">
+          This account&apos;s plan says <code className="dev__code">candle</code> but the Candle
+          bundle is off, so Makullveny grants it nothing — no themes, no Journal, no Scroll, no
+          raised limits. The app gates all of those on{' '}
+          <code className="dev__code">candle_purchased_at</code>, never on the tier. Turning{' '}
+          <strong>Candle Bundle</strong> on below fixes the row; the panel can no longer create it.
+        </p>
+      )}
+
+      <Switch
+        checked={candle}
+        busy={busy === 'candle'}
+        onChange={(next) =>
+          run('candle', next ? 'Candle bundle granted.' : 'Candle bundle removed.', () =>
+            api.setMakCandle(a.user_id, next),
+          )
+        }
+        label="Candle Bundle"
+        hint="Bought once and kept: every marketplace theme, the Journal, the Scroll and the raised capacity limits. One press writes both the purchase and the tier that mirrors it, the same pair a real Candle checkout writes. It deliberately leaves the Supporter Badge alone — a real purchase sets that too, and a hand grant quietly moving a second switch is what this panel was rebuilt to stop."
+      />
+
+      <hr className="dev__rule" />
+
       <div className="dev__grid2">
-        <Field label="Tier" hint="free · candle · lantern · hearth, cheapest first.">
-          <Select
-            value={tier}
-            onChange={setTier}
-            options={catalog.mak_tiers.map((t) => ({ value: t, label: t }))}
-          />
+        <Field
+          label="Plan"
+          hint="What the account RENTS. Candle is not on this list because it is not rent — it is the bundle above, and the ladder reports it on its own."
+        >
+          <Select value={plan} onChange={setPlan} options={PLANS} />
         </Field>
-        <Field label="Status" hint="Mirrors Stripe's own subscription statuses.">
+        <Field
+          label="Standing"
+          hint={
+            plan === 'free'
+              ? 'Only asked when there is a plan to be standing in. With no subscription this is written as active, which is where every account rests.'
+              : "Mirrors Stripe's own subscription statuses. Only active actually unlocks the plan."
+          }
+        >
           <Select
-            value={status}
+            value={statusToWrite}
             onChange={setStatus}
-            options={catalog.statuses.map((s) => ({ value: s, label: s }))}
+            disabled={plan === 'free'}
+            options={catalog.statuses.map((st) => ({ value: st, label: st }))}
           />
         </Field>
       </div>
+
+      {plan === 'free' && candle && (
+        <p className="dev__panel-quiet">
+          With no subscription and the bundle owned, the tier column is written as{' '}
+          <code className="dev__code">candle</code>. That is the mirror, not a plan: it is what the
+          app&apos;s own webhook writes, and what its ladder reports the bundle as.
+        </p>
+      )}
 
       <div className="dev__row dev__row--end">
         <Button
@@ -772,28 +886,17 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
           disabled={!dirty}
           busy={busy === 'mak'}
           onClick={() =>
-            run('mak', `Makullveny set to ${tier} / ${status}.`, () =>
-              api.setMakSubscription(a.user_id, tier, status),
+            run('mak', `Makullveny set to ${tierToWrite} / ${statusToWrite}.`, () =>
+              api.setMakSubscription(a.user_id, tierToWrite, statusToWrite),
             )
           }
         >
-          Save Makullveny Tier
+          Save Plan
         </Button>
       </div>
 
       <hr className="dev__rule" />
 
-      <Switch
-        checked={candle}
-        busy={busy === 'candle'}
-        onChange={(next) =>
-          run('candle', next ? 'Candle bundle granted.' : 'Candle bundle removed.', () =>
-            api.setMakFlag(a.user_id, 'candle_bundle', next),
-          )
-        }
-        label="Candle Bundle"
-        hint="The whole marketplace in one switch. The app reads it as owning every theme below, including any added later, so granting Candle needs no individual themes."
-      />
       <Switch
         checked={a.mak_support_badge_at != null}
         busy={busy === 'badge'}
@@ -808,11 +911,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
 
       <Field
         label="Individual Themes"
-        hint={
-          candle
-            ? 'Candle is on, so every theme is already unlocked in the app whatever these say. These are the ones bought one at a time.'
-            : 'Themes bought one at a time from the Market page.'
-        }
+        hint="Themes bought one at a time from the Market page. This switch is that purchase and nothing else: a theme can also be unlocked by the Candle bundle or by Hearth, and where it is, the tile says which — the same four answers the app's own themeEntitlement gives."
       >
         <div className="dev__tiles">
           {catalog.mak_themes.map((theme) => (
@@ -821,7 +920,19 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
               name={prettyId(theme)}
               owned={a.mak_themes.includes(theme)}
               busy={busy === `theme:${theme}`}
-              note={candle ? 'via Candle' : undefined}
+              // Only when the tile would otherwise be misread. A theme bought
+              // outright says "Owned" already; one the account has by another
+              // door needs to say which door, or switching it off looks like it
+              // will take the theme away, and it will not.
+              note={
+                a.mak_themes.includes(theme)
+                  ? undefined
+                  : candle
+                    ? 'Unlocked by Candle'
+                    : a.mak_tier === 'hearth'
+                      ? 'Unlocked by Hearth'
+                      : undefined
+              }
               onChange={(next) =>
                 run(
                   `theme:${theme}`,
@@ -836,6 +947,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
 
       <div className="dev__facts dev__facts--tight">
         <Fact label="Stripe customer" value={a.mak_stripe_customer_id ?? 'none (never paid)'} mono />
+        <Fact label="Candle bought" value={fmtDate(a.mak_candle_purchased_at)} />
         <Fact label="Period ends" value={fmtDate(a.mak_period_end)} />
         <Fact label="Cancels at period end" value={a.mak_cancel_at_period_end ? 'yes' : 'no'} />
       </div>
@@ -895,9 +1007,38 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   // server says does not exist has no holdings to report, and saying so twice
   // buries the one line that matters.
   const holdingsMissing = !absent && !app.holdingsKnown
-  const subscriptionPacks = app.packs.filter(
-    (pack) => pack.owned && pack.supportsSubscriptionStates,
-  )
+  /** Packs the shop rents rather than sells outright, held or not. It is what
+   *  decides whether the note about hand-made subscriptions is worth printing. */
+  const rentable = app.packs.filter((pack) => pack.supportsSubscriptionStates)
+
+  /**
+   * One choice, one write. Nothing has to be granted before it can be shaped.
+   *
+   * `tdg_admin_set_pack_grant` writes the grant whether or not the account
+   * already held the pack — a BEFORE trigger derives `owned_packs` from it
+   * through `<app>_packs_in_force()` — so going straight from Not Owned to
+   * Subscribed is one call, not a grant followed by a correction. The old
+   * two-control version could not do that, and the perpetual grant it wrote on
+   * the way through left a purchase-event row nobody had asked for.
+   */
+  const setHolding = (pack: DevStorePack, next: HoldingId) => {
+    const key = `${app.id}:${pack.id}`
+    if (next === 'none') {
+      run(key, `${pack.name} revoked.`, () => api.setPack(a.user_id, app.id, pack.id, false))
+      return
+    }
+    // An app whose table has no `grants` column can only hold a pack outright,
+    // and its picker only ever offered those two states.
+    if (!app.hasGrants) {
+      run(key, `${pack.name} granted.`, () => api.setPack(a.user_id, app.id, pack.id, true))
+      return
+    }
+    const shape = GRANT_SHAPES.find((sh) => sh.id === next)
+    if (!shape) return
+    run(key, `${pack.name} is now ${shape.label}.`, () =>
+      api.setPackGrant(a.user_id, app.id, pack.id, grantArgsFor(shape)),
+    )
+  }
 
   const what = absent
     ? `The site sells ${app.title}'s packs, but TDG Core has no table to record them in, so nothing here can be granted and a real payment would land nowhere.`
@@ -986,98 +1127,50 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
           console will accept any well-formed pack id the moment there is one to grant.
         </p>
       ) : (
-        <div className="dev__tiles">
-          {app.packs.map((pack) => (
-            <OwnTile
-              key={pack.id}
-              name={pack.name}
-              owned={pack.owned}
-              disabled={absent}
-              busy={busy === `${app.id}:${pack.id}`}
-              // Short, and only when it says something. A note repeating what
-              // every tile would say is a note nobody reads, which is how the
-              // one saying `ends 23 Sep` gets missed. The cadence in the price
-              // already tells you a pack is rented, so `grantNote` stays quiet
-              // unless the account's own grant says something the price cannot.
-              note={
-                grantNote(pack.grant) ??
-                (!pack.inShop && app.inShop ? 'not sold' : (pack.price ?? undefined))
-              }
-              onChange={(next) =>
-                run(
-                  `${app.id}:${pack.id}`,
-                  `${pack.name} ${next ? 'granted' : 'revoked'}.`,
-                  () => api.setPack(a.user_id, app.id, pack.id, next),
-                )
-              }
-            />
-          ))}
+        <div className="dev__holds">
+          {app.packs.map((pack) => {
+            // What THIS pack can be. A one-time pack is offered the two states
+            // it has; a rented one is offered the six the Store can draw. Not
+            // Owned is the first entry of the same list rather than a separate
+            // switch, so there is never a press that exists only to unlock the
+            // control you actually wanted.
+            const states = holdingsFor(pack.supportsSubscriptionStates)
+            const current = holdingOf(pack.owned, pack.grant, pack.supportsSubscriptionStates)
+            const chosen = states.find((h) => h.id === current)
+            return (
+              <HoldingTile
+                key={pack.id}
+                name={pack.name}
+                disabled={absent}
+                busy={busy === `${app.id}:${pack.id}`}
+                // Short, and only when it says something. A note repeating what
+                // every tile would say is a note nobody reads, which is how the
+                // one saying `ends 23 Sep` gets missed. The state's own label
+                // says a pack is rented; `grantNote` adds the date it cannot.
+                note={
+                  grantNote(pack.grant) ??
+                  (!pack.inShop && app.inShop ? 'not sold' : (pack.price ?? undefined))
+                }
+                value={current ?? ''}
+                options={[
+                  ...(current === null ? [{ value: '', label: 'Unrecognised shape' }] : []),
+                  ...states.map((h) => ({ value: h.id, label: h.label })),
+                ]}
+                what={
+                  chosen?.what ??
+                  'Held in a shape this site has no reading for, so no state matches it. Choosing one replaces it.'
+                }
+                onChange={(next) => setHolding(pack, next as HoldingId)}
+              />
+            )
+          })}
         </div>
       )}
 
-      {/*
-          HOW each held pack is held, for an app that records it.
-
-          Only for packs that are actually ON: a shape is a property of a grant,
-          and offering to set one on a pack nobody holds would be a second way
-          to grant that disagrees with the switch above it.
-
-          This exists because every pack a developer has ever granted was
-          PERPETUAL — `tdg_admin_set_pack` writes a bare id and the app's own
-          trigger reads that as bought-outright, which is the right default and
-          left every subscription state unreachable by hand. Both apps are
-          pre-release and there is not one live Stripe subscription on the
-          project, so without this nobody can look at the half of the Store that
-          renews, ends, lapses or fails to take a payment.
-      */}
-      {app.hasGrants && app.holdingsKnown && !absent && subscriptionPacks.length > 0 && (
-        // `dev__grid` is the page's masked, 45%-opacity BACKGROUND texture.
-        // Reusing it here made these real controls faded and clipped into a
-        // near-zero-height strip. Form fields use the existing `dev__grid2`.
-        <div className="dev__grid2">
-          {subscriptionPacks.map((pack) => {
-              const current = shapeOfGrant(pack.grant, pack.owned)
-              return (
-                <Field
-                  key={`shape:${pack.id}`}
-                  label={`${pack.name} · Held As`}
-                  htmlFor={`shape-${app.id}-${pack.id}`}
-                  hint={
-                    GRANT_SHAPES.find((sh) => sh.id === current)?.what ??
-                    'This grant is in a shape the site has no reading for, so no preset matches it. Choosing one below replaces it.'
-                  }
-                >
-                  <Select
-                    id={`shape-${app.id}-${pack.id}`}
-                    value={current ?? ''}
-                    disabled={busy === `shape:${app.id}:${pack.id}`}
-                    options={[
-                      ...(current === null
-                        ? [{ value: '', label: 'Unrecognised shape' }]
-                        : []),
-                      ...GRANT_SHAPES.map((sh) => ({ value: sh.id, label: sh.label })),
-                    ]}
-                    onChange={(next) => {
-                      const shape = GRANT_SHAPES.find((sh) => sh.id === next)
-                      if (!shape) return
-                      run(
-                        `shape:${app.id}:${pack.id}`,
-                        `${pack.name} is now ${shape.label}.`,
-                        () =>
-                          api.setPackGrant(a.user_id, app.id, pack.id, grantArgsFor(shape)),
-                      )
-                    }}
-                  />
-                </Field>
-              )
-            })}
-        </div>
-      )}
-
-      {app.hasGrants && app.holdingsKnown && !absent && subscriptionPacks.length > 0 && (
+      {app.hasGrants && app.holdingsKnown && !absent && rentable.length > 0 && (
         <p className="dev__panel-quiet">
-          A shape written here carries no Stripe subscription id, because the server refuses to
-          invent one — that id is the only handle the Store's Cancel button has, and a made-up one
+          A subscription state chosen above carries no Stripe subscription id, because the server
+          refuses to invent one — that id is the only handle the Store's Cancel button has, and a made-up one
           would aim it into a live Stripe account at something that was never there. So a hand-made
           subscription shows every state on the card and its actions refuse, and the card says so.
           Ended drops the pack out of <code className="dev__code">owned_packs</code> the moment it is

@@ -413,12 +413,20 @@ export function Select({
   options,
   id,
   disabled,
+  ariaLabel,
 }: {
   value: string
   onChange: (v: string) => void
   options: { value: string; label: string }[]
   id?: string
   disabled?: boolean
+  /**
+   * For a select whose name is on screen but not in a `<label>` — the state
+   * picker on a pack tile, whose name is the tile's own heading. A control
+   * announced as "combo box" and nothing else is a control a screen reader
+   * cannot tell from the five beside it.
+   */
+  ariaLabel?: string
 }) {
   return (
     <span className="dev__select-wrap" data-disabled={disabled || undefined}>
@@ -427,6 +435,7 @@ export function Select({
         className="dev__select"
         value={value}
         disabled={disabled}
+        aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
       >
         {options.map((o) => (
@@ -686,6 +695,87 @@ export function OwnTile({
       </span>
       {note && <span className="dev__own-note">{note}</span>}
     </button>
+  )
+}
+
+/**
+ * One thing an account can hold, and the ONE control that says how it holds it.
+ *
+ * ## What it replaced, and why
+ *
+ * A Store pack used to wear two controls: an `OwnTile` switch for whether the
+ * account had it, and — rendered only once that switch was on — a separate
+ * dropdown for how. Two questions about one fact, in a fixed order, with a
+ * wrong answer in between. Making somebody a subscriber meant first granting
+ * the pack outright, which wrote a perpetual grant and a purchase-event row
+ * that nobody wanted, and only then saying what you actually meant. The first
+ * press was a toll, not a decision.
+ *
+ * So there is one control, its first option is `Not Owned`, and every choice is
+ * a single write. Nothing has to be turned on before it can be configured, and
+ * there is no order to get right.
+ *
+ * ## Why it still looks like a tile
+ *
+ * Because it sits in the same grid `OwnTile` does, beside things that genuinely
+ * are one switch — an individual theme is owned or it is not — and a shelf
+ * where every item is the same size and shape is one a reader can scan. What
+ * changes between them is the control inside, which is the thing that actually
+ * differs.
+ *
+ * ## The sentence under the picker is not decoration
+ *
+ * It is what the Store's own card will say in that state. A developer choosing
+ * `Ends Soon` is choosing a card, not a status string, and the picker showing
+ * the card's words is what makes the two agree without anybody checking.
+ */
+export function HoldingTile({
+  name,
+  note,
+  value,
+  options,
+  what,
+  onChange,
+  busy,
+  disabled,
+}: {
+  name: string
+  /** A price, a date, `not sold` — whatever this tile says about itself. */
+  note?: string
+  /** The current state, or `''` for one the site has no reading for. */
+  value: string
+  options: { value: string; label: string }[]
+  /** The sentence for the state currently chosen. */
+  what: string
+  onChange: (next: string) => void
+  busy?: boolean
+  /** For a tile the server would refuse anyway — an app with no table. */
+  disabled?: boolean
+}) {
+  const id = useId()
+  return (
+    <div
+      className="dev__hold"
+      data-held={(value !== 'none' && value !== '') || undefined}
+      data-busy={busy || undefined}
+      data-disabled={disabled || undefined}
+    >
+      <div className="dev__hold-top">
+        <span className="dev__hold-name" id={`${id}-name`}>
+          {name}
+        </span>
+        {note && <span className="dev__hold-note">{note}</span>}
+      </div>
+      <Select
+        id={id}
+        value={value}
+        options={options}
+        disabled={busy || disabled}
+        ariaLabel={`${name}: how this account holds it`}
+        onChange={onChange}
+      />
+      <p className="dev__hold-what">{what}</p>
+    </div>
   )
 }
 

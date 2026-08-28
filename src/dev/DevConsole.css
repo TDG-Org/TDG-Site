@@ -1252,6 +1252,83 @@
   color: var(--faint);
 }
 
+/* ── one holding, one control ─────────────────────────────────────────────
+   A pack's whole state as a single picker: `Not Owned` is the first option
+   rather than a switch you have to press before the picker appears. See
+   `HoldingTile` in controls.tsx for what it replaced and why.
+
+   Deliberately the same tile shape as `.dev__own` beside it — same radius,
+   same surface, same border, one padding variable driving both ends — because
+   the two sit in sibling grids and only the control inside them differs. The
+   tile is wider than an OwnTile because it holds a select whose longest option
+   is `Payment Failed`, and a picker that truncates its own state is a picker
+   that cannot be read at the width it is used.                              */
+
+.dev__holds {
+  --hold-pad: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 232px), 1fr));
+  gap: 8px;
+}
+
+.dev__hold {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--hold-pad);
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+/* Held reads at a glance, the way `.dev__own[data-owned]` does: a shelf of six
+   packs has to answer "which of these does this account have" without anybody
+   reading six dropdowns. */
+.dev__hold[data-held] {
+  border-color: var(--border-hover);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.dev__hold[data-busy] {
+  opacity: 0.6;
+}
+.dev__hold[data-disabled] {
+  opacity: 0.5;
+}
+
+.dev__hold-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  /* The note drops to its own line rather than crushing the name — the same
+     wrap `.dev__own` learned the hard way, where `ends 23 Sep` held on one row
+     took a 210px tile from 53px to 113px and stretched the whole grid row. */
+  flex-wrap: wrap;
+}
+.dev__hold-name {
+  font: 600 12.5px var(--font-body);
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dev__hold-note {
+  flex: none;
+  font: 500 10.5px var(--font-mono);
+  color: var(--faint);
+  letter-spacing: 0.02em;
+}
+/* What the Store's own card will say in the chosen state. It is the reason the
+   picker can be read as a decision rather than as a status string, so it is
+   body text and not a whisper. */
+.dev__hold-what {
+  margin: 0;
+  font: 400 11.5px/1.55 var(--font-body);
+  color: var(--muted);
+}
+
 /* ── badges ───────────────────────────────────────────────────────────── */
 
 /* A fixed floor, for the reason the Store card has one (rule 5): the panel

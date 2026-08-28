@@ -205,59 +205,98 @@ Three more tabs cover the whole project: **Feedback** (below), **Purchases**
 (all three ledgers merged, with `PAID` and `GRANTED` told apart) and **Audit
 Log** (every developer action in every app).
 
-## Held As · the states nobody could otherwise reach
+## One thing, one control
 
-Switching a pack ON writes a bare pack id, and the app's own trigger reads a
-bare id as **bought outright** — the historically true reading, and the right
-default. The consequence was that every pack any developer had ever granted was
-perpetual, and every state a real subscription passes through was unreachable
-by hand: renewing on a date, cancelled and running out, in a free trial, behind
-on a payment, ended.
+**Nothing on this page has to be turned on before it can be configured.** That
+sentence is the rule the Store panels and the Makullveny panel were rebuilt
+around in 2.1.0, and it is worth stating because the page broke it in two
+different ways at once.
 
-Those are on the money path and nobody could look at one. There is not a single
-live Stripe subscription on this project — both apps are pre-release and every
-`stripe_customer_id` is null — so the entire half of the Store that renews,
-ends and lapses had never been seen outside a screenshot.
+### A pack is one picker, and `Not Owned` is its first option
 
-So a held pack that the Store actually sells on a recurring plan gets a **Held
-As** dropdown, whose options are the Store card's own state names. One press
-puts the account into that state, the card on `#/store` draws it, and
-`src/dev/grantShapes.ts` is the single list both ends read — if the Store can
-draw it, the console can reach it. The answer is asked of the pack's `plans`,
-not merely of the app having a `grants` column: TDG Veditor's Pro Export Pack
-can recur, while its Theme Pack beside it is a one-time payment and may never
-be offered Subscribed or Ended.
+A Store pack used to wear two controls: a switch for whether the account had it,
+and — rendered only once that switch was on — a dropdown for how it was held. To
+make somebody a subscriber you first had to grant them the pack outright, which
+wrote a perpetual grant and a purchase-event row nobody wanted, and only then
+could you say what you actually meant. The first press was a toll, not a
+decision, and there was a wrong state in between.
 
-The on/off switch follows the same boundary on the server. For an app with a
-`grants` column, `tdg_admin_set_pack` writes a perpetual grant on ON and removes
-that grant on OFF; the app's trigger derives the legacy `owned_packs` mirror.
-Writing the mirror directly made the checkbox look checked while TDG Veditor
-continued reading an ended grant, so the UI and the app contradicted each
-other. Apps without `grants` keep writing `owned_packs`, which is authoritative
-for their simpler table.
+Now there is one picker per pack whose first option is `Not Owned`, and every
+choice is a single write. `tdg_admin_set_pack_grant` writes the grant whether or
+not the account already held the pack — `veditor_entitlements_sync_owned`, a
+BEFORE trigger, derives `owned_packs` from it through
+`<app>_packs_in_force()` — so Not Owned straight to `Ends Soon` is one call.
 
-**It never writes a Stripe subscription id.** `tdg_admin_set_pack_grant` carries
-over whatever was already on the grant and refuses to invent one, in both
-directions: nudging a real subscriber's period end must not detach their row
-from Stripe, and a hand-made subscription must not look like one the Store could
-cancel — `tdg-site-billing` acts on that id alone, so a fake one would be a
-Cancel button reaching into a live Stripe account for something that was never
-there.
+**The options are whatever that pack can actually be.** A pack the shop sells on
+a recurring plan is offered the six Store states; a one-time pack is offered
+`Not Owned` and `Owned`, because `Subscribed` on a pack that cannot recur is an
+option that exists only to be wrong. The answer comes from the pack's `plans`,
+not from the app merely having a `grants` column: TDG Veditor's Pro Export Pack
+can recur while its Theme Pack beside it cannot.
+
+The sentence under each picker is what the Store's own card will say in that
+state, from the same `src/dev/grantShapes.ts` both ends read — so choosing a
+state is choosing a card, and the two cannot drift.
+
+### Why the states had to be reachable at all
+
+There is not a single live Stripe subscription on this project — both apps are
+pre-release and every `stripe_customer_id` is null — so the entire half of the
+Store that renews, ends and lapses had never been seen outside a screenshot.
+Every pack any developer had ever granted was perpetual, because a bare pack id
+is read by the app's trigger as bought outright, which is the historically true
+reading and the right default.
+
+### It never writes a Stripe subscription id
+
+`tdg_admin_set_pack_grant` carries over whatever was already on the grant and
+refuses to invent one, in both directions: nudging a real subscriber's period
+end must not detach their row from Stripe, and a hand-made subscription must not
+look like one the Store could cancel — `tdg-site-billing` acts on that id alone,
+so a fake one would be a Cancel button reaching into a live Stripe account for
+something that was never there.
 
 The consequence is visible rather than permission-gated. On the Store, every
 account holding a current subscription-shaped grant gets **Manage or Cancel
 Plan**, whether that account is a Developer or not. A hand-made grant opens the
-same panel with **Billing Link Missing** above its rows, because there is no
-Stripe id for an action to reach. Turning Developer on or off changes the
-Developer console only; it never adds or removes a customer billing control.
-The catalogue remains the other half of the boundary: a one-time Theme Pack
-ignores impossible subscription-shaped metadata and never grows this panel.
+same panel with **Billing Link Missing** above its rows. Turning Developer on or
+off changes the Developer console only; it never adds or removes a customer
+billing control.
 
 **`Ended` makes the pack leave.** Writing it drops the pack out of
 `owned_packs` immediately, which is `<app>_packs_in_force()` doing its job and
 not the grant failing. The Store then offers to sell it again — with a line
 saying what ended and when, so a card that went back to Buy is not silent about
 why.
+
+### Makullveny: two facts, one of which was a mirror of the other
+
+`mak_subscriptions` carries `tier` (free · candle · lantern · hearth) and
+`candle_purchased_at`. The panel offered a dropdown for the first and a switch
+for the second, unrelated — so `candle` sat in a list of subscription rungs
+looking exactly like the thing that grants the bundle.
+
+**It grants nothing.** Makullveny's own `src/entitlements.js` unlocks every
+piece of Candle content — the five marketplace themes, the Journal, the Scroll,
+the raised capacity limits — on `candlePurchased || tier >= hearth`, and never
+on `tier === 'candle'`. Its comment says why: Candle is a one-time purchase, and
+ranking it inside `TIER_ORDER` would hand it to every Lantern subscriber because
+`lantern(2) > candle(1)`.
+
+There is a live row on this project with `tier = 'candle'` and no flag — an
+account somebody believes they gave the bundle to, which has never had it. That
+row is what the rebuild was measured against, and the panel now names it in a
+warning with the one press that fixes it.
+
+So: two axes, one control each.
+
+| | |
+| --- | --- |
+| **Candle Bundle** | One switch, over `tdg_admin_set_mak_candle`, which writes the flag AND the tier mirror in one statement — the same pair the app's own Stripe webhook writes. It deliberately leaves the Supporter Badge alone: a real purchase sets that too, and one press quietly moving a second switch is the coupling this rebuild removed. |
+| **Plan** | Only the rungs that are actually rent: No subscription, Lantern, Hearth. `candle` is not offered, because it is not a plan — it is how the ladder reports the bundle. Saving a plan of *No subscription* with the bundle on writes `candle`, which is `higherTier()` from the webhook spelled out. |
+| **Standing** | Only asked when there is a plan to be standing in. With no subscription it is written as `active`, where every account rests, because `free / past_due` is a sentence about nothing. The TDG Core panel does the same. |
+| **Individual Themes** | Still one switch each, because that purchase is a real separate fact. A theme the account has by another door says which — `Unlocked by Candle`, `Unlocked by Hearth` — so switching it off never looks like it will take a theme away that it cannot. |
+
 ## Badges
 
 A **badge** is one global mark on a TDG account — true in every TDG app at
@@ -480,7 +519,7 @@ reference implementation of the startup reply panel the other apps copy.
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
-| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
+| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, **HoldingTile**, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |

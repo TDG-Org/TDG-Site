@@ -399,6 +399,31 @@ export const setMakFlag = (
 ): Promise<null> => rpc<null>('tdg_admin_set_mak_flag', { p_target: userId, p_flag: flag, p_on: on })
 
 /**
+ * The Candle bundle, and the tier that mirrors it, in ONE write.
+ *
+ * `mak_subscriptions` stores the bundle twice and only one of them is the
+ * authority. `candle_purchased_at` is what Makullveny's `entitlements.js`
+ * actually gates every piece of Candle content on — the themes, the Journal,
+ * the Scroll, the raised limits — and `tier = 'candle'` grants NOTHING: the
+ * app's own comment explains that ranking a one-time purchase inside
+ * TIER_ORDER would hand it to every Lantern subscriber, so it does not.
+ *
+ * The tier is a MIRROR the app's Stripe webhook keeps beside the flag. The
+ * console used to offer both, unrelated — a dropdown where `candle` looked
+ * exactly like the thing that grants everything and granted nothing, beside a
+ * switch that was the real one. There is a live row on this project in exactly
+ * that state, which is how the trap was found.
+ *
+ * So this writes the pair the way the webhook writes it, in one statement, and
+ * the console offers one control. `setMakFlag` above is untouched and stays the
+ * narrow verb; nothing calls it for Candle any more.
+ *
+ * See supabase/migrations/20260828160000_admin_mak_candle_one_press.sql.
+ */
+export const setMakCandle = (userId: string, on: boolean): Promise<null> =>
+  rpc<null>('tdg_admin_set_mak_candle', { p_target: userId, p_on: on })
+
+/**
  * One Store pack on or off, for any account, in any app the server knows.
  *
  * `app` is a plain string rather than a union of the apps that existed when
