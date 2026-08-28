@@ -1,9 +1,10 @@
 /* ── Your TDG account ──────────────────────────────────────────────────────
    Only what is genuinely new on this page. Its shell, blend tints, head, back
-   control, ghost buttons and grid texture are `.appview`'s, from
+   control, fold rows, controls bar and ghost buttons are `.appview`'s, from
    AppPage.css — the same decision About.tsx records, and for the same reason:
    this page opens from the same chrome as those, and a second set of lookalike
-   page furniture is how the two start drifting apart.
+   page furniture is how two surfaces that should feel identical start
+   drifting.
 
    `.appview__shell` caps at 900px, which is right for a column of prose. The
    privacy list is a column of ROWS, each with a label on one side and a
@@ -40,40 +41,58 @@
   gap: 6px;
 }
 
-/* ── the cards ────────────────────────────────────────────────────────────
-   A wrapping row rather than a grid template, because WHICH cards exist does
-   not change but their heights do wildly — Privacy is five times Badges — and
-   a grid row stretches its siblings to the tallest, which would leave Account
-   and Badges as tall panels holding four lines each. Wrapping, a card takes
-   the height it needs and the next one starts where it ends.
+/* ── the six folds ────────────────────────────────────────────────────────
+   A stack, never a wrapping row. A fold's whole job is that a shut page reads
+   as an index you can take in at a glance, and two columns of chevrons is a
+   grid to scan rather than a list to read — the reason `.appview__folds` is a
+   column too, and this takes its gap from the same idea.                     */
 
-   --acct-col is the narrowest a card stays readable at, and it is ONE number
-   for every card on the page (AGENTS.md rule 6): a pair that took its width
-   from two literals is a lopsided pair the first time one of them moves.     */
-
-.acct__grid {
-  --acct-col: 300px;
-  --acct-gap: clamp(14px, 1.6vw, 20px);
+.acct__folds {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--acct-gap);
-  margin-top: clamp(30px, 4vw, 46px);
+  flex-direction: column;
+  gap: 10px;
 }
+
+/* The fold's own body is a column with a 20px gap. These are forms, lists and
+   grids rather than paragraphs, so they want a little more air between the
+   blocks and none of the prose measure. */
+.acct__fold-body {
+  gap: 22px;
+}
+
+/* ── a subsection inside a fold ───────────────────────────────────────────
+   `h3` in the markup, because the fold it sits in is an `h2`: Streaks is part
+   of Your Stats, not a seventh section of the page, and the outline has to say
+   so. Quieter than a fold's own title on purpose — a subsection that shouted
+   as loud as its parent would read as a section somebody forgot to fold.     */
+
+.acct__sub {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.acct__sub-title {
+  margin: 0;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.acct__sub-what {
+  margin: -4px 0 0;
+  max-width: 72ch;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+/* ── the two cards that are not folds ─────────────────────────────────────
+   Signed out, and still restoring. Neither is a section of an account — one is
+   the reason there is no account to section, and folding it would put the only
+   thing on the page behind a chevron.                                        */
 
 .card.acct__card {
-  flex: 1 1 var(--acct-col);
-  min-width: min(100%, var(--acct-col));
+  margin-top: clamp(30px, 4vw, 46px);
   padding: clamp(16px, 2vw, 22px);
-}
-/* Privacy and Session hold rows that run the width of the page. A row whose
-   chooser wraps under its own label reads as a broken control, not a narrow
-   one, so these never pair. */
-.card.acct__card--wide {
-  flex-basis: 100%;
-}
-
-.acct__card-head {
-  margin-bottom: 14px;
 }
 .acct__card-title {
   margin: 0;
@@ -88,8 +107,8 @@
   color: var(--muted);
 }
 
-/* Every card's own empty / loading / refused line, so the six of them cannot
-   say the same thing in six voices. `--warn` is the site's warm, which is what
+/* Every section's own empty / loading / refused line, so the six of them
+   cannot say the same thing in six voices. `--warn` is the site's warm, which
    the Store and the nav's badge shelf already use for "we could not find out"
    as opposed to "there is nothing". */
 .acct__note {
@@ -101,10 +120,133 @@
   color: var(--warm);
 }
 
+/* ── editable fields ──────────────────────────────────────────────────────
+   The site's own, not the auth modal's. That modal is always dark and
+   deliberately does not reskin with the page (AGENTS.md §4), so borrowing its
+   input would put a permanently dark box in the middle of a light page.
+
+   Nothing here is a browser default: the fill, the border, the focus ring, the
+   caret and the placeholder are all tokens, and `base.css` already owns the
+   autofill highlight (rule 5).                                               */
+
+.acct__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px 16px;
+}
+.acct__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+/* The bio wants the width, not a column of its own next to something short. */
+.acct__field:has(.acct__input--area) {
+  grid-column: 1 / -1;
+}
+
+.acct__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+/* Saving / Saved, beside the label rather than under the field: under it would
+   push the hint down and move everything below, which is a page hopping while
+   somebody tabs through it. Here it swaps one word for another in a line that
+   is already there. */
+.acct__field-flag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.acct__field-flag--ok {
+  color: var(--live-fg);
+}
+
+.acct__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.acct__input-wrap:hover {
+  border-color: var(--border-hover);
+}
+/* The ring goes on the WRAP, not the input, because the `@` prefix is a
+   sibling of the field and a ring drawn round the input alone would leave it
+   outside its own control. `:focus-within` is what carries it across. */
+.acct__input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.acct__input-prefix {
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  font: 500 13px var(--font-mono);
+  color: var(--faint);
+}
+.acct__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  background-color: transparent;
+  font: 400 13.5px/1.5 var(--font-body);
+  color: var(--text);
+  transition: var(--t-theme);
+}
+.acct__input-wrap[data-prefixed] .acct__input {
+  padding-left: 4px;
+}
+.acct__input:focus {
+  outline: none; /* the wrap draws it, above */
+}
+.acct__input::placeholder {
+  color: var(--faint);
+  opacity: 0.75;
+}
+.acct__input--area {
+  resize: vertical;
+  min-height: 74px;
+  font-family: var(--font-body);
+}
+/* A field mid-save stays completely readable and does not move: greying it out
+   or swapping in a spinner would take the box away from under the cursor at
+   the exact moment somebody is checking whether their edit took. */
+.acct__field[data-saving] .acct__input {
+  opacity: 0.7;
+}
+
+.acct__hint {
+  margin: 0;
+  min-height: 32px;
+  font: 400 11.5px/1.4 var(--font-body);
+  color: var(--faint);
+}
+/* A refusal is about THIS field and sits under it, in the danger ink the Store
+   already uses, rather than in a toast somebody has to catch. The hint's
+   min-height above is what stops the two swapping and moving the page. */
+.acct__hint-bad {
+  color: var(--danger);
+}
+
 /* ── facts ────────────────────────────────────────────────────────────── */
 
 .acct__facts {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 1px;
   margin: 0;
   border: 1px solid var(--border);
@@ -140,8 +282,8 @@
 
 /* ── counters ─────────────────────────────────────────────────────────────
    `minmax(min(100%, …), 1fr)` and not a bare minmax: a track whose minimum is
-   wider than its container overflows it, and at 320px this card is 250px wide
-   (AGENTS.md rule 16).                                                       */
+   wider than its container overflows it, and at 320px this fold's body is
+   248px wide (AGENTS.md rule 16).                                            */
 
 .acct__tiles {
   display: grid;
@@ -180,9 +322,8 @@
    measured against. One block per app, from whatever the server had. */
 .acct__streaks {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 10px;
-  margin-top: 12px;
 }
 .acct__streak {
   display: flex;
@@ -199,6 +340,7 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--live-fg);
+  overflow-wrap: anywhere;
 }
 .acct__streak-n {
   display: flex;
@@ -213,8 +355,55 @@
   color: var(--muted);
 }
 .acct__streak-more {
-  font: 400 11.5px var(--font-body);
+  font: 400 11.5px/1.5 var(--font-body);
   color: var(--faint);
+}
+
+/* ── one app, and what this account has of it ─────────────────────────── */
+
+.acct__apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 10px;
+}
+.acct__app {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.acct__app:hover {
+  border-color: var(--border-hover);
+}
+.acct__app-name {
+  font: 700 14px var(--font-display);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.acct__app-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+.acct__app-fact dt {
+  margin: 0 0 2px;
+  font: 600 8.5px var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.acct__app-fact dd {
+  margin: 0;
+  font: 400 12.5px/1.45 var(--font-body);
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 /* ── badges ───────────────────────────────────────────────────────────── */
@@ -228,6 +417,106 @@
   overflow-wrap: anywhere;
 }
 
+/* ── people ───────────────────────────────────────────────────────────────
+   One card per person, and the actions on it are decided by where you already
+   STAND with them (see PersonCard). The card wraps its two halves rather than
+   squeezing them, because a name and three buttons do not fit on one line at
+   320px and a button sliced by a card edge is the bug this page already fixed
+   once.                                                                      */
+
+.acct__people {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.acct__person {
+  --acct-person-pad: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px var(--acct-person-pad);
+  padding: var(--acct-person-pad) calc(var(--acct-person-pad) + 1px);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.acct__person:hover {
+  border-color: var(--border-hover);
+}
+/* Mid-action the card goes quiet and its buttons are disabled, but nothing
+   moves and nothing is replaced: the list is about to be re-read, and a card
+   that vanished before the answer arrived would look like the action had
+   already happened when it might yet be refused. */
+.acct__person[data-busy] {
+  opacity: 0.6;
+}
+.acct__person-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+}
+.acct__person-name {
+  font: 600 13.5px var(--font-body);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.acct__person-handle {
+  font: 500 11.5px var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.acct__person-bio {
+  margin-top: 2px;
+  max-width: 62ch;
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.acct__person-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Block and Unfriend are quieter than Accept, because one of them is the thing
+   you came to do and the other two are what you do to somebody once. Never a
+   danger colour: these are reversible, and painting them red would put a
+   delete-shaped button next to a name. */
+.appview__ghost[data-tone='primary'] {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.appview__ghost[data-tone='quiet'] {
+  color: var(--faint);
+}
+.appview__ghost:disabled {
+  opacity: 0.5;
+}
+
+/* ── asking somebody ──────────────────────────────────────────────────── */
+
+.acct__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.acct__ask-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.acct__ask-row .acct__input-wrap {
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+}
+
 /* ── privacy ──────────────────────────────────────────────────────────── */
 
 .acct__setall {
@@ -237,7 +526,6 @@
   flex-wrap: wrap;
   gap: 10px;
   padding: 11px 13px;
-  margin-bottom: 18px;
   border-radius: 3px;
   border: 1px solid var(--border);
   background-color: var(--surface);
@@ -256,27 +544,10 @@
   gap: 8px;
 }
 
-.acct__group + .acct__group {
-  margin-top: 24px;
-}
-.acct__group-title {
-  margin: 0;
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.acct__group-blurb {
-  margin: 5px 0 0;
-  max-width: 72ch;
-  font: 400 12.5px/1.6 var(--font-body);
-  color: var(--muted);
-}
 .acct__rows {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  margin-top: 11px;
   border: 1px solid var(--border);
   border-radius: 3px;
   background-color: var(--border);
@@ -296,15 +567,17 @@
   gap: 10px var(--acct-row-pad);
   padding: var(--acct-row-pad) calc(var(--acct-row-pad) + 1px);
   background-color: var(--surface);
-  transition: background-color 0.2s ease, var(--t-theme);
+  transition:
+    background-color 0.2s ease,
+    var(--t-theme);
 }
 .acct__row:hover {
   background-color: var(--surface-hover);
 }
 /* A row mid-save stays completely readable. It dims its text a little and
    nothing moves: a row that greyed out or swapped in a spinner would take the
-   control away from under the pointer at the exact moment somebody is
-   deciding whether the press worked. */
+   control away from under the pointer at the exact moment somebody is deciding
+   whether the press worked. */
 .acct__row[data-busy] .acct__row-text {
   opacity: 0.62;
 }
@@ -336,11 +609,12 @@
 
 /* The chooser. One track, the options inside it, and the chosen one wearing
    the site's inverted surface — the same "this is the one" the hero's primary
-   button uses, so a reader meets one idiom for a chosen thing. */
-/* `flex-wrap` here is not a nicety, it is the fix for a measured clip. The
+   button uses, so a reader meets one idiom for a chosen thing.
+
+   `flex-wrap` here is not a nicety, it is the fix for a measured clip. The
    three labels come to 264px of content, and at 320px the row's content box is
    222px — so without wrapping the group stayed 266px wide inside a 248px row
-   and `Only Me` was cut off by `.acct__rows`' own `overflow: hidden`. A control
+   and `Only Me` was cut off by `.acct__rows`' `overflow: hidden`. A control
    sliced by a card edge is the same bug whether it is a trash icon or the
    narrowest of three options, and this one was the option somebody reaches for
    when they want to be seen by nobody.
@@ -366,7 +640,9 @@
   border-radius: 3px;
   border: 1px solid var(--border);
   background-color: var(--accent-soft);
-  transition: opacity 0.2s ease, var(--t-theme);
+  transition:
+    opacity 0.2s ease,
+    var(--t-theme);
 }
 .acct__seg[data-busy] {
   opacity: 0.72;
@@ -410,7 +686,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin: 0 0 14px;
+  margin: 0;
   padding: 10px 12px;
   border-radius: 3px;
   border: 1px solid var(--danger-border);
@@ -435,11 +711,10 @@
   gap: 8px;
 }
 
-/* The one filled button on the page, for the one moment there is nothing else
-   to press: a signed-out reader who opened this from a link. */
+/* The page's one filled button shape: the signed-out call to action, and Send
+   Request. Both are the primary thing to press where they stand. */
 .acct__primary {
-  margin-top: 4px;
-  padding: 10px 18px;
+  padding: 9px 18px;
   border-radius: 2px;
   border: 1px solid transparent;
   background-color: var(--invert-bg);
@@ -449,19 +724,29 @@
     opacity 0.2s ease,
     var(--t-theme);
 }
+.card.acct__card .acct__primary {
+  margin-top: 14px;
+}
 .acct__primary:hover {
   opacity: 0.86;
 }
+.acct__primary:disabled {
+  opacity: 0.55;
+}
 
 /* ── reduced motion ───────────────────────────────────────────────────────
-   Nothing here animates position, so the only thing to hold still is the
-   colour and opacity easing on the chooser and the rows.                     */
+   The fold's own open/close transition is AppPage.css's and is already handled
+   there. What is left here is colour and opacity easing.                     */
 
 @media (prefers-reduced-motion: reduce) {
   .acct__row,
   .acct__row-text,
   .acct__seg,
   .acct__seg-btn,
+  .acct__person,
+  .acct__app,
+  .acct__input-wrap,
+  .acct__input,
   .acct__primary {
     transition-duration: 0.01ms;
   }

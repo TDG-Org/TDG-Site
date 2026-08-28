@@ -109,6 +109,36 @@ It gates whether the Developer tab is even rendered. **It gates nothing else.**
 Every read and write the console makes goes through a Postgres function that
 checks for itself. Never move a permission decision into this folder.
 
+## The profile is read once, and re-read exactly once more
+
+`AuthProvider` fetches the profile row when the session arrives and holds it for
+the life of the tab. That was right while nothing on this site could change it.
+
+The Account page can (`src/account/`), so the context now exposes
+**`refreshProfile()`**, and that page calls it after every field it saves.
+Without it, saving a display name would leave the nav's account menu, the
+account page's own title and everything else reading `profile` showing the old
+one until the next sign-in.
+
+**It is a re-READ, not a setter taking the new values**, and that is the whole
+point. `public.profiles` has triggers on it: `recovery_email` is lowercased and
+trimmed on the way in, and `username_changed_at` is stamped by
+`touch_profile_timestamps` on a column no client may write. What was sent is
+therefore not always what was stored, and a client that assumed otherwise would
+show a value the database does not agree with. Ask.
+
+A failed refresh leaves the previous profile standing. Stale and true beats
+blank: it runs right after a save, and blanking somebody's own name because the
+follow-up request lost the network would look exactly like the save having
+destroyed it.
+
+`PROFILE_COLUMNS` grew with the page — `bio`, `recovery_email` and
+`username_changed_at` joined it, because a form that cannot read the current
+value can only offer an empty box, and an empty box beside a saved value reads
+as the value having been lost. All three are readable for the same reason
+`is_admin` is: `profiles_select_own` lets an account read its OWN row. Keep the
+list explicit; **never `select('*')` against a table four other apps share.**
+
 ## Rules for changing anything here
 
 - **Never reveal whether an account exists — with one named exception, at

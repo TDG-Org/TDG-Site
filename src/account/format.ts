@@ -75,3 +75,28 @@ const counts = new Intl.NumberFormat()
 export function fmtCount(n: number): string {
   return counts.format(n)
 }
+
+/**
+ * When the username cooldown ends, or null when a change is free right now.
+ *
+ * Fourteen days from the stamp on the profile row. **The stamp is the
+ * server's** — `touch_profile_timestamps` writes `username_changed_at` on a
+ * column no client may set — so this is arithmetic on a fact rather than a
+ * guess at one. The interval is the only thing repeated, and it is repeated
+ * because Postgres has no way to hand it over: the trigger holds it as a
+ * `constant interval` and refuses with `PT429`.
+ *
+ * That refusal, not this, is the authority. What this buys is saying so
+ * BEFORE somebody types a new name and presses save, which is the difference
+ * between a rule and an ambush. If the two ever disagree, the server's
+ * sentence is the one shown, because it is the one that decided.
+ */
+const USERNAME_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000
+
+export function usernameFreeAt(changedAt: string | null | undefined): Date | null {
+  if (!changedAt) return null
+  const t = Date.parse(changedAt)
+  if (Number.isNaN(t)) return null
+  const free = t + USERNAME_COOLDOWN_MS
+  return free > Date.now() ? new Date(free) : null
+}

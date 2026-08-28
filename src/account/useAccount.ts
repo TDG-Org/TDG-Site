@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import {
+  addFriendByUsername,
   myAccountStats,
   myPrivacy,
   privacyAudiences,
   privacyGroups,
+  saveProfile,
   setPrivacy,
   setPrivacyMany,
+  socialAct,
+  socialGraph,
+  type ProfilePatch,
+  type SocialAction,
+  type SocialGraph,
 } from './api'
+import { usernameShapeProblem } from '../auth/wording'
+import type { Profile } from '../auth/AuthProvider'
 import type { AccountStats, Audience, PrivacyControl, PrivacyGroup } from './types'
 
 /**
@@ -283,4 +292,324 @@ export function usePrivacy(): PrivacyPanel {
     setOne,
     setAll,
   }
+}
+
+/* ── the social graph ──────────────────────────────────────────────────────── */
+
+export type SocialState =
+  | { kind: 'checking' }
+  | { kind: 'signedOut' }
+  | { kind: 'error' }
+  | { kind: 'ok'; graph: SocialGraph }
+
+export type SocialPanel = {
+  state: SocialState
+  /** User ids with an action in flight, so a card can go quiet without moving. */
+  busy: ReadonlySet<string>
+  problem: string | null
+  dismissProblem: () => void
+  /** Do one thing to one person, then re-read. Never throws at the caller. */
+  act: (action: SocialAction, userId: string) => void
+  /** Ask by handle. Resolves true when the request went; false when it did not. */
+  ask: (username: string) => Promise<boolean>
+  reload: () => void
+}
+
+/**
+ * Friends, the requests in both directions, and the people you have blocked.
+ *
+ * ## Why every action re-reads instead of patching the lists
+ *
+ * One press moves a person between two of the four lists, and often both
+ * sides of a friendship at once: accepting a request removes it from Waiting
+ * On You AND adds them to Friends, blocking removes them from Friends AND adds
+ * them to Blocked AND clears anything pending in either direction. Patching
+ * four arrays for each of seven verbs is seven chances to get one of those
+ * arms wrong, and the failure is silent — a card in two lists at once, or a
+ * friend who never appears.
+ *
+ * So the verb runs and the graph is read again. It costs one round trip on an
+ * action somebody takes a handful of times, and it cannot disagree with the
+ * database. The card that was pressed is marked `busy` meanwhile, so it goes
+ * quiet without the list moving under the pointer.
+ */
+export function useSocial(): SocialPanel {
+  const { status, user } = useAuth()
+  const [state, setState] = useState<SocialState>({ kind: 'checking' })
+  const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set())
+  const [problem, setProblem] = useState<string | null>(null)
+  const userId = user?.id ?? null
+
+  const live = useRef(true)
+  useEffect(() => {
+    live.current = true
+    return () => {
+      live.current = false
+    }
+  }, [])
+
+  const read = useCallback(async () => {
+    const graph = await socialGraph()
+    if (!live.current) return
+    setState(graph === null ? { kind: 'error' } : { kind: 'ok', graph })
+  }, [])
+
+  useEffect(() => {
+    if (status === 'loading') {
+      setState({ kind: 'checking' })
+      return
+    }
+    if (status === 'signedOut' || !userId) {
+      setState({ kind: 'signedOut' })
+      return
+    }
+    setState({ kind: 'checking' })
+    setProblem(null)
+    void read()
+  }, [status, userId, read])
+
+  const mark = useCallback((id: string, on: boolean) => {
+    setBusy((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const act = useCallback(
+    (action: SocialAction, id: string) => {
+      setProblem(null)
+      mark(id, true)
+      void socialAct(action, id)
+        .then(read)
+        .catch((err: unknown) => {
+          if (!live.current) return
+          setProblem(err instanceof Error ? err.message : String(err))
+        })
+        .finally(() => {
+          if (live.current) mark(id, false)
+        })
+    },
+    [mark, read],
+  )
+
+  const ask = useCallback(
+    async (username: string) => {
+      setProblem(null)
+      try {
+        await addFriendByUsername(username)
+        await read()
+        return true
+      } catch (err: unknown) {
+        if (live.current) setProblem(err instanceof Error ? err.message : String(err))
+        return false
+      }
+    },
+    [read],
+  )
+
+  return {
+    state,
+    busy,
+    problem,
+    dismissProblem: useCallback(() => setProblem(null), []),
+    act,
+    ask,
+    reload: useCallback(() => void read(), [read]),
+  }
+}
+
+/* ── editing your own details ──────────────────────────────────────────────── */
+
+export type FieldState = {
+  value: string
+  /** True while this field has been typed in and not yet saved. */
+  dirty: boolean
+  saving: boolean
+  /** The server's refusal, or a shape problem this browser can see for itself. */
+  problem: string | null
+  /** Set for the moment after a successful save, so the field can say so. */
+  saved: boolean
+}
+
+export type ProfileEditor = {
+  fields: Record<ProfileField, FieldState>
+  set: (field: ProfileField, value: string) => void
+  /** Commit one field. Called on blur and on Enter, never on every keystroke. */
+  commit: (field: ProfileField) => void
+  /** Throw the typing away and go back to what is stored. */
+  reset: (field: ProfileField) => void
+}
+
+export type ProfileField = 'displayName' | 'username' | 'bio' | 'recoveryEmail'
+
+/** The one place a field id maps to the column it writes and the value it
+ *  starts from. A `switch` in three handlers would be three chances to add a
+ *  field to two of them. */
+const FIELD_OF = (profile: Profile | null): Record<ProfileField, string> => ({
+  displayName: profile?.display_name ?? '',
+  username: profile?.username ?? '',
+  bio: profile?.bio ?? '',
+  recoveryEmail: profile?.recovery_email ?? '',
+})
+
+const blank = (value: string): FieldState => ({
+  value,
+  dirty: false,
+  saving: false,
+  problem: null,
+  saved: false,
+})
+
+/**
+ * The four editable fields of a TDG account, each saving on its own.
+ *
+ * ## One field, one save
+ *
+ * Not a form with a Save button. Each field commits when you leave it, which
+ * is what the rest of this account already does everywhere else — and it means
+ * a refused username never takes an unrelated bio edit down with it. A Save
+ * button over four independent columns would have to decide what to do when
+ * three succeed and one is refused, and every answer to that is worse than not
+ * having the question.
+ *
+ * ## Commit on blur, never on keystroke
+ *
+ * A username is checked against a unique index and a fourteen-day cooldown.
+ * Sending one per keystroke would be a request per letter, and — worse — would
+ * spend the cooldown on a half-typed name.
+ *
+ * ## The stored value is the truth, and it is re-read
+ *
+ * After a save the profile is fetched again rather than patched locally,
+ * because the row has triggers: `recovery_email` is lowercased and trimmed on
+ * the way in, and `username_changed_at` is stamped. What came back is what the
+ * field then shows, so the box and the database cannot disagree.
+ *
+ * A refusal puts the field back to the stored value and says why. Leaving the
+ * rejected text in the box would look like it had been accepted.
+ */
+export function useProfileEditor(): ProfileEditor {
+  const { user, profile, refreshProfile } = useAuth()
+  const [fields, setFields] = useState<Record<ProfileField, FieldState>>(() => {
+    const start = FIELD_OF(profile)
+    return {
+      displayName: blank(start.displayName),
+      username: blank(start.username),
+      bio: blank(start.bio),
+      recoveryEmail: blank(start.recoveryEmail),
+    }
+  })
+
+  const live = useRef(true)
+  useEffect(() => {
+    live.current = true
+    return () => {
+      live.current = false
+    }
+  }, [])
+
+  /*
+   * Take the stored value for any field the reader is not part-way through.
+   *
+   * This fires whenever the profile object changes, which includes the refresh
+   * a save triggers — so a committed field picks up whatever the database
+   * actually stored. A field with unsaved typing in it is left alone: the
+   * profile changing under somebody mid-edit is a save of a DIFFERENT field,
+   * and taking their text away for that would be the page throwing work out.
+   */
+  useEffect(() => {
+    const stored = FIELD_OF(profile)
+    setFields((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const key of Object.keys(stored) as ProfileField[]) {
+        if (prev[key].dirty || prev[key].saving) continue
+        if (prev[key].value === stored[key]) continue
+        next[key] = { ...prev[key], value: stored[key], problem: null }
+        changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [profile])
+
+  const patch = useCallback((field: ProfileField, part: Partial<FieldState>) => {
+    setFields((prev) => ({ ...prev, [field]: { ...prev[field], ...part } }))
+  }, [])
+
+  const set = useCallback(
+    (field: ProfileField, value: string) => {
+      patch(field, { value, dirty: true, problem: null, saved: false })
+    },
+    [patch],
+  )
+
+  const reset = useCallback(
+    (field: ProfileField) => {
+      patch(field, {
+        value: FIELD_OF(profile)[field],
+        dirty: false,
+        problem: null,
+        saved: false,
+      })
+    },
+    [patch, profile],
+  )
+
+  const commit = useCallback(
+    (field: ProfileField) => {
+      const current = fields[field]
+      const stored = FIELD_OF(profile)[field]
+      if (!current.dirty || current.saving) return
+      if (current.value.trim() === stored.trim()) {
+        patch(field, { dirty: false, value: stored, problem: null })
+        return
+      }
+      const uid = user?.id
+      if (!uid) return
+
+      // The one check this browser can make for itself, and the reason it is
+      // worth making: a shape refusal from Postgres would arrive as a bare
+      // constraint code with nothing a reader could act on, while
+      // `usernameShapeProblem` already says exactly which rule was broken. The
+      // server still checks — this only saves somebody a round trip to be told
+      // something the page could see.
+      if (field === 'username') {
+        const shape = usernameShapeProblem(current.value)
+        if (shape) {
+          patch(field, { problem: shape, saving: false })
+          return
+        }
+      }
+
+      patch(field, { saving: true, problem: null, saved: false })
+      void saveProfile(uid, { [field]: current.value } as ProfilePatch)
+        .then(async () => {
+          await refreshProfile()
+          if (!live.current) return
+          patch(field, { saving: false, dirty: false, saved: true })
+          // The tick is a moment, not a state. Left up, it would still be
+          // there the next time the section is opened, claiming a save that
+          // happened yesterday.
+          window.setTimeout(() => {
+            if (live.current) patch(field, { saved: false })
+          }, 2400)
+        })
+        .catch((err: unknown) => {
+          if (!live.current) return
+          patch(field, {
+            saving: false,
+            dirty: false,
+            // Back to what is stored. Leaving the refused text in the box
+            // would look like it had been taken.
+            value: FIELD_OF(profile)[field],
+            problem: err instanceof Error ? err.message : String(err),
+          })
+        })
+    },
+    [fields, patch, profile, refreshProfile, user?.id],
+  )
+
+  return { fields, set, commit, reset }
 }

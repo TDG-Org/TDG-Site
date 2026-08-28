@@ -15,18 +15,137 @@ are the authority for every sentence below.
 | File | What it is |
 | --- | --- |
 | `types.ts` | `Audience`, `PrivacyControl`, `PrivacyGroup`, `AccountStats`. **No key, audience or app id is written down here.** |
-| `api.ts` | The six calls: `privacyAudiences`, `privacyGroups`, `myPrivacy`, `setPrivacy`, `setPrivacyMany`, `myAccountStats`. |
-| `useAccount.ts` | `useAccountStats()` and `usePrivacy()`. |
-| `format.ts` | `fmtDay`, `fmtRelative`, `prettyId`, `fmtCount`. A deliberate twin of `src/dev/format.ts` — see below. |
+| `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph with its seven verbs. |
+| `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `useProfileEditor()`. |
+| `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. |
+| `format.ts` | `fmtDay`, `fmtRelative`, `prettyId`, `fmtCount`, `usernameFreeAt`. A deliberate twin of `src/dev/format.ts` — see below. |
+| `AccountFold.tsx` | `AccountFold` and `AccountSub`: one section of the page, open or shut. |
 | `AccountPage.tsx` | The page at `#/account`, in its own lazy chunk. |
-| `Account.css` | Only what is new here: the privacy list and the counters. |
+| `Account.css` | Only what is new here: the fields, the counters, the people, the apps and the privacy list. |
 
 ```ts
-const stats = useAccountStats()  // 'checking' | 'signedOut' | 'error' | 'ok'
-const panel = usePrivacy()       // the same four, plus saving / problem / setOne / setAll
+const stats  = useAccountStats()   // 'checking' | 'signedOut' | 'error' | 'ok'
+const panel  = usePrivacy()        // the same four, plus saving / problem / setOne / setAll
+const social = useSocial()         // the same four, plus busy / problem / act / ask / reload
+const editor = useProfileEditor()  // one FieldState per editable field, plus set / commit / reset
+const name   = useAppNames()       // 'bea' -> 'Bible Educator'
 ```
 
----
+## Six sections, and every one of them folds
+
+The page is `.fold` rows from `AppPage.css`, driven by
+[`../lib/sections.tsx`](../lib/README.md) — the same machinery the app pages
+and the Developer console use. So **Expand All and Collapse All reach every
+section without being told any of them exist**, and a seventh added later joins
+for free.
+
+`AccountFold` is not `Folded.tsx`'s `Fold`. That one renders a `PageSection`'s
+`blocks`, a vocabulary of prose written in `src/data/`, which cannot express a
+form or a list of people with buttons on them. So this is the same ROW with
+arbitrary children under it, sharing the stylesheet rather than copying it — a
+second set of lookalike collapsible rows is how two surfaces that should feel
+identical start drifting.
+
+**The page does not open fully collapsed, which is a deliberate departure**
+from what `sections.tsx` describes as the default. An app page is ten sections
+of prose you browse; two of these six ARE the answer somebody came for — what
+this account is, and what it has added up to. Every other row is one line and a
+chevron.
+
+A shut row still answers for itself: `what` is the line that makes a collapsed
+page readable, and `count` is the one figure worth seeing without opening — how
+many friends, or, when somebody is waiting on you, **that** instead. A section
+that says nothing while shut is a bug.
+
+## Your details are editable, one field at a time
+
+Display name, username, bio and recovery email are a direct `update` on
+`public.profiles` — not an RPC, because this is the one write on the page an
+account genuinely owns, and `profiles_update_own` plus the column grants
+already scope it exactly. A function here would re-implement a policy Postgres
+is enforcing.
+
+**Never name `updated_at` or `username_changed_at` in a patch.** Both are
+trigger-maintained and neither is client-writable, and Postgres does not ignore
+an ungranted column — it refuses the WHOLE statement with `42501`. That is what
+silently broke every profile save in Bible Educator the day the column grants
+were tightened, so `saveProfile` builds its row key by key and cannot spread
+one in.
+
+**One field, one save.** Not a form with a Save button: each commits when you
+leave it, so a refused username never takes an unrelated bio edit down with it.
+A Save button over four independent columns would have to decide what to do
+when three succeed and one is refused, and every answer to that is worse than
+not having the question.
+
+**Commit on blur, never on keystroke.** A username is checked against a unique
+index and a fourteen-day cooldown; one request per letter would spend that
+cooldown on a half-typed name. Escape puts the stored value back, because a
+field you can only correct by retyping what was there is one you cannot back
+out of.
+
+**The stored value is the truth, and it is re-read.** After a save the profile
+is fetched again through `refreshProfile()` rather than patched locally,
+because the row has triggers: `recovery_email` is lowercased and trimmed on the
+way in, and `username_changed_at` is stamped. A refusal puts the field back to
+what is stored and says why underneath it — leaving the rejected text in the
+box would look like it had been accepted, and the hint reserves its height so
+the swap moves nothing.
+
+The four refusals are matched on `code`, never on message text, which is the
+rule [`../auth/wording.ts`](../auth/README.md) settled and explains at length.
+`PT429`'s own message is passed through untouched because it already names the
+date the cooldown ends — and `usernameFreeAt` says that date BEFORE somebody
+types a new name, which is the difference between a rule and an ambush.
+
+## The social graph, and why every action re-reads
+
+Friends, the requests in both directions, and blocks — read as four lists in
+one call, changed through the seven `tdg_*` verbs. `tdg_profile_state` has no
+client write policies at all, so those verbs are the whole surface: they
+validate, they write both sides of a friendship, and they are where the
+friend-request privacy control is enforced.
+
+**A press runs the verb and then reads the graph again**, rather than patching
+four arrays. One action moves a person between lists and often changes both
+sides at once — blocking removes them from Friends AND adds them to Blocked AND
+clears anything pending in either direction. Patching for each of seven verbs
+is seven chances to get one arm wrong, and the failure is silent: a card in two
+lists, or a friend who never appears. One round trip on an action somebody
+takes a handful of times buys a panel that cannot disagree with the database.
+
+**The buttons on a person come from where you already STAND with them.**
+Somebody who asked you gets Accept and Decline; somebody you asked gets
+Withdraw; a friend gets Unfriend and Block; a blocked account gets Unblock.
+Drawing all seven and letting the server refuse five would be five buttons that
+look like actions and are guaranteed to be errors — the mistake Bible
+Educator's profile page made and fixed, and the reason its README spells the
+standings out one by one.
+
+**A miss and a hidden account are the same answer** when adding by username. A
+different sentence for the second would turn that box into a way to test
+whether a handle exists, which is the property [`../auth/README.md`](../auth/README.md)
+protects everywhere else on this site.
+
+## An app is called what it is called, never what the column says
+
+`tdg_my_account_stats()` answers keyed by app id — `bea`, `veditor`,
+`tdg-site` — because that is what the rows carry. A page that printed those
+would tell somebody they have a `Bea` streak, which is a Supabase column value
+wearing a product's clothes and is not the name of anything anybody has opened.
+
+`useAppNames()` resolves it through `backend` on each card in
+`src/data/content.ts` — the data file where a product's copy lives (rule 1) —
+read via [`../content/`](../content/README.md), so a product renamed from
+`#/dev` is renamed here in the same breath. An id with no card falls back to
+`prettyId`, which turns `tdg-site` into `TDG Site`; a list that dropped what it
+could not name would under-report what somebody uses, and under-reporting is
+the failure nobody notices (rule 17).
+
+The App Stats section builds its rows from the UNION of three answers: what has
+synced a badge, what owns a pack, and what has counted a day. An app can be in
+any one without the others, so anything narrower would leave out an app whose
+only mark on the account is a pack somebody bought.
 
 ## The route is not gated, and that is the point
 
@@ -173,5 +292,10 @@ variable, on this page and nowhere else.
 - **Never move a permission decision into this folder.** Every verb here is
   callable by anybody signed in; they refuse from inside, and that refusal is
   the boundary.
+- **Never add a column to a `profiles` patch without checking its grant.** An
+  ungranted column is not ignored — it refuses the whole save, and the failure
+  looks like the page being broken rather than like a permission.
+- **A new section is an `AccountFold`**, and it registers itself. Do not add it
+  to a list somewhere for Expand All to find.
 - The server's refusals are **shown, not rewritten** — they are worded to be
   read.

@@ -231,6 +231,27 @@ export type AppCard = {
    * been checked against a live one yet.
    */
   repo?: string
+  /**
+   * What this app calls itself when it writes to the shared TDG database —
+   * `bea`, `veditor`, `devfleet`, `makullveny`. It is the `app` column of
+   * `tdg_badges`, `tdg_streaks` and `tdg_feedback`, and the id
+   * `tdg_store_apps()` discovers.
+   *
+   * It is here so the Account page can say **Bible Educator** where the
+   * database says `bea`. Nothing else on this site needed the mapping, because
+   * nothing else drew a row the database had named — and the moment one did,
+   * the alternative was a lookup table inside a component, which is what rule 1
+   * forbids: a product's name is copy, and copy lives in this file.
+   *
+   * **Optional, and a missing one is not a bug.** An app that has never written
+   * a row has nothing to map, and an id this file has never heard of still gets
+   * a face: `prettyId` turns `music-everything` into `Music Everything` and
+   * `tdg-site` into `TDG Site`. So the list is allowed to be incomplete. What
+   * it must never be is WRONG — only ids actually observed in the database are
+   * written here, because a guessed one produces a mapping that silently never
+   * matches, which reads exactly like not having it at all.
+   */
+  backend?: string
   title: string
   copy: string
   /**
@@ -284,6 +305,7 @@ export const APPS: AppCard[] = [
     page: 'bible-educator',
     // Private repo, public deploy — the probe in src/live/ is what finds it.
     repo: 'Bible-Educator',
+    backend: 'bea',
     title: 'Bible Educator',
     copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Download any of the 16 translations once and the whole thing keeps working with the internet off.',
     icon: 'icon-bible-educator.webp',
@@ -342,6 +364,7 @@ export const APPS: AppCard[] = [
     // Named for the claim alone: the hand-written `download` below outranks
     // discovery, so the runtime never asks anything about this repo.
     repo: 'Makullveny',
+    backend: 'makullveny',
     title: 'Makullveny',
     copy: 'A calm desk for studying. Write and draw straight into books of your own, hand it a syllabus and get the dates back, and drill the hard parts with flashcards. None of it leaves your machine.',
     icon: 'icon-makullveny.webp',
@@ -380,6 +403,7 @@ export const APPS: AppCard[] = [
     index: '04',
     page: 'devfleet',
     repo: 'DevFleet', // expected name — check against the repo when it first deploys
+    backend: 'devfleet',
     title: 'DevFleet',
     copy: 'Point it at a folder and every git repo becomes a live card. Open up to sixteen panes, each with its own terminal, diff review and notebook.',
     icon: 'icon-devfleet.webp',
@@ -428,6 +452,7 @@ export const APPS: AppCard[] = [
     index: '06',
     page: 'veditor',
     repo: 'TDG-Veditor', // expected name — check against the repo when it first deploys
+    backend: 'veditor',
     title: 'TDG Veditor',
     copy: 'A desktop video editor: cut on a timeline, grade the colour, mix the audio, then hand it an export pipeline you set up yourself instead of one somebody else chose for you.',
     icon: 'icon-veditor.webp',

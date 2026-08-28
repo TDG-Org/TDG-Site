@@ -84,6 +84,23 @@ export type Profile = {
    * flag forced true is a page full of buttons that all answer 42501.
    */
   is_admin: boolean
+  /** The few lines somebody wrote about themselves. `not null default ''` in
+   *  Postgres, so an account that has written nothing has an empty string
+   *  rather than a null — the form and the column agree about "no bio". */
+  bio: string
+  /** A second address you can sign in with. Reset links still only ever go to
+   *  the address you signed up with; see `src/auth/README.md`. */
+  recovery_email: string | null
+  /**
+   * When the username was last changed, or null while it has never been.
+   *
+   * Read so the Account page can say when the next change is allowed BEFORE
+   * somebody types one and is refused. The fourteen days are the server's,
+   * stamped by a trigger on a column no client may write — this is that
+   * stamp, not a local guess at it, and `PT429`'s own message remains the
+   * authority the moment a save is actually refused.
+   */
+  username_changed_at: string | null
 }
 
 type SignUpInput = { email: string; password: string; username: string; displayName: string }
@@ -104,6 +121,26 @@ type AuthContextValue = {
   /** Set when a provider redirect lands back with `?error=…` (e.g. OAuth not configured yet). */
   oauthError: string | null
   dismissOauthError: () => void
+  /**
+   * Read the profile row again.
+   *
+   * For the one surface that CHANGES it: the Account page's Your Details
+   * fields. Without this, saving a display name would leave the nav's account
+   * menu, the page's own title and the Store's greeting all showing the old
+   * one until the next sign-in — the profile is fetched once, when the session
+   * arrives, because until now nothing on this site could edit it.
+   *
+   * Deliberately a re-READ rather than a setter taking the new values. The row
+   * has triggers on it — `username_changed_at` is stamped by one, and
+   * `recovery_email` is lowercased and trimmed by another — so what was sent
+   * is not always what was stored, and a client that assumed otherwise would
+   * show a value the database does not agree with. Ask.
+   *
+   * Never throws: a failed refresh leaves the previous profile in place, which
+   * is stale but true, rather than blanking an account's own name because one
+   * request lost the network.
+   */
+  refreshProfile: () => Promise<void>
   signUp: (input: SignUpInput) => Promise<{ error: string | null; needsEmailConfirm: boolean }>
   signIn: (input: SignInInput) => Promise<{ error: string | null }>
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
@@ -121,8 +158,38 @@ export function useAuth() {
   return ctx
 }
 
-/** Columns the UI actually reads. Never select('*') against a shared table. */
-const PROFILE_COLUMNS = 'user_id,username,display_name,is_admin'
+/**
+ * Columns the UI actually reads. Never select('*') against a shared table.
+ *
+ * `bio` and `recovery_email` joined the list when the Account page gained
+ * fields for them: a form that cannot read the current value can only offer an
+ * empty box, and an empty box beside a saved value reads as the value having
+ * been lost. Both are readable here for the same reason `is_admin` is —
+ * `profiles_select_own` lets an account read its OWN row, and nobody learns
+ * anybody else's.
+ */
+const PROFILE_COLUMNS =
+  'user_id,username,display_name,is_admin,bio,recovery_email,username_changed_at'
+
+/**
+ * One profile read, shared by the sign-in path and by `refreshProfile`.
+ *
+ * A function rather than two copies of the query, because the column list is
+ * the thing that would drift: a field added for the Account page and not added
+ * here comes back undefined, and an undefined value in a controlled input is
+ * React quietly switching it to uncontrolled halfway through a save.
+ *
+ * Answers null on failure, and the caller decides what that means — on boot it
+ * means "no profile yet", on a refresh it means "keep the one you have".
+ */
+async function readProfile(uid: string): Promise<Profile | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('user_id', uid)
+    .maybeSingle()
+  return data
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -166,14 +233,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       const uid = session.user.id
-      supabase
-        .from('profiles')
-        .select(PROFILE_COLUMNS)
-        .eq('user_id', uid)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (!cancelled) setProfile(data)
-        })
+      void readProfile(uid).then((row) => {
+        if (!cancelled) setProfile(row)
+      })
       supabase
         .from('subscriptions')
         .select('tier')
@@ -209,6 +271,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       recovery,
       oauthError,
       dismissOauthError: () => setOauthError(null),
+
+      async refreshProfile() {
+        const uid = user?.id
+        if (!uid) return
+        const row = await readProfile(uid)
+        // A failed read leaves the previous profile standing. Stale and true
+        // beats blank: this runs right after a save, and blanking somebody's
+        // own name because the follow-up request lost the network would look
+        // exactly like the save having destroyed it.
+        if (row) setProfile(row)
+      },
 
       async signUp({ email, password, username, displayName }) {
         const { data, error } = await supabase.auth.signUp({

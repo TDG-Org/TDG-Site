@@ -190,3 +190,203 @@ export async function myAccountStats(): Promise<AccountStats | null> {
     streaks: row.streaks ?? {},
   }
 }
+
+/* ── editing the account ─────────────────────────────────────────────────────
+ *
+ * A direct `update` on `public.profiles`, not an RPC, because this is the one
+ * write on this page an account genuinely owns: `profiles_update_own` scopes it
+ * to the caller's row and the column grants scope it to the seven fields
+ * `authenticated` may set. There is no privileged verb to add — a function here
+ * would only re-implement a policy Postgres is already enforcing.
+ *
+ * **Never name `updated_at` or `username_changed_at` in the patch.** Both are
+ * trigger-maintained and neither is client-writable, and Postgres does not
+ * ignore an ungranted column — it refuses the WHOLE statement with 42501. That
+ * is what silently broke every profile save in Bible Educator the day the
+ * column grants were tightened, so this file builds the row key by key and
+ * cannot accidentally spread one in.
+ */
+
+/** What the Account page may change. Every field is optional; only what is
+ *  present is sent, so a save is always exactly what the reader touched. */
+export type ProfilePatch = {
+  displayName?: string
+  username?: string
+  bio?: string
+  /** `''` clears it: a null column and "no backup address" are one fact. */
+  recoveryEmail?: string
+}
+
+/**
+ * The four refusals this write can collect, each with the sentence the reader
+ * actually needs.
+ *
+ * Matched on `code`, never on message text — the rule `src/auth/wording.ts`
+ * settled and explains at length: a code cannot be a prefix of another code,
+ * and a table of substrings answers the wrong arm the day two messages
+ * overlap.
+ *
+ * **PT429's own message is passed through**, because it already names the date
+ * the cooldown ends and a rewrite here could only lose it. That is also why
+ * nothing here computes that date: the fourteen days are the SERVER's, kept by
+ * a trigger on a column no client may write, and a local guess would drift.
+ */
+function profileRefusal(error: { code?: string; message?: string } | null): string {
+  const code = error?.code
+  if (code === '23505') return 'That username is already taken. Try another.'
+  if (code === 'PT429') return error?.message || 'Usernames can change once every 2 weeks.'
+  if (code === 'PT409') {
+    return 'That address is already in use on another account. Pick a different one.'
+  }
+  if (code === '23514') return "That doesn't look like a valid email address."
+  if (code === '42501') {
+    // Not a permission problem the reader can act on: it means this file named
+    // a column `authenticated` may not set. Say something true rather than
+    // something reassuring.
+    return "We couldn't save that. Something on our side is set up wrong."
+  }
+  return worded(error?.message)
+}
+
+/**
+ * Save what changed. Throws with the server's sentence on refusal, because
+ * every one of them is something the reader has to read and act on: a taken
+ * username, a cooldown with a date in it, an address somebody else uses.
+ */
+export async function saveProfile(userId: string, patch: ProfilePatch): Promise<void> {
+  const row: Record<string, unknown> = {}
+  if (patch.displayName !== undefined) row.display_name = patch.displayName.trim() || null
+  if (patch.username !== undefined) row.username = patch.username.trim().replace(/^@/, '') || null
+  if (patch.bio !== undefined) row.bio = patch.bio.trim()
+  if (patch.recoveryEmail !== undefined) row.recovery_email = patch.recoveryEmail.trim() || null
+  if (!Object.keys(row).length) return
+
+  const { error } = await supabase.from('profiles').update(row).eq('user_id', userId)
+  if (error) throw new Error(profileRefusal(error))
+}
+
+/** Is this username free? Answers **true on any failure**, deliberately: this
+ *  is a courtesy that saves a round trip, and the real answer is the unique
+ *  index. Guessing "taken" when the check itself failed would refuse a name
+ *  that is actually available. */
+export async function usernameAvailable(name: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('tdg_username_available', { uname: name })
+  if (error) return true
+  return data !== false
+}
+
+/* ── the social graph ────────────────────────────────────────────────────────
+ *
+ * Four reads and seven writes, every one of them a `tdg_*` verb: friends,
+ * requests and blocks live on `tdg_profile_state`, which has no client write
+ * policies at all, so the verbs are the whole surface. They validate, they
+ * write both sides of a friendship, and they are where the friend-request
+ * privacy control is enforced — which is why adding somebody is
+ * `tdg_add_friend` and never an insert.
+ */
+
+export type Person = {
+  userId: string
+  username: string | null
+  displayName: string | null
+  bio: string | null
+  /** When THEY joined TDG, on the two lists that carry it. */
+  createdAt: string | null
+}
+
+type PersonRow = {
+  user_id: string
+  username: string | null
+  display_name: string | null
+  bio?: string | null
+  created_at?: string | null
+}
+
+const toPerson = (row: PersonRow): Person => ({
+  userId: row.user_id,
+  username: row.username,
+  displayName: row.display_name,
+  bio: row.bio ?? null,
+  createdAt: row.created_at ?? null,
+})
+
+export type SocialGraph = {
+  friends: Person[]
+  incoming: Person[]
+  outgoing: Person[]
+  blocked: Person[]
+}
+
+/**
+ * All four lists in one go. Null means the read FAILED — not "no friends",
+ * which is a real and common answer and draws a different sentence.
+ *
+ * Fetched together because a panel that showed friends but not the requests
+ * waiting on you would have quietly hidden the only part of it that needed an
+ * answer from you.
+ */
+export async function socialGraph(): Promise<SocialGraph | null> {
+  const [f, i, o, b] = await Promise.all([
+    supabase.rpc('tdg_my_friends'),
+    supabase.rpc('tdg_incoming_requests'),
+    supabase.rpc('tdg_outgoing_requests'),
+    supabase.rpc('tdg_my_blocks'),
+  ])
+  if (f.error || i.error || o.error || b.error) return null
+  const list = (data: unknown) => ((data as PersonRow[] | null) ?? []).map(toPerson)
+  return {
+    friends: list(f.data),
+    incoming: list(i.data),
+    outgoing: list(o.data),
+    blocked: list(b.data),
+  }
+}
+
+/** Every verb that changes a relationship, by the name the database uses. One
+ *  map rather than seven exported functions: the panel draws its buttons from
+ *  what a person's standing allows, so it looks one up rather than knowing all
+ *  seven by name. */
+const SOCIAL_VERBS = {
+  add: 'tdg_add_friend',
+  accept: 'tdg_accept_friend',
+  decline: 'tdg_decline_friend',
+  cancel: 'tdg_cancel_request',
+  remove: 'tdg_remove_friend',
+  block: 'tdg_block_user',
+  unblock: 'tdg_unblock_user',
+} as const
+
+export type SocialAction = keyof typeof SOCIAL_VERBS
+
+/**
+ * Do one thing to one person. Throws with the server's sentence, because every
+ * refusal here is worth reading — *this account is not taking friend requests*
+ * is a fact about them, and swallowing it would leave a button that looked
+ * like it worked.
+ */
+export async function socialAct(action: SocialAction, userId: string): Promise<void> {
+  const { error } = await supabase.rpc(SOCIAL_VERBS[action], { target: userId })
+  if (error) throw new Error(worded(error.message))
+}
+
+/**
+ * Ask to be somebody's friend, by the handle you know them as.
+ *
+ * Two calls, because the verb takes an id and a person types a name — and the
+ * lookup is `tdg_find_profile`, the same door the public profile page uses, so
+ * an account that has closed itself off answers here exactly as it does there.
+ *
+ * **A miss and a hidden account are deliberately the same answer.** A
+ * different sentence for the second would turn this box into a way to test
+ * whether a handle exists, which is the property `src/auth/README.md` protects
+ * everywhere else on this site.
+ */
+export async function addFriendByUsername(name: string): Promise<void> {
+  const handle = name.trim().replace(/^@/, '')
+  if (!handle) throw new Error('Type a username first.')
+  const { data, error } = await supabase.rpc('tdg_find_profile', { uname: handle })
+  if (error) throw new Error(worded(error.message))
+  const found = (data as { user_id: string }[] | null)?.[0]
+  if (!found) throw new Error(`We couldn't find anybody with the username @${handle}.`)
+  await socialAct('add', found.user_id)
+}

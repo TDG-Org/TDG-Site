@@ -183,6 +183,28 @@ overview tile and a Purchases filter. Step 4 above then supplies the name and
 the prices that panel shows. If you are editing `src/dev/` to make a new product
 appear, you are doing it the old way.
 
+## `backend` · the one place an app's database id meets its name
+
+Every app card may carry a `backend` — `bea`, `veditor`, `devfleet`,
+`makullveny` — which is what that app calls itself when it writes to the shared
+TDG database: the `app` column of `tdg_badges`, `tdg_streaks` and
+`tdg_feedback`, and the id `tdg_store_apps()` discovers.
+
+It is here because the Account page draws rows the DATABASE named, and printing
+them raw would tell somebody they have a `Bea` streak. The name of a product is
+copy, and copy lives in this folder (rule 1) — the alternative was a lookup
+table inside a component, which is the thing rule 1 exists to prevent.
+
+**Optional, and a missing one is not a bug.** An app that has never written a
+row has nothing to map, and an id nothing here has heard of still gets a face:
+`prettyId` in `src/account/format.ts` turns `music-everything` into
+`Music Everything` and `tdg-site` into `TDG Site`.
+
+**What it must never be is wrong.** Only ids actually observed in the database
+are written here. A guessed one produces a mapping that silently never matches,
+which reads exactly like not having it at all — and there is nothing on screen
+to tell the two apart.
+
 ## This folder is the default, not the last word
 
 Since 2.0.0 the Developer console's **Content** tab can override any of it at
