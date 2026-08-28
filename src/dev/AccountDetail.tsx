@@ -997,6 +997,28 @@ function AppsPanel({ stores, ...props }: Props & { stores: DevStoreApp[] }) {
   )
 }
 
+/**
+ * The sentence the Tell Them box starts with, from what is staged.
+ *
+ * One function for both ownership panels, because a message about somebody's
+ * account has to read the same whichever panel it came from — and because the
+ * two drifted the moment they were written separately: one turned `Plan →
+ * Hearth` into words and the other lowercased it and left the arrow in, which
+ * is a developer's shorthand sent to a customer.
+ *
+ * Title Case survives on purpose. The left of each line is a product or a
+ * control by name — `Candle Bundle`, `Pro Export Pack` — and rule 7 keeps a
+ * proper noun in its own form wherever it lands. It is only ever a STARTING
+ * point: the box is editable, and the developer's own words are the reason the
+ * tick box exists at all.
+ */
+function noticeFrom(product: string, changes: readonly string[], reason: string): string {
+  if (changes.length === 0) return ''
+  const said = changes.map((line) => line.replace(' → ', ' is now ')).join('; ')
+  const why = reason.trim()
+  return `We changed what your account has in ${product}: ${said}.${why ? ` ${why}` : ''}`
+}
+
 /* ── Makullveny ────────────────────────────────────────────────────────── */
 
 /**
@@ -1145,11 +1167,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
   ]
 
   const notice = useSaveNotice(
-    changes.length === 0
-      ? ''
-      : `We changed what your account has in Makullveny: ${changes
-          .map((c) => c.toLowerCase())
-          .join('; ')}.${reason.trim() ? ` ${reason.trim()}` : ''}`,
+    noticeFrom('Makullveny', changes, reason),
     `${a.user_id}:mak:${a.mak_tier}:${a.mak_status}:${savedCandle}:${block != null}`,
   )
 
@@ -1283,7 +1301,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       <div className="dev__grid2">
         <Field
           label="Plan"
-          hint="What the account RENTS. Candle is not on this list because it is not rent — it is the bundle above, and the ladder reports it on its own."
+          hint="What the account RENTS, cheapest first: No subscription → Lantern → Hearth. Candle is not on this list and is not missing from it — it is bought once, not rented, so it is the switch above. Only Hearth carries what the bundle carries; Lantern does not."
         >
           <Select value={plan} onChange={setPlan} options={PLANS} />
         </Field>
@@ -1549,14 +1567,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
     ...packMoves.map((pack) => `${pack.name} → ${labelOf(pack, draft[pack.id])}`),
   ]
 
-  const notice = useSaveNotice(
-    changes.length === 0
-      ? ''
-      : `We changed what your account has in ${app.title}: ${changes
-          .map((c) => c.replace(' → ', ' is now ').toLowerCase())
-          .join('; ')}.${reason.trim() ? ` ${reason.trim()}` : ''}`,
-    serverKey,
-  )
+  const notice = useSaveNotice(noticeFrom(app.title, changes, reason), serverKey)
 
   const wantsReason =
     revokeApp !== (app.revoked != null) && revokeApp
@@ -1792,40 +1803,46 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         </div>
       )}
 
-      {!absent && (
-        <>
-          <Switch
-            checked={revokeApp}
-            onChange={setRevokeApp}
-            tone="danger"
-            label={`Revoke The Whole Of ${app.title}`}
-            hint="Every pack at once, and the standing answer that this account may not buy any of them. What comes off the row is kept on the block, so lifting it puts back exactly what was taken — dates, and the day they first got each pack."
-          />
+      {/* Drawn even when the table is missing. A revocation is a decision about
+          PERMISSION, and the server records and lifts one whether or not there
+          is an entitlements table to take anything from — so hiding this with
+          the rest of the panel would leave a block visible above it with no
+          control that could lift it. The pack pickers stay dead either way,
+          which is what keeps `absent` from being able to stage anything else. */}
+      <Switch
+        checked={revokeApp}
+        onChange={setRevokeApp}
+        tone="danger"
+        label={`Revoke The Whole Of ${app.title}`}
+        hint={
+          absent
+            ? 'The standing answer that this account may not have this app or buy any of it. With no entitlements table there is nothing on a row to take, so this records the decision and says so — it does not pretend to have removed anything.'
+            : 'Every pack at once, and the standing answer that this account may not buy any of them. What comes off the row is kept on the block, so lifting it puts back exactly what was taken — dates, and the day they first got each pack.'
+        }
+      />
 
-          {(wantsReason || reason) && (
-            <Field
-              label="Reason"
-              hint="Sentence case, written for the person it is about — they see it on their own Store card and in the app. It goes on everything this save revokes. Left blank, the block still stands and simply says nothing about why."
-            >
-              <TextInput
-                value={reason}
-                onChange={setReason}
-                maxLength={200}
-                placeholder="Refunded after a chargeback."
-              />
-            </Field>
-          )}
-
-          <SaveBar
-            changes={changes}
-            onSave={save}
-            busy={busy === `store:${app.id}`}
-            notice={notice}
-            noticeTo={app.title}
-            nothingLabel={`Nothing to save. Every pack above matches what this account holds in ${app.title}.`}
+      {(wantsReason || reason) && (
+        <Field
+          label="Reason"
+          hint="Sentence case, written for the person it is about — they see it on their own Store card and in the app. It goes on everything this save revokes. Left blank, the block still stands and simply says nothing about why."
+        >
+          <TextInput
+            value={reason}
+            onChange={setReason}
+            maxLength={200}
+            placeholder="Refunded after a chargeback."
           />
-        </>
+        </Field>
       )}
+
+      <SaveBar
+        changes={changes}
+        onSave={save}
+        busy={busy === `store:${app.id}`}
+        notice={notice}
+        noticeTo={app.title}
+        nothingLabel={`Nothing to save. Every pack above matches what this account holds in ${app.title}.`}
+      />
 
       {app.hasGrants && app.holdingsKnown && !absent && rentable.length > 0 && (
         <p className="dev__panel-quiet">

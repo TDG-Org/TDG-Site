@@ -1606,6 +1606,9 @@
   flex-direction: column;
   gap: 4px;
 }
+.dev__save-tell-text .dev__hint {
+  max-width: 76ch;
+}
 .dev__save-msg {
   display: flex;
   flex-direction: column;

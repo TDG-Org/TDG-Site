@@ -1046,8 +1046,12 @@ export function SaveBar({
             has to re-read six controls to find out will stop reading it. */}
         {dirty ? (
           <ul className="dev__save-list">
-            {changes.map((line) => (
-              <li key={line}>{line}</li>
+            {/* Index keys, deliberately. These are lines of prose with no state
+                and no identity — two panels could legitimately stage the same
+                sentence, and a duplicate key is a React warning about a list
+                that is only ever read. */}
+            {changes.map((line, i) => (
+              <li key={i}>{line}</li>
             ))}
           </ul>
         ) : (
