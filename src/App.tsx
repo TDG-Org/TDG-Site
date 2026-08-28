@@ -57,6 +57,17 @@ const About = lazy(() => import('./components/About'))
  */
 const AccountPage = lazy(() => import('./account/AccountPage'))
 
+/**
+ * Somebody else's account, in its own chunk.
+ *
+ * Same reasoning again, and one more besides: this page is opened from a
+ * search result or from a link somebody sent, and a visitor who never opens
+ * one should not download the profile's read, its hook or its stylesheet. The
+ * route is recognised without this file — a handle is not in any catalogue, so
+ * `route.ts` needs nothing from here to parse it. See src/people/README.md.
+ */
+const ProfilePage = lazy(() => import('./people/ProfilePage'))
+
 export default function App() {
   useOffscreenPause()
   const { oauthError, recovery, isAdmin } = useAuth()
@@ -102,6 +113,7 @@ export default function App() {
       route.kind === 'app' ||
       route.kind === 'about' ||
       route.kind === 'account' ||
+      route.kind === 'profile' ||
       showDev
     ) {
       if (back !== null) {
@@ -199,6 +211,23 @@ export default function App() {
             <AccountPage
               onOpenAuth={() => setAuthOpen(true)}
               onOpenFeedback={() => setFeedbackOpen(true)}
+            />
+          </Suspense>
+        </main>
+      ) : route.kind === 'profile' ? (
+        <main>
+          {/* The chunk is local and small; the placeholder only stops the
+              footer flying up to meet the nav for one frame. */}
+          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+            {/* Keyed on the handle so following one profile to another
+                REMOUNTS rather than re-running effects inside a page still
+                holding the previous person's read. Two profiles are two
+                pages; `same()` in lib/route.ts already keeps them apart at
+                the route level, and this keeps them apart at the component. */}
+            <ProfilePage
+              key={route.username}
+              username={route.username}
+              onOpenAuth={() => setAuthOpen(true)}
             />
           </Suspense>
         </main>

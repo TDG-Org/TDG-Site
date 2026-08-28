@@ -44,10 +44,23 @@ on the site and the comment at that line says when the rename happened.
 type Route =
   | { kind: 'home' }
   | { kind: 'about' }
+  | { kind: 'account' }
+  | { kind: 'profile'; username: string }
   | { kind: 'store'; app?: string }
   | { kind: 'dev' }
   | { kind: 'app'; slug: string }
 ```
+
+`#/user/<handle>` is the one route whose variable part is neither a catalogue id
+nor anything this file can check: it is a **username**, chosen by whoever holds
+it, resolved by the server. That is why it is behind a segment like every other
+one — a bare `#/luke` would let the next username collide with a section anchor
+or a route added tomorrow. The hash is lower-cased with the rest, so
+`#/user/Rose` and `#/user/rose` are one page; a leading `@` is stripped, so a
+handle pasted the way people write it works; a bare `#/user/` has named nobody
+and falls through to home. `decodeURIComponent` is wrapped, because it THROWS on
+a lone `%` and an exception here would take the whole render down rather than
+landing on a page. See [`../people/README.md`](../people/README.md).
 
 Four things to keep true when you add one:
 

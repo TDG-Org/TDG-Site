@@ -1,0 +1,209 @@
+/* ── Somebody else's TDG account ───────────────────────────────────────────
+   Only what is genuinely new here. The shell, blend tints, head, back control
+   and ghost buttons are `.appview`'s from AppPage.css; the counters, badge
+   chips, streak rows, app facts, notes and refusal banner are `.acct`'s from
+   Account.css. Both are imported by ProfilePage.tsx and the file says why.
+
+   Every colour is a token (rule 2) and every one of them resolves in both
+   themes (rule 3) — there is not a literal in this file, which is what stops
+   the standing banner from being legible in dark and invisible in light.     */
+
+.prof .appview__shell {
+  /* Matches the Account page exactly. The two are read one after the other —
+     a search result opens this, its Back returns there — and a column that
+     changed width between them would read as a different site. It is one
+     value in each file rather than a shared variable because the only thing
+     they must agree on is the NUMBER, and a token for a measure used twice is
+     a token nobody can find. If one moves, move both. */
+  max-width: 1040px;
+}
+
+/* ── who they are ─────────────────────────────────────────────────────── */
+
+.prof__identity {
+  /* `.acct__identity` already lays out the handle and the chips. This only
+     tightens the gap, because there is no email line here to separate. */
+  gap: 6px 12px;
+}
+
+/* The standing chip carries the one thing the page is about when it is about
+   anything awkward, so the two block words are tinted rather than left to read
+   as another neutral tag. `--warm` is this site's caution colour and
+   `--live-*` its affirmative one; neither is written as a hex anywhere. */
+.chip[data-standing='friend'] {
+  color: var(--live-fg);
+  background-color: var(--live-bg);
+  border-color: var(--live-border);
+}
+.chip[data-standing='blocked'],
+.chip[data-standing='blocked_by'] {
+  color: var(--warm);
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+
+.prof__bio {
+  max-width: 62ch;
+  margin-top: 14px;
+  font: 400 14.5px/1.65 var(--font-body);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.prof__bio--withheld {
+  font-style: italic;
+  color: var(--faint);
+}
+
+/* ── the page under the head ──────────────────────────────────────────── */
+
+.prof__body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 26px;
+}
+
+/* Where you stand, in a sentence, before anything else on the page.
+
+   A left rule rather than a filled box: this is a fact about two people, not
+   an error and not a warning, and a full alert tint would make every profile
+   of a friend-request-in-flight look like something had gone wrong. The two
+   block standings tint the rule and nothing else. */
+.prof__notice {
+  --prof-notice: var(--border-hover);
+  margin: 0;
+  padding: 11px 14px;
+  border-left: 3px solid var(--prof-notice);
+  border-radius: 0 3px 3px 0;
+  background-color: color-mix(in srgb, var(--prof-notice) 8%, transparent);
+  font: 400 13.5px/1.6 var(--font-body);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.prof__notice[data-standing='blocked'],
+.prof__notice[data-standing='blocked_by'] {
+  --prof-notice: var(--warm);
+  color: var(--text);
+}
+.prof__notice[data-standing='self'] {
+  --prof-notice: var(--accent);
+}
+
+/* ── what you can do about them ───────────────────────────────────────── */
+
+.prof__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s ease;
+}
+/* Mid-action the row goes quiet and its buttons are disabled, but nothing
+   moves and nothing is replaced — the profile is about to be read again, and
+   a button that vanished before the answer arrived would look like the action
+   had already happened when it might yet be refused. The same floor
+   `.acct__person[data-busy]` keeps. */
+.prof__acts[data-busy] {
+  opacity: 0.6;
+}
+/* A ghost button and a link that looks like one must be the same height, and
+   an `<a>` has no button box: this is the mirrored half of the pair, taking
+   its sizing from the same rule rather than from a second set of numbers. */
+.prof__acts a.appview__ghost {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.prof__no-ask {
+  margin: 0;
+  align-self: center;
+}
+
+/* ── sections ─────────────────────────────────────────────────────────── */
+
+.prof__section {
+  /* `.acct__sub` already owns the heading, the line under it and the spacing.
+     A profile is a flat page rather than a stack of folds, so the sections
+     need a rule between them that the account page's folds provide for free. */
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.prof__section:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.prof__tiles {
+  /* Four counters rather than the account page's eight, so they may be wider
+     before the row starts to look sparse. Same tile, same minimum, one
+     variable. */
+  --acct-tile-min: 150px;
+}
+
+.prof__withheld {
+  font-style: italic;
+  color: var(--faint);
+}
+
+.prof__closed {
+  margin-top: 4px;
+}
+
+/* ── their friends ────────────────────────────────────────────────────── */
+
+.prof__friends {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prof__friend {
+  --prof-friend-pad: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--prof-friend-pad) calc(var(--prof-friend-pad) + 2px);
+  min-width: min(100%, 160px);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    var(--t-theme);
+}
+a.prof__friend:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+a.prof__friend:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Somebody with no handle has no page to open, so their card is not a link.
+   It keeps the same box on purpose — a row of cards with one missing would
+   read as a rendering fault rather than as an account that has not picked a
+   username yet. */
+.prof__friend--flat {
+  font: 600 13.5px var(--font-body);
+  color: var(--faint);
+  cursor: default;
+}
+.prof__friend-name {
+  font: 600 13.5px var(--font-body);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.prof__friend-handle {
+  font: 500 11.5px var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a.prof__friend:hover {
+    transform: none;
+  }
+}

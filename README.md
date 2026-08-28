@@ -111,7 +111,7 @@ authoritative for its folder:
 | [`src/styles/`](src/styles/README.md) · palette & primitives | [`src/lib/`](src/lib/README.md) · router, frame loop, machinery | [`src/hooks/`](src/hooks/README.md) · the motion hooks |
 | [`src/auth/`](src/auth/README.md) · signing in to TDG Core | [`src/badges/`](src/badges/README.md) · the marks on an account | [`src/feedback/`](src/feedback/README.md) · sending feedback, and hearing back |
 | [`src/store/`](src/store/README.md) · what an account owns | [`src/theme/`](src/theme/README.md) · two worlds and the wave | [`src/dev/`](src/dev/README.md) · the Developer console |
-| [`supabase/`](supabase/README.md) · the part that runs on a server | | |
+| [`src/account/`](src/account/README.md) · your account, and who may see it | [`src/people/`](src/people/README.md) · somebody else's account | [`supabase/`](supabase/README.md) · the part that runs on a server |
 
 ```bash
 npm install && npm run dev

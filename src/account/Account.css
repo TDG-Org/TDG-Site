@@ -286,8 +286,15 @@
    248px wide (AGENTS.md rule 16).                                            */
 
 .acct__tiles {
+  /* The track's floor, named rather than typed, because a second surface
+     draws this same grid with fewer tiles in it: the profile page shows four
+     counters where this shows eight, and four 96px tracks on a wide shell
+     read as a row that forgot to fill. One variable on the grid, overridden
+     from the page that wants a different one — never a second
+     `grid-template-columns` with its own literal in it (AGENTS.md rule 6). */
+  --acct-tile-min: 96px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--acct-tile-min)), 1fr));
   gap: 1px;
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -749,5 +756,221 @@
   .acct__input,
   .acct__primary {
     transition-duration: 0.01ms;
+  }
+}
+
+/* ── finding people, and arranging the ones you know ──────────────────────
+   Added with the profile pages (v2.10.0). Everything here is either a control
+   the two lists share or the one thing a person card gained: a way in.       */
+
+/* Your own profile, from the identity row under the page title. It is a link
+   rather than a button because it opens a page, and it takes the handle's own
+   colour so the two read as one thought — "this is who you are, and this is
+   what that looks like to somebody else". */
+.acct__self-link {
+  font: 600 12px var(--font-body);
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.acct__self-link:hover {
+  border-bottom-color: var(--accent);
+}
+.acct__self-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+/* No handle, no page. It keeps the row's shape and says what to do about it,
+   rather than leaving a gap where everybody else has a link. */
+.acct__self-link--off {
+  color: var(--faint);
+  border-bottom: 0;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* The bar over a list: a filter on the left, a sort on the right. Both are
+   drawn even when the list is empty — a control that appears once a list is
+   long enough is a control nobody knows exists until the day it turns up —
+   and they go quiet together from ONE variable rather than two literals. */
+.acct__listbar {
+  --acct-listbar-gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--acct-listbar-gap);
+}
+.acct__listbar-find {
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+}
+.acct__listbar-sort {
+  position: relative;
+  display: inline-flex;
+  /* STRETCH, not center, and the select fills it. The two controls on this bar
+     are a mirrored pair under AGENTS.md rule 6, so their heights must come from
+     one place rather than from two sets of paddings that happen to agree: the
+     search box and the select were measured at 38.25px and 38px, a quarter of a
+     pixel apart because a 13.5px/1.5 line box and a 13px normal one round
+     differently. Matched by construction here, so neither can drift when the
+     other's font moves. */
+  align-items: stretch;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.acct__listbar-sort[data-disabled] {
+  opacity: 0.55;
+}
+.acct__listbar-count {
+  margin-top: -8px;
+}
+
+/* A select that looks like this site rather than like Windows. The twin of
+   `.dev__select`, deliberately not an import of it: that file is the Developer
+   console's and is documented as internal, the same reason `format.ts` is a
+   copy. What the two must keep agreeing on is that neither ever ships the
+   native control (rule 5). */
+.acct__select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 32px 9px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  color: var(--text);
+  font: 400 13px var(--font-body);
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.acct__select:hover:not(:disabled) {
+  border-color: var(--border-hover);
+}
+.acct__select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.acct__select:disabled {
+  cursor: not-allowed;
+}
+.acct__listbar-sort .acct__select {
+  height: 100%;
+}
+/* The popup list is drawn by the OS. These two do land in Firefox and Chrome
+   on Windows, and they are what stops the list rendering white-on-white in
+   dark mode. */
+.acct__select option {
+  background-color: var(--bg2);
+  color: var(--text);
+}
+.acct__select-chevron {
+  position: absolute;
+  right: 11px;
+  /* The wrapper stretches, so the chevron has to say where it sits itself. */
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  pointer-events: none;
+  color: var(--muted);
+}
+
+/* Chrome paints its own clear button into a search input. It is unstyleable
+   and matches nothing else here, so it goes; clearing the box is Escape and
+   selecting the text, the same as every other field on this page. */
+.acct__input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ── a person, with a way in ──────────────────────────────────────────── */
+
+/* The star, the name and the standing chip sit on one line so the name keeps
+   its place whether or not the other two are drawn. */
+.acct__person-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Starring is a toggle, and it has to read as one BEFORE it is pressed:
+   an outline star that fills. It reserves its box in every friend card, so a
+   list where one person is starred is not a list where one row is 13px wider
+   than the others. */
+.acct__star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    var(--t-theme);
+}
+.acct__star:hover:not(:disabled) {
+  color: var(--warm);
+  border-color: color-mix(in srgb, var(--warm) 35%, transparent);
+}
+.acct__star[data-on] {
+  color: var(--warm);
+}
+.acct__star:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.acct__star:disabled {
+  cursor: not-allowed;
+}
+
+/* Where you stand with somebody, on their card. The two block words are
+   tinted for the reason the profile page tints them: a page that showed
+   nothing would leave the reader working out why an account has no bio and no
+   buttons. Every colour is a token, so both themes resolve. */
+.acct__person-chip[data-standing='friend'] {
+  color: var(--live-fg);
+  background-color: var(--live-bg);
+  border-color: var(--live-border);
+}
+.acct__person-chip[data-standing='blocked'],
+.acct__person-chip[data-standing='blocked_by'] {
+  color: var(--warm);
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+
+/* A ghost button and a link dressed as one must be the same height, and an
+   `<a>` has no button box. The mirrored half of the pair, taking its sizing
+   from the same rule rather than from a second set of numbers (rule 6). */
+.acct__person-acts a.acct__person-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acct__self-link,
+  .acct__star,
+  .acct__select {
+    transition: var(--t-theme);
   }
 }

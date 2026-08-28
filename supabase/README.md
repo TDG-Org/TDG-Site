@@ -225,6 +225,69 @@ keep working: DevFleet is a desktop app with no auto-update, so the only copies
 in the wild are ones somebody installed by hand, and the one account with badges
 was rebuilt in the same work block.
 
+## Looking somebody up, and reading their page
+
+`20260828230000_tdg_people_and_profiles.sql` is what turned a friends list into
+a social system. The site's half is [`src/people/`](../src/people/README.md) and
+the search box in [`src/account/`](../src/account/README.md); there is no edge
+function here either.
+
+Before it, the only door onto somebody else's account was `tdg_find_profile`:
+one exact handle, one row. That is enough to send a friend request to a person
+whose spelling you already know, and it is not enough to look anybody up, browse
+the project, or read what you found.
+
+| Verb | What it answers |
+| --- | --- |
+| `tdg_profile(uuid)` | One account's whole page in one round trip: identity, the standing, **every** `tdg_can_view` answer, and the counters, badges, apps and streaks those answers allow. |
+| `tdg_profile_at(text)` | The same, resolved from a handle — which is what a link carries and a person types. |
+| `tdg_search_profiles(text,int)` | The directory. |
+| `tdg_standing(uuid)` | Internal. `self` / `blocked` / `blocked_by` / `friend` / `they_asked` / `you_asked` / `none`. |
+| `tdg_set_favorite(uuid,bool)` | Star ONE friend. |
+
+**The visibility flags are returned as well as applied**, and that is the point
+of the shape. A column that is null could be null because there is nothing there
+or because you may not see it, and those are different sentences about a person
+— "no badges yet" and "they keep their badges to themselves". The page never has
+to guess, so it never guesses unkindly.
+
+**The one deliberate loosening is the block, and its bounds are exact.**
+`tdg_find_profile` answers nothing at all for an account that has blocked you:
+the handle reads as free, the page reads as absent, and there was no way to tell
+*no such person* from *that person blocked you*. So `tdg_profile_at` resolves
+whoever holds the handle and `tdg_profile` always returns the row, and the
+standing says `blocked_by` out loud. **What is on the page did not loosen by one
+column** — every content key still goes through `tdg_can_view`, which still
+refuses everything to somebody who has been blocked, so a blocked reader gets an
+identity, a sentence, and nothing else. The directory is one step tighter still:
+somebody who blocked you is reachable by exact handle and by link, and does not
+surface while you browse, because a block that turned up in a list of
+suggestions would be a block doing the opposite of its job.
+
+**Moderation is not a block and does not soften.** `tdg_is_findable` gates every
+one of these, so an account hidden or deleted by a developer answers exactly
+what a handle nobody holds answers, which is nothing.
+
+**The same file repairs three reads that were quietly wrong**, all with their
+signatures byte-for-byte unchanged so the `bea_*` forwarders keep compiling:
+
+- `tdg_my_friends` returned `favorite` **false** and `sort_order` **null** for
+  every row, hardcoded, while `tdg_set_favorites` and `tdg_set_friend_order`
+  went on writing the two columns those values come from. A star you press, that
+  saves, and that is gone when you come back — dead in every app reading this
+  for as long as the columns have existed, with nothing on any screen saying so.
+  It was proved on the live project rather than reasoned about: `@luke` had
+  three favourites stored and three rows answering `false`.
+- `tdg_incoming_requests` and `tdg_outgoing_requests` gated `bio` on
+  `profiles.public_profile` — the two-state MIRROR of the `profile` key, and
+  never the answer to "may this person read your bio". It leaked a `bio: self`
+  bio to anybody you had asked, and withheld a `bio: public` one from anybody
+  whose profile is friends-only.
+- `tdg_my_friends` showed a friend's bio with no check at all.
+
+All three ask `tdg_can_view` now, which is the one question they were always
+meant to ask.
+
 ## Deploying
 
 ```bash

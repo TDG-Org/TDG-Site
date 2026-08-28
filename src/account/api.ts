@@ -285,13 +285,62 @@ export async function usernameAvailable(name: string): Promise<boolean> {
  * `tdg_add_friend` and never an insert.
  */
 
+/**
+ * Where the caller stands with one account, in the server's own vocabulary.
+ *
+ * Written down here rather than derived from which list somebody turned up in,
+ * because the two surfaces that draw people no longer agree on that: the
+ * Account page reads four lists and knows the standing from the list, and a
+ * search result or a profile arrives on its own with no list behind it. One
+ * word from `tdg_standing` is what lets both draw the same buttons.
+ *
+ * `they_asked` / `you_asked` rather than incoming/outgoing: a card says a
+ * sentence about two people, and it should not have to work out which end of
+ * an arrow it is holding.
+ */
+export type Standing =
+  | 'self'
+  | 'friend'
+  | 'they_asked'
+  | 'you_asked'
+  | 'blocked'
+  | 'blocked_by'
+  | 'none'
+
+/** Anything the server says is a standing this build has not been taught falls
+ *  back to `none`, which draws as an account you may ask to be friends with —
+ *  and the server refuses if that is wrong. Rule 17: an unknown value still
+ *  gets a face. */
+export const asStanding = (value: string | null | undefined): Standing => {
+  const known: Standing[] = [
+    'self',
+    'friend',
+    'they_asked',
+    'you_asked',
+    'blocked',
+    'blocked_by',
+    'none',
+  ]
+  return known.includes(value as Standing) ? (value as Standing) : 'none'
+}
+
 export type Person = {
   userId: string
   username: string | null
   displayName: string | null
   bio: string | null
-  /** When THEY joined TDG, on the two lists that carry it. */
+  /** When THEY joined TDG, on the lists that carry it — null both when they
+   *  keep it to themselves and when the list has no column for it. */
   createdAt: string | null
+  /** Starred by you. Only ever true for a friend; the server enforces it. */
+  favorite: boolean
+  /** 1-based place in your own ordering, or null for a friend you have not
+   *  placed. Null sorts LAST, which is what an unplaced remainder wants. */
+  sortOrder: number | null
+  /** Set on a search result, where there is no list to infer it from. */
+  standing?: Standing
+  /** Set on a search result: may you open their page at all. */
+  visible?: boolean
 }
 
 type PersonRow = {
@@ -300,6 +349,10 @@ type PersonRow = {
   display_name: string | null
   bio?: string | null
   created_at?: string | null
+  favorite?: boolean | null
+  sort_order?: number | null
+  standing?: string | null
+  visible?: boolean | null
 }
 
 const toPerson = (row: PersonRow): Person => ({
@@ -308,6 +361,10 @@ const toPerson = (row: PersonRow): Person => ({
   displayName: row.display_name,
   bio: row.bio ?? null,
   createdAt: row.created_at ?? null,
+  favorite: row.favorite ?? false,
+  sortOrder: row.sort_order ?? null,
+  standing: row.standing === undefined ? undefined : asStanding(row.standing),
+  visible: row.visible ?? undefined,
 })
 
 export type SocialGraph = {
@@ -370,23 +427,49 @@ export async function socialAct(action: SocialAction, userId: string): Promise<v
 }
 
 /**
- * Ask to be somebody's friend, by the handle you know them as.
+ * Everybody on TDG, or everybody whose name has this in it.
  *
- * Two calls, because the verb takes an id and a person types a name — and the
- * lookup is `tdg_find_profile`, the same door the public profile page uses, so
- * an account that has closed itself off answers here exactly as it does there.
+ * **An empty query browses rather than refusing.** A directory that answers
+ * nothing until you have guessed part of a name is one nobody can explore, and
+ * "type something to search" is the emptiest of empty states. The server
+ * decides who is on that list — see `tdg_search_profiles` in
+ * `20260828230000_tdg_people_and_profiles.sql`: people whose profile you may
+ * open, anybody you already have a standing with, and an exact handle match —
+ * which is the door `tdg_find_profile` has always been, kept at its old width,
+ * so an account that keeps its page to itself is still reachable by somebody
+ * who knows how to spell its handle and can still be sent a request.
  *
  * **A miss and a hidden account are deliberately the same answer.** A
  * different sentence for the second would turn this box into a way to test
  * whether a handle exists, which is the property `src/auth/README.md` protects
  * everywhere else on this site.
+ *
+ * Null means the read failed, the rule the whole folder keeps. An empty ARRAY
+ * is a real and different answer — nobody matched — and the panel says so in
+ * different words.
  */
-export async function addFriendByUsername(name: string): Promise<void> {
-  const handle = name.trim().replace(/^@/, '')
-  if (!handle) throw new Error('Type a username first.')
-  const { data, error } = await supabase.rpc('tdg_find_profile', { uname: handle })
+export async function searchPeople(query: string, limit = 24): Promise<Person[] | null> {
+  const { data, error } = await supabase.rpc('tdg_search_profiles', {
+    p_q: query.trim(),
+    p_limit: limit,
+  })
+  if (error) return null
+  return ((data as PersonRow[] | null) ?? []).map(toPerson)
+}
+
+/**
+ * Star or unstar one friend.
+ *
+ * `tdg_set_favorite`, not `tdg_set_favorites`: the plural takes the WHOLE set,
+ * which is right for a screen that reorders a list and wrong for a star you
+ * press — two presses in flight together each send a set computed before the
+ * other landed, and the loser silently un-stars what the winner just starred.
+ *
+ * Throws like every other write here. A star that quietly did nothing would be
+ * indistinguishable from the one this project shipped for months, where the
+ * write landed and the READ threw the answer away.
+ */
+export async function setFavorite(userId: string, on: boolean): Promise<void> {
+  const { error } = await supabase.rpc('tdg_set_favorite', { target: userId, on_off: on })
   if (error) throw new Error(worded(error.message))
-  const found = (data as { user_id: string }[] | null)?.[0]
-  if (!found) throw new Error(`We couldn't find anybody with the username @${handle}.`)
-  await socialAct('add', found.user_id)
 }

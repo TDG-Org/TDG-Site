@@ -23,13 +23,15 @@ field never gets a frame where its version is the one on screen.
 
 ## What App.tsx does
 
-One `useRoute()` call decides which of five things is on screen:
+One `useRoute()` call decides which of seven things is on screen:
 
 | Route | What renders |
 | --- | --- |
 | `home` | Hero, Origin, Apps, Tools, Building, Faith, Outro — the one-page scroll |
 | `#/about` | `About`, lazily |
 | `#/store` · `#/store/<app>` | `Store`: its index of app cards, or one app's own page of packs |
+| `#/account` | `AccountPage`, lazily — **not gated**: a signed-out reader is told to sign in, on the page they asked for |
+| `#/user/<handle>` | `ProfilePage`, lazily, keyed on the handle so one profile to the next remounts |
 | `#/app/<slug>` | `AppPage`, lazily |
 | `#/dev` | `DevConsole`, lazily, **and only for a signed-in TDG developer** |
 
@@ -74,6 +76,7 @@ up to 452px of camera padding above the heading. See
 | `hooks/` | Reveal, tilt, parallax, hero parallax, offscreen pause | [→](hooks/README.md) |
 | `auth/` | Sign-in, the profile, session revocation, refusal wording | [→](auth/README.md) |
 | `account/` | The `#/account` page: the account's facts, its counters, and who may see each part of it | [→](account/README.md) |
+| `people/` | The `#/user/<handle>` page: somebody else's account, and what a block looks like when it is said out loud | [→](people/README.md) |
 | `badges/` | Global account badges, and the account count the footer prints | [→](badges/README.md) |
 | `feedback/` | Send Feedback, and the panel that delivers our replies | [→](feedback/README.md) |
 | `store/` | Which packs an account owns | [→](store/README.md) |

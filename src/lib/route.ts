@@ -56,6 +56,22 @@ export type Route =
    */
   | { kind: 'account' }
   /**
+   * Somebody ELSE'S account, by the handle they are known as.
+   *
+   * The variable part is a username rather than an id, because this is the one
+   * route on the site a person types, says out loud and pastes to a friend —
+   * and because a uuid in the address bar tells a reader nothing about where
+   * they are. It is behind a segment for rule 8's reason: a handle is chosen
+   * by whoever holds it, so `#/luke` would let the next username collide with
+   * a section anchor or a route added tomorrow.
+   *
+   * Ungated, exactly like `#/account` and for the same reason: it is linked
+   * from every friend card and every search result, and shared between people.
+   * A signed-out reader is told to sign in, in words, on the page they asked
+   * for. What they may then SEE is the server's decision, never this file's.
+   */
+  | { kind: 'profile'; username: string }
+  /**
    * The Store: its index of app cards, or one app's own page of packs. A link
    * that says "Veditor packs are in the Store" has named an app, and it opens
    * that app's packs rather than a page with somebody else's on it too.
@@ -71,6 +87,18 @@ export const DEV_HASH = '#/dev'
 
 /** The hash that opens one app's own page. */
 export const appHash = (slug: string) => `#/app/${slug}`
+
+/**
+ * The hash that opens one person's profile.
+ *
+ * A handle is `[a-z0-9_]` by the rule `src/auth/wording.ts` states and the
+ * unique index keeps, so there is nothing here that needs escaping — but it is
+ * encoded anyway, because the one thing this function must never do is build a
+ * hash out of a stored value it has not checked. A profile with no username has
+ * no address, and callers draw it as a card without a link rather than as a
+ * link to `#/user/`.
+ */
+export const userHash = (username: string) => `#/user/${encodeURIComponent(username)}`
 
 /**
  * The hash that opens one app's own page of packs, the way `appHash` opens one
@@ -96,6 +124,20 @@ const APP_SLUGS: string[] = [
 
 const HOME: Route = { kind: 'home' }
 
+/**
+ * `decodeURIComponent` THROWS on a lone `%` — `#/user/%` is a hash a reader can
+ * type and a link rot can produce, and an exception here would take the whole
+ * render down rather than landing on a page. A hash that cannot be decoded is
+ * a hash naming nobody, which is what the raw text already is.
+ */
+function safeDecode(part: string): string {
+  try {
+    return decodeURIComponent(part)
+  } catch {
+    return part
+  }
+}
+
 export function routeFromHash(hash: string): Route {
   const key = hash.replace(/^#/, '').replace(/^\/+/, '').toLowerCase()
   if (key === 'about') return { kind: 'about' }
@@ -109,6 +151,14 @@ export function routeFromHash(hash: string): Route {
   }
   if (key === 'account') return { kind: 'account' }
   if (key === 'dev') return { kind: 'dev' }
+  if (key.startsWith('user/')) {
+    // Lower-cased with the rest of the hash above, which is right: handles are
+    // compared case-insensitively everywhere on this project, so `#/user/Rose`
+    // and `#/user/rose` are one page rather than two. A bare `#/user/` has
+    // named nobody and falls through to home, the way `#/banana` does.
+    const username = safeDecode(key.slice(5)).replace(/^@/, '').trim()
+    return username ? { kind: 'profile', username } : HOME
+  }
   if (key.startsWith('app/')) {
     const slug = key.slice(4)
     // An app we do not have a page for behaves like `#/banana`: the home page,
@@ -125,6 +175,11 @@ const same = (a: Route, b: Route) => {
   // treating them as one would leave a reader who clicked the second link
   // looking at the first app's packs.
   if (a.kind === 'store' && b.kind === 'store') return a.app === b.app
+  // Two profiles are two people. Following a friend-of-a-friend from one
+  // profile to the next is a hashchange within one route kind, and treating
+  // them as the same route would leave the second reader looking at the first
+  // person's page.
+  if (a.kind === 'profile' && b.kind === 'profile') return a.username === b.username
   return true
 }
 

@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import {
-  addFriendByUsername,
   myAccountStats,
   myPrivacy,
   privacyAudiences,
   privacyGroups,
   saveProfile,
+  searchPeople,
+  setFavorite,
   setPrivacy,
   setPrivacyMany,
   socialAct,
   socialGraph,
+  type Person,
   type ProfilePatch,
   type SocialAction,
   type SocialGraph,
@@ -310,8 +312,8 @@ export type SocialPanel = {
   dismissProblem: () => void
   /** Do one thing to one person, then re-read. Never throws at the caller. */
   act: (action: SocialAction, userId: string) => void
-  /** Ask by handle. Resolves true when the request went; false when it did not. */
-  ask: (username: string) => Promise<boolean>
+  /** Star or unstar one friend, then re-read. Never throws at the caller. */
+  favorite: (userId: string, on: boolean) => void
   reload: () => void
 }
 
@@ -394,19 +396,29 @@ export function useSocial(): SocialPanel {
     [mark, read],
   )
 
-  const ask = useCallback(
-    async (username: string) => {
+  /*
+   * A star is the one press on this panel that does NOT move anybody between
+   * lists, so it could have been patched locally. It re-reads anyway, for the
+   * reason the whole panel does: `tdg_set_favorite` refuses to star somebody
+   * who is not a friend, and a locally-painted star over a refused write would
+   * be a lie that survives until the next reload. One round trip on a press
+   * somebody makes a handful of times is the cheaper half of that trade.
+   */
+  const favorite = useCallback(
+    (id: string, on: boolean) => {
       setProblem(null)
-      try {
-        await addFriendByUsername(username)
-        await read()
-        return true
-      } catch (err: unknown) {
-        if (live.current) setProblem(err instanceof Error ? err.message : String(err))
-        return false
-      }
+      mark(id, true)
+      void setFavorite(id, on)
+        .then(read)
+        .catch((err: unknown) => {
+          if (!live.current) return
+          setProblem(err instanceof Error ? err.message : String(err))
+        })
+        .finally(() => {
+          if (live.current) mark(id, false)
+        })
     },
-    [read],
+    [mark, read],
   )
 
   return {
@@ -415,8 +427,104 @@ export function useSocial(): SocialPanel {
     problem,
     dismissProblem: useCallback(() => setProblem(null), []),
     act,
-    ask,
+    favorite,
     reload: useCallback(() => void read(), [read]),
+  }
+}
+
+/* ── finding people ────────────────────────────────────────────────────────── */
+
+export type PeopleSearchState =
+  | { kind: 'idle' }
+  | { kind: 'checking' }
+  | { kind: 'error' }
+  | { kind: 'ok'; people: Person[] }
+
+export type PeopleSearch = {
+  query: string
+  setQuery: (value: string) => void
+  state: PeopleSearchState
+  /** True while a read is in flight over results already on screen. The list
+   *  is kept rather than blanked — a list that empties on every keystroke and
+   *  fills again reads as a page breaking — so this is how the panel says the
+   *  names under it are one query behind. */
+  busy: boolean
+  /** Read the current query again — what an action on a result needs, so the
+   *  card it was made on picks up its new standing. */
+  reload: () => void
+}
+
+/**
+ * The people directory: everybody on TDG, filtered by what has been typed.
+ *
+ * ## Debounced, not on submit
+ *
+ * A search box with a button beside it is a box you have to be told how to
+ * use. This one answers as you type, 220ms after you stop — long enough that
+ * "Rosemary" is one request rather than eight, short enough that it never
+ * feels like a form. The interval exemption in AGENTS.md rule 9 does not
+ * apply and is not needed: this is a `setTimeout` that fires once per pause
+ * and is cleared by the next keystroke, not a loop.
+ *
+ * ## An empty box is a browse, not an empty state
+ *
+ * It runs the read with an empty query and gets back the accounts this reader
+ * may open. Somebody who has never used this before should see people in it,
+ * not an instruction.
+ *
+ * ## `idle` exists so a shut section costs nothing
+ *
+ * The whole panel lives inside a fold. Until it is opened for the first time
+ * there is no reason to have asked the server anything, and `idle` is what
+ * lets the caller say when to start.
+ */
+export function usePeopleSearch(active: boolean): PeopleSearch {
+  const { status } = useAuth()
+  const [query, setQuery] = useState('')
+  const [state, setState] = useState<PeopleSearchState>({ kind: 'idle' })
+  const [busy, setBusy] = useState(false)
+  const [nonce, setNonce] = useState(0)
+
+  useEffect(() => {
+    if (!active || status !== 'signedIn') {
+      // Back to `idle`, deliberately: a reader who signs out must not be left
+      // holding somebody else's search results, and a section shut mid-read
+      // must not reopen onto an answer to a question that is no longer on
+      // screen.
+      setState({ kind: 'idle' })
+      setBusy(false)
+      return
+    }
+
+    let cancelled = false
+    // The first read has nothing to debounce — a fold opening should not wait
+    // a fifth of a second to start. Only typing does.
+    const wait = query.trim() === '' ? 0 : 220
+    setBusy(true)
+    const timer = window.setTimeout(() => {
+      // `checking` only when there is nothing on screen yet. After that the
+      // previous list stays and `busy` carries the news, because a list that
+      // empties on every keystroke and fills again reads as a page breaking.
+      setState((prev) => (prev.kind === 'ok' ? prev : { kind: 'checking' }))
+      void searchPeople(query).then((people) => {
+        if (cancelled) return
+        setBusy(false)
+        setState(people === null ? { kind: 'error' } : { kind: 'ok', people })
+      })
+    }, wait)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [active, status, query, nonce])
+
+  return {
+    query,
+    setQuery,
+    state,
+    busy,
+    reload: useCallback(() => setNonce((n) => n + 1), []),
   }
 }
 

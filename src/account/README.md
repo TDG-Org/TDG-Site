@@ -15,8 +15,9 @@ are the authority for every sentence below.
 | File | What it is |
 | --- | --- |
 | `types.ts` | `Audience`, `PrivacyControl`, `PrivacyGroup`, `AccountStats`. **No key, audience or app id is written down here.** |
-| `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph with its seven verbs. |
-| `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `useProfileEditor()`. |
+| `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph — its seven verbs, the people search and the favourite toggle. |
+| `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |
+| `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
 | `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. |
 | `format.ts` | `fmtDay`, `fmtRelative`, `prettyId`, `fmtCount`, `usernameFreeAt`. A deliberate twin of `src/dev/format.ts` — see below. |
 | `AccountFold.tsx` | `AccountFold` and `AccountSub`: one section of the page, open or shut. |
@@ -26,7 +27,8 @@ are the authority for every sentence below.
 ```ts
 const stats  = useAccountStats()   // 'checking' | 'signedOut' | 'error' | 'ok'
 const panel  = usePrivacy()        // the same four, plus saving / problem / setOne / setAll
-const social = useSocial()         // the same four, plus busy / problem / act / ask / reload
+const social = useSocial()         // the same four, plus busy / problem / act / favorite / reload
+const finder = usePeopleSearch(on) // 'idle' | 'checking' | 'error' | 'ok', plus query / busy
 const editor = useProfileEditor()  // one FieldState per editable field, plus set / commit / reset
 const name   = useAppNames()       // 'bea' -> 'Bible Educator'
 ```
@@ -122,10 +124,79 @@ look like actions and are guaranteed to be errors — the mistake Bible
 Educator's profile page made and fixed, and the reason its README spells the
 standings out one by one.
 
-**A miss and a hidden account are the same answer** when adding by username. A
+**A miss and a hidden account are the same answer** when looking somebody up. A
 different sentence for the second would turn that box into a way to test
 whether a handle exists, which is the property [`../auth/README.md`](../auth/README.md)
 protects everywhere else on this site.
+
+**The buttons themselves live in `standing.ts`, not here.** Two surfaces draw a
+person now — these four lists and [`../people/`](../people/README.md)'s profile
+page — and the moment each holds its own `switch` they start disagreeing: a
+Block on one and not the other, an Accept that says "Confirm" over here. One
+table, one set of buttons, wherever a person is drawn.
+
+## Finding people, and arranging the ones you know
+
+Three controls, and only one of them is a request.
+
+**Find People is a real read**, `tdg_search_profiles`, over every account on the
+project — this browser holds none of them. It answers as you type, 220ms after
+you stop, and **an empty box browses rather than refusing**: a directory that
+shows nothing until you have guessed part of a name is one nobody can explore,
+and "type something to search" is the emptiest of the empty states. The
+previous list stays on screen while a new one is in flight and a `Searching…`
+flag carries the news, because a list that empties on every keystroke and fills
+again reads as a page breaking.
+
+It **replaced the Add A Friend box**, which took one exact handle and answered
+only after the request had been sent. Everything that box did, this does — an
+exact handle still resolves, including one belonging to an account that keeps
+its page private, and including one belonging to an account that has blocked
+you — and it answers BEFORE the press. Two boxes doing one job on one panel
+would be the clutter, not the courtesy. `addFriendByUsername` went with it.
+
+It is its own component (`FindPeople`) for one reason: it needs to know whether
+the fold it lives in is OPEN, and `useSections` is only readable from inside the
+provider. A shut section that had already searched would be a request made for a
+panel nobody has looked at, on a page that already makes six on arrival.
+
+**The friends filter and sort are NOT reads.** `tdg_my_friends` answers
+alphabetically and hands over `favorite` and `sort_order` with every row, and
+this list is the handful of people somebody actually knows — a round trip per
+keystroke to reorder twenty names would be a request spent on arithmetic the
+browser already has the data for. Both controls are drawn even when there is
+nothing to arrange, and go quiet instead: a control that appears once a list is
+long enough is a control nobody knows exists until the day it turns up. The
+count above the list is the FILTERED one against the total, so a search that
+hides half the list says so rather than looking like half the friends went
+missing.
+
+**Favourites First is the default and degrades to A–Z.** Somebody who has never
+starred anybody sees exactly what the server sent; somebody who has sees the
+people they picked at the top. Every sort ends in the same alphabetical
+tiebreak, so a re-read after an action looks like nothing happened rather than
+like the list reshuffling itself.
+
+**The star was dead until 2026-08-28.** `tdg_my_friends` returned `favorite`
+false and `sort_order` null for every row — hardcoded — while
+`tdg_set_favorites` and `tdg_set_friend_order` went on writing the two columns
+those values are supposed to come from. A star you press, that saves, and that
+is gone when you come back. The read is fixed, and the press goes through
+`tdg_set_favorite`, a verb that names ONE person and one direction: the plural
+takes the whole set, and two presses in flight together each send a set computed
+before the other landed, so the loser silently un-stars what the winner just
+starred.
+
+## Your own profile, as everybody else sees it
+
+`View Your Public Profile` sits in the identity row under the page title, not
+under Privacy. The question it answers is *what do people see*, and the honest
+way to answer that is to show the actual page rather than describe it —
+[`../people/`](../people/README.md) draws it, and your own handle opens it.
+
+Without a handle there is no page, because a profile's address is
+`#/user/<handle>` and there is no other one. So the row says how to get one
+instead of leaving a gap where everybody else has a link.
 
 ## An app is called what it is called, never what the column says
 
