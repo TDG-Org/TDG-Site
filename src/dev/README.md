@@ -44,6 +44,66 @@ Which sections are open follows you between accounts. Expanding Makullveny and
 then clicking the next person shows Makullveny open again, which is what makes
 comparing two accounts bearable.
 
+### The order an account reads in, and the two folds
+
+Six sections, in the order you actually need them: who this is, what we have
+done to the account, then what they hold.
+
+| | |
+| --- | --- |
+| **Identity** | Who the account is. The read-only facts it was created with, the name, handle, bio and privacy we can change, and — in a fold of its own — **Permissions**. |
+| **Standing & Access** | Account management: suspend, hide, soft-delete, sign out everywhere, delete forever. It is what you reach for when somebody reports abuse, so it is near the top rather than under a screen of pack switches. |
+| **Badges** | The global marks, under the two panels owning the facts a derived badge follows. |
+| **TDG Core Subscription** | The one tier every TDG app can gate on, directly above the apps that gate on it. |
+| **Apps** | One fold holding Makullveny and every pack Store, each with its own fold inside. |
+| **This Account's History** | Every payment, grant and moderation action, for this account. |
+
+**At A Glance is not its own panel any more.** It was eight read-only rows about
+the same account Identity edits, sitting immediately above it, so reading a join
+date before editing a username meant two sections open to look at one person.
+
+**The apps are one fold rather than seven panels.** Makullveny plus one Store
+per app the console discovers — a list that grows by one every time a product
+ships — used to sit in the middle of the account and push Standing & Access
+below a screen and a half of pack switches. Shut, the run of sections is short
+enough to read as an index. Open, every app is inside it exactly as it was, and
+Expand All still reaches all of them, because `sections.tsx` holds one open set
+for the whole page rather than a flag per panel.
+
+**A parent fold cannot hide a matching child.** A `Panel` that does not match
+the page search removes itself, so the Apps fold counts its children's own
+haystacks and reports that as its `matchCount`: searching a pack id opens the
+fold, prints how many apps inside it matched, and shows only those.
+
+### Developer asks before it moves
+
+Developer grants full read and write over every account, purchase and
+subscription in TDG Core, and it used to be one click in the same run of
+switches as Public Friend List. It now opens a confirm in place — the same shape
+rule 11 of `AGENTS.md` sets for the Store's money presses: in the panel, not in
+a second dialog over the first. The switch keeps showing what is TRUE while the
+question is open, because a switch that moves on the ask has already told you it
+did something.
+
+It asks in **both** directions. Granting hands somebody the console; revoking
+takes a working account away from one of us mid-session.
+
+**Two accounts skip it**, listed as `NO_CONFIRM_ACCOUNTS` in
+`AccountDetail.tsx`: the developer test accounts we flip on purpose while
+working on this page. A confirm on the switch you are toggling twenty times is
+one you learn to click through without reading, which is worse than not having
+it. It is a convenience and never a permission — the server refuses a
+non-developer either way, and the two OWNER accounts are held by a trigger this
+list cannot reach.
+
+### The header carries the id
+
+The account's uuid is in the header beside the name, handle and email, with a
+Copy button. It is what every other tool on this project asks for — a SQL query,
+a Stripe customer, a log line, a message to whoever is looking at the same
+account — and having to open a panel to get it made the one thing you always
+need the one thing you had to go and find.
+
 ## Which build you are looking at
 
 The header prints one quiet line under the lede: **`Build <version> · <when it
@@ -514,7 +574,7 @@ reference implementation of the startup reply panel the other apps copy.
 | File | What it is |
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the five tabs, the roster, and the one action runner every write goes through. |
-| `AccountDetail.tsx` | The panels for one account — eight fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
+| `AccountDetail.tsx` | The panels for one account, in six top-level sections. Two of them nest: Permissions sits inside Identity, and Makullveny plus a Store panel per app sit inside Apps. Each states what it is and names the table it writes. |
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |

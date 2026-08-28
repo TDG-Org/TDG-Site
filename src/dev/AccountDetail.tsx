@@ -11,6 +11,7 @@ import { GRANT_SHAPES, grantArgsFor, holdingOf, holdingsFor, type HoldingId } fr
 import {
   Button,
   Combo,
+  CopyButton,
   Fact,
   Field,
   HoldingTile,
@@ -35,6 +36,28 @@ import {
   untilFromHours,
 } from './format'
 import { Highlight, hay, matchesTerms, useSearch } from './search'
+
+/**
+ * The accounts whose Developer switch does NOT stop to ask.
+ *
+ * Granting or removing Developer opens a confirm in place, because it is the
+ * one switch on this page that hands somebody the whole console — every
+ * account, every purchase, every subscription in TDG Core — and it is a single
+ * click away from the switch above it. These two are the developer test
+ * accounts we flip on purpose while working on this page, and a confirm on the
+ * thing you are deliberately toggling twenty times is a confirm you learn to
+ * click through without reading, which is worse than not having one.
+ *
+ * **It is a convenience, not a permission.** Nothing here decides anything: the
+ * server refuses a non-developer either way, and the two OWNER accounts are
+ * protected by a trigger on `public.profiles` that this list has no bearing on
+ * — see `useProtectedAccounts` below and
+ * supabase/migrations/20260822015840_protected_developer_accounts.sql.
+ */
+const NO_CONFIRM_ACCOUNTS: ReadonlySet<string> = new Set([
+  '95d7b353-6a23-4c8e-82e4-e029e7a4a183',
+  'd0ff8af3-6fe2-4cb6-8de1-c537357e7e64',
+])
 
 /** What DevConsole hands every panel: run one write, then re-read the account. */
 export type Run = (key: string, okMessage: string, fn: () => Promise<unknown>) => void
@@ -104,6 +127,20 @@ export function AccountDetail(props: Props) {
               <span className="dev__handle dev__handle--none">no username</span>
             )}
             <span className="dev__detail-email">{account.email ?? 'no email'}</span>
+            {/* The id, in full, in the header rather than only inside a panel.
+                It is what every other tool on this project asks for — a SQL
+                query, a Stripe customer, a log line, a message to whoever is
+                looking at the same account — and having to open At A Glance to
+                copy it made the one thing you always need the one thing you
+                had to go and find. */}
+            <span className="dev__detail-id">
+              <span className="dev__sr-only">User id: </span>
+              <code className="dev__code">{account.user_id}</code>
+              <CopyButton
+                value={account.user_id}
+                label={`Copy the user id for ${nameOf(account)}`}
+              />
+            </span>
           </div>
         </div>
         <div className="dev__detail-tags">
@@ -118,19 +155,24 @@ export function AccountDetail(props: Props) {
         <strong>{standing.label}:</strong> {standing.meaning}
       </p>
 
-      <WhoPanel account={account} />
-      <IdentityPanel {...props} />
-      <PermissionsPanel {...props} isSelf={isSelf} isProtected={isProtected} />
-      <CorePanel {...props} />
-      {/* Directly under the two panels that own the facts today's derived
-          badges follow, so "change the fact and the badge follows" points
-          upward at something the reader can already see. */}
-      <BadgesPanel {...props} />
-      <MakullvenyPanel {...props} />
-      {stores.map((app) => (
-        <StorePanel key={app.id} {...props} app={app} />
-      ))}
+      {/* ── the order, and why it is this one ─────────────────────────────
+          Who they are, then what we have done to the account, then what they
+          hold. The apps used to be seven panels stacked in the middle of that
+          run — Makullveny plus one Store each — which pushed Standing & Access,
+          the panel you reach for when somebody reports abuse, below a screen of
+          pack switches. Now they are one fold: shut, the run of panels is short
+          enough to read as an index; open, every app is inside it with its own
+          fold, exactly as it was. */}
+      <IdentityPanel {...props} isSelf={isSelf} isProtected={isProtected} />
       <StandingPanel {...props} isSelf={isSelf} isProtected={isProtected} />
+      {/* Under the panels that own the two facts a DERIVED badge follows —
+          Developer is `profiles.is_admin`, which now lives in the Permissions
+          fold inside Identity above, and Subscriber is a paid `core_tier`,
+          which is the panel directly below. So "change the fact and the badge
+          follows" still points at something the reader can see from here. */}
+      <BadgesPanel {...props} />
+      <CorePanel {...props} />
+      <AppsPanel {...props} stores={stores} />
       <HistoryPanel {...props} />
     </div>
   )
@@ -138,61 +180,35 @@ export function AccountDetail(props: Props) {
 
 /* ── who this is ───────────────────────────────────────────────────────── */
 
-function WhoPanel({ account: a }: { account: DevAccount }) {
-  return (
-    <Panel
-      title="At A Glance"
-      what="Read-only facts about the account itself. Nothing here can be edited from this console: the email and the password belong to GoTrue, and the id is fixed for life."
-      writes="auth.users + public.profiles"
-      terms={[a.user_id, a.email, a.recovery_email, a.username, a.display_name]}
-      right={
-        a.email_confirmed_at ? (
-          <Tag tone="ok">CONFIRMED</Tag>
-        ) : (
-          <Tag tone="warn">UNCONFIRMED</Tag>
-        )
-      }
-    >
-      <div className="dev__facts">
-        <Fact label="User id" value={a.user_id} copy={a.user_id} mono />
-        <Fact
-          label="Email"
-          value={
-            <>
-              {a.email ?? 'none'}{' '}
-              {a.email_confirmed_at ? (
-                <Tag tone="ok">CONFIRMED</Tag>
-              ) : (
-                <Tag tone="warn">UNCONFIRMED</Tag>
-              )}
-            </>
-          }
-          copy={a.email ?? undefined}
-        />
-        <Fact label="Recovery email" value={a.recovery_email ?? 'none'} />
-        <Fact label="Joined" value={`${fmtDate(a.created_at)} · ${fmtRelative(a.created_at)}`} />
-        <Fact
-          label="Last signed in"
-          value={
-            a.last_sign_in_at
-              ? `${fmtDate(a.last_sign_in_at)} · ${fmtRelative(a.last_sign_in_at)}`
-              : 'never'
-          }
-        />
-        <Fact label="Profile last changed" value={fmtRelative(a.updated_at)} />
-        <Fact label="Bible Educator friends" value={String(a.friend_count)} />
-        <Fact
-          label="Bible Educator streak"
-          value={`${a.streak_current} now · ${a.streak_longest} best · ${a.streak_total} days total`}
-        />
-      </div>
-    </Panel>
-  )
-}
-
 /* ── identity ──────────────────────────────────────────────────────────── */
 
-function IdentityPanel({ account: a, run, busy }: Props) {
+/**
+ * Who this account is: the facts about it, the fields we can change, and — in a
+ * fold of its own — the one permission TDG has.
+ *
+ * ## Why At A Glance is not a panel any more
+ *
+ * It was eight read-only rows about the same account this panel edits, sitting
+ * immediately above it, and opening one to read a join date before editing a
+ * username meant two sections open to look at one person. They are one panel
+ * now: the facts first, then the fields that change them.
+ *
+ * ## Why Developer is a fold inside it rather than a switch in it
+ *
+ * It belongs to identity — it is what this account IS across every TDG app —
+ * but it is also the single most dangerous control on the page, and a switch
+ * sitting in the same run as Display Name is a switch somebody hits on the way
+ * past. Shut, it says which of the three standings the account has and nothing
+ * else. Open, it asks before it moves. See `NO_CONFIRM_ACCOUNTS` for the two
+ * accounts that skip the asking and why.
+ */
+function IdentityPanel({
+  account: a,
+  run,
+  busy,
+  isSelf,
+  isProtected,
+}: Props & { isSelf: boolean; isProtected: boolean }) {
   const [displayName, setDisplayName] = useState(a.display_name ?? '')
   const [username, setUsername] = useState(a.username ?? '')
   const [bio, setBio] = useState(a.bio ?? '')
@@ -233,13 +249,58 @@ function IdentityPanel({ account: a, run, busy }: Props) {
   return (
     <Panel
       title="Identity"
-      what="The name and handle this account shows under, everywhere in TDG. Leave a field blank to clear it."
-      writes="public.profiles"
-      terms={[a.display_name, a.username, a.bio, 'name handle privacy']}
+      what="Who this account is: the facts it was created with, the name and handle it shows under everywhere in TDG, and its Developer permission. Leave a field blank to clear it."
+      writes="public.profiles + auth.users"
+      terms={[
+        a.user_id,
+        a.email,
+        a.recovery_email,
+        a.display_name,
+        a.username,
+        a.bio,
+        a.is_admin ? 'developer admin' : 'standard',
+        'name handle privacy permission role',
+      ]}
       right={
         dirty ? <Tag tone="warn">UNSAVED</Tag> : <span className="dev__panel-quiet">Saved</span>
       }
     >
+      <div className="dev__facts">
+        <Fact label="User id" value={a.user_id} copy={a.user_id} mono />
+        <Fact
+          label="Email"
+          value={
+            <>
+              {a.email ?? 'none'}{' '}
+              {a.email_confirmed_at ? (
+                <Tag tone="ok">CONFIRMED</Tag>
+              ) : (
+                <Tag tone="warn">UNCONFIRMED</Tag>
+              )}
+            </>
+          }
+          copy={a.email ?? undefined}
+        />
+        <Fact label="Recovery email" value={a.recovery_email ?? 'none'} />
+        <Fact label="Joined" value={`${fmtDate(a.created_at)} · ${fmtRelative(a.created_at)}`} />
+        <Fact
+          label="Last signed in"
+          value={
+            a.last_sign_in_at
+              ? `${fmtDate(a.last_sign_in_at)} · ${fmtRelative(a.last_sign_in_at)}`
+              : 'never'
+          }
+        />
+        <Fact label="Profile last changed" value={fmtRelative(a.updated_at)} />
+        <Fact label="Bible Educator friends" value={String(a.friend_count)} />
+        <Fact
+          label="Bible Educator streak"
+          value={`${a.streak_current} now · ${a.streak_longest} best · ${a.streak_total} days total`}
+        />
+      </div>
+
+      <hr className="dev__rule" />
+
       <div className="dev__grid2">
         <Field label="Display Name" htmlFor="dev-dn" hint="What people see. Any characters, up to 60.">
           <TextInput id="dev-dn" value={displayName} onChange={setDisplayName} maxLength={60} />
@@ -275,21 +336,69 @@ function IdentityPanel({ account: a, run, busy }: Props) {
           Save Identity
         </Button>
       </div>
+
+      <PermissionsPanel a={a} run={run} busy={busy} isSelf={isSelf} isProtected={isProtected} />
     </Panel>
   )
 }
 
 /* ── permissions ───────────────────────────────────────────────────────── */
 
+/**
+ * The one permission TDG has, in a fold of its own inside Identity.
+ *
+ * ## Why it asks
+ *
+ * Developer grants full read and write over every account, purchase and
+ * subscription in TDG Core, and until this it was a single click with no step
+ * in between — in the same run of switches as Public Friend List. Rule 11 of
+ * AGENTS.md already says the Store's two money presses ask first, in the panel,
+ * in place rather than in a second dialog over the first; this is the same
+ * press with more behind it, so it asks the same way.
+ *
+ * It asks in BOTH directions on purpose. Granting is the one that hands the
+ * console to somebody; revoking is the one that takes a working account away
+ * from one of us mid-session. Neither is a thing to do by brushing past it.
+ *
+ * ## Why two accounts skip it
+ *
+ * `NO_CONFIRM_ACCOUNTS` — the two developer test accounts we flip on purpose
+ * while working on this page. A confirm on the switch you are deliberately
+ * toggling twenty times is one you learn to click through without reading,
+ * which is worse than not having it at all. It is a convenience and never a
+ * permission: the server refuses a non-developer either way, and the two OWNER
+ * accounts are held by a trigger this list cannot reach.
+ */
 function PermissionsPanel({
-  account: a,
+  a,
   run,
   busy,
   isSelf,
   isProtected,
-}: Props & { isSelf: boolean; isProtected: boolean }) {
+}: {
+  a: DevAccount
+  run: Run
+  busy: string | null
+  isSelf: boolean
+  isProtected: boolean
+}) {
+  /** The value somebody asked for and has not confirmed yet. */
+  const [pending, setPending] = useState<boolean | null>(null)
+  const locked = isSelf || isProtected
+  const skipsConfirm = NO_CONFIRM_ACCOUNTS.has(a.user_id)
+
+  // A different account arriving under an open confirm would put the question
+  // about one person over the answer for another.
+  useEffect(() => setPending(null), [a.user_id, a.is_admin])
+
+  const apply = (next: boolean) =>
+    run('developer', next ? 'Developer granted.' : 'Developer revoked.', () =>
+      api.setDeveloper(a.user_id, next),
+    )
+
   return (
     <Panel
+      id="permissions"
       title="Permissions"
       what="Developer is the only permission TDG has. It unlocks this console and Bible Educator's moderation tools, for every TDG app at once."
       writes="public.profiles.is_admin"
@@ -307,25 +416,58 @@ function PermissionsPanel({
     >
       <Switch
         tone="danger"
+        // The switch keeps showing what is TRUE while a confirm is open. A
+        // switch that moves on the ask and moves back on Cancel is a switch
+        // that has already told you it did something.
         checked={a.is_admin}
-        disabled={isSelf || isProtected}
+        disabled={locked || pending !== null}
         busy={busy === 'developer'}
-        onChange={(next) =>
-          run(
-            'developer',
-            next ? 'Developer granted.' : 'Developer revoked.',
-            () => api.setDeveloper(a.user_id, next),
-          )
-        }
+        onChange={(next) => (skipsConfirm ? apply(next) : setPending(next))}
         label="Developer"
         hint={
           isProtected
             ? 'This is one of the two TDG owner accounts. Its Developer permission is fixed in the database and cannot be removed from here, or from anywhere else the apps can reach. Changing that list takes a migration.'
             : isSelf
               ? "You can't change your own. That rule is what stops the last developer locking everyone out, so ask the other one to do it."
-              : 'Grants full read and write over every account, purchase and subscription in TDG Core. Give it to nobody who is not one of us.'
+              : skipsConfirm
+                ? 'Grants full read and write over every account, purchase and subscription in TDG Core. This is one of the two developer test accounts, so it takes effect on the press with no confirm — see NO_CONFIRM_ACCOUNTS in this file.'
+                : 'Grants full read and write over every account, purchase and subscription in TDG Core. Give it to nobody who is not one of us. It will ask before it moves.'
         }
       />
+
+      {pending !== null && (
+        <div className="dev__confirm">
+          <p className="dev__confirm-copy">
+            {pending ? (
+              <>
+                Make <strong>{nameOf(a)}</strong> a TDG developer? They get this console and
+                everything in it: every account, every purchase, every subscription across Bible
+                Educator, Makullveny, TDG Veditor and DevFleet, and Bible Educator&apos;s
+                moderation tools.
+              </>
+            ) : (
+              <>
+                Take Developer away from <strong>{nameOf(a)}</strong>? They lose this console and
+                every moderation tool immediately, in every TDG app, including any they are in the
+                middle of using.
+              </>
+            )}
+          </p>
+          <div className="dev__row">
+            <Button
+              variant={pending ? 'danger' : 'primary'}
+              busy={busy === 'developer'}
+              onClick={() => {
+                apply(pending)
+                setPending(null)
+              }}
+            >
+              {pending ? 'Grant Developer' : 'Remove Developer'}
+            </Button>
+            <Button onClick={() => setPending(null)}>Cancel</Button>
+          </div>
+        </div>
+      )}
     </Panel>
   )
 }
@@ -727,6 +869,95 @@ function BadgesPanel({ account: a, badges, badgesState, badgesError, run, busy }
           </>
         )}
       </div>
+    </Panel>
+  )
+}
+
+/* ── every app, in one fold ────────────────────────────────────────────── */
+
+/**
+ * What this account holds in each TDG app, behind one heading.
+ *
+ * ## Why it is a fold and not seven panels
+ *
+ * It used to be seven: Makullveny, then one Store panel per app the console
+ * discovered, and the list grows by one every time a product ships. They sat in
+ * the middle of the account, so Standing & Access — the panel you reach for
+ * when somebody reports abuse — was a screen and a half of pack switches below
+ * the fold. Shut, this is one row. Open, every app is inside it with its own
+ * fold, exactly as it was, and Expand All still reaches all of them because
+ * `sections.tsx` holds one open set for the whole page rather than a flag per
+ * panel.
+ *
+ * ## The search still finds what is inside it
+ *
+ * A `Panel` that does not match the query removes itself, and a parent removing
+ * itself would take matching children with it — so this one counts its
+ * children's own haystacks and reports that as `matchCount`. A search for a
+ * pack id opens this fold and prints how many apps inside it matched, which is
+ * also the answer to "is it worth opening".
+ *
+ * ## What a shut fold says
+ *
+ * How many of the apps this account has anything in. Never a bare zero while an
+ * answer is still missing: an app whose holdings did not come back makes the
+ * tag say so instead, for the same reason `StorePanel` refuses to draw an
+ * unreported holding as "Not owned".
+ */
+function AppsPanel({ stores, ...props }: Props & { stores: DevStoreApp[] }) {
+  const a = props.account
+  const search = useSearch()
+
+  const makHay = hay(
+    'makullveny',
+    a.mak_tier,
+    a.mak_status,
+    a.mak_themes,
+    a.mak_stripe_customer_id,
+    a.mak_candle_purchased_at ? 'candle bundle' : '',
+    a.mak_support_badge_at ? 'supporter badge' : '',
+    'theme market plan',
+  )
+  const storeHays = stores.map((app) =>
+    hay(
+      app.id,
+      app.title,
+      ...app.packs.map((pk) => `${pk.id} ${pk.name}`),
+      'pack store grant revoke',
+    ),
+  )
+
+  const matchCount = search.active
+    ? [makHay, ...storeHays].filter((h) => search.matches(h)).length
+    : undefined
+
+  const holdsMak =
+    a.mak_tier !== 'free' || a.mak_candle_purchased_at != null || a.mak_themes.length > 0
+  const held = stores.filter((app) => app.ownedCount > 0).length + (holdsMak ? 1 : 0)
+  const total = stores.length + 1
+  const anyUnknown = stores.some((app) => app.serverState !== 'absent' && !app.holdingsKnown)
+
+  return (
+    <Panel
+      id="apps"
+      title="Apps"
+      what="What this account holds in each TDG app: Makullveny's plan, bundle and themes, and every pack Store. Each app opens on its own inside."
+      matchCount={matchCount}
+      right={
+        anyUnknown ? (
+          // A shut fold must not summarise a missing answer as a number.
+          <Tag tone="warn">NO ANSWER</Tag>
+        ) : (
+          <Tag tone={held ? 'ok' : 'plain'}>
+            {held} OF {total} APPS
+          </Tag>
+        )
+      }
+    >
+      <MakullvenyPanel {...props} />
+      {stores.map((app) => (
+        <StorePanel key={app.id} {...props} app={app} />
+      ))}
     </Panel>
   )
 }

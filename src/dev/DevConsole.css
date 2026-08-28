@@ -425,6 +425,22 @@
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+/* The account's id, in the header rather than only inside a panel. It is the
+   thing every other tool asks for — a SQL query, a Stripe customer, a log line
+   — so it sits with the name, on its own row below the handle and the email
+   because a 36-character uuid held on the same line as an email address wraps
+   both of them at any width worth using. */
+.dev__detail-id {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.dev__detail-id .dev__code {
+  overflow-wrap: anywhere;
+}
+
 .dev__detail-tags {
   display: flex;
   flex-wrap: wrap;
@@ -480,6 +496,21 @@
    one, which is what keeps it reading as one step off neutral in both. */
 .dev__panel[data-tone='danger'] {
   border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
+}
+
+/* ── a panel inside a panel ───────────────────────────────────────────────
+   Two folds nest now: every app lives inside the Apps fold, and Developer
+   lives inside Identity. A nested panel has to read as CONTENTS of the one it
+   is in rather than as a sibling that happens to be indented, and the only
+   thing separating them at the same surface and the same border was 15px of
+   gap — which at a glance is the same 15px between two top-level panels.
+
+   So a child sits on the page's own --bg2 instead of the panel surface it is
+   painted on, which puts it a step BACK from its parent rather than a step
+   forward. Nothing else changes: same radius, same border, same header, same
+   region animation, so opening one is the same gesture at either depth.       */
+.dev__panel-body > .dev__panel {
+  background-color: var(--bg2);
 }
 
 /* The whole header row is the toggle. A 12px chevron is a 12px target, and
