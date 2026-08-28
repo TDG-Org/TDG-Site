@@ -10,7 +10,7 @@ deletes it in a dashboard.
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
 | `functions/tdg-site-deploys/index.ts` | Answers which TDG-Org GitHub Pages sites exist — `live`, `down` or `absent`, in one batched response — for `src/live/`'s deploy discovery. Probed here rather than in the browser because every browser-side miss is a 404 printed in the console, and answered three ways rather than two because of `tdg_site_deploys_seen`: the function remembers every site it has seen answering, which is how a site that was taken DOWN gets `Temporarily unavailable` instead of being un-announced as `Coming soon`. Deployed with `--no-verify-jwt`: the caller is an anonymous visitor and the answer is whether a public website exists. A caller sends repo names only — never a URL — and the function probes only `https://tdg-org.github.io/`. |
-| `migrations/` | SQL already applied to the shared project. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, `tdg_billing_subscription`, and the site-content overlay below. |
+| `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, `tdg_billing_subscription`, and the site-content overlay below. |
 
 ## Why the site cannot do this itself
 

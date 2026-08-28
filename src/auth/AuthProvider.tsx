@@ -69,6 +69,35 @@ async function callAccountFn(
   }
 }
 
+/**
+ * Username-or-email + password → a session this tab owns.
+ *
+ * At module scope, and not a line inside the context object, because TWO
+ * things need it: the Login tab, and `signUp` finishing what it started. A
+ * second copy inside sign-up would be a second set of refusals for one
+ * situation, which is the exact thing the endpoint exists to prevent — see the
+ * note inside `signIn`.
+ */
+async function passwordSignIn(identifier: string, password: string): Promise<{ error: string | null }> {
+  const answer = await callAccountFn({ action: 'login', identifier, password })
+  if (!answer.ok) return { error: answer.error }
+
+  const session = answer.data.session as
+    | { access_token?: string; refresh_token?: string }
+    | undefined
+  if (!session?.access_token || !session.refresh_token) {
+    return { error: authMessage('server_error') }
+  }
+  // Adopting the session through supabase-js is what puts it in localStorage
+  // and starts the refresh timer. The session is not "signed in" to this tab
+  // until the library owns it.
+  const { error } = await supabase.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  })
+  return { error: error ? authMessage(error.code, error.message) : null }
+}
+
 export type Profile = {
   user_id: string
   username: string | null
@@ -141,7 +170,17 @@ type AuthContextValue = {
    * request lost the network.
    */
   refreshProfile: () => Promise<void>
-  signUp: (input: SignUpInput) => Promise<{ error: string | null; needsEmailConfirm: boolean }>
+  /**
+   * Creates the account AND signs it in.
+   *
+   * Two failures, deliberately kept apart, because they need opposite things
+   * said about them. `error` means **nothing was created** and the form should
+   * be tried again. `pending` means the account is REAL and this browser is
+   * not signed in to it — the sentence says why — and treating that as an
+   * error would send somebody to sign up a second time on an address that is
+   * now taken. Both null is the ordinary answer: signed in, close the modal.
+   */
+  signUp: (input: SignUpInput) => Promise<{ error: string | null; pending: string | null }>
   signIn: (input: SignInInput) => Promise<{ error: string | null }>
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
   /** Takes a username or an email, like signing in does. */
@@ -290,28 +329,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           options: { data: { username, display_name: displayName || null } },
         })
         if (error) {
-          return { error: authMessage(error.code, error.message), needsEmailConfirm: false }
+          return { error: authMessage(error.code, error.message), pending: null }
         }
         /*
          * A duplicate email does NOT come back as an error.
          *
-         * With confirmation required, GoTrue answers a sign-up for an address it
+         * While the project's `mailer_autoconfirm` is off — it is; ask
+         * `/auth/v1/settings` — GoTrue answers a sign-up for an address it
          * already knows with a success shaped exactly like a new one: a user
-         * object and no session, so that a stranger cannot use the form to learn
-         * who has an account here. The one thing that differs is the identities array,
-         * which is empty in that case and holds the new identity otherwise.
+         * object and no session, so that a stranger cannot use the form to
+         * learn who has an account here. The one thing that differs is the
+         * identities array, which is empty in that case and holds the new
+         * identity otherwise.
          *
-         * Left alone, the form then says "check your email for a confirmation
-         * link" to somebody who already has an account and will never receive
-         * one. Telling them plainly costs the anti-enumeration property, which
-         * is a trade worth making on a site this size: the alternative is
-         * sending a real person to wait for a message that is not coming.
+         * Left alone, that success reaches somebody who already has an account
+         * as a sign-up that appeared to work and left them signed out, with
+         * nothing on the page saying why. Telling them plainly costs the
+         * anti-enumeration property, which is a trade worth making on a site
+         * this size.
+         *
+         * This arm survives the switch being turned off, rather than becoming
+         * the wrong answer: GoTrue then refuses a duplicate outright with
+         * `user_already_exists`, which is the arm above, and `wording.ts`
+         * answers both codes with the same sentence.
          */
         const identities = data.user?.identities
         if (Array.isArray(identities) && identities.length === 0) {
-          return { error: authMessage('email_exists'), needsEmailConfirm: false }
+          return { error: authMessage('email_exists'), pending: null }
         }
-        return { error: null, needsEmailConfirm: !data.session }
+        if (data.session) return { error: null, pending: null }
+
+        /*
+         * No session came back, so finish the job here rather than sending
+         * somebody to their inbox.
+         *
+         * Creating an account signs you in. That is the rule for every TDG
+         * app, and tdg-core keeps it in the place all of them share:
+         * `on_auth_user_confirm_email`, a BEFORE INSERT trigger on
+         * `auth.users` that stamps `email_confirmed_at` as the row is
+         * written, so GoTrue finds the account already confirmed, sends no
+         * confirmation email, and hands back a session. Measured on the live
+         * project, not assumed — the migration header records exactly what was
+         * driven. So this branch does not run today.
+         *
+         * It is here because the rule lives in a database this repo does not
+         * own. Drop that trigger and GoTrue goes back to answering a sign-up
+         * with a user and no session; the account still EXISTS and its
+         * password still works, so one password grant is the difference
+         * between somebody being signed in and somebody being told to go and
+         * find an email. Cheap insurance for the exact wording of the ask.
+         */
+        const { error: signInError } = await passwordSignIn(email, password)
+        if (!signInError) return { error: null, pending: null }
+
+        /*
+         * Created, and we could not sign them in. NOT an `error`: the account
+         * is real, and saying otherwise would send somebody to make a second
+         * one on an address that is now taken. The endpoint's own sentence is
+         * carried through rather than replaced, because the two ways this can
+         * happen need opposite things done about them — an unconfirmed email
+         * means go and click a link, a lost connection means press it again —
+         * and one sentence covering both would be right about neither.
+         */
+        return {
+          error: null,
+          pending: `Your account is ready, but we couldn't sign you in just now. ${signInError}`,
+        }
       },
 
       async signIn({ identifier, password }) {
@@ -319,25 +402,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          * Always through the endpoint, even when the identifier is obviously an
          * email. Two paths would mean two sets of refusals for one situation,
          * and the day they disagree is the day somebody is told their password
-         * is wrong because they typed a name instead of an address.
+         * is wrong because they typed a name instead of an address. `signUp`
+         * reaches the same helper for that reason.
          */
-        const answer = await callAccountFn({ action: 'login', identifier, password })
-        if (!answer.ok) return { error: answer.error }
-
-        const session = answer.data.session as
-          | { access_token?: string; refresh_token?: string }
-          | undefined
-        if (!session?.access_token || !session.refresh_token) {
-          return { error: authMessage('server_error') }
-        }
-        // Adopting the session through supabase-js is what puts it in
-        // localStorage and starts the refresh timer. The session is not
-        // "signed in" to this tab until the library owns it.
-        const { error } = await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        })
-        return { error: error ? authMessage(error.code, error.message) : null }
+        return passwordSignIn(identifier, password)
       },
 
       async signInWithOAuth(provider) {

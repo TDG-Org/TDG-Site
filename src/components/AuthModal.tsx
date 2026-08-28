@@ -515,7 +515,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       return
     }
 
-    const { error, needsEmailConfirm } = await signUp({
+    const { error, pending } = await signUp({
       email,
       password,
       username: normalized,
@@ -526,11 +526,25 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setFormError(error)
       return
     }
-    if (needsEmailConfirm) {
-      setNotice(`Check ${email} for a confirmation link to finish creating your account.`)
-    } else {
-      onClose()
+    if (pending) {
+      /*
+       * The account exists and this browser is not signed in to it. Not
+       * reachable while tdg-core's `on_auth_user_confirm_email` trigger
+       * stands — see the note in AuthProvider.signUp — and it gets a face
+       * anyway, because a state somebody can land on and cannot read is a bug
+       * whatever its odds.
+       *
+       * Carried to the Log in tab with the address already filled, rather than
+       * left as a sentence under a Sign up button that would now only refuse
+       * them for an address they have just taken. setTab, not switchTab: that
+       * one clears the notice, which is the whole message.
+       */
+      setTab('login')
+      setLoginId(email)
+      setNotice(pending)
+      return
     }
+    onClose()
   }
 
   async function handleLoginSubmit(e: FormEvent<HTMLFormElement>) {

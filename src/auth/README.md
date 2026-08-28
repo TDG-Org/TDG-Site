@@ -29,6 +29,40 @@ resolved: only a session, or a refusal.
 Everything GoTrue *can* do directly — password reset completion, OAuth, sign-up
 — still goes through supabase-js from the browser.
 
+## Creating an account signs you in
+
+**No TDG account waits on an email.** Signing up ends signed in, and signing in
+never asks anybody to go and find a link first. That is the rule for every TDG
+app, not just this one.
+
+**It is kept in the database all the apps share**, not here:
+`on_auth_user_confirm_email` in tdg-core, a `BEFORE INSERT` trigger on
+`auth.users` that stamps `email_confirmed_at` as the row is written
+(`supabase/migrations/20260828210000_accounts_never_wait_on_email.sql`, which
+carries the full reasoning and the measurements). The obvious place would have
+been GoTrue's own `mailer_autoconfirm`, but that is a **dashboard** switch — no
+SQL and nothing in any TDG repo can move it, and it is still `false`. Ask
+`/auth/v1/settings` if you want to see for yourself; it is public.
+
+Measured on the live project rather than assumed: with the row already
+confirmed, GoTrue sends **no** confirmation email and answers the sign-up
+**with a session**. So `signUp` normally has nothing left to do.
+
+**`signUp` finishes the job anyway when it has to.** No session back means one
+password grant through `passwordSignIn` — the same helper the Login tab uses,
+so there is one set of refusals for one situation. That branch does not run
+today. It is there because the rule lives in a database this repo does not own,
+and dropping that trigger would otherwise turn every sign-up back into "check
+your email".
+
+**Its two failures are deliberately different things.** `error` means nothing
+was created. `pending` means the account is REAL and this browser is not signed
+in to it, and it carries the endpoint's own sentence about why — an unconfirmed
+email and a lost connection need opposite things done about them. Calling
+`pending` an error would send somebody to sign up a second time on an address
+that is now taken; `AuthModal` instead moves them to **Log in** with the
+address already filled and prints the sentence there.
+
 ## `wording.ts` · match on codes, never on message text
 
 This is not a style preference. It is the difference between a right answer and a
