@@ -674,6 +674,109 @@
   color: var(--text);
 }
 
+/* ── the section filter ───────────────────────────────────────────────────
+   Where the matches are, as buttons rather than as a sentence. It takes the
+   toolbar's whole second row: at four sections plus a label it does not fit
+   beside a 340px search box at any width worth designing for, and wrapping it
+   mid-list would put two of the five on their own line looking like a
+   different control.                                                        */
+
+.dev__scope {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.dev__scope-label {
+  font: 700 9.5px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.dev__scope-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dev__scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
+  font: 600 11.5px var(--font-body);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.dev__scope-btn:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+.dev__scope-btn[data-active] {
+  border-color: var(--border-hover);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Faded, never disabled. Going somewhere to see for yourself that nothing
+   matches is a legitimate thing to do, and a dead button answers worse than a
+   zero does. */
+.dev__scope-btn[data-empty] {
+  opacity: 0.5;
+}
+.dev__scope-n {
+  font: 600 10.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+.dev__scope-btn[data-empty] .dev__scope-n {
+  color: var(--faint);
+}
+
+/* ── a checkbox that is ours ──────────────────────────────────────────────
+   The row selector in a long list. `.dev__own` is the other kind — a claimable
+   tile that says "Owned" in words, because granting a pack is a decision. This
+   one is scanned down a column two hundred rows deep, so it is a box and a
+   tick and nothing else, and the row beside it is its label.                */
+
+.dev__check {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--surface);
+  color: transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.dev__check:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.dev__check[data-on] {
+  border-color: transparent;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.dev__check:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .dev__toolbar-right {
   display: flex;
   align-items: center;
@@ -1591,16 +1694,73 @@
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.dev__fb-copyall {
+/* ── the bulk bar ─────────────────────────────────────────────────────────
+   What the buttons will act on, then the buttons. One bar rather than a Copy
+   pair tucked into the filter row, because all four act on the SAME set and a
+   set has to be stated once, in front of them, as a number — `Mark 37 As Read`
+   can be pressed without counting the list first, `Mark All` cannot.
+
+   Both halves take their padding from one variable on the bar, per rule 6.  */
+
+.dev__fb-bulk {
+  --fb-bulk-pad: 10px;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px var(--fb-bulk-pad);
+  margin-bottom: 10px;
+  padding: var(--fb-bulk-pad);
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+/* A bar acting on a hand-picked set rather than on everything shown says so in
+   its own edge, so "am I about to act on twelve or on two hundred" is
+   answerable without reading. */
+.dev__fb-bulk[data-picked] {
+  border-color: var(--border-hover);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.dev__fb-bulk-what,
+.dev__fb-bulk-acts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-left: auto;
+  min-width: 0;
+}
+.dev__fb-bulk-count {
+  font: 400 12px var(--font-body);
+  color: var(--muted);
+  margin-right: 2px;
+}
+.dev__fb-bulk-count strong {
+  font-weight: 700;
+  color: var(--text);
+}
+.dev__fb-bulk-note {
+  color: var(--faint);
+}
+
+/* The tick column, on both the head and every row, so the two grids line up
+   from one variable rather than from two numbers that agree today. */
+.dev__fb-pickcell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: var(--fb-pad-x);
 }
 
 .dev__fb-table {
   /* when · type · app · version · os · from · message · status */
   --fb-cols: 92px 96px 96px 56px 120px minmax(130px, 0.9fr) minmax(160px, 1.6fr) 84px;
   --fb-copy-w: 56px;
+  /* The tick column, on the head and every row from one variable. */
+  --fb-pick-w: 33px;
   --fb-pad-x: 12px;
   /* The narrowest this table can be drawn without a column losing width it
      needs: 834px of tracks (six fixed, two floored at 130 and 160) + 7 × 10px
@@ -1612,7 +1772,7 @@
      scrolls is a wide table; a wide table that clips is a lie about how many
      columns it has. The stacked layout below 720px clears this back to `auto`,
      because there is nothing left to scroll once each report is a card. */
-  --fb-min: 972px;
+  --fb-min: 1005px;
   border: 1px solid var(--border);
   border-radius: var(--dev-radius);
   background-color: var(--bg2);
@@ -1622,7 +1782,7 @@
 
 .dev__fb-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  grid-template-columns: var(--fb-pick-w) minmax(0, 1fr) var(--fb-copy-w);
   min-width: var(--fb-min);
   border-bottom: 1px solid var(--border);
   background-color: var(--surface);
@@ -1632,7 +1792,9 @@
   grid-template-columns: var(--fb-cols);
   gap: 10px;
   min-width: 0;
-  padding: 0 0 0 var(--fb-pad-x);
+  /* The tick column carries the left inset now, for the head and the rows
+     alike, so the two grids cannot drift apart. */
+  padding: 0;
 }
 .dev__fb-sort {
   display: inline-flex;
@@ -1685,13 +1847,17 @@
 
 .dev__fb-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--fb-copy-w);
+  grid-template-columns: var(--fb-pick-w) minmax(0, 1fr) var(--fb-copy-w);
   min-width: var(--fb-min);
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 .dev__fb-row:last-child {
   border-bottom: none;
+}
+/* A ticked row reads down the list without anybody looking at the boxes. */
+.dev__fb-row[data-picked] {
+  background-color: var(--accent-soft);
 }
 
 .dev__fb-open {
@@ -1700,7 +1866,7 @@
   gap: 10px;
   align-items: center;
   min-width: 0;
-  padding: 9px 0 9px var(--fb-pad-x);
+  padding: 9px 0;
   text-align: left;
   border: none;
   background-color: transparent;
@@ -2528,6 +2694,17 @@
   .dev__fb-open {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
+    padding: 9px 0;
+  }
+  /* Each report is a card here, and the tick sits against its top-left rather
+     than floating in the middle of a tall row. */
+  .dev__fb-pickcell {
+    align-items: flex-start;
+    padding-top: 11px;
+  }
+  .dev__fb-bulk-what,
+  .dev__fb-bulk-acts {
+    flex: 1 1 100%;
   }
   .dev__fb-msg {
     white-space: normal;

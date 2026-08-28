@@ -159,7 +159,69 @@ export function Panel({
 }
 
 /**
- * The page toolbar: one search box, and Expand All / Collapse All.
+ * Where the matches ARE, and the way to go and read them.
+ *
+ * The search filters the section you are standing in, and the console has five.
+ * Before this, the toolbar answered "12 reports match" in a sentence you could
+ * not click, so finding them meant reading the sentence, remembering the word,
+ * and going to look for the right tab. Every count here is a button that takes
+ * you to the section it counted, with the query intact.
+ *
+ * A section with no hits stays live rather than being disabled: going somewhere
+ * to see for yourself that nothing matches is a legitimate thing to do, and a
+ * dead button is a worse answer than a zero.
+ *
+ * `count: null` means "this section does not count ahead of time" — the Content
+ * tab filters its own panels as you type, and there is no honest number to put
+ * here for it. It draws a dash. A zero would be a claim, and it would be wrong.
+ */
+export type SearchSection = {
+  id: string
+  label: string
+  /** Hits for the current query, or null for a section that cannot say. */
+  count: number | null
+  active: boolean
+  onPick: () => void
+}
+
+function SectionFilter({ sections, searching }: { sections: SearchSection[]; searching: boolean }) {
+  return (
+    <div className="dev__scope">
+      <span className="dev__scope-label" id="dev-scope-label">
+        Search in
+      </span>
+      <div className="dev__scope-list" role="group" aria-labelledby="dev-scope-label">
+        {sections.map((sec) => (
+          <button
+            key={sec.id}
+            type="button"
+            className="dev__scope-btn"
+            data-active={sec.active || undefined}
+            data-empty={(searching && sec.count === 0) || undefined}
+            aria-current={sec.active ? 'page' : undefined}
+            onClick={sec.onPick}
+            title={
+              sec.count === null
+                ? `${sec.label} filters its own panels as you type, so it has no count to show ahead of time`
+                : searching
+                  ? `${sec.count} match${sec.count === 1 ? '' : 'es'} in ${sec.label}`
+                  : `Go to ${sec.label}`
+            }
+          >
+            {sec.label}
+            {searching && (
+              <span className="dev__scope-n">{sec.count === null ? '·' : sec.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The page toolbar: one search box, a section filter, and Expand All /
+ * Collapse All.
  *
  * The search filters every section on the page at once, and the rows inside
  * them, with no debounce anywhere. See `search.tsx`.
@@ -170,7 +232,14 @@ export function Panel({
  * says it is not for now. Clearing the box hands the page back exactly as you
  * had arranged it.
  */
-export function SectionControls({ hint }: { hint?: ReactNode }) {
+export function SectionControls({
+  hint,
+  sections,
+}: {
+  hint?: ReactNode
+  /** The five tabs, each with its hit count. Omit for a page with one. */
+  sections?: SearchSection[]
+}) {
   const { expandAll, collapseAll, openCount, total } = useSections()
   const { query, setQuery, active } = useSearch()
   const id = useId()
@@ -225,6 +294,10 @@ export function SectionControls({ hint }: { hint?: ReactNode }) {
           </button>
         )}
       </div>
+
+      {sections && sections.length > 0 && (
+        <SectionFilter sections={sections} searching={active} />
+      )}
 
       <div className="dev__toolbar-right">
         <span className="dev__sections-count">
@@ -633,6 +706,66 @@ export function LedgerTag({
     <Tag tone={n ? 'ok' : 'plain'}>
       {n} {noun}
     </Tag>
+  )
+}
+
+/**
+ * A checkbox, drawn by us.
+ *
+ * `OwnTile` is the claimable-tile version of this idea and says its state in
+ * words, because granting a pack is a decision. This is the other kind: a row
+ * selector in a list of two hundred, where the only thing that matters is
+ * whether this one is in the set and how fast you can see that down a column.
+ * So it is a 16px box with a tick and no label of its own — the row beside it
+ * is the label, and `aria-label` carries that to a screen reader.
+ *
+ * A real button with `role="checkbox"` rather than a restyled `<input>`: the
+ * button brings the keyboard behaviour, and there is no invisible input to fall
+ * out of sync with what is painted. `indeterminate` is a real third state, for
+ * the header box over a partly-selected list — a box that shows "all" when
+ * twelve of two hundred are picked is a box that has told you something false.
+ */
+export function Check({
+  checked,
+  indeterminate,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean
+  indeterminate?: boolean
+  onChange: (next: boolean) => void
+  /** What this selects, for a screen reader. The row is the visible label. */
+  label: string
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={indeterminate ? 'mixed' : checked}
+      aria-label={label}
+      className="dev__check"
+      data-on={(checked || indeterminate) || undefined}
+      data-mixed={indeterminate || undefined}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        {indeterminate ? <path d="M5 12h14" /> : <path d="M20 6 9 17l-5-5" />}
+      </svg>
+    </button>
   )
 }
 

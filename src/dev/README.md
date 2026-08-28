@@ -104,6 +104,24 @@ a Stripe customer, a log line, a message to whoever is looking at the same
 account — and having to open a panel to get it made the one thing you always
 need the one thing you had to go and find.
 
+## The search says which section the matches are in
+
+One box filters the section you are standing in, and there are five of them. So
+under the box is a **Search in** row: every section, and while the box has
+something in it, how many things in that section match. Each count is a button
+that goes there with the query intact — before this, the toolbar answered
+`12 reports match` in a sentence you could not click, so finding them meant
+reading the sentence, remembering the word and going to look for the right tab.
+
+A section with no hits is faded but stays live: going somewhere to see for
+yourself that nothing matches is a legitimate thing to do, and a dead button
+answers worse than a zero does. **Content shows a dash rather than a number** —
+that tab filters its own panels as you type and there is no honest count to give
+ahead of time, and a zero would be a claim rather than an absence.
+
+The row is derived from the same `TABS` list the tab bar is, so a section added
+later cannot be missing from the one control that says which sections exist.
+
 ## Which build you are looking at
 
 The header prints one quiet line under the lede: **`Build <version> · <when it
@@ -532,9 +550,47 @@ needs to join in is `docs/feedback-app-prompt.md`.
   for when the catalog read has not landed; without it a failed catalog left
   the status control offering one option and no explanation.
 - **Everything copies at every grain**: one field (in the report dialog), one
-  report (the Copy on its row), or the whole filtered list as text or JSON —
-  because a bug report's destination is usually a chat or a Claude session,
-  and retyping an OS string is how a detail gets lost.
+  report (the Copy on its row), or any set of them as review text, full text or
+  JSON — because a bug report's destination is usually a chat or a Claude
+  session, and retyping an OS string is how a detail gets lost.
+- **Tick reports and act on all of them at once.** A box on every row, a
+  select-all with a real mixed state above the list, and **Select Unread**,
+  which is the one you actually press: it ticks everything on screen still
+  marked `new`. Every bulk button then says the number it is about to act on —
+  `Copy 12 For Review`, `Mark 12 As Read` — because a button that names its
+  count can be pressed without counting the list first, and `Mark All` cannot.
+  With nothing ticked the buttons act on **everything the filters and the
+  search have left on screen**, which is the same rule stated in the bar in
+  front of them.
+
+  A selection is NOT pruned when the filters change: narrowing to one app,
+  ticking four, then narrowing to another and ticking three more is a real way
+  to build a set. What it costs is that some ticked reports can be off screen,
+  so every action takes the intersection with what is shown and the bar says
+  `3 more ticked but not in this filter, and left alone`.
+- **Mark As Read is one write, and only ever `new → seen`.** A report already
+  `replied` or `resolved` is further along than read, and dragging it back
+  would be the button undoing work, so it is skipped.
+  `tdg_admin_feedback_set_status_many` answers how many actually MOVED rather
+  than how many ids were sent, which is why the toast is a fact. It writes one
+  audit line naming the count and the ids: forty lines saying the same thing at
+  the same second is a log nobody reads past. The client sends the exact ids on
+  screen rather than a filter, so nothing is marked that the developer never
+  saw — including anything that arrived since the page loaded.
+- **Copy For Review is the one to paste into a Claude session.** The point of
+  feedback is to fix things, and the shortest route from a report to a fix is a
+  model reading it. So this format carries only what changes a review's answer
+  — the type, the app and version, the OS, the date, and the words the person
+  wrote — under a header naming the fields, with any reply we have already sent
+  marked `> already replied:` so nothing proposes what somebody has already
+  been promised.
+
+  It carries **no identity at all**: no name, no username, no email, no user
+  id, no contact line. None of it changes what should be built, all of it is
+  somebody else's personal information, and a paste into a third-party model is
+  exactly the moment not to send it. The `#id` stays, so a finding can be traced
+  back to the report on this page. Copy Full and Copy JSON are unchanged and
+  still carry everything, for a chat with the other developer.
 - **A click opens the report over the page** — Escape, the ×, or the scrim
   puts you back exactly where you were. All three go through `lib/modal.ts`,
   which also keeps Tab inside the card. The scrim wants a press that starts AND
@@ -552,8 +608,8 @@ needs to join in is `docs/feedback-app-prompt.md`.
   waiting report is visible from every tab, not only this one. Both read the
   same server-side count (`tdg_admin_overview`), not the loaded rows, so they
   cannot disagree once the ledger outgrows the read's cap.
-- **The table scrolls sideways rather than clipping.** Eight columns need
-  about 972px; below that the panel gives you a scrollbar, and below 720px
+- **The table scrolls sideways rather than clipping.** Eight columns and the
+  tick need about 1005px; below that the panel gives you a scrollbar, and below 720px
   each report stacks into a small card instead. A wide table that clips is a
   lie about how many columns it has.
 - **What a sender is allowed to send**, so a thin-looking ledger is not read
@@ -577,9 +633,9 @@ reference implementation of the startup reply panel the other apps copy.
 | `AccountDetail.tsx` | The panels for one account, in six top-level sections. Two of them nest: Permissions sits inside Identity, and Makullveny plus a Store panel per app sit inside Apps. Each states what it is and names the table it writes. |
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
-| `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |
+| `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the tick-and-act bulk bar, the report dialog, the reply composer with its delivery state, and copying at every grain — including the identity-free **review** format built for a model to read. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
-| `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, **HoldingTile**, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
+| `controls.tsx` | Panel, SectionControls with its **section filter**, Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |

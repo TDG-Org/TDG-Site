@@ -590,16 +590,38 @@ function DevConsoleBody({
   const restored = useRestoreView(saved?.anchor ?? null)
   useRememberView({ tab, selectedId, query, open: openIds }, restored)
 
+  /**
+   * Where the matches are, as buttons rather than as a sentence.
+   *
+   * The counts were already computed for the four lists above; what changed is
+   * that they are now the section filter's numbers and each one goes to the
+   * section it counted, with the query intact. Content is `null` on purpose —
+   * that tab filters its own panels as you type and there is no honest number
+   * to put on it ahead of time, and a zero would be a claim rather than an
+   * absence. Derived from TABS so a tab added later cannot be left out of the
+   * one control that says which sections exist.
+   */
+  const sectionCounts: Record<Tab, number | null> = {
+    accounts: shownRows.length,
+    content: null,
+    feedback: shownFeedback.length,
+    purchases: shownEvents.length,
+    audit: shownAudit.length,
+  }
+  const sections = TABS.map((t) => ({
+    id: t.id,
+    label: t.label,
+    count: sectionCounts[t.id],
+    active: tab === t.id,
+    onPick: () => setTab(t.id),
+  }))
+
   /** What the toolbar says while a search is running, across every tab. */
   const searchHint = (() => {
     if (!searching) return null
-    const parts = [
-      shownRows.length && `${shownRows.length} account${shownRows.length === 1 ? '' : 's'}`,
-      shownFeedback.length && `${shownFeedback.length} report${shownFeedback.length === 1 ? '' : 's'}`,
-      shownEvents.length && `${shownEvents.length} purchase${shownEvents.length === 1 ? '' : 's'}`,
-      shownAudit.length && `${shownAudit.length} action${shownAudit.length === 1 ? '' : 's'}`,
-    ].filter(Boolean)
-    return parts.length ? `${parts.join(' · ')} match` : 'Nothing matches that'
+    const total =
+      shownRows.length + shownFeedback.length + shownEvents.length + shownAudit.length
+    return total ? `${total} match${total === 1 ? '' : 'es'} across the sections below` : 'Nothing matches that'
   })()
 
   return (
@@ -651,7 +673,7 @@ function DevConsoleBody({
           </p>
         )}
 
-        <SectionControls hint={searchHint} />
+        <SectionControls hint={searchHint} sections={sections} />
 
         <Overview overview={overview} stores={stores} />
 

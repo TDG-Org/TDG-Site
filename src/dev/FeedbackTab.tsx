@@ -4,6 +4,7 @@ import * as api from './api'
 import type { DevCatalog, DevFeedback } from './api'
 import {
   Button,
+  Check,
   CopyButton,
   Fact,
   Field,
@@ -151,6 +152,51 @@ function reportText(f: DevFeedback, appTitle: string): string {
   return lines.join('\n')
 }
 
+/**
+ * Many reports, stripped to what a model can act on.
+ *
+ * ## What is in it, and what is deliberately not
+ *
+ * The point of feedback is to fix things, and the fastest route from a report
+ * to a fix is pasting it into a Claude session — which is why this exists
+ * beside the full text and the JSON rather than instead of them. So it carries
+ * exactly what changes a review's answer: what kind of report it is, which app
+ * and which version it came from, the OS, the date, and the words the person
+ * wrote.
+ *
+ * It carries NO identity — no name, no username, no email, no user id, no
+ * contact line. None of it changes what should be built, all of it is somebody
+ * else's personal information, and a paste into a third-party model is exactly
+ * the moment not to send it. The `#id` stays, because that is how a finding
+ * gets traced back to the report on this page.
+ *
+ * Replies we have already sent DO go in, marked. A model proposing a fix we
+ * have already promised — or contradicting an answer somebody has been given —
+ * is the one failure a compact format could cause by leaving something out.
+ *
+ * The header names the fields, so the shape does not have to be inferred from
+ * the first entry.
+ */
+function reviewText(list: DevFeedback[], appTitle: (id: string) => string): string {
+  const head = [
+    `# TDG user feedback for review · ${list.length} report${list.length === 1 ? '' : 's'}`,
+    '# each entry: [#id] type · app version · os · received, then the message,',
+    '# then any reply we have already sent, prefixed with >',
+    '# no names, emails or account ids: this is the criticism, not the people',
+  ]
+  const body = list.map((f) => {
+    const line = [
+      `[#${f.id}] ${f.kind}`,
+      `${appTitle(f.app)}${f.app_version ? ` ${f.app_version}` : ''}`,
+      f.os ?? 'os not sent',
+      f.at.slice(0, 10),
+    ].join(' · ')
+    const replies = f.replies.map((r) => `> already replied: ${r.body}`)
+    return [line, f.message.trim(), ...replies].join('\n')
+  })
+  return [...head, '', body.join('\n\n')].join('\n')
+}
+
 type Props = {
   rows: DevFeedback[]
   state: 'loading' | 'ready' | 'error'
@@ -190,6 +236,18 @@ export function FeedbackTab({
   const [sort, setSort] = useState<Sort>({ key: 'at', dir: 'desc' })
   const [openId, setOpenId] = useState<number | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+
+  /**
+   * Which reports are ticked.
+   *
+   * Kept as raw ids and NOT pruned when the filters change. Narrowing to one
+   * app, ticking four, then narrowing to another and ticking three more is a
+   * real way to build a set, and a selection that quietly emptied itself under
+   * a filter change would make that impossible. What it costs is that some
+   * ticked reports can be off screen, so every action takes the INTERSECTION
+   * with what is shown and the bar says out loud when there is a difference.
+   */
+  const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set())
 
   /*
    * The server's vocabulary, in the server's order, with anything the rows hold
@@ -290,16 +348,83 @@ export function FeedbackTab({
     if (openId != null && !rows.some((f) => f.id === openId)) setOpenId(null)
   }, [openId, rows])
 
-  /* ── copying the whole filtered list ──────────────────────────────────── */
+  /* ── what a bulk action acts on ───────────────────────────────────────
+   *
+   * The ticked reports if any are ticked, otherwise everything the filters and
+   * the search have left on screen. One rule, and every button says the number
+   * it is about to act on, which is what makes "Mark 37 As Read" safe to press
+   * without counting the list first.
+   */
+  const pickedShown = useMemo(() => sorted.filter((f) => picked.has(f.id)), [sorted, picked])
+  const targets = pickedShown.length ? pickedShown : sorted
+  const offScreen = picked.size - pickedShown.length
+  const unreadShown = useMemo(() => sorted.filter((f) => f.status === 'new'), [sorted])
+  const unreadTargets = targets.filter((f) => f.status === 'new')
 
-  const copyAll = (asJson: boolean) => {
-    const text = asJson
-      ? JSON.stringify(sorted, null, 2)
-      : sorted.map((f) => reportText(f, titleOf(f.app))).join('\n\n———\n\n')
+  const allShownPicked = sorted.length > 0 && pickedShown.length === sorted.length
+  const somePicked = pickedShown.length > 0
+
+  const toggleAllShown = () =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (allShownPicked) for (const f of sorted) next.delete(f.id)
+      else for (const f of sorted) next.add(f.id)
+      return next
+    })
+
+  const togglePick = (id: number) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  /* ── copying ──────────────────────────────────────────────────────────── */
+
+  const copy = (kind: 'review' | 'full' | 'json') => {
+    const n = targets.length
+    if (!n) return
+    const text =
+      kind === 'json'
+        ? JSON.stringify(targets, null, 2)
+        : kind === 'review'
+          ? reviewText(targets, titleOf)
+          : targets.map((f) => reportText(f, titleOf(f.app))).join('\n\n———\n\n')
+    const said =
+      kind === 'json' ? 'as JSON' : kind === 'review' ? 'for review' : 'in full'
     void navigator.clipboard?.writeText(text).then(
-      () => push('ok', `Copied ${sorted.length} report${sorted.length === 1 ? '' : 's'}${asJson ? ' as JSON' : ''}.`),
+      () => push('ok', `Copied ${n} report${n === 1 ? '' : 's'} ${said}.`),
       () => push('bad', "Couldn't reach the clipboard."),
     )
+  }
+
+  /**
+   * Mark every unread report in range as read, in one write.
+   *
+   * `new` → `seen` and only that direction: a report that is already replied or
+   * resolved is further along than read, and dragging it back would be this
+   * button undoing work. The server skips anything already in the target status
+   * and answers how many actually moved, so the toast is a fact rather than the
+   * number of ids that were sent.
+   */
+  const markRead = () => {
+    const ids = unreadTargets.map((f) => f.id)
+    if (!ids.length) return
+    const here = captureAnchor()
+    setBusy('mark-read')
+    void (async () => {
+      try {
+        const n = await api.setFeedbackStatusMany(ids, 'seen')
+        push('ok', n === 0 ? 'They were already read.' : `${n} report${n === 1 ? '' : 's'} marked read.`)
+        await reload()
+      } catch (e) {
+        push('bad', e instanceof Error ? e.message : "Something went wrong, and it didn't say what.")
+      } finally {
+        setBusy(null)
+        holdAnchor(here, { ms: 600 })
+      }
+    })()
   }
 
   const filtered = kindF !== 'all' || appF !== 'all' || statusF !== 'all' || searching
@@ -331,14 +456,83 @@ export function FeedbackTab({
             ...statuses.map((s) => ({ value: s, label: prettyId(s) })),
           ]}
         />
-        <span className="dev__fb-copyall">
-          <Button onClick={() => copyAll(false)} disabled={sorted.length === 0}>
-            Copy All
+      </div>
+
+      {/* ── what the buttons will act on, and the buttons ──────────────────
+          One bar rather than a Copy pair in the filter row, because every one
+          of these acts on the same set and the set has to be stated once, in
+          front of them, in a number. A button that says `Mark 37 As Read` can
+          be pressed without counting the list first; one that says `Mark All`
+          cannot. */}
+      <div className="dev__fb-bulk" data-picked={somePicked || undefined}>
+        <div className="dev__fb-bulk-what">
+          <Check
+            checked={allShownPicked}
+            indeterminate={somePicked && !allShownPicked}
+            disabled={sorted.length === 0}
+            onChange={toggleAllShown}
+            label={allShownPicked ? 'Unselect every report shown' : 'Select every report shown'}
+          />
+          <span className="dev__fb-bulk-count">
+            {somePicked ? (
+              <>
+                <strong>{pickedShown.length} selected</strong>
+                {offScreen > 0 && (
+                  // Ticked, but filtered out from under them. Saying so is the
+                  // difference between a button that acts on less than you
+                  // think and one you can trust.
+                  <span className="dev__fb-bulk-note">
+                    {' '}
+                    · {offScreen} more ticked but not in this filter, and left alone
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                Acting on <strong>all {sorted.length}</strong> shown
+              </>
+            )}
+          </span>
+          <Button
+            onClick={() => setPicked(new Set(unreadShown.map((f) => f.id)))}
+            disabled={unreadShown.length === 0}
+            title="Tick every report on screen that nobody has read yet"
+          >
+            Select Unread ({unreadShown.length})
           </Button>
-          <Button onClick={() => copyAll(true)} disabled={sorted.length === 0}>
+          <Button onClick={() => setPicked(new Set())} disabled={picked.size === 0}>
+            Clear
+          </Button>
+        </div>
+
+        <div className="dev__fb-bulk-acts">
+          <Button
+            variant="primary"
+            onClick={() => copy('review')}
+            disabled={targets.length === 0}
+            title="The type, app, version, OS, date and message of each — and any reply already sent. No names, emails or account ids. This is the one to paste into a Claude session."
+          >
+            Copy {targets.length} For Review
+          </Button>
+          <Button onClick={() => copy('full')} disabled={targets.length === 0}>
+            Copy Full
+          </Button>
+          <Button onClick={() => copy('json')} disabled={targets.length === 0}>
             Copy JSON
           </Button>
-        </span>
+          <Button
+            onClick={markRead}
+            busy={busy === 'mark-read'}
+            disabled={unreadTargets.length === 0}
+            title={
+              unreadTargets.length === 0
+                ? 'Nothing in range is still unread'
+                : 'Moves them from new to seen. A report already replied or resolved is further along than read and is left alone.'
+            }
+          >
+            Mark {unreadTargets.length} As Read
+          </Button>
+        </div>
       </div>
 
       <p className="dev__roster-count">
@@ -358,6 +552,10 @@ export function FeedbackTab({
       >
         <div className="dev__fb-table">
           <div className="dev__fb-head">
+            {/* Empty on purpose: the select-all box lives in the bar above,
+                where the count it is about is written next to it. A second one
+                here would be two controls for one thing. */}
+            <span className="dev__fb-pickcell" aria-hidden="true" />
             <div className="dev__fb-head-main">
               {COLUMNS.map((c) => (
                 <button
@@ -397,6 +595,8 @@ export function FeedbackTab({
                 key={f.id}
                 report={f}
                 appTitle={titleOf(f.app)}
+                picked={picked.has(f.id)}
+                onPick={() => togglePick(f.id)}
                 onOpen={() => setOpenId(f.id)}
               />
             ))}
@@ -432,16 +632,30 @@ export function FeedbackTab({
 function FeedbackRow({
   report: f,
   appTitle,
+  picked,
+  onPick,
   onOpen,
 }: {
   report: DevFeedback
   appTitle: string
+  picked: boolean
+  onPick: () => void
   onOpen: () => void
 }) {
   return (
     // Anchored on the report, so Refresh and a re-sort hold the row you were
     // reading still rather than whatever lands at its old offset.
-    <li className="dev__fb-row" data-dev-anchor={`fb-${f.id}`}>
+    <li className="dev__fb-row" data-picked={picked || undefined} data-dev-anchor={`fb-${f.id}`}>
+      {/* Outside the row button, not inside it: a button in a button is not
+          something a browser will render, and ticking a report must never be a
+          near miss on opening it. */}
+      <span className="dev__fb-pickcell">
+        <Check
+          checked={picked}
+          onChange={onPick}
+          label={`Select report #${f.id} from ${f.who}`}
+        />
+      </span>
       <button
         type="button"
         className="dev__fb-open"

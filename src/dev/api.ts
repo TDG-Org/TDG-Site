@@ -509,6 +509,22 @@ export const setFeedbackStatus = (id: number, status: string): Promise<null> =>
   rpc<null>('tdg_admin_feedback_set_status', { p_id: id, p_status: status })
 
 /**
+ * The same, for many reports at once. Answers how many actually MOVED.
+ *
+ * The console sends the exact ids it is looking at rather than a filter, so
+ * what gets written is what was on screen — a server-side "everything matching
+ * X" would also catch rows that arrived between the page loading and the button
+ * being pressed. Reports already in the target status are skipped and are not
+ * counted, which is why the toast can say "12 marked read" and mean it.
+ *
+ * One audit line for the whole press, naming the count and the ids: forty lines
+ * saying the same thing at the same second is a log nobody reads past. See
+ * supabase/migrations/20260828190000_admin_feedback_status_many.sql.
+ */
+export const setFeedbackStatusMany = (ids: number[], status: string): Promise<number> =>
+  rpc<number>('tdg_admin_feedback_set_status_many', { p_ids: ids, p_status: status })
+
+/**
  * Answer one report. Writing the reply IS the whole send: the person's own app
  * calls `tdg_feedback_inbox()` when it next starts and shows it. There is no
  * push and no email, which is why the console words it as "next time they
