@@ -75,6 +75,15 @@
 -- says so in its own comment. DevFleet reads that table directly and returns
 -- its row type out of `devfleet_badge_sync`, and that repo is not part of
 -- this change — retiring it is its own job, done with DevFleet open.
+--
+-- ⚠ **COMMENT-ONLY EDIT, 2026-08-28, after this file was applied.** That job
+-- was done the same day, so the paragraph above is history rather than a
+-- standing statement and a reader arriving cold would act on it. Nothing about
+-- what this file DOES has changed. `devfleet_badges` and `devfleet_badge_sync`
+-- were dropped by
+-- `20260828170000_devfleet_badges_onto_tdg_badges.sql`, which carried every
+-- row across with its epoch and its earned dates untouched and filed `commits`
+-- as `tdg_badges.measurements.commits`. The DevFleet half shipped as v1.11.0.
 -- ===========================================================================
 
 
