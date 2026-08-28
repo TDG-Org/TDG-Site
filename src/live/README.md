@@ -27,6 +27,22 @@ eight cards of one render share one request. See
 rules — a caller sends repo NAMES only, and the function will only ever probe
 the one fixed origin.
 
+**And the probe answers three ways, not two, because a 404 is two different
+sentences depending on history.** The function keeps a memory
+(`tdg_site_deploys_seen`, service-role only): every site it sees answering is
+remembered, so a later miss splits into `absent` — never shipped, the card
+honestly keeps `Coming soon` — and `down` — it WAS live and has stopped
+answering, and every surface says **Temporarily unavailable** instead,
+because telling somebody who used the app yesterday that it never existed is
+a lie by omission. The words are one exported constant, `DOWN_WORDING` in
+`useLive.ts`, mechanism copy kept with the mechanism the way `auth/wording.ts`
+keeps refusals. Server-side memory rather than localStorage on purpose: two
+visitors reading one page must read one truth, and a browser-side memory
+would show a returning visitor `down` while a first-time visitor read
+`Coming soon` for the same app at the same moment. When the memory cannot be
+read the miss degrades to `absent` — the safe direction; the site never
+claims a door is open.
+
 ## How a card gets its button
 
 A card in `content.ts` names its repository with `repo: 'Bible-Educator'`
@@ -41,8 +57,12 @@ A card in `content.ts` names its repository with `repo: 'Bible-Educator'`
    instead of `Open <App>`; that is the Makullveny convention made
    mechanical, controlled from GitHub without touching this repo.
 3. **The derived Pages URL** when the API says a deploy exists, or when the
-   direct probe finds one for a repo the API cannot see.
-4. **Nothing** — the card keeps its status caption, which is the honest face
+   probe finds one for a repo the API cannot see.
+4. **`Temporarily unavailable`** when the probe's memory says the site was
+   live and has stopped answering — the caption replaces the button rather
+   than linking to a dead page, and replaces `Coming soon` rather than
+   un-telling people the app exists.
+5. **Nothing** — the card keeps its status caption, which is the honest face
    for "not deployed yet" and for "we could not ask".
 
 A wrong `repo:` name fails quietly (the card just never upgrades), so when an
@@ -73,11 +93,14 @@ arrive.
 
 ## Caching, and which answers may be remembered
 
-Successful answers live at module scope for the tab and in `sessionStorage`
-for ten minutes, so one visit costs one API call however many cards ask. A
-Pages 404 is a real answer ("not deployed") and is cached like a success.
-**A failed read is never remembered** — the same rule `badges/useBadges.ts`
-keeps, so one hiccup at boot cannot pin "we do not know" for a whole visit.
+The repos list lives at module scope for the tab and in `sessionStorage` for
+five minutes, so one visit costs one API call however many cards ask. Probe
+answers are remembered at module scope ONLY — a refresh always re-asks. That
+distinction was learned the hard way: a ten-minute stored probe answer meant
+a site taken down went on saying `Open` to anyone who refreshed, which is
+exactly the moment a person checks whether the takedown worked. **A failed
+read is never remembered** — the same rule `badges/useBadges.ts` keeps, so
+one hiccup at boot cannot pin "we do not know" for a whole visit.
 
 ## The files
 

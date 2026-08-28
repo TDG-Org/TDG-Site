@@ -56,6 +56,26 @@ export type LiveAccess = {
 }
 
 /**
+ * What the deploy probe can say about one repo name. Three answers, because
+ * a 404 is two different sentences depending on history: `absent` has never
+ * been seen answering (the card honestly says Coming soon), `down` WAS
+ * answering and has stopped (the card says temporarily unavailable — telling
+ * somebody who used it yesterday that it never existed is a lie by
+ * omission). The history lives server-side, in the `tdg_site_deploys_seen`
+ * table behind the `tdg-site-deploys` function, so every visitor reads one
+ * truth.
+ */
+export type DeployAnswer = 'live' | 'down' | 'absent'
+
+/**
+ * What `useLiveAccess` hands a card: a working way in, the fact that the
+ * usual way in has stopped answering, or null for "nothing to add" — which
+ * covers both "never shipped" and "could not ask", because the two render
+ * identically as the hand-written status quo.
+ */
+export type LiveState = ({ kind: 'live' } & LiveAccess) | { kind: 'down' }
+
+/**
  * A public org repository that asked for a card — the `tdg-app` topic — and
  * that no hand-written card claims. Everything on it is derived from the
  * repository itself, which is the point: it is the face an app gets between

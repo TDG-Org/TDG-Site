@@ -8,7 +8,7 @@ import { useTilt } from '../hooks/useTilt'
 import { type ToolCard } from '../data/content'
 import { visibleTools } from '../content/resolve'
 import { useSiteContent } from '../content/store'
-import { useLiveAccess } from '../live/useLive'
+import { DOWN_WORDING, useLiveAccess } from '../live/useLive'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { StillArt, ThemedArt } from './scene/ThemedArt'
@@ -109,9 +109,11 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
   const tilt = useTilt<HTMLElement>()
 
   /* Same runtime upgrade the Apps cards get: a tool whose repo turns out to
-     be deployed swaps its muted caption for a real link. A hand-written
-     `href` (Volume Controller's store listing) passes `undefined`, which asks
-     nothing — a human decision outranks discovery. See src/live/README.md. */
+     be deployed swaps its muted caption for a real link, and one whose site
+     was live and stopped answering says so instead of `Coming soon`. A
+     hand-written `href` (Volume Controller's store listing) passes
+     `undefined`, which asks nothing — a human decision outranks discovery.
+     See src/live/README.md. */
   const live = useLiveAccess(tool.href ? undefined : tool.repo, tool.title)
 
   return (
@@ -151,14 +153,16 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
         <a className="tools__cta tools__cta--link" href={tool.href} target="_blank" rel="noopener">
           {tool.cta}
         </a>
-      ) : live ? (
+      ) : live?.kind === 'live' ? (
         /* The arrow glyph is part of the cta STRING on hand-written links
            (`Add to Chrome →`), so a derived label carries the same one. */
         <a className="tools__cta tools__cta--link" href={live.href} target="_blank" rel="noopener">
           {live.label} →
         </a>
       ) : (
-        <span className="tools__cta tools__cta--muted">{tool.cta}</span>
+        <span className="tools__cta tools__cta--muted">
+          {live?.kind === 'down' ? DOWN_WORDING : tool.cta}
+        </span>
       )}
     </article>
   )

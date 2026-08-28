@@ -206,6 +206,15 @@
 .appview__link:hover .appview__link-arrow {
   transform: translateX(3px);
 }
+/* The `Temporarily unavailable` state (src/live/): the link's own pill so the
+   row does not reflow when a site comes back, but visibly inert — muted ink,
+   the resting border, and no hover answer, because a pill that lights up is a
+   pill promising a click will do something. It is a span, so the hover rules
+   above never match it. */
+.appview__link.appview__link--down {
+  color: var(--faint);
+  border-color: var(--border);
+}
 
 .appview__art {
   margin: clamp(30px, 4vw, 46px) 0 0;

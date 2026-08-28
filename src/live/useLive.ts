@@ -4,7 +4,7 @@ import { resolvedApps, resolvedGame, resolvedTools } from '../content/resolve'
 import type { SiteContentDoc } from '../content/types'
 import { prettyId } from '../dev/format'
 import { orgRepos, pagesDeployed, PAGES_ORIGIN } from './api'
-import type { DiscoveredApp, LiveAccess, OrgRepo, OrgReposState } from './types'
+import type { DiscoveredApp, LiveState, OrgRepo, OrgReposState } from './types'
 
 /**
  * The hooks a card or a page calls, and the derivations under them.
@@ -49,34 +49,50 @@ function accessLabel(href: string, title: string, verb?: string): string {
 }
 
 /**
- * The href a repo name resolves to, or null for "nothing is live".
+ * The one sentence for a site that WAS live and has stopped answering.
  *
- * The public list is asked first, because for a public repo it is the whole
- * answer: the Website field when somebody set one (it is the explicit,
- * human-pointed door, so it beats the derived URL), else the Pages URL when
- * a deploy exists, else honestly nothing — no probe, the API already said no.
- *
- * A repo NOT in the list is private, or the list itself failed; either way
- * GitHub Pages may still be serving a public deploy, so Pages itself is
- * asked. That second question is what turns Bible Educator's card — private
- * repo, public deploy — from a status caption into a button.
+ * Mechanism copy, kept with the mechanism the way `auth/wording.ts` keeps
+ * refusals: it is about a STATE any product can be in, not about any one
+ * product, and every card, panel and page that can show the state imports
+ * this one string so they can never say it three different ways. Sentence
+ * case, because it stands where a status caption stands.
  */
-async function resolveAccessHref(repo: string): Promise<string | null> {
+export const DOWN_WORDING = 'Temporarily unavailable'
+
+/** What a repo name resolves to: a working href, the fact that the usual
+ *  href has stopped answering, or null for nothing/not-told. */
+type Resolved = { href: string } | { down: true } | null
+
+/**
+ * The public list is asked first, because for a public repo a POSITIVE
+ * answer is the whole answer: the Website field when somebody set one (it is
+ * the explicit, human-pointed door, so it beats the derived URL), else the
+ * Pages URL when a deploy exists.
+ *
+ * Everything else — repo private, the list itself failed, or a public repo
+ * whose Pages are off — goes to the probe, whose server-side memory can also
+ * tell a site that WAS live from one that never shipped. That second
+ * question is what turns Bible Educator's card — private repo, public
+ * deploy — from a status caption into a button, and back into an honest
+ * "temporarily unavailable" the day the deploy stops answering.
+ */
+async function resolveLive(repo: string): Promise<Resolved> {
   const repos = await orgRepos()
   const wanted = repo.toLowerCase()
   const found = repos?.find((r) => r.name.toLowerCase() === wanted)
-  if (found) {
-    if (found.homepage) return found.homepage
-    if (found.hasPages) return `${PAGES_ORIGIN}/${found.name}/`
-    return null
-  }
-  const deployed = await pagesDeployed(repo)
-  return deployed ? `${PAGES_ORIGIN}/${encodeURIComponent(repo)}/` : null
+  if (found?.homepage) return { href: found.homepage }
+  if (found?.hasPages) return { href: `${PAGES_ORIGIN}/${found.name}/` }
+  const answer = await pagesDeployed(repo)
+  if (answer === 'live') return { href: `${PAGES_ORIGIN}/${encodeURIComponent(repo)}/` }
+  if (answer === 'down') return { down: true }
+  return null
 }
 
 /**
- * A live way in to the app behind `repo`, or null while there is none (or
- * none KNOWN — the two render the same, as the hand-written status quo).
+ * What is live for the app behind `repo`: a working way in, `down` for a
+ * site that was live and has stopped answering, or null while there is
+ * nothing to add — which covers "never shipped" and "could not ask" alike,
+ * because both render as the hand-written status quo.
  *
  * Pass `undefined` for a card that already carries a hand-written access —
  * Makullveny's download, Volume Controller's store link. That is the caller
@@ -88,24 +104,26 @@ export function useLiveAccess(
   repo: string | undefined,
   title: string,
   verb?: string,
-): LiveAccess | null {
-  const [href, setHref] = useState<string | null>(null)
+): LiveState | null {
+  const [resolved, setResolved] = useState<Resolved>(null)
 
   useEffect(() => {
     if (!repo) {
-      setHref(null)
+      setResolved(null)
       return
     }
     let cancelled = false
-    void resolveAccessHref(repo).then((answer) => {
-      if (!cancelled) setHref(answer)
+    void resolveLive(repo).then((answer) => {
+      if (!cancelled) setResolved(answer)
     })
     return () => {
       cancelled = true
     }
   }, [repo])
 
-  return href ? { href, label: accessLabel(href, title, verb) } : null
+  if (!resolved) return null
+  if ('down' in resolved) return { kind: 'down' }
+  return { kind: 'live', href: resolved.href, label: accessLabel(resolved.href, title, verb) }
 }
 
 /**

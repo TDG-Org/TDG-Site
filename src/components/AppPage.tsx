@@ -9,7 +9,7 @@ import type { AppPage as AppPageData } from '../data/appPages'
 import { chipsFor, iconFor, shotFor } from '../content/resolve'
 import { resolvePage } from '../content/resolvePage'
 import { useSiteContent } from '../content/store'
-import { liveRepoForPage, useLiveAccess } from '../live/useLive'
+import { DOWN_WORDING, liveRepoForPage, useLiveAccess } from '../live/useLive'
 import './AppPage.css'
 
 /**
@@ -42,13 +42,18 @@ function AppPageBody({ page }: { page: AppPageData }) {
   const icon = iconFor(doc, page.slug)
 
   /* The runtime deploy check the card runs, run here too, so the page and the
-     card can never disagree about whether the app is live. `liveRepoForPage`
-     answers nothing for a product whose card already carries a hand-written
-     way in — and the dedupe below keeps the derived link out when the page's
-     own `links` already name the same destination. See src/live/README.md. */
+     card can never disagree about whether the app is live — or about a site
+     that WAS live and has stopped answering, which renders here as the same
+     `Temporarily unavailable` the card carries, in the row where its link
+     would have stood. `liveRepoForPage` answers nothing for a product whose
+     card already carries a hand-written way in — and the dedupe below keeps
+     the derived link out when the page's own `links` already name the same
+     destination. See src/live/README.md. */
   const ask = liveRepoForPage(doc, page.slug)
   const live = useLiveAccess(ask.repo, page.title, ask.verb)
-  const liveLink = live && !(page.links ?? []).some((l) => l.href === live.href) ? live : null
+  const liveLink =
+    live?.kind === 'live' && !(page.links ?? []).some((l) => l.href === live.href) ? live : null
+  const liveDown = live?.kind === 'down'
 
   return (
     <section id="top" className="section section--blend appview">
@@ -90,7 +95,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
             ))}
           </dl>
 
-          {((page.links && page.links.length > 0) || liveLink) && (
+          {((page.links && page.links.length > 0) || liveLink || liveDown) && (
             <div className="appview__links">
               {(page.links ?? []).map((link) =>
                 link.external ? (
@@ -137,6 +142,12 @@ function AppPageBody({ page }: { page: AppPageData }) {
                     →
                   </span>
                 </a>
+              )}
+              {liveDown && (
+                /* The link's own pill, muted and inert: the state stands
+                   exactly where the way in stands when there is one, so its
+                   absence is announced rather than silent. */
+                <span className="appview__link appview__link--down">{DOWN_WORDING}</span>
               )}
             </div>
           )}

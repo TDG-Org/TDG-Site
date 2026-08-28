@@ -1,4 +1,4 @@
-import type { OrgRepo } from './types'
+import type { DeployAnswer, OrgRepo } from './types'
 
 /**
  * The two questions this folder asks, and everything about how they are asked.
@@ -23,19 +23,32 @@ import type { OrgRepo } from './types'
  *    alike. Calls made in the same breath share one request: the grid mounts
  *    eight cards at once, and eight cards are one question.
  *
+ *    The function answers three ways per name, not two — see `DeployAnswer`
+ *    in `types.ts`: its server-side memory is what tells a site that was
+ *    taken DOWN from one that never shipped, so a disabled app can say
+ *    "temporarily unavailable" instead of pretending it never existed.
+ *
  * ## Caching, and which answers are allowed to be remembered
  *
- * The API allows 60 unauthenticated requests an hour per address, and a
- * visitor walking the hash routes remounts these callers many times a minute
- * — so successful answers are kept at module scope for the life of the tab,
- * and in sessionStorage for ten minutes so a reload does not re-ask. Requests
- * in flight are shared rather than duplicated.
+ * The GitHub API allows 60 unauthenticated requests an hour per address, and
+ * a visitor walking the hash routes remounts these callers many times a
+ * minute — so the REPOS LIST is kept at module scope for the life of the tab
+ * and in sessionStorage for five minutes across reloads. Requests in flight
+ * are shared rather than duplicated.
+ *
+ * PROBE answers are remembered at module scope only — never in storage — so
+ * hash-route remounts inside one page load share one answer, and a REFRESH
+ * always asks again. That is deliberate and it was learned the hard way: a
+ * ten-minute stored answer meant a site taken down went on saying "Open" to
+ * anyone who refreshed, which is exactly the moment a person checks whether
+ * the takedown worked. The probe is one batched call to our own function;
+ * freshness is worth it.
  *
  * **A failed read is never remembered**, the same rule `badges/useBadges.ts`
  * keeps and for the same reason: caching a hiccup would pin "we do not know"
  * for the whole visit because one request at boot lost the network. A 404
- * from the Pages probe is not a failure — it is the real answer "not
- * deployed" — so it is cached like any success.
+ * from the probe is not a failure — `down` and `absent` are real answers —
+ * so those are kept like any success, for the tab's life only.
  */
 
 export const ORG = 'TDG-Org'
@@ -43,13 +56,13 @@ export const PAGES_ORIGIN = 'https://tdg-org.github.io'
 
 const REPOS_URL = `https://api.github.com/orgs/${ORG}/repos?per_page=100`
 
-/** How long a stored answer stays good across reloads. Long enough that one
- *  visit costs one API call, short enough that a deploy shows up on the next
- *  hard refresh a few minutes later. */
-const TTL_MS = 10 * 60_000
+/** How long the stored repos list stays good across reloads. Long enough
+ *  that one visit costs one API call, short enough that a public repo's
+ *  Pages being switched on or off shows within a few minutes. The probe has
+ *  no such window — see the header. */
+const TTL_MS = 5 * 60_000
 
 const REPOS_KEY = 'tdg:live:repos:v1'
-const PAGES_KEY = 'tdg:live:pages:v1'
 
 /* sessionStorage can throw on read AND write (private windows, storage shut
    off) — a visitor in that state just pays the network call each time. */
@@ -126,12 +139,18 @@ export function orgRepos(): Promise<OrgRepo[] | null> {
 
 const DEPLOYS_FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tdg-site-deploys`
 
-const pagesAnswers = new Map<string, boolean>()
-const pagesInFlight = new Map<string, Promise<boolean | null>>()
+/* Tab-lifetime only, on purpose — the header says why a probe answer must
+   not outlive a refresh. */
+const pagesAnswers = new Map<string, DeployAnswer>()
+const pagesInFlight = new Map<string, Promise<DeployAnswer | null>>()
 
 /** Names waiting for the next batch, with every caller's resolver. */
-let pendingProbes = new Map<string, ((answer: boolean | null) => void)[]>()
+let pendingProbes = new Map<string, ((answer: DeployAnswer | null) => void)[]>()
 let probeFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+function isDeployAnswer(raw: unknown): raw is DeployAnswer {
+  return raw === 'live' || raw === 'down' || raw === 'absent'
+}
 
 async function flushProbes(): Promise<void> {
   const batch = pendingProbes
@@ -139,7 +158,7 @@ async function flushProbes(): Promise<void> {
   probeFlushTimer = null
   const names = [...batch.keys()]
 
-  let live: Record<string, unknown> | null = null
+  let status: Record<string, unknown> | null = null
   try {
     const res = await fetch(DEPLOYS_FN, {
       method: 'POST',
@@ -148,31 +167,27 @@ async function flushProbes(): Promise<void> {
     })
     if (res.ok) {
       const body: unknown = await res.json()
-      const found = (body as { live?: unknown })?.live
-      if (typeof found === 'object' && found !== null) live = found as Record<string, unknown>
+      const found = (body as { status?: unknown })?.status
+      if (typeof found === 'object' && found !== null) status = found as Record<string, unknown>
     }
   } catch {
     /* answered below as "not told", never cached */
   }
 
   for (const [name, resolvers] of batch) {
-    const raw = live?.[name]
-    const answer = typeof raw === 'boolean' ? raw : null
+    const raw = status?.[name]
+    const answer = isDeployAnswer(raw) ? raw : null
     const cacheKey = name.toLowerCase()
     pagesInFlight.delete(cacheKey)
-    if (answer !== null) {
-      pagesAnswers.set(cacheKey, answer)
-      const all = stored<Record<string, boolean>>(PAGES_KEY) ?? {}
-      store(PAGES_KEY, { ...all, [cacheKey]: answer })
-    }
+    if (answer !== null) pagesAnswers.set(cacheKey, answer)
     for (const resolve of resolvers) resolve(answer)
   }
 }
 
 /**
- * Is a GitHub Pages site live for this repo name? True and false are real
- * answers; null means "could not ask" — the function unreachable, or GitHub
- * not answering it — and is never cached.
+ * What GitHub Pages says about this repo name — `live`, `down`, or `absent`
+ * (see `DeployAnswer` in `types.ts`); null means "could not ask" — the
+ * function unreachable, or GitHub not answering it — and is never cached.
  *
  * Every call landing inside one short window joins one request to
  * `tdg-site-deploys`. The window is a one-shot `setTimeout`, which is the
@@ -182,21 +197,15 @@ async function flushProbes(): Promise<void> {
  * breath — the eight cards of one render all arrive well inside it, and a
  * straggler simply starts the next batch.
  */
-export function pagesDeployed(name: string): Promise<boolean | null> {
+export function pagesDeployed(name: string): Promise<DeployAnswer | null> {
   const cacheKey = name.toLowerCase()
   const known = pagesAnswers.get(cacheKey)
   if (known !== undefined) return Promise.resolve(known)
 
-  const remembered = stored<Record<string, boolean>>(PAGES_KEY) ?? {}
-  if (cacheKey in remembered) {
-    pagesAnswers.set(cacheKey, remembered[cacheKey])
-    return Promise.resolve(remembered[cacheKey])
-  }
-
   const inFlight = pagesInFlight.get(cacheKey)
   if (inFlight) return inFlight
 
-  const ask = new Promise<boolean | null>((resolve) => {
+  const ask = new Promise<DeployAnswer | null>((resolve) => {
     const waiting = pendingProbes.get(name)
     if (waiting) waiting.push(resolve)
     else pendingProbes.set(name, [resolve])

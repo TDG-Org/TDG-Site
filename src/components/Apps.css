@@ -336,8 +336,10 @@
 
 .apps__title {
   display: flex;
-  /* CENTRE, not baseline: see the same note in Tools.css. The icon's middle
-     and the title's middle have to be one line. */
+  /* CENTRE, not baseline: see the same note in Tools.css. It used to be the
+     icon's middle against the title's; the icon is off this row now — the
+     cover above draws it — and it is the arrow that has to share the title's
+     middle rather than sit on its baseline. */
   align-items: center;
   gap: 10px;
   margin: 0 0 10px;
@@ -363,26 +365,6 @@
   color: var(--muted);
 }
 
-/* The initial standing in for an icon on a DISCOVERED card (see OrgTile in
-   Apps.tsx). Same box, radius formula and hairline ring as a tile icon in
-   AppIcon.css, so the one card whose mark is drawn rather than shipped still
-   sits level with its neighbours; the letter is the display face at the same
-   optical weight the real marks carry. Tokens only, so both themes hold. */
-.apps__orgmark {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  align-self: center;
-  border-radius: calc(30px * 0.22);
-  background-color: var(--surface);
-  box-shadow: 0 0 0 1px var(--border);
-  font: 700 15px var(--font-display);
-  color: var(--accent-2);
-  transition: var(--t-theme);
-}
 .apps__status {
   display: flex;
   align-items: center;

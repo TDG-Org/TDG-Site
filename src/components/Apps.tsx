@@ -4,11 +4,10 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ImageSlot } from './ImageSlot'
-import { AppIcon } from './AppIcon'
 import { GITHUB_ORG, type AppCard } from '../data/content'
 import { visibleApps } from '../content/resolve'
 import { useSiteContent } from '../content/store'
-import { useDiscoveredApps, useLiveAccess } from '../live/useLive'
+import { DOWN_WORDING, useDiscoveredApps, useLiveAccess } from '../live/useLive'
 import type { DiscoveredApp } from '../live/types'
 import { appHash, rememberOrigin } from '../lib/route'
 import './Apps.css'
@@ -46,9 +45,13 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
      renders — Bible Educator's card is the one this was built for: private
      repo, public Pages deploy, nothing in `content.ts` to say so. A card that
      already carries a `download` passes `undefined`, which asks nothing: a
-     human decision outranks discovery (see src/live/README.md). */
+     human decision outranks discovery. `down` is the third answer — a site
+     that WAS live and has stopped answering — and it replaces the status
+     words rather than the button: a link to a dead site is not access, and
+     `Coming soon` about an app people have used is not honest either. See
+     src/live/README.md. */
   const live = useLiveAccess(app.download ? undefined : app.repo, app.title)
-  const access = app.download ?? live
+  const access = app.download ?? (live?.kind === 'live' ? live : null)
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card apps__card">
@@ -89,8 +92,13 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
             </span>
           ))}
         </div>
+        {/* No icon beside the name. The cover above already draws it — top
+            left of the key art, at the size it was designed at — and a second
+            copy 30px tall next to the title was the same mark twice on one
+            card, competing with the thing it is meant to introduce. The app's
+            own page still carries one beside its `h1`, where there is no cover
+            above it to say the same thing. */}
         <h3 className="apps__title">
-          <AppIcon icon={app.icon} shape={app.iconShape} />
           {app.title}
           <span className="apps__title-arrow" aria-hidden="true">
             →
@@ -105,29 +113,24 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
             </span>
           </a>
         ) : (
-          <div className="apps__status">{app.status}</div>
+          <div className="apps__status">{live?.kind === 'down' ? DOWN_WORDING : app.status}</div>
         )}
       </div>
     </article>
   )
 }
 
-/**
- * The mark on a discovered card's title row, standing where `AppIcon` stands
- * on its neighbours. GitHub has no icon to offer for a repository, and a
- * title row that is the only one in the grid with nothing beside it reads as
- * a card still loading — so the awkward state gets a face: the app's own
- * initial, drawn in the same box, radius and hairline ring a tile icon gets.
- * The real icon arrives with the app's real entry in `content.ts`, which is
- * also what retires the whole card (see src/live/README.md).
+/*
+ * There used to be an `OrgMark` here: a discovered card has no icon to draw,
+ * and its title row was the only one in the grid with nothing beside it, which
+ * read as a card still loading — so it got the app's initial in the same box a
+ * tile icon gets.
+ *
+ * That reason inverted the day the icons came off these title rows. Nothing in
+ * this grid carries a mark beside its name any more, so the letter tile stopped
+ * being the row that matched its neighbours and became the only row that did
+ * not. It is deleted rather than hidden, along with `.apps__orgmark`.
  */
-function OrgMark({ title }: { title: string }) {
-  return (
-    <span className="apps__orgmark" aria-hidden="true">
-      {title.trim().charAt(0).toUpperCase()}
-    </span>
-  )
-}
 
 /**
  * A card for an app the catalogue has not been taught yet: a public TDG-Org
@@ -142,6 +145,15 @@ function OrgMark({ title }: { title: string }) {
 function OrgTile({ app, position }: { app: DiscoveredApp; position: number }) {
   const reveal = useReveal<HTMLElement>('card3d', position % 4)
   const tilt = useTilt<HTMLElement>()
+
+  /* A discovered card's static access comes from the API's answer about the
+     repo. When that answer was NO, the probe still gets a word — its memory
+     is what tells a tagged repo whose site was taken down (`down`) from one
+     that has not shipped yet, and it also catches a deploy the API's cached
+     list has not noticed. Same rule as AppTile: an existing access asks
+     nothing. */
+  const live = useLiveAccess(app.access ? undefined : app.name, app.title)
+  const access = app.access ?? (live?.kind === 'live' ? live : null)
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card apps__card">
@@ -171,25 +183,23 @@ function OrgTile({ app, position }: { app: DiscoveredApp; position: number }) {
           ))}
         </div>
         <h3 className="apps__title">
-          <OrgMark title={app.title} />
           {app.title}
           <span className="apps__title-arrow" aria-hidden="true">
             →
           </span>
         </h3>
         <p className="apps__copy">{app.copy}</p>
-        {app.access ? (
-          <a className="apps__download" href={app.access.href} target="_blank" rel="noopener">
-            {app.access.label}
+        {access ? (
+          <a className="apps__download" href={access.href} target="_blank" rel="noopener">
+            {access.label}
             <span className="apps__download-arrow" aria-hidden="true">
               →
             </span>
           </a>
         ) : (
           /* The same words its hand-written neighbours use for the same
-             state — mechanism copy for any undiscovered-yet-undeployed repo,
-             not any one product's. */
-          <div className="apps__status">Coming soon</div>
+             states — mechanism copy for any repo, not any one product's. */
+          <div className="apps__status">{live?.kind === 'down' ? DOWN_WORDING : 'Coming soon'}</div>
         )}
       </div>
     </article>

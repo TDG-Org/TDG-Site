@@ -5,7 +5,7 @@ import { useTilt } from '../hooks/useTilt'
 import { MARANATHA, NEXT_UP } from '../data/content'
 import { visibleGame, type SiteGame } from '../content/resolve'
 import { useSiteContent } from '../content/store'
-import { useLiveAccess } from '../live/useLive'
+import { DOWN_WORDING, useLiveAccess } from '../live/useLive'
 import { asset } from '../lib/asset'
 import { appHash, rememberOrigin } from '../lib/route'
 import { Seam } from './scene/Seam'
@@ -115,12 +115,14 @@ function Feature({ game }: { game: SiteGame }) {
             <a className="building__play" href={game.href} target="_blank" rel="noopener">
               {game.status}
             </a>
-          ) : live ? (
+          ) : live?.kind === 'live' ? (
             <a className="building__play" href={live.href} target="_blank" rel="noopener">
               {live.label}
             </a>
           ) : (
-            <span className="building__play building__play--soon">{game.status}</span>
+            <span className="building__play building__play--soon">
+              {live?.kind === 'down' ? DOWN_WORDING : game.status}
+            </span>
           )}
           <span className="building__note">{game.note}</span>
         </div>
