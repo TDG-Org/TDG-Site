@@ -1,0 +1,446 @@
+/* ── Your TDG account ──────────────────────────────────────────────────────
+   Only what is genuinely new on this page. Its shell, blend tints, head, back
+   control, ghost buttons and grid texture are `.appview`'s, from
+   AppPage.css — the same decision About.tsx records, and for the same reason:
+   this page opens from the same chrome as those, and a second set of lookalike
+   page furniture is how the two start drifting apart.
+
+   `.appview__shell` caps at 900px, which is right for a column of prose. The
+   privacy list is a column of ROWS, each with a label on one side and a
+   three-way chooser on the other, and at 900px those two halves sit so far
+   apart that the eye loses the line between them. So the shell widens here and
+   nowhere else, from ONE variable, because it is the only page on the site
+   with a control at the right-hand edge of every row.                        */
+
+.acct .appview__shell {
+  max-width: 1040px;
+}
+
+/* ── who you are, under the title ─────────────────────────────────────── */
+
+.acct__identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 14px;
+}
+.acct__handle {
+  font: 500 14px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent-2);
+  overflow-wrap: anywhere;
+}
+.acct__email {
+  font: 400 13.5px var(--font-body);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.chips.acct__tags {
+  gap: 6px;
+}
+
+/* ── the cards ────────────────────────────────────────────────────────────
+   A wrapping row rather than a grid template, because WHICH cards exist does
+   not change but their heights do wildly — Privacy is five times Badges — and
+   a grid row stretches its siblings to the tallest, which would leave Account
+   and Badges as tall panels holding four lines each. Wrapping, a card takes
+   the height it needs and the next one starts where it ends.
+
+   --acct-col is the narrowest a card stays readable at, and it is ONE number
+   for every card on the page (AGENTS.md rule 6): a pair that took its width
+   from two literals is a lopsided pair the first time one of them moves.     */
+
+.acct__grid {
+  --acct-col: 300px;
+  --acct-gap: clamp(14px, 1.6vw, 20px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--acct-gap);
+  margin-top: clamp(30px, 4vw, 46px);
+}
+
+.card.acct__card {
+  flex: 1 1 var(--acct-col);
+  min-width: min(100%, var(--acct-col));
+  padding: clamp(16px, 2vw, 22px);
+}
+/* Privacy and Session hold rows that run the width of the page. A row whose
+   chooser wraps under its own label reads as a broken control, not a narrow
+   one, so these never pair. */
+.card.acct__card--wide {
+  flex-basis: 100%;
+}
+
+.acct__card-head {
+  margin-bottom: 14px;
+}
+.acct__card-title {
+  margin: 0;
+  font: 700 17px var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.acct__card-blurb {
+  margin: 5px 0 0;
+  max-width: 68ch;
+  font: 400 13px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+/* Every card's own empty / loading / refused line, so the six of them cannot
+   say the same thing in six voices. `--warn` is the site's warm, which is what
+   the Store and the nav's badge shelf already use for "we could not find out"
+   as opposed to "there is nothing". */
+.acct__note {
+  margin: 0;
+  font: 400 13px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.acct__note--warn {
+  color: var(--warm);
+}
+
+/* ── facts ────────────────────────────────────────────────────────────── */
+
+.acct__facts {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.acct__fact {
+  padding: 10px 13px;
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.acct__fact-label {
+  margin: 0 0 4px;
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.acct__fact-value {
+  margin: 0;
+  font: 400 13.5px/1.5 var(--font-body);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.acct__fact-hint {
+  display: block;
+  margin-top: 2px;
+  font: 400 11.5px var(--font-body);
+  color: var(--faint);
+}
+
+/* ── counters ─────────────────────────────────────────────────────────────
+   `minmax(min(100%, …), 1fr)` and not a bare minmax: a track whose minimum is
+   wider than its container overflows it, and at 320px this card is 250px wide
+   (AGENTS.md rule 16).                                                       */
+
+.acct__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.acct__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 12px;
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.acct__tile-n {
+  font: 700 20px/1 var(--font-display);
+  color: var(--text);
+}
+.acct__tile-label {
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.acct__tile-hint {
+  font: 400 10.5px var(--font-body);
+  color: var(--faint);
+}
+
+/* A streak is a sentence, not a tile: the run you are on, then what it is
+   measured against. One block per app, from whatever the server had. */
+.acct__streaks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.acct__streak {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 13px;
+  border-radius: 3px;
+  border: 1px solid var(--live-border);
+  background-color: var(--live-bg);
+  transition: var(--t-theme);
+}
+.acct__streak-app {
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--live-fg);
+}
+.acct__streak-n {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font: 700 22px/1 var(--font-display);
+  color: var(--text);
+}
+.acct__streak-unit {
+  font: 500 11px var(--font-body);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.acct__streak-more {
+  font: 400 11.5px var(--font-body);
+  color: var(--faint);
+}
+
+/* ── badges ───────────────────────────────────────────────────────────── */
+
+/* The site's own .chip, with the tracking relaxed for the same reason the
+   nav's badge row relaxes it: 0.12em is drawn for shouted one-word tags, and a
+   badge's label is a Title Case name, which comes apart at that spacing. */
+.chip.acct__badge {
+  letter-spacing: 0.05em;
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+/* ── privacy ──────────────────────────────────────────────────────────── */
+
+.acct__setall {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 11px 13px;
+  margin-bottom: 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.acct__setall-text {
+  margin: 0;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.acct__setall-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.acct__group + .acct__group {
+  margin-top: 24px;
+}
+.acct__group-title {
+  margin: 0;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.acct__group-blurb {
+  margin: 5px 0 0;
+  max-width: 72ch;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+.acct__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 11px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+
+/* Label on the left, chooser on the right, and they wrap onto two lines
+   together rather than the chooser dropping half of itself. `--acct-row-pad`
+   is one number for both sides of the row (rule 6). */
+.acct__row {
+  --acct-row-pad: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px var(--acct-row-pad);
+  padding: var(--acct-row-pad) calc(var(--acct-row-pad) + 1px);
+  background-color: var(--surface);
+  transition: background-color 0.2s ease, var(--t-theme);
+}
+.acct__row:hover {
+  background-color: var(--surface-hover);
+}
+/* A row mid-save stays completely readable. It dims its text a little and
+   nothing moves: a row that greyed out or swapped in a spinner would take the
+   control away from under the pointer at the exact moment somebody is
+   deciding whether the press worked. */
+.acct__row[data-busy] .acct__row-text {
+  opacity: 0.62;
+}
+.acct__row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  /* 220px, so the label keeps a readable measure before the chooser wraps
+     under it rather than squeezing to one word a line. */
+  flex: 1 1 220px;
+  min-width: min(100%, 220px);
+  transition: opacity 0.2s ease;
+}
+.acct__row-label {
+  font: 600 13.5px var(--font-body);
+  color: var(--text);
+}
+.acct__row-blurb {
+  font: 400 12px/1.55 var(--font-body);
+  color: var(--muted);
+}
+/* Quiet on purpose: it is a fact about the value, not a warning about it. */
+.acct__row-default {
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* The chooser. One track, the options inside it, and the chosen one wearing
+   the site's inverted surface — the same "this is the one" the hero's primary
+   button uses, so a reader meets one idiom for a chosen thing. */
+.acct__seg {
+  display: flex;
+  flex: 0 1 auto;
+  padding: 2px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: var(--accent-soft);
+  transition: opacity 0.2s ease, var(--t-theme);
+}
+.acct__seg[data-busy] {
+  opacity: 0.72;
+}
+.acct__seg-btn {
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 2px;
+  background-color: transparent;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.acct__seg-btn:hover {
+  color: var(--text);
+  background-color: var(--surface-hover);
+}
+.acct__seg-btn[aria-checked='true'] {
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.acct__seg-btn[aria-checked='true']:hover {
+  background-color: var(--invert-bg);
+}
+/* The ring goes on the option, not the group: with a roving tabindex the group
+   never takes focus, and a ring drawn around all three would not say which one
+   the arrows are about to move from. */
+.acct__seg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A refusal, where the press was made. */
+.acct__problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 3px;
+  border: 1px solid var(--danger-border);
+  background-color: var(--danger-soft);
+  font: 400 12.5px/1.55 var(--font-body);
+  color: var(--danger);
+  transition: var(--t-theme);
+}
+.acct__problem-x {
+  margin-left: auto;
+  flex: none;
+  padding: 0 4px;
+  font: 500 16px/1 var(--font-body);
+  color: var(--danger);
+}
+
+/* ── actions ──────────────────────────────────────────────────────────── */
+
+.acct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The one filled button on the page, for the one moment there is nothing else
+   to press: a signed-out reader who opened this from a link. */
+.acct__primary {
+  margin-top: 4px;
+  padding: 10px 18px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background-color: var(--invert-bg);
+  font: 600 12px var(--font-body);
+  color: var(--invert-fg);
+  transition:
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.acct__primary:hover {
+  opacity: 0.86;
+}
+
+/* ── reduced motion ───────────────────────────────────────────────────────
+   Nothing here animates position, so the only thing to hold still is the
+   colour and opacity easing on the chooser and the rows.                     */
+
+@media (prefers-reduced-motion: reduce) {
+  .acct__row,
+  .acct__row-text,
+  .acct__seg,
+  .acct__seg-btn,
+  .acct__primary {
+    transition-duration: 0.01ms;
+  }
+}

@@ -4,7 +4,9 @@ import { useTheme } from '../theme/ThemeProvider'
 import { useAuth } from '../auth/AuthProvider'
 import { useMyBadges } from '../badges/useBadges'
 import { NAV_LINKS } from '../data/content'
-import { useRoute, ABOUT_HASH, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
+import { useAccountStats } from '../account/useAccount'
+import { fmtCount, fmtDay } from '../account/format'
+import { useRoute, ABOUT_HASH, ACCOUNT_HASH, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
 import { setDevMode, useDevMode } from '../dev/devMode'
 import './Nav.css'
 
@@ -192,6 +194,90 @@ function AccountBadges() {
 }
 
 /**
+ * Three figures and a date, above the door to the page that has the rest.
+ *
+ * ## Why the menu carries numbers at all
+ *
+ * A menu that only repeats the name you signed in with answers a question
+ * nobody has. These are the three counts somebody actually opens an account
+ * menu to check — how many friends, how long a run, how much they own — and
+ * the day it all began. Everything else is a page away, and the button under
+ * these is that page.
+ *
+ * ## Which three, and why not badges
+ *
+ * Deliberately NOT the badge count: the badges are drawn as chips directly
+ * below, and a tile counting the thing sitting under it is the same fact said
+ * twice in one 280px panel.
+ *
+ * A streak is per app, and this has room for one number, so it shows the
+ * longest run currently going anywhere — which is what "am I still on a
+ * streak" means to the person asking. The Account page breaks it out per app.
+ * **Zero is a true answer here** and is drawn as one: this is the reader's own
+ * account, so no streak row means no run kept, not a figure being withheld.
+ *
+ * ## Four states, and the box is one size in all of them
+ *
+ * Same floor as the badge shelf below it, for the same reason: a panel that
+ * grows under the pointer as a read lands reads as a page still loading. The
+ * reservation holds the tile row and the date line, which is the tallest this
+ * can honestly be.
+ */
+function AccountGlance() {
+  const state = useAccountStats()
+
+  // Same reasoning as AccountBadges: unreachable except for the tick between
+  // pressing Sign out and this unmounting, and what must not flash there is a
+  // row of zeros on the way out.
+  if (state.kind === 'signedOut') return null
+
+  const packs =
+    state.kind === 'ok'
+      ? Object.values(state.stats.packs).reduce((sum, list) => sum + list.length, 0)
+      : 0
+  const streak =
+    state.kind === 'ok'
+      ? Object.values(state.stats.streaks).reduce((best, s) => Math.max(best, s.current), 0)
+      : 0
+
+  return (
+    <div className="nav__glance">
+      {state.kind === 'checking' && <p className="nav__glance-note">Counting…</p>}
+
+      {state.kind === 'error' && (
+        /* Not zeros. "We could not find out" is a different fact from "you
+           have none", and drawing the second would tell somebody they have no
+           friends because a request timed out. Same rule, same warm, as the
+           badge shelf below — see src/badges/README.md. */
+        <p className="nav__glance-note nav__glance-note--warn">
+          We couldn't read your stats just now.
+        </p>
+      )}
+
+      {state.kind === 'ok' && (
+        <>
+          <div className="nav__glance-row">
+            <span className="nav__glance-tile">
+              <span className="nav__glance-n">{fmtCount(state.stats.friends)}</span>
+              <span className="nav__glance-label">Friends</span>
+            </span>
+            <span className="nav__glance-tile">
+              <span className="nav__glance-n">{fmtCount(streak)}</span>
+              <span className="nav__glance-label">Streak</span>
+            </span>
+            <span className="nav__glance-tile">
+              <span className="nav__glance-n">{fmtCount(packs)}</span>
+              <span className="nav__glance-label">Packs</span>
+            </span>
+          </div>
+          <p className="nav__glance-since">Member since {fmtDay(state.stats.createdAt)}</p>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
  * Controlled by the Nav rather than by itself, because the burger panel and
  * this share one bar and are both open-able at once on a phone. One owner
  * means opening either closes the other, instead of the two overlapping.
@@ -200,10 +286,13 @@ function AccountMenu({
   open,
   setOpen,
   onOpenFeedback,
+  onAccountPage,
 }: {
   open: boolean
   setOpen: (v: boolean) => void
   onOpenFeedback: () => void
+  /** True while `#/account` is already the page, so the door says so. */
+  onAccountPage: boolean
 }) {
   const { user, profile, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
@@ -244,6 +333,24 @@ function AccountMenu({
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
+        <AccountGlance />
+        {/* The door to everything this panel cannot hold: the whole privacy
+            list, every counter, the badges with their blurbs, and the account's
+            own facts. An anchor and not a button, because it goes to a place —
+            so it can be middle-clicked, copied and opened in a new tab like
+            every other link on this site. Closing the menu is the click's own
+            business; the hash change is the browser's. */}
+        <a
+          className="nav__account-open"
+          href={ACCOUNT_HASH}
+          aria-current={onAccountPage ? 'page' : undefined}
+          onClick={() => setOpen(false)}
+        >
+          {/* It stays reachable while you are already there — a door that
+              vanishes once you are through it leaves somebody who scrolled
+              away with no way to see they are still on it. */}
+          {onAccountPage ? 'Your Account Page' : 'Open Your Account Page'}
+        </a>
         <AccountBadges />
         {/* Feedback needs the account (a reply has to reach its sender), so
             its door lives with the account things. See src/feedback/. */}
@@ -506,6 +613,7 @@ export function Nav({
               open={openPanel === 'account'}
               setOpen={(v) => setOpenPanel(v ? 'account' : null)}
               onOpenFeedback={onOpenFeedback}
+              onAccountPage={route.kind === 'account'}
             />
           ) : (
             <button type="button" className="nav__auth-btn" onClick={onOpenAuth}>

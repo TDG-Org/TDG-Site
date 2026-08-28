@@ -29,7 +29,7 @@ One `useRoute()` call decides which of five things is on screen:
 | --- | --- |
 | `home` | Hero, Origin, Apps, Tools, Building, Faith, Outro — the one-page scroll |
 | `#/about` | `About`, lazily |
-| `#/store` · `#/store/<app>` | `Store`, landed at that app's shelf when one is named |
+| `#/store` · `#/store/<app>` | `Store`: its index of app cards, or one app's own page of packs |
 | `#/app/<slug>` | `AppPage`, lazily |
 | `#/dev` | `DevConsole`, lazily, **and only for a signed-in TDG developer** |
 
@@ -66,6 +66,7 @@ the hash is the one that was left — see `lib/route.ts`.
 | `lib/` | Routing, the frame loop, sections state, Supabase, asset paths | [→](lib/README.md) |
 | `hooks/` | Reveal, tilt, parallax, hero parallax, offscreen pause | [→](hooks/README.md) |
 | `auth/` | Sign-in, the profile, session revocation, refusal wording | [→](auth/README.md) |
+| `account/` | The `#/account` page: the account's facts, its counters, and who may see each part of it | [→](account/README.md) |
 | `badges/` | Global account badges, and the account count the footer prints | [→](badges/README.md) |
 | `feedback/` | Send Feedback, and the panel that delivers our replies | [→](feedback/README.md) |
 | `store/` | Which packs an account owns | [→](store/README.md) |

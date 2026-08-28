@@ -17,7 +17,7 @@ shared primitives every one of these builds on live in
 | `Hero.tsx` | The opening scene, and a **pinned** one: a 230svh section whose `scene/Stage` holds still for 130svh while the copy dissolves over it and Origin climbs up on a `margin-top: -100svh`. Its own header draws the three boxes and names the trap in each; read it before you touch the seam. Its canvases and its typed tagline are in `hero/`. (It used to own a `useHeroTakeover` hook that slid Origin with a JS translate. That hook is gone — the overlap is CSS now, so there is nothing left to time.) |
 | `Walk.tsx` | **Not a section — a wrapper around three of them.** It owns the one 3D backdrop the whole cabin walk is read against, and the `margin-top: -100svh` that pulls this half of the page onto the pinned hero. See below. |
 | `Origin.tsx` | Seven chapters on a timeline that fills as you read, over the walk's `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read, and then goes inside. |
-| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. Both are read against the walk's camera — the projects over a table, the tools over a window — so neither paints a background of its own. |
+| `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. Both are read against the walk's camera — the projects over a table, the tools over a window — so neither paints a background of its own. Both ask `src/live/` at runtime whether each card's app is actually deployed, and a yes turns its status caption into a real link; the Apps grid also appends a derived card per `tdg-app`-tagged org repository the catalogue has not been taught (`OrgTile`, with a drawn-monogram stand-in for the icon GitHub cannot provide). |
 | `Building.tsx` | What is on our screens right now. |
 | `Faith.tsx` | A slow gradient field, one verse, and the summit below it — `faith/Summit.tsx`, where the page's moon finally arrives behind the cross. |
 | `Outro.tsx` | The makers note and the GitHub card that close the page. |
@@ -28,7 +28,7 @@ shared primitives every one of these builds on live in
 | --- | --- |
 | `AppPage.tsx` | One app's own page. **Knows nothing about any particular app** — everything comes from `data/appPages.ts`. |
 | `About.tsx` | About TDG. Deliberately the same page as an app page, and carries **no stylesheet of its own**: a second one would be the two starting to drift, and this page's whole job is to look like it belongs beside the ten it links to. |
-| `Store.tsx` | The shop. Read it with `data/store.ts` and `store/useOwnedPacks.ts` — see below. |
+| `Store.tsx` | The shop, in **two views over one set of state**: `#/store` is an index of one card per app, `#/store/<app>` is that app's own page of packs with the buy and manage panels on them. Both open and close with the app pages' own `BackButton`. Read it with `data/store.ts` and `store/useOwnedPacks.ts` — see below. |
 
 ### Always on screen
 
@@ -198,7 +198,8 @@ Nothing ships wearing the browser's default look.
 
 **Keep a card's height stable across its states.** `.store__action` carries a
 `min-height` so a card does not change size when it flips from Buy to Waiting to
-Owned — a shelf that jumps as answers arrive reads as a page still loading.
+Owned — a row of cards that jumps as answers arrive reads as a page still
+loading.
 
 **Icons are inline SVG components, written where they are used.** `Tick`,
 `Caret` and `Cross` in `Store.tsx`, `Chevron` in `Folded.tsx`, the set at the top
@@ -227,7 +228,28 @@ are checking layout.
 
 ## Store.tsx is the worked example
 
-It is the file to read before you build anything new here, and its two choosers
+### Two views, and what each of them owns
+
+`#/store` draws `StoreIndex`: one `AppCard` per entry in `STORE_APPS`, each a
+whole-card link to `#/store/<app>` with the app's packs listed as a contents row
+(name and cheapest way in, both derived), an ownership line that has a sentence
+for **every** state including "checking", "couldn't check" and "signed out", and
+one real inner link to the app's own page above `.card__cover`.
+
+`#/store/<app>` draws `StoreApp`: the app's head, then its `PackCard`s
+unchanged. Those cards were lifted from the old single-scroll Store without a
+line of them being re-decided, which is the pattern paying for itself.
+
+Three blocks are drawn on **both** and are one component each — `AccountStrip`,
+`BeforeYouPay`, `MoneyAnswers` — so the two views cannot answer differently
+about who is buying, what the refund policy is, or how the money works. The buy
+watch (`pending`, and the five-minute poll after a checkout opens) lives in
+`Store` itself, the parent of both, so walking back to the index mid-payment
+does not throw the wait away.
+
+### The two choosers
+
+Its two choosers
 are a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it
 down, and any future app that sells a plan copies it rather than designing
 beside it. In one component:
@@ -262,12 +284,14 @@ beside it. In one component:
   and returning focus, and a scrim that is a real button and is hidden from
   screen readers because Escape is its keyboard equivalent.
 
-- A **`Before You Pay` block above the shelf**, carrying the three facts most
+- A **`Before You Pay` block above the cards**, carrying the three facts most
   likely to stop somebody pressing Buy: the card lists everything, a one-time
-  pack stays bought, and payments are not refundable. It is above the shelf
-  rather than folded under it because a refund policy you find afterwards is one
-  you never agreed to. Its long form is the `refunds` section of
-  `storeAnswers.ts`; change one and change the other.
+  pack stays bought, and payments are not refundable. It is above the cards
+  rather than folded under them because a refund policy you find afterwards is
+  one you never agreed to. Its long form is the `refunds` section of
+  `storeAnswers.ts`; change one and change the other. Both are drawn on **both**
+  Store views, as `BeforeYouPay` and `MoneyAnswers`, because Buy lives on the
+  app's own page and the policy has to be readable from there.
 - A **permission-independent subscription entrance**. Every current recurring
   standing draws **Manage or Cancel Plan** for its account holder; making that
   person a Developer cannot add it and removing Developer cannot take it away.

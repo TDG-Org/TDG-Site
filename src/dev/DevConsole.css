@@ -1875,6 +1875,458 @@
   }
 }
 
+/* ── the Content tab ──────────────────────────────────────────────────────
+   What the site says about our own products, edited here. It is the one tab
+   that STAGES its edits rather than writing them as they are typed, so most of
+   what is new below exists to make that legible: the publish bar that says how
+   much is waiting, the EDITED / BUILT-IN mark on every field, and the built-in
+   value printed under an edited one so putting it back never means going to
+   look it up.
+
+   Every paired edge in here comes from one of the variables on `.dev__content`,
+   per rule 6. A row's two ends, a preview's frame, a nested list's inset: all
+   of them read the same three, so a lopsided pair is not something this file
+   can express.                                                                */
+
+.dev__content {
+  --c-gap: 12px;
+  --c-pad: 13px;
+  --c-inset: 12px;
+  /* Clear of the fixed nav, which is 24px of content inside 17px of padding
+     and shrinks to 12px once the page scrolls. 62px clears the taller of the
+     two with a hair to spare, so the bar never slides under the wordmark. */
+  --c-sticky: 62px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2vw, 22px);
+}
+
+/* ── the publish bar ──────────────────────────────────────────────────── */
+
+/* Sticky, and this is most of what makes the tab trustworthy: the sections
+   editor is a very long page, and a Publish button only reachable by scrolling
+   back to the top is a button somebody forgets to press. The count of unsaved
+   changes travels with it, so "is any of this live?" is answerable without
+   moving. */
+.dev__publish {
+  position: sticky;
+  top: var(--c-sticky);
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--c-gap);
+  padding: var(--c-pad);
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+/* A page holding unpublished work says so in its own edge, not only in words:
+   the state has to be readable from the corner of the eye while typing. */
+.dev__publish[data-dirty] {
+  border-color: var(--live-border);
+  box-shadow: inset 3px 0 0 var(--live-fg);
+}
+.dev__publish-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.dev__publish-state {
+  margin: 0;
+  font: 400 13px/1.6 var(--font-body);
+  color: var(--text);
+}
+.dev__publish-state strong {
+  color: var(--live-fg);
+  font-weight: 700;
+}
+.dev__publish-when {
+  margin: 3px 0 0;
+  font: 400 11.5px var(--font-body);
+  color: var(--faint);
+}
+.dev__publish-act {
+  flex: 0 1 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.dev__publish .dev__warn {
+  flex: 1 1 100%;
+}
+
+/* ── the product roster ───────────────────────────────────────────────── */
+
+.dev__cgroup + .dev__cgroup {
+  margin-top: 16px;
+}
+.dev__cgroup-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dev__cgroup-what {
+  font: 400 11.5px var(--font-body);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--faint);
+}
+
+/* The row is a list item holding three controls rather than one big button,
+   because a button inside a button is not something a browser will render and
+   the reorder arrows have to be reachable by Tab in their own right. The
+   border and the active mark live on the LI so the whole row lights together. */
+.dev__crow {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.dev__crow:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+}
+.dev__crow[data-active] {
+  border-color: var(--border-hover);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.dev__crow-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--c-pad);
+  text-align: left;
+}
+.dev__crow-n {
+  flex: none;
+  width: 18px;
+  font: 600 11px var(--font-mono);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.dev__crow-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+/* The same rule the site itself keeps: a ring belongs on a tile, and around a
+   glyph it is a box drawn about thin air. */
+.dev__crow-icon[data-shape='tile'] {
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.dev__crow-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 13.5px var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev__crow-tags {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+.dev__crow-move {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: var(--c-pad);
+}
+
+/* ── the small square buttons: move up, move down, remove ─────────────── */
+
+.dev__mini {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
+  font: 600 12px var(--font-body);
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.dev__mini:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+/* Disabled rather than hidden at both ends of a list: a control that vanishes
+   at the top makes the row jump and takes away the one thing that said which
+   end you were at. */
+.dev__mini:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
+}
+.dev__mini--bad:hover:not(:disabled) {
+  border-color: var(--danger-border);
+  background-color: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ── the override frame ───────────────────────────────────────────────── */
+
+.dev__ov {
+  padding-left: var(--c-inset);
+  border-left: 2px solid var(--border);
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.dev__ov[data-edited] {
+  border-left-color: var(--live-border);
+}
+.dev__ov-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.dev__ov-head .dev__label {
+  margin: 0;
+}
+.dev__ov-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.dev__ov-count {
+  font: 600 11px var(--font-mono);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.dev__ov-reset {
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
+  font: 600 10.5px var(--font-body);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.dev__ov-reset:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+
+/* What the repo says, under a field somebody has typed over. It is here so
+   putting a line back is reading and retyping rather than a trip to GitHub. */
+.dev__was {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.dev__was-label {
+  flex: none;
+  font: 700 9px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── repeating rows ───────────────────────────────────────────────────── */
+
+.dev__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dev__rows-empty {
+  margin: 0;
+  padding: 12px var(--c-pad);
+  border-radius: var(--dev-radius);
+  border: 1px dashed var(--border);
+  font: 400 12.5px var(--font-body);
+  color: var(--faint);
+}
+.dev__rowitem {
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+}
+.dev__rowitem-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px var(--c-pad);
+  border-bottom: 1px solid var(--border);
+}
+.dev__rowitem-n {
+  flex: none;
+  width: 16px;
+  font: 600 10.5px var(--font-mono);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.dev__rowitem-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 12px var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev__rowitem-name em {
+  color: var(--faint);
+  font-style: normal;
+}
+.dev__rowitem-btns {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+.dev__rowitem-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--c-pad);
+}
+/* A list inside a list — the blocks of a section — steps in by the same inset
+   the override frame uses, so nesting reads as one idea rather than two. */
+.dev__rowitem-body .dev__rows {
+  padding-left: var(--c-inset);
+  border-left: 2px solid var(--border);
+}
+
+/* ── previews ─────────────────────────────────────────────────────────── */
+
+.dev__preview {
+  display: flex;
+  align-items: center;
+  gap: var(--c-gap);
+  padding: var(--c-pad);
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+}
+.dev__preview-what {
+  margin: 0;
+  flex: 1 1 180px;
+  font: 400 12px/1.6 var(--font-body);
+  color: var(--faint);
+}
+/* The card's real key art, at about the width a card paints it. Not a mock-up:
+   it is the same component the site draws, so what is in this box is what
+   ships. */
+.dev__keyart {
+  flex: none;
+  /* `.keyart` is `position: absolute; inset: 0` because a card's cover slot is
+     a positioned box of a known ratio. This box is that slot: relative, and
+     16/10, which is also the art's own viewBox. Without both, the SVG collapses
+     to two pixels tall and the preview says nothing. */
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--dev-radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.dev__asset {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  overflow: hidden;
+}
+.dev__asset[data-frame='icon'] {
+  width: 56px;
+  height: 56px;
+  padding: 8px;
+}
+.dev__asset[data-frame='wide'] {
+  width: 260px;
+  max-width: 100%;
+  aspect-ratio: 16 / 10;
+}
+.dev__asset-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+/* A filename that is not in the repo fails INVISIBLY on a card — a blank box
+   reads as a slow network — so here it is a sentence in a box that is clearly
+   wrong, beside the field that caused it. */
+.dev__asset[data-state='gone'] {
+  border-color: var(--danger-border);
+  background-color: var(--danger-soft);
+}
+.dev__asset[data-state='gone'] .dev__asset-img {
+  display: none;
+}
+.dev__asset-gone {
+  margin: 0;
+  padding: 6px;
+  font: 400 10.5px/1.5 var(--font-body);
+  color: var(--danger);
+  text-align: center;
+}
+
+/* The access button as the card will draw it, in both of its states: a real
+   button when it has a link, a quiet caption when it does not. */
+.dev__btnpreview {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--surface);
+  color: var(--faint);
+  font: 600 13px var(--font-body);
+}
+.dev__btnpreview[data-live] {
+  border-color: transparent;
+  background-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.dev__btnpreview em {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* ── responsive ───────────────────────────────────────────────────────── */
 
 @media (max-width: 1040px) {
@@ -1893,6 +2345,20 @@
 @media (max-width: 720px) {
   .dev {
     --dev-pad: 15px;
+  }
+  .dev__content {
+    --c-pad: 11px;
+  }
+  /* A sticky bar this tall would eat a third of a phone screen, and a phone is
+     not where anybody rewrites a product page. It goes back into the flow. */
+  .dev__publish {
+    position: static;
+  }
+  .dev__publish-act {
+    flex: 1 1 100%;
+  }
+  .dev__preview {
+    flex-wrap: wrap;
   }
   .dev__toolbar {
     align-items: stretch;

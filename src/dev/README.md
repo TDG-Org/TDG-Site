@@ -2,7 +2,8 @@
 
 The internal page at `#/dev`. One place to see and change any account across
 **all** of TDG Core (Bible Educator, Makullveny, TDG Veditor and DevFleet) and
-the money and moderation trail behind it.
+the money and moderation trail behind it — and, on its **Content** tab, what
+this site says about our own products and which of them it shows at all.
 
 Bible Educator has its own Developer tab and it stays what it is: it manages
 Bible Educator. This one manages the shared project all four apps sign into.
@@ -360,6 +361,57 @@ from `api.ts` here. Badges are a whole-site surface — the footer counts them a
 every TDG app reads them — so the folder that owns them owns the client, and
 this console is one of its callers.
 
+## Content · what the site says about our own apps
+
+The **Content** tab is the one place that changes the public site rather than
+somebody's account. It manages every product card the site draws — the six under
+Apps, the three under Tools, and the game in Building now — and behind each of
+them, that product's own page.
+
+What it can change, per product:
+
+| | |
+| --- | --- |
+| **Whether it is on the site** | One switch. The card leaves its grid; its own page stays exactly where it was, at `#/app/<slug>`, because a link somebody has already shared should not start answering "nothing here". |
+| **Where it sits** | Move Up / Move Down on every row, plus Move To Front and Move To Back in the panel. The order in the roster is the order on the home page. |
+| **Its words** | Number, title, copy, status caption, chips — and for the game, its heading, live tag, note and count. |
+| **Its icon and its cover** | The icon file and whether it is drawn as a tile or a glyph; and the cover as key art (title, line, facts, one of five scenes) or a screenshot (file, both widths, alt, crop) or nothing, with a live preview of each. |
+| **Its access button** | The words on it and the link it opens — *"Download Makullveny"* to *"Visit!"*, pointed anywhere — with a preview of the button in both of its states. An app card can be given a button or have it taken away; the game had never had a link at all and can now be given one. |
+| **Its own page** | Title, lede, intro, group, Back, the at-a-glance facts, the links row, and every folding section: its title, its shut-row line, its tag and every block inside it, in all seven block kinds. |
+
+### It stages, and it is the only tab that does
+
+Every other switch on this console writes the moment it is pressed, because
+every other switch changes one person's account and that person can see the
+result. This changes the public home page, for everybody, and it is edited by
+typing — so a live write per keystroke would publish `Downlo` to the internet on
+the way to `Download`.
+
+So edits are held until **Publish Changes**. The bar saying how much is waiting
+is sticky at the top of the tab, the tab itself carries an `N UNSAVED` badge so
+work behind an unopened tab is still visible, and closing the browser with a
+dirty draft asks first. The draft is held by `DevConsole` rather than by the
+tab, so a trip to Accounts and back does not lose a half-written page.
+
+### The repo is still the source
+
+`src/data/content.ts` and `src/data/appPages.ts` are where the words are
+written; this writes an overlay of only what somebody changed. Every field shows
+`BUILT-IN` or `EDITED` with a **Reset** beside it and the repo's own value
+printed underneath, a field typed back to its built-in text drops its override
+so it goes on tracking the repo, and **Reset This Product To Built-In** drops
+all of them at once. [`src/content/README.md`](../content/README.md) has the
+merge rules and why an unreadable document degrades to the built-in card.
+
+### If two of us edit at once
+
+The draft remembers the published version it started from. A Refresh that finds
+a different one while there are unsaved edits says so, out loud, and offers the
+two honest answers — publish yours whole, or discard yours and take theirs.
+Nothing is merged, because only a person can say which sentence the site should
+carry. Every publish keeps the version it replaced, up to fifty of them, in
+`tdg_site_content_history`.
+
 ## Feedback
 
 Everything users send from inside the apps — a bug, a suggestion, a question —
@@ -422,15 +474,17 @@ reference implementation of the startup reply panel the other apps copy.
 
 | File | What it is |
 | --- | --- |
-| `DevConsole.tsx` | The page: header, the overview numbers, the four tabs, the roster, and the one action runner every write goes through. |
+| `DevConsole.tsx` | The page: header, the overview numbers, the five tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The panels for one account — eight fixed ones and a Store panel per app. Each states what it is and names the table it writes. |
+| `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
+| `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the report dialog, the reply composer with its delivery state, and copying at every grain. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
 | `controls.tsx` | Panel, SectionControls, Field, Fact, TextInput, Select, Combo, Switch, Button, Tag, OwnTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
-| `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. The one exception is the pair of badge verbs, which live in [`../badges/api.ts`](../badges/README.md) with the rest of that surface — see **Badges** above. |
+| `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |

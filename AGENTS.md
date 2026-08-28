@@ -47,9 +47,12 @@ protection is RLS on the server.
 | `src/data/` | **All page copy and catalogue data.** Prices, app pages, About, the Store's prose. | [`src/data/README.md`](src/data/README.md) |
 | `src/components/` | Every rendered surface, one `.tsx` + one `.css` per component. | [`src/components/README.md`](src/components/README.md) |
 | `src/styles/` | `tokens.css` (the palette) and `base.css` (the shared primitives). | [`src/styles/README.md`](src/styles/README.md) |
+| `src/content/` | The runtime overlay over `src/data/`: what `#/dev` has changed about our product cards, merged over the copy the repo ships. | [`src/content/README.md`](src/content/README.md) |
 | `src/lib/` | Routing, the animation loop, sections state, Supabase client, asset paths. | [`src/lib/README.md`](src/lib/README.md) |
+| `src/live/` | What is deployed right now, asked of GitHub at runtime: cards upgrade their status to a real link, and `tdg-app`-tagged org repos get derived cards. | [`src/live/README.md`](src/live/README.md) |
 | `src/hooks/` | The five motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
 | `src/auth/` | Sign-in, the profile, session revocation, and what a refusal says. | [`src/auth/README.md`](src/auth/README.md) |
+| `src/account/` | The account page at `#/account`: what the account is, what it counts, and who may see each part of it. | [`src/account/README.md`](src/account/README.md) |
 | `src/badges/` | Global account badges, and the account count the footer prints. | [`src/badges/README.md`](src/badges/README.md) |
 | `src/feedback/` | Send Feedback, and the panel that delivers our replies. | [`src/feedback/README.md`](src/feedback/README.md) |
 | `src/store/` | Reading which packs an account owns. | [`src/store/README.md`](src/store/README.md) |
@@ -94,6 +97,21 @@ a status, a fact row, a paragraph of a guide — and never add a component whose
 only job is to render one app's content. That half is absolute; it is the half
 that costs money when it bends. [`src/data/README.md`](src/data/README.md) has
 the worked line.
+
+**`src/data/` is the DEFAULT, and since 2.0.0 it is not the last word.** The
+Developer console's Content tab can override any of it at runtime — the order
+of the product cards, whether each is shown, its words, its cover, its access
+button, every section of its own page — and that overlay is one jsonb row in
+tdg-core, read and merged by [`src/content/`](src/content/README.md).
+
+Nothing above bends for it. A product's words are still WRITTEN in `src/data/`,
+that file is still what every visitor sees when the overlay says nothing, and it
+is still what renders when the read fails — which is the only reason a static
+marketing page is allowed to depend on a database at all. **So a surface that
+draws a product reads it through `src/content/`, never from `content.ts`
+directly**, or that surface goes on printing the words the site stopped saying
+an hour ago. `Apps.tsx`, `Tools.tsx`, `Building.tsx`, `AppPage.tsx` and
+`Store.tsx` are the five that do, and adding a sixth means doing the same.
 
 ### 2. Never write a colour, and never write a second one.
 
@@ -175,9 +193,13 @@ An unrecognised route renders **home, with the hash untouched** — the same thi
 `#/banana` does. Never a "not found" screen, never a redirect: both of those
 answer the question "is there something here?".
 
-A route may name a *place* on the page it opens (`#/store/veditor` lands on that
-shelf). A link that has already said which shelf it means must not make the
-reader find it again.
+A route may put its variable part behind a segment and open a different *page*
+for each value: `#/store/veditor` is that app's own page of packs, not the Store
+with somebody else's cards on it too. A link that has already said which app it
+means must not make the reader find it again. (That route used to name a place
+rather than a page — the Store was one scroll of shelves and it landed on one of
+them. The hash did not change when the shelves became pages, which is the point:
+every link ever written to it still opens the same app's packs.)
 
 ### 9. All motion goes through the one frame loop.
 
@@ -227,15 +249,19 @@ make.** Every chip, label and cadence on a card must agree with the plan it
 describes.
 
 **A pack's `unlocks` is the WHOLE list, not a highlight reel.** The Store says
-out loud, above the shelf, that what is on a card is everything you get — so a
+out loud, above the cards, that what is on a card is everything you get — so a
 feature left off because the list was getting long is the shop breaking a
 promise it made in writing. If a pack gains something, it gains a line.
 
 **And there are no refunds**, which is stated in the same place before anybody
 presses Buy, because a rule discovered afterwards is a rule nobody agreed to.
 That policy lives in exactly two places and they have to move together: the
-`Before You Pay` block in `Store.tsx`, above the shelf, and the `refunds`
-section of `storeAnswers.ts` under it. The short version is above the fold on
+`Before You Pay` block in `Store.tsx`, above the cards, and the `refunds`
+section of `storeAnswers.ts` under them. **Both are drawn on BOTH Store views** —
+the index and each app's own page — because Buy lives on the app's page now, and
+a policy one click behind the button is a policy found the day it is wanted.
+They are one component each (`BeforeYouPay`, `MoneyAnswers`) so the two views
+cannot answer differently. The short version is above the fold on
 purpose — a refund policy only reachable by opening a fold is one somebody finds
 out about the day they want one. The two things that are NOT refunds and are
 still fixed the day somebody asks — money taken that bought nothing, and a pack
@@ -387,7 +413,8 @@ unbroken strings (a display name, a handle, a pasted URL) already break via
 
 ### 17. A surface that lists our products derives the list. It never types it.
 
-The Apps grid maps `APPS`. The Store shelf maps `STORE_APPS`. The Developer
+The Apps grid maps `APPS`. The Store's index maps `STORE_APPS`, and one app's
+page maps that app's own `packs`. The Developer
 console maps whatever tdg-core turns out to have. **Nowhere on this site is
 there a place where adding a product means remembering to also add it here** —
 and the reason is not tidiness, it is that forgetting does not fail loudly. A
@@ -407,6 +434,13 @@ The exception is a genuinely different *shape*, not a different instance of one.
 Makullveny keeps a hand-written panel because it sells a tier ladder plus themes
 plus two flags, which is not the pack-Store shape wearing a different name.
 
+**Derive it through `src/content/`, not from `content.ts`.** The Apps grid, the
+Tools shelf, the Building panel and the Developer console's own Content roster
+all map `visibleApps()` / `visibleTools()` / `visibleGame()`, so a card hidden
+in one place cannot still be printed in another. That is the same rule this one
+already was — one derived list, no second copy — with one more thing folded into
+the derivation.
+
 ---
 
 ## 3 · The five jobs you will actually be asked to do
@@ -415,10 +449,22 @@ plus two flags, which is not the pack-Store shape wearing a different name.
 `src/data/content.ts` with a `page:` slug, its icon art in `public/assets/`, and
 a matching entry in `APP_PAGES` in `src/data/appPages.ts`. The router picks the
 slug up from the card, so a page with no card is unreachable by design. No
-component changes.
+component changes. Give the card a `repo:` naming its TDG-Org repository —
+that is what lets `src/live/` notice the app deploying and turn its `Coming
+soon` into a real button at runtime, with nothing here to edit on launch day.
+(A public org repo tagged `tdg-app` gets a derived card before any of this is
+written; see [`src/live/README.md`](src/live/README.md).)
+
+The Content tab at `#/dev` picks it up with no edit at all: the roster maps the
+same derived lists the site does, and a slug the stored order does not name
+lands at the end of its grid on its own. So a new app is orderable, hideable and
+editable on its first day without anybody republishing the content document.
 
 If the app sells packs, add it to `STORE_APPS` in `src/data/store.ts` too — and
-**that is the whole job, the Developer console included.** `#/dev` finds apps by
+**that is the whole job, its Store page and the Developer console included.**
+The Store's index maps `STORE_APPS`, so the entry is its card; `#/store/<id>`
+becomes its own page of packs with no route to add, because the router accepts
+any id the catalogue claims. `#/dev` finds apps by
 scanning tdg-core for `public.<app>_entitlements`, so its panel, its grant
 switches, its overview tile, its Purchases filter and its audit trail appear
 from the table the app needed anyway. Do not add a panel or a column for it; see
@@ -432,7 +478,7 @@ one paragraph; that is how a content file becomes a component.
 
 **Add or change a pack in the Store.** `src/data/store.ts`, and read its header
 first — the number lives in four places plus Stripe. `unlocks` is a complete
-list and not a summary, because the shelf promises it is (rule 10). A pack sold more than one
+list and not a summary, because the Store promises it is (rule 10). A pack sold more than one
 way gets a `plans[]` array whose **first entry must match the pack's own
 `priceCents` and `paymentLink`**, so the primary plan is not a fourth place to
 state it. The card renders one button whatever the plan count; see
@@ -562,8 +608,14 @@ verification is manual and you have to actually do it.
 
 The Store's Pro Export Pack is sold monthly, yearly and outright. It used to
 print one button per plan, which gave its card a taller action row than the
-one-time Theme Pack beside it: same shelf, same size card, buy buttons that did
-not line up.
+one-time Theme Pack beside it: same row of the grid, same size card, buy buttons
+that did not line up.
+
+(The page around it has moved since. The Store was one scroll with every app's
+shelf on it, and it is now an index of app cards over one page of packs per app
+at `#/store/<app>` — but every word below is about the CARD, and the card is
+unchanged. That is the point of the pattern: the pack card was liftable to a new
+page without a line of it being re-decided.)
 
 The fix shows most of this document at once:
 

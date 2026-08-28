@@ -261,6 +261,93 @@
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+/* ── the glance ────────────────────────────────────────────────────────────
+   Three counts and the day the account began, between the identity and the
+   door to the page that has the rest.
+
+   Reserved to one height across all four of its states, for the same reason
+   the badge shelf below is (AGENTS.md rule 5): 44px holds the tile row plus
+   the date line, and also holds two lines of either note, which is the tallest
+   each arm can honestly be.
+
+   The three tiles take their width from `1fr` each rather than from a literal,
+   so `12` and `1,204` sit in tracks of the same width and the row cannot go
+   lopsided as a number grows (rule 6).                                        */
+
+.nav__glance {
+  margin-top: 12px;
+  padding-top: 10px;
+  min-height: 44px;
+  border-top: 1px solid var(--border);
+  transition: var(--t-theme);
+}
+.nav__glance-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.nav__glance-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.nav__glance-n {
+  font: 700 15px/1.1 var(--font-display);
+  color: var(--text);
+}
+.nav__glance-label {
+  font: 600 8.5px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.nav__glance-since {
+  margin: 8px 0 0;
+  font: 400 11px var(--font-body);
+  color: var(--faint);
+}
+.nav__glance-note {
+  margin: 0;
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--muted);
+}
+/* A failed read is not a row of zeros, so it does not look like one. */
+.nav__glance-note--warn {
+  color: var(--warm);
+}
+
+/* ── the door ──────────────────────────────────────────────────────────────
+   The panel's one primary action, so it is the one filled control in it: the
+   site's inverted surface, the same "this is the one" the hero's primary
+   button wears. `aria-current` keeps it drawn while you are already on the
+   page — quieted rather than removed, because a door that disappears once you
+   are through it leaves somebody who scrolled away unsure they are still
+   there.                                                                     */
+
+.nav__account-open {
+  display: block;
+  margin-top: 12px;
+  padding: 9px 0;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background-color: var(--invert-bg);
+  font: 600 12px var(--font-body);
+  color: var(--invert-fg);
+  text-align: center;
+  transition:
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.nav__account-open:hover {
+  opacity: 0.86;
+}
+.nav__account-open[aria-current='page'] {
+  background-color: transparent;
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
 /* ── badges ────────────────────────────────────────────────────────────────
    The signed-in account's badges, under their identity. Four states share this
    box and it must be one size in all of them: a menu that grows under the

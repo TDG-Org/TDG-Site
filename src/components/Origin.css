@@ -83,7 +83,7 @@
    **Nothing about this section's document position changed.** `.walk` has no
    padding and no border and this is its first in-flow child, so `.walk`'s
    border-box top and `#origin`'s are the same line — which is what keeps
-   `scrollIntoView`, `rememberOrigin`, `takeOrigin` and CONTRACT D's dissolve
+   `scrollIntoView`, `rememberOrigin`, `arriveAt` and CONTRACT D's dissolve
    measuring from where they always did.
 
    `z-index: 4` is what paints this over the hero, and it is now doing three

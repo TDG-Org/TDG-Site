@@ -85,19 +85,17 @@ export type StorePack = {
 export type StoreApp = {
   id: string
   /**
-   * The slug of this app's own page, in `src/data/appPages.ts`. The head of
-   * this shelf is a card, and this is where it opens, so somebody deciding
-   * whether to buy can read what the app actually is first. Named rather than
-   * assumed from `id`: the two happen to match today, and a shop that guessed
-   * a route would break silently the first time they did not.
+   * The slug of this app's own page, in `src/data/appPages.ts`. Its card on the
+   * Store's index and the head of its own shop page both link there, so
+   * somebody deciding whether to buy can read what the app actually is first.
+   * Named rather than assumed from `id`: the two happen to match today, and a
+   * shop that guessed a route would break silently the first time they did not.
    */
   page: string
-  /** The app this section is for. */
+  /** The app this shop page is for. */
   title: string
   /** Sentence case: what the app is, for somebody who has not seen it. */
   copy: string
-  /** Where to get the app itself, when there is somewhere to send them. */
-  appHref?: string
   /** UPPERCASE, short: a status TAG, the same shape every chip on the site is. */
   status: string
   /** Sentence case: the honest note about availability, which is a sentence and
@@ -224,6 +222,26 @@ export const STORE_APPS: StoreApp[] = [
 /** `799` → `$7.99`. Whole dollars keep the cents, because a shop price does. */
 export function formatUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
+}
+
+/**
+ * The lowest amount that gets somebody into ANY of one app's packs, in cents.
+ *
+ * The Store's index card prints it as `From $5.99`, and it is derived rather
+ * than written down for the reason `annualSavingCents` is: a "from" price typed
+ * beside a catalogue is a claim that goes quietly wrong the first time a
+ * cheaper pack is added or a price moves, and the mistake it makes is the one
+ * this file's header says a shop may not make. A pack's own `priceCents` is its
+ * cheapest way in by definition — `plans[0]` must match it — so this is a
+ * minimum over the packs and nothing more.
+ *
+ * `null` for an app with no packs, which is not a shape the catalogue has
+ * today and is still the honest answer if it ever does: there is no price to
+ * state, so the card states none.
+ */
+export function cheapestPlan(app: StoreApp): number | null {
+  const amounts = app.packs.map((pack) => pack.priceCents)
+  return amounts.length > 0 ? Math.min(...amounts) : null
 }
 
 /**

@@ -2,15 +2,14 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { SectionsProvider } from '../lib/sections'
 import { asset } from '../lib/asset'
+import { rememberOrigin } from '../lib/route'
 import { BackButton, Fold, FoldControls } from './Folded'
 import { AppIcon } from './AppIcon'
-import {
-  chipsForPage,
-  iconForPage,
-  pageForSlug,
-  shotForPage,
-  type AppPage as AppPageData,
-} from '../data/appPages'
+import type { AppPage as AppPageData } from '../data/appPages'
+import { chipsFor, iconFor, shotFor } from '../content/resolve'
+import { resolvePage } from '../content/resolvePage'
+import { useSiteContent } from '../content/store'
+import { liveRepoForPage, useLiveAccess } from '../live/useLive'
 import './AppPage.css'
 
 /**
@@ -33,9 +32,23 @@ function AppPageBody({ page }: { page: AppPageData }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const art = useReveal<HTMLDivElement>('scale', 1)
 
-  const shot = shotForPage(page.slug)
-  const chips = chipsForPage(page.slug)
-  const icon = iconForPage(page.slug)
+  /* All three come from this product's own CARD, which the Content tab at
+     `#/dev` can rename, re-cover or re-chip. Reading the live document rather
+     than the built-in card is what stops this page printing the words the site
+     stopped saying an hour ago. See src/content/README.md. */
+  const doc = useSiteContent()
+  const shot = shotFor(doc, page.slug)
+  const chips = chipsFor(doc, page.slug)
+  const icon = iconFor(doc, page.slug)
+
+  /* The runtime deploy check the card runs, run here too, so the page and the
+     card can never disagree about whether the app is live. `liveRepoForPage`
+     answers nothing for a product whose card already carries a hand-written
+     way in — and the dedupe below keeps the derived link out when the page's
+     own `links` already name the same destination. See src/live/README.md. */
+  const ask = liveRepoForPage(doc, page.slug)
+  const live = useLiveAccess(ask.repo, page.title, ask.verb)
+  const liveLink = live && !(page.links ?? []).some((l) => l.href === live.href) ? live : null
 
   return (
     <section id="top" className="section section--blend appview">
@@ -77,9 +90,9 @@ function AppPageBody({ page }: { page: AppPageData }) {
             ))}
           </dl>
 
-          {page.links && page.links.length > 0 && (
+          {((page.links && page.links.length > 0) || liveLink) && (
             <div className="appview__links">
-              {page.links.map((link) =>
+              {(page.links ?? []).map((link) =>
                 link.external ? (
                   <a
                     key={link.href}
@@ -94,13 +107,36 @@ function AppPageBody({ page }: { page: AppPageData }) {
                     </span>
                   </a>
                 ) : (
-                  <a key={link.href} className="appview__link" href={link.href}>
+                  /* An in-site link is a journey, so it says where it started.
+                     Every one of these today points at that app's packs in the
+                     Store, and without this the page they open would offer
+                     "Back to Apps" — the label of whatever journey opened THIS
+                     page — while actually returning here. See lib/route.ts. */
+                  <a
+                    key={link.href}
+                    className="appview__link"
+                    href={link.href}
+                    onClick={() => rememberOrigin(page.title)}
+                  >
                     {link.label}
                     <span className="appview__link-arrow" aria-hidden="true">
                       →
                     </span>
                   </a>
                 ),
+              )}
+              {liveLink && (
+                <a
+                  className="appview__link"
+                  href={liveLink.href}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  {liveLink.label}
+                  <span className="appview__link-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </a>
               )}
             </div>
           )}
@@ -150,7 +186,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
 }
 
 export default function AppPage({ slug }: { slug: string }) {
-  const page = pageForSlug(slug)
+  const page = resolvePage(useSiteContent(), slug)
 
   /*
    * The router accepts a slug because a CARD names it, so a card whose page

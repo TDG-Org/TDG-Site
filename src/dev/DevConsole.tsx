@@ -22,6 +22,7 @@ import {
   useToasts,
 } from './controls'
 import { FeedbackTab, feedbackHaystacks } from './FeedbackTab'
+import { ContentTab, useSiteContentDraft } from './ContentTab'
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
@@ -52,10 +53,11 @@ import './DevConsole.css'
 /** The server clamps every ledger read to this, so asking for more is a lie. */
 const LEDGER_CAP = 1000
 
-type Tab = 'accounts' | 'feedback' | 'purchases' | 'audit'
+type Tab = 'accounts' | 'content' | 'feedback' | 'purchases' | 'audit'
 
 const TABS: { id: Tab; label: string; what: string }[] = [
   { id: 'accounts', label: 'Accounts', what: 'Find anyone, and change anything about them.' },
+  { id: 'content', label: 'Content', what: 'What this site says about our apps, and which ones it shows.' },
   { id: 'feedback', label: 'Feedback', what: 'What users sent us from inside the apps, and our replies.' },
   { id: 'purchases', label: 'Purchases', what: 'Every payment and free grant TDG has recorded.' },
   { id: 'audit', label: 'Audit Log', what: 'Every action a developer has taken, in every app.' },
@@ -95,6 +97,18 @@ function DevConsoleBody({
   const { user, profile } = useAuth()
   const devMode = useDevMode()
   const { toasts, push, dismiss } = useToasts()
+
+  /*
+   * The Content tab's whole state, held HERE rather than inside the tab.
+   *
+   * It is the one tab that stages its edits instead of writing them the moment
+   * a control moves — see ContentTab.tsx for why a public page cannot be
+   * published a keystroke at a time — so a draft has to survive a trip to
+   * Accounts and back. A hook inside the tab would lose a half-written page to
+   * somebody wanting to look up an email, which is the same class of loss as a
+   * lost scroll position, and this console already refuses to have that one.
+   */
+  const content = useSiteContentDraft(push)
 
   const [tab, setTab] = useState<Tab>(() =>
     TABS.some((t) => t.id === saved?.tab) ? (saved!.tab as Tab) : 'accounts',
@@ -323,7 +337,16 @@ function DevConsoleBody({
     async (scope: 'boot' | 'again') => {
       const here = scope === 'again' ? captureAnchor() : null
       if (scope === 'again') setRefreshing(true)
-      const reads: Promise<boolean>[] = [loadOverview(), loadCatalog(), loadLedger(), loadFeedback()]
+      const reads: Promise<boolean>[] = [
+        loadOverview(),
+        loadCatalog(),
+        loadLedger(),
+        loadFeedback(),
+        // The published site content, on the same Refresh as everything else.
+        // A panel with its own quiet fetch is a second refresh button that
+        // refreshes less; see README, "Adding a new kind of verb".
+        content.reload(),
+      ]
       if (scope === 'again') {
         reads.push(loadRoster(query), loadHistory(selectedId), loadBadges(selectedId))
       }
@@ -344,6 +367,7 @@ function DevConsoleBody({
       loadCatalog,
       loadLedger,
       loadFeedback,
+      content.reload,
       loadRoster,
       loadHistory,
       loadBadges,
@@ -648,6 +672,13 @@ function DevConsoleBody({
                 {t.id === 'feedback' && feedbackNew > 0 && (
                   <Tag tone="warn">{feedbackNew} NEW</Tag>
                 )}
+                {/* Content is the one tab that can be left holding unpublished
+                    work, so it is the one tab that has to say so from outside
+                    itself: an edit waiting behind a tab nobody opened is an
+                    edit that never reaches the site. */}
+                {t.id === 'content' && content.dirty && (
+                  <Tag tone="warn">{content.edits} UNSAVED</Tag>
+                )}
               </span>
               <span className="dev__tab-what">{t.what}</span>
             </button>
@@ -712,6 +743,8 @@ function DevConsoleBody({
             </div>
           </div>
         )}
+
+        {tab === 'content' && <ContentTab c={content} />}
 
         {tab === 'feedback' && (
           <FeedbackTab

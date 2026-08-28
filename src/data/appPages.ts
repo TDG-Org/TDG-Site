@@ -1,4 +1,3 @@
-import { APPS, MARANATHA, TOOLS, type IconShape, type Shot } from './content'
 import type { PageLink, PageSection } from './pageBlocks'
 
 /**
@@ -62,7 +61,7 @@ const BIBLE_EDUCATOR: AppPage = {
     { label: 'Where it runs', value: 'Any modern browser, installable on phone, tablet or desktop' },
     { label: 'Price', value: 'Free, and no account is needed to use it' },
     { label: 'Offline', value: 'Full, once a translation is downloaded' },
-    { label: 'Status', value: 'In development, not published yet' },
+    { label: 'Status', value: 'In development — the current build is live to try' },
   ],
   sections: [
     {
@@ -2319,55 +2318,20 @@ export const APP_PAGES: AppPage[] = [
 export const pageForSlug = (slug: string): AppPage | undefined =>
   APP_PAGES.find((page) => page.slug === slug)
 
-/**
- * The screenshot a page shows, taken from the card it was opened from.
+/*
+ * The screenshot, the icon and the chips a page shows are NOT here, and used
+ * to be.
  *
- * Kept as a lookup rather than copied into this file: one alt text, one set of
- * widths, one crop, so the page and the card can never end up describing the
- * same picture differently.
+ * All three read a page's own CARD — one alt text, one set of widths, one
+ * crop, one icon file, one chip row, so a page and its card can never end up
+ * describing the same app differently. That is still exactly what they do; the
+ * only thing that changed is which cards they read. The Developer console's
+ * Content tab can rename a card, swap its cover or hide it outright, and a
+ * page that went on reading the built-in card would print the words the site
+ * stopped saying an hour ago.
+ *
+ * So they live in `src/content/resolve.ts` now — `shotFor`, `iconFor` and
+ * `chipsFor` — beside the overlay they have to read. `AppPage.tsx` calls them
+ * with the live document. This file stays what it always was: the built-in
+ * copy, and the fallback for everything the overlay does not mention.
  */
-export function shotForPage(slug: string): Shot | undefined {
-  if (slug === MARANATHA_PAGE.slug) return MARANATHA.shot
-  return APPS.find((app) => app.page === slug)?.shot
-}
-
-/**
- * The icon a page shows, taken from the card it was opened from.
- *
- * Same reason as the screenshot below it: one file, one shape, named once, so a
- * page and its card can never end up showing different marks for one app.
- */
-export function iconForPage(slug: string): { icon: string; shape: IconShape } | undefined {
-  if (slug === MARANATHA_PAGE.slug) return { icon: MARANATHA.icon, shape: MARANATHA.iconShape }
-  const app = APPS.find((card) => card.page === slug)
-  if (app) return { icon: app.icon, shape: app.iconShape }
-  const tool = TOOLS.find((card) => card.page === slug)
-  return tool ? { icon: tool.icon, shape: tool.iconShape } : undefined
-}
-
-/**
- * The chips a page carries under its title.
- *
- * Nine of the ten read them off the card the page was opened from, for the
- * same reason as the icon and the screenshot above: one place to name a thing,
- * so a page and its card cannot describe the same app differently.
- *
- * MARANATHA is the tenth and it is the odd one, because its "card" is the
- * Building feature panel — which prints `status` and `note` in prose and has
- * no `chips` array to read. Left to fall through, the game was the one page in
- * ten that drew no chip row at all, which looks like a page still loading
- * rather than like a decision. So its three are named here, beside the page
- * they belong to and inside the content file, where a chip is data like every
- * other word on the site. Each one restates something the facts row directly
- * below it already says, so there is no second claim to go stale. If that
- * panel ever gains chips of its own, read them from there instead.
- */
-export function chipsForPage(slug: string): { label: string; hot?: boolean }[] {
-  if (slug === MARANATHA_PAGE.slug) {
-    return [{ label: 'BROWSER' }, { label: 'IN PLAYTEST', hot: true }, { label: 'FREE' }]
-  }
-  const app = APPS.find((card) => card.page === slug)
-  if (app) return [...app.chips]
-  const tool = TOOLS.find((card) => card.page === slug)
-  return tool ? [...tool.chips] : []
-}

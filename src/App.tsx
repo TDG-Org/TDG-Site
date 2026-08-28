@@ -16,7 +16,7 @@ import { FeedbackDialog } from './feedback/FeedbackDialog'
 import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
-import { storeShelfId, takeOrigin, useRoute } from './lib/route'
+import { arriveAt, useRoute } from './lib/route'
 
 /**
  * The Developer console, in its own chunk.
@@ -44,6 +44,17 @@ const AppPage = lazy(() => import('./components/AppPage'))
 
 /** About, in its own chunk for the same reason: prose nobody has asked for. */
 const About = lazy(() => import('./components/About'))
+
+/**
+ * The account page, in its own chunk.
+ *
+ * Same reasoning as the two above and one more besides: the privacy list, the
+ * counters and their stylesheet are only ever wanted by somebody who has
+ * pressed Account, and a visitor who reads the landing page and leaves should
+ * not download a line of it. The route is recognised without this file, so the
+ * request is made when the page is actually opened. See src/account/README.md.
+ */
+const AccountPage = lazy(() => import('./account/AccountPage'))
 
 export default function App() {
   useOffscreenPause()
@@ -73,16 +84,27 @@ export default function App() {
   // an element that did not exist when it was clicked. Effects run after the
   // commit, so by here it does.
   useEffect(() => {
-    if (route.kind === 'store' || route.kind === 'app' || route.kind === 'about' || showDev) {
-      // A page can be opened AT something rather than at its top. `#/store/veditor`
-      // is a link that already named the shelf, and landing its reader at the
-      // top of a shop with somebody else's shelf on it makes them do the
-      // finding twice. `scroll-margin-top` on the target is what keeps it clear
-      // of the fixed nav; see Store.css.
-      const at = route.kind === 'store' && route.app ? storeShelfId(route.app) : null
-      const target = at ? document.getElementById(at) : null
-      if (target) {
-        target.scrollIntoView({ behavior: 'instant', block: 'start' })
+    const hash = window.location.hash
+    /*
+     * Coming back to the exact place a card was clicked from — the home page,
+     * and now the Store's index too, which is a page a reader leaves from a
+     * card and returns to. Asked on EVERY route change rather than only on the
+     * arms that can use the answer, because that call is also what lets the
+     * memory die at the right moment: a reader who walks off mid-journey has
+     * not returned to anything, and a memory that outlived its journey would
+     * put the wrong name on the next page's Back control. See src/lib/route.ts.
+     */
+    const back = arriveAt(hash)
+
+    if (
+      route.kind === 'store' ||
+      route.kind === 'app' ||
+      route.kind === 'about' ||
+      route.kind === 'account' ||
+      showDev
+    ) {
+      if (back !== null) {
+        window.scrollTo({ top: back, behavior: 'instant' })
         return
       }
       // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
@@ -92,14 +114,8 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'instant' })
       return
     }
-    const hash = window.location.hash
-    // Coming back from an app page, to the exact place the card was clicked
-    // from. Only when the hash is the one that was left: somebody who leaves an
-    // app page by clicking Origin in the nav is not returning to the list, and
-    // this must not land on top of their anchor. See src/lib/route.ts.
-    const y = takeOrigin(hash)
-    if (y !== null) {
-      window.scrollTo({ top: y, behavior: 'instant' })
+    if (back !== null) {
+      window.scrollTo({ top: back, behavior: 'instant' })
       return
     }
     const id = hash.replace(/^#/, '')
@@ -153,12 +169,25 @@ export default function App() {
         </main>
       ) : route.kind === 'store' ? (
         <main>
-          <Store onOpenAuth={() => setAuthOpen(true)} />
+          {/* `app` is the index or one app's own packs, and the router has
+              already dropped an id the catalogue does not claim. */}
+          <Store onOpenAuth={() => setAuthOpen(true)} app={route.app} />
         </main>
       ) : route.kind === 'about' ? (
         <main>
           <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
             <About />
+          </Suspense>
+        </main>
+      ) : route.kind === 'account' ? (
+        <main>
+          {/* The chunk is local and small; the placeholder only stops the
+              footer flying up to meet the nav for one frame. */}
+          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+            <AccountPage
+              onOpenAuth={() => setAuthOpen(true)}
+              onOpenFeedback={() => setFeedbackOpen(true)}
+            />
           </Suspense>
         </main>
       ) : route.kind === 'app' ? (
@@ -182,7 +211,7 @@ export default function App() {
 
               The three children keep their own ids, their own copy and their
               own place in the nav. Nothing about `#origin`'s document position
-              changed, so `takeOrigin` and the section anchors are untouched. */}
+              changed, so `arriveAt` and the section anchors are untouched. */}
           <Walk>
             <Origin />
             <Apps />

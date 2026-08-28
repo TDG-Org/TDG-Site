@@ -9,7 +9,8 @@ deletes it in a dashboard.
 | --- | --- |
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
-| `migrations/` | SQL already applied to the shared project. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, and `tdg_billing_subscription`. |
+| `functions/tdg-site-deploys/index.ts` | Answers which TDG-Org GitHub Pages sites exist, in one batched response, for `src/live/`'s deploy discovery. Probed here rather than in the browser because every browser-side miss is a 404 printed in the console. Deployed with `--no-verify-jwt`: the caller is an anonymous visitor and the answer is whether a public website exists. A caller sends repo names only — never a URL — and the function probes only `https://tdg-org.github.io/`. |
+| `migrations/` | SQL already applied to the shared project. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, `tdg_billing_subscription`, and the site-content overlay below. |
 
 ## Why the site cannot do this itself
 
@@ -86,6 +87,42 @@ picker additionally wants the portal configuration to have the
 `subscription_update` flow enabled; when it does not, the function falls back to
 the plain portal, which reaches the same controls one click further in.
 
+
+## The site's own words, editable without a deploy
+
+`20260828120000_site_content_overrides.sql` adds `tdg_site_content`: one jsonb
+row holding what the Developer console's **Content** tab has changed about our
+own product cards — the order of them, whether each is shown, its words, its
+icon, its cover, its access button, and every section of its own page. The
+site's half is [`src/content/`](../src/content/README.md).
+
+**It is an overlay, never the source.** `src/data/` in the site repo is still
+where a product's words are written, and it is still what a visitor sees when
+the row says nothing, when the read fails, and when this whole table is empty.
+That is the only reason a marketing page is allowed to depend on a database at
+all: the failure mode is the built-in site, exactly.
+
+**Why a document and not a schema.** What is being stored is the shape of
+`AppCard`, `ToolCard` and `AppPage` in TypeScript — nested arrays of sections,
+each holding blocks of seven different kinds. Tables would put that shape in two
+places, in two languages, and every new block type would be a migration before
+it could be a paragraph. The site validates what it reads and drops what it
+cannot understand, so a document written by a newer console than the bundle
+reading it degrades to the built-in copy rather than to a blank card.
+
+**Why the read is granted to `anon`.** It is the second exception to
+`migrations/README.md`'s standing rule, and that file now argues both. The short
+version: no parameter, no `auth.uid()`, no refusal to probe with, and what comes
+back is the text of a public page every visitor is about to be shown.
+
+**Why every publish keeps the one it replaced.** Nothing else this console
+changes is invisible to the person it affects — an account's owner can see their
+own tier. This changes what every visitor reads, and a paragraph deleted by a
+mis-click has no other copy. So a BEFORE UPDATE trigger writes the outgoing
+version to `tdg_site_content_history` and trims it to fifty. A trigger rather
+than a line inside the write verb, because a second writer added later cannot
+forget a trigger.
+
 ## Account badges, and the one number the footer prints
 
 `20260826120000_tdg_account_badges.sql` adds a **global** mark on a TDG
@@ -124,6 +161,52 @@ shape to ask for. `accounts` counts `public.profiles`, which is the same count
 `tdg_admin_overview()` calls `accounts`, so the footer and the console cannot
 disagree. **The site prints it exactly as it comes back**: never rounded, never
 padded, and never replaced by a fallback when the read fails.
+
+## Who may see what, and the three tables that stopped being their own
+
+`20260828090000_tdg_privacy_and_table_merges.sql` adds **`tdg_privacy`**: one
+row per account, one jsonb of control → audience, and one function
+(`tdg_can_view`) that every read on this project asks rather than re-deriving
+the rule. The site's half is [`src/account/`](../src/account/README.md); there
+is no edge function, because nothing here needs a secret.
+
+**The point of it is the middle value.** A boolean answers *everyone or
+nobody*, so the one thing people actually want to say — *my friends, and not
+the internet* — had nowhere to live. Every control now takes `public`,
+`friends` or `self`, and `tdg_privacy_catalog()` is the list of which controls
+exist, exactly the way `tdg_badge_catalog()` and `tdg_feedback_kinds()` already
+work: a new control is a migration and no TypeScript, in any TDG app.
+
+**`profiles.public_profile` and `public_friend_list` are still there, as
+mirrors.** Four deployed apps read them and two write them, and none of those
+builds could be changed by a migration. They carry the two-state projection —
+true exactly when the audience is `public`, so a friends-only profile reads
+false, which is the conservative answer and the right one. `tdg_set_privacy`
+writes both; a legacy write straight at the column is forwarded back by
+`tdg_profiles_forward_privacy`. **That trigger has one subtlety and it is
+load-bearing:** a write of `false` over an audience that is already narrower
+than public leaves it alone. Without it every Bible Educator profile save —
+which sends `public_profile` alongside the display name whether or not anybody
+touched it — would quietly downgrade "friends only" to "only me".
+
+Three tables merged in the same migration, and each for its own reason:
+
+| Was | Is | Why |
+| --- | --- | --- |
+| `bea_public_stats` | `tdg_privacy` + `tdg_badges.published` | Two unrelated things wearing one row. Who may see your account is an account fact; the published badge snapshot is per (account, app), which `tdg_badges` already held. |
+| `bea_streaks` | `tdg_streaks`, keyed `(user_id, app)` | A streak is a run of days an ACCOUNT kept. The same move `tdg_badges` made over `devfleet_badges`, so a second app wanting one needs no migration. |
+| `mak_typing_rate_limit` | `tdg_rate_limits`, keyed `(user_id, bucket)` | Nothing about counting submissions is typing-shaped. Server-side only: no client named it then and none may now. |
+
+**`bea_public_stats_for` is kept**, as a forwarder answering its exact old shape
+from the new sources — so a browser still running the Bible Educator build from
+before the merge draws a public profile page correctly. It joins
+`bea_find_profile` and `bea_is_visible`, which have been forwarders since the
+`bea_*` → `tdg_*` move.
+
+**`devfleet_badges` was deliberately NOT merged**, though `tdg_badges`
+supersedes it and says so in its own comment: DevFleet reads that table
+directly and returns its row type out of `devfleet_badge_sync`, and that repo
+was not open. Retiring it is its own job, done with DevFleet in front of you.
 
 ## Deploying
 

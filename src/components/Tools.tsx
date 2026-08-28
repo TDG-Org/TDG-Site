@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
 import { onFrame } from '../lib/motion'
 import { useParallax } from '../hooks/useParallax'
 import { usePointer } from '../hooks/usePointer'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
-import { TOOLS, type ToolCard } from '../data/content'
+import { type ToolCard } from '../data/content'
+import { visibleTools } from '../content/resolve'
+import { useSiteContent } from '../content/store'
+import { useLiveAccess } from '../live/useLive'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { StillArt, ThemedArt } from './scene/ThemedArt'
@@ -105,6 +108,12 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
   const reveal = useReveal<HTMLElement>('slideL', index)
   const tilt = useTilt<HTMLElement>()
 
+  /* Same runtime upgrade the Apps cards get: a tool whose repo turns out to
+     be deployed swaps its muted caption for a real link. A hand-written
+     `href` (Volume Controller's store listing) passes `undefined`, which asks
+     nothing — a human decision outranks discovery. See src/live/README.md. */
+  const live = useLiveAccess(tool.href ? undefined : tool.repo, tool.title)
+
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card tools__card">
       <span className="card__spot" aria-hidden="true" />
@@ -142,6 +151,12 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
         <a className="tools__cta tools__cta--link" href={tool.href} target="_blank" rel="noopener">
           {tool.cta}
         </a>
+      ) : live ? (
+        /* The arrow glyph is part of the cta STRING on hand-written links
+           (`Add to Chrome →`), so a derived label carries the same one. */
+        <a className="tools__cta tools__cta--link" href={live.href} target="_blank" rel="noopener">
+          {live.label} →
+        </a>
       ) : (
         <span className="tools__cta tools__cta--muted">{tool.cta}</span>
       )}
@@ -150,6 +165,12 @@ function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
 }
 
 export function Tools() {
+  /* The shelf, in the order and with the words the Developer console's Content
+     tab last published, over the built-in list in `src/data/content.ts`. Rule
+     17 again: derived, never typed. See src/content/README.md. */
+  const doc = useSiteContent()
+  const tools = useMemo(() => visibleTools(doc), [doc])
+
   /* ── the depth ladder for this section ────────────────────────────────────
      Four rates, and the SIGN is half of what makes them read. `useParallax`
      writes `centreOffset * -factor`, so a positive factor moves a layer DOWN
@@ -332,7 +353,7 @@ export function Tools() {
         </div>
 
         <div className="tools__grid">
-          {TOOLS.map((tool, i) => (
+          {tools.map((tool, i) => (
             <ToolTile key={tool.index} tool={tool} index={i} />
           ))}
         </div>

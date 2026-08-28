@@ -3,6 +3,9 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { MARANATHA, NEXT_UP } from '../data/content'
+import { visibleGame, type SiteGame } from '../content/resolve'
+import { useSiteContent } from '../content/store'
+import { useLiveAccess } from '../live/useLive'
 import { asset } from '../lib/asset'
 import { appHash, rememberOrigin } from '../lib/route'
 import { Seam } from './scene/Seam'
@@ -15,6 +18,113 @@ function NextUpPill({ label, index }: { label: string; index: number }) {
     <div ref={reveal} className="building__pill">
       <span className="building__pill-dot" data-alt={index % 2 === 1 || undefined} />
       {label}
+    </div>
+  )
+}
+
+/**
+ * The game's own card.
+ *
+ * Its own component so the section can leave it out entirely — the Content tab
+ * at `#/dev` can hide any product, this one included, and a hook cannot be
+ * called conditionally. The tilt and the reveal belong to the card anyway; they
+ * were only on the section because there was one card and it never went away.
+ */
+function Feature({ game }: { game: SiteGame }) {
+  const reveal = useReveal<HTMLDivElement>('scale', 0)
+  const tilt = useTilt<HTMLDivElement>()
+  const shot = game.shot
+
+  /* Is the game actually deployed? Asked only while no human has given the
+     button a link — a Content-tab `href` is a decision, and discovery never
+     argues with one. `Play`, not `Open`: it is a game. See src/live/README.md. */
+  const live = useLiveAccess(game.href ? undefined : MARANATHA.repo, 'MARANATHA', 'Play')
+
+  return (
+    <div ref={mergeRefs(reveal, tilt)} className="card building__feature">
+      <span className="card__spot" aria-hidden="true" />
+      <span className="card__edge" aria-hidden="true" />
+
+      {/* The game gets its own page too, opened the same way every app
+          card is opened. */}
+      <a className="card__cover" href={appHash(game.page)} onClick={() => rememberOrigin('Building')}>
+        <span className="sr-only">Open the {game.heading} page</span>
+      </a>
+
+      {/* A card whose cover has been taken away keeps its body rather than a
+          hole where a picture was: the panel is a wide card and an empty art
+          box would read as an image that failed to load. */}
+      {shot && (
+        <div className="building__art">
+          <picture>
+            <source
+              type="image/avif"
+              sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
+              srcSet={shot.widths
+                .map((w) => `${asset(`shots/${shot.slug}-${w}.avif`)} ${w}w`)
+                .join(', ')}
+            />
+            <source
+              type="image/webp"
+              sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
+              srcSet={shot.widths
+                .map((w) => `${asset(`shots/${shot.slug}-${w}.webp`)} ${w}w`)
+                .join(', ')}
+            />
+            <img
+              className="building__art-img"
+              src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
+              alt={shot.alt}
+              width={720}
+              height={405}
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
+        </div>
+      )}
+
+      <div className="building__body">
+        <div className="building__tags">
+          <span className="building__tag">GAME</span>
+          {/* `game.tag`, not a literal. This tag and the `status` on the button
+              below it are two claims about one card, and while the tag was
+              typed here they had already drifted: IN PLAYTEST over a status of
+              `Coming soon`. Rule 1 — a word a visitor reads lives in data. */}
+          <span className="building__tag building__tag--live">
+            <span aria-hidden="true">● </span>
+            {game.tag}
+          </span>
+        </div>
+        <h3 className="building__title">
+          {game.heading}
+          <span className="building__title-arrow" aria-hidden="true">
+            →
+          </span>
+        </h3>
+        <p className="building__copy">{game.copy}</p>
+        <div className="building__actions">
+          {/* Not a link until the demo is actually reachable, and two things
+              can make it one: the Content tab giving the button a link (which
+              keeps `status` as its words), or `src/live/` finding a deploy on
+              its own (which brings its own words — `status` still says Coming
+              soon, and printing that on a working button would be the drift
+              this panel's tag comment warns about). All three states are the
+              same element in the same place, so the row does not move. */}
+          {game.href ? (
+            <a className="building__play" href={game.href} target="_blank" rel="noopener">
+              {game.status}
+            </a>
+          ) : live ? (
+            <a className="building__play" href={live.href} target="_blank" rel="noopener">
+              {live.label}
+            </a>
+          ) : (
+            <span className="building__play building__play--soon">{game.status}</span>
+          )}
+          <span className="building__note">{game.note}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -54,8 +164,11 @@ export function Building() {
   const blob = useParallax<HTMLDivElement>(0.012)
   const seam = useParallax<HTMLDivElement>(0.022)
   const head = useReveal<HTMLDivElement>('wipe', 0)
-  const reveal = useReveal<HTMLDivElement>('scale', 0)
-  const tilt = useTilt<HTMLDivElement>()
+
+  /* The game panel, as the Developer console's Content tab last published it.
+     `null` when it has been hidden, and then this section is its heading, its
+     count line and the Next Up pills — see src/content/README.md. */
+  const game = visibleGame(useSiteContent())
 
   return (
     <section id="building" className="section section--flat building">
@@ -185,73 +298,10 @@ export function Building() {
               What's on our screens right now. One is nearly done, the rest are just getting going.
             </p>
           </div>
-          <span className="building__count">{MARANATHA.count}</span>
+          {game && <span className="building__count">{game.count}</span>}
         </div>
 
-        <div ref={mergeRefs(reveal, tilt)} className="card building__feature">
-          <span className="card__spot" aria-hidden="true" />
-          <span className="card__edge" aria-hidden="true" />
-
-          {/* The game gets its own page too, opened the same way every app
-              card is opened. */}
-          <a className="card__cover" href={appHash(MARANATHA.page)} onClick={() => rememberOrigin('Building')}>
-            <span className="sr-only">Open the MARANATHA page</span>
-          </a>
-
-          <div className="building__art">
-            <picture>
-              <source
-                type="image/avif"
-                sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
-                srcSet={MARANATHA.shot.widths
-                  .map((w) => `${asset(`shots/${MARANATHA.shot.slug}-${w}.avif`)} ${w}w`)
-                  .join(', ')}
-              />
-              <source
-                type="image/webp"
-                sizes="(max-width: 760px) 100vw, min(50vw, 590px)"
-                srcSet={MARANATHA.shot.widths
-                  .map((w) => `${asset(`shots/${MARANATHA.shot.slug}-${w}.webp`)} ${w}w`)
-                  .join(', ')}
-              />
-              <img
-                className="building__art-img"
-                src={asset(`shots/${MARANATHA.shot.slug}-${MARANATHA.shot.widths[0]}.webp`)}
-                alt={MARANATHA.shot.alt}
-                width={720}
-                height={405}
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
-          </div>
-
-          <div className="building__body">
-            <div className="building__tags">
-              <span className="building__tag">GAME</span>
-              {/* MARANATHA.tag, not a literal. This tag and the `status` on
-                  the button eleven lines down are two claims about one card,
-                  and while the tag was typed here they had already drifted:
-                  IN PLAYTEST over a status of `Coming soon`. Rule 1 — a word a
-                  visitor reads lives in src/data/. */}
-              <span className="building__tag building__tag--live">
-                <span aria-hidden="true">● </span>
-                {MARANATHA.tag}
-              </span>
-            </div>
-            <h3 className="building__title">
-              {MARANATHA.heading}
-              <span className="building__title-arrow" aria-hidden="true">
-                →
-              </span>
-            </h3>
-            <p className="building__copy">{MARANATHA.copy}</p>
-            <div className="building__actions">
-              <span className="building__play building__play--soon">{MARANATHA.status}</span>
-              <span className="building__note">{MARANATHA.note}</span>
-            </div>
-          </div>
-        </div>
+        {game && <Feature game={game} />}
 
         <div className="building__pills">
           {NEXT_UP.map((label, i) => (

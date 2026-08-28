@@ -24,11 +24,12 @@ import { STORE_APPS } from '../data/store'
  * a signpost, so somebody who greps for `story` and lands here does not
  * conclude the old anchor died in the rename.
  *
- * A route may also name a PLACE on the page it opens, which is what
- * `#/store/<app>` is: the Store, landed at that app's shelf rather than at its
- * top. A link that has already said which shelf it means should not make the
- * reader find it again, so anything pointing at one thing on a long page gets
- * a route of this shape rather than a bare page hash.
+ * `#/store/<app>` is that app's OWN shop page, and it used to be something
+ * else: the one long Store, scrolled to that app's shelf. The shelves are gone
+ * — the Store is an index of app cards now and each card opens a page of packs
+ * — so the route that used to name a place on a page names a page. Nothing
+ * about the hash changed, which is the point: every link written to it, here
+ * and in `appPages.ts`, still lands on the same app's packs.
  *
  * `dev` is the Developer console, and it is not a secret because of this file:
  * anything the router can recognise has to be named here. What keeps it out of
@@ -41,10 +42,23 @@ export type Route =
   | { kind: 'home' }
   | { kind: 'about' }
   /**
-   * The Store, and optionally the one shelf on it that was asked for. A link
-   * that says "Veditor packs are in the Store" has named a place, and landing
-   * the reader at the top of a page with somebody else's shelf on it makes
-   * them do the finding the link already did.
+   * The signed-in account's own page: what it is, what it counts, and who may
+   * see each part of it.
+   *
+   * **Not gated the way `dev` is, and that is the difference between the two.**
+   * `#/dev` renders home for anybody who is not a developer, because a console
+   * nobody should know about must answer the same thing an unknown hash does.
+   * This is the opposite kind of page: it is linked from the nav on every page
+   * of the site, so a signed-out reader who opens it — or who follows the link
+   * somebody sent them — is told to sign in, in words, on the page they asked
+   * for. Rendering home there would answer "is there something here?" with a
+   * silence that is simply wrong.
+   */
+  | { kind: 'account' }
+  /**
+   * The Store: its index of app cards, or one app's own page of packs. A link
+   * that says "Veditor packs are in the Store" has named an app, and it opens
+   * that app's packs rather than a page with somebody else's on it too.
    */
   | { kind: 'store'; app?: string }
   | { kind: 'dev' }
@@ -52,18 +66,20 @@ export type Route =
 
 export const ABOUT_HASH = '#/about'
 export const STORE_HASH = '#/store'
+export const ACCOUNT_HASH = '#/account'
 export const DEV_HASH = '#/dev'
 
 /** The hash that opens one app's own page. */
 export const appHash = (slug: string) => `#/app/${slug}`
 
 /**
- * The DOM id of one app's shelf on the Store, so the route and the page agree
- * on the target without either of them writing the string twice. The hash that
- * asks for one is `#/store/<the same id>`, written as a literal wherever a
- * page links to a shelf, the way every other in-site href on this site is.
+ * The hash that opens one app's own page of packs, the way `appHash` opens one
+ * app's own page. Both exist so a component builds the route from an id rather
+ * than concatenating the string itself; the two literals in `appPages.ts` stay
+ * literals, because a data file writes an href the same way it writes any
+ * other one.
  */
-export const storeShelfId = (appId: string) => `shelf-${appId}`
+export const storeAppHash = (appId: string) => `#/store/${appId}`
 
 /**
  * The slugs the router will accept, taken from the CARDS rather than from the
@@ -86,11 +102,12 @@ export function routeFromHash(hash: string): Route {
   if (key === 'store') return { kind: 'store' }
   if (key.startsWith('store/')) {
     const app = key.slice(6)
-    // A shelf we do not have still lands on the Store rather than on the home
-    // page, because `#/store/banana` is unmistakably a request for the shop.
-    // Only the part naming a shelf is dropped.
+    // An app we do not sell for still lands on the Store rather than on the
+    // home page, because `#/store/banana` is unmistakably a request for the
+    // shop. Only the part naming the app is dropped.
     return STORE_APPS.some((a) => a.id === app) ? { kind: 'store', app } : { kind: 'store' }
   }
+  if (key === 'account') return { kind: 'account' }
   if (key === 'dev') return { kind: 'dev' }
   if (key.startsWith('app/')) {
     const slug = key.slice(4)
@@ -104,9 +121,9 @@ export function routeFromHash(hash: string): Route {
 const same = (a: Route, b: Route) => {
   if (a.kind !== b.kind) return false
   if (a.kind === 'app' && b.kind === 'app') return a.slug === b.slug
-  // Two Store routes naming different shelves are two different journeys, and
+  // Two Store routes naming different apps are two different pages, and
   // treating them as one would leave a reader who clicked the second link
-  // standing at the first shelf.
+  // looking at the first app's packs.
   if (a.kind === 'store' && b.kind === 'store') return a.app === b.app
   return true
 }
@@ -137,12 +154,31 @@ export function useRoute(): Route {
  * remembers, and the page's own Back control simply calls `history.back()`, so
  * both routes through are one code path and cannot land in different places.
  *
- * The remembered hash is checked on the way back. Somebody who leaves an app
- * page by clicking Origin in the nav is not returning to the list, and
- * restoring a scroll position over their anchor would drop them somewhere they
- * did not ask to be.
+ * ## One journey, exactly one hop long
+ *
+ * This used to be consumed in ONE place — the home page's arrival — because
+ * home was the only page a journey ever returned to. It is not any more: the
+ * Store's index is a page you leave from a card and come back to, and an app
+ * page can send you to that app's packs and be come back to in turn. A memory
+ * consumed only at home outlives its journey on every one of those, and a
+ * stale one is not harmless: `BackButton` reads its LABEL, so an app page
+ * reached back from the Store would offer "Back to TDG Veditor" while standing
+ * on TDG Veditor.
+ *
+ * So `arriveAt` is called on EVERY route change and the memory lives exactly
+ * one hop. The first arrival after `rememberOrigin` records where the journey
+ * went; arriving back at where it started restores the scroll and forgets it;
+ * arriving anywhere ELSE forgets it too, because the reader has left the
+ * journey rather than finished it. That last arm is what the old
+ * consume-on-mismatch was buying, kept.
  */
-type Origin = { hash: string; scrollY: number; label: string }
+type Origin = {
+  hash: string
+  scrollY: number
+  label: string
+  /** Where the journey went, learned on its first arrival. Null until then. */
+  to: string | null
+}
 
 let origin: Origin | null = null
 
@@ -156,7 +192,7 @@ let origin: Origin | null = null
  * moment somebody is trying to get back.
  */
 export function rememberOrigin(from: string) {
-  origin = { hash: window.location.hash, scrollY: window.scrollY, label: from }
+  origin = { hash: window.location.hash, scrollY: window.scrollY, label: from, to: null }
 }
 
 /** True while there is a place on this site to go back to. */
@@ -170,13 +206,29 @@ export function originLabel(): string | null {
 }
 
 /**
- * The scroll position to restore for `hash`, or null when the reader is not
- * returning to the place they left. Consumes the memory either way: it
- * describes one journey, and a stale one would hijack the next scroll.
+ * Tell the memory a route change has landed on `hash`, and get back the scroll
+ * position to restore — or null, which is every case but one.
+ *
+ * Called once per route change, from App.tsx, before anything decides where to
+ * scroll. The three answers it can give are the whole of the contract above:
+ * this is the journey's destination (keep it, so the page's Back control can
+ * name where it came from), this is the journey's start (restore, forget), or
+ * this is neither (forget).
  */
-export function takeOrigin(hash: string): number | null {
+export function arriveAt(hash: string): number | null {
   const from = origin
-  origin = null
   if (!from) return null
-  return from.hash === hash ? from.scrollY : null
+  if (from.hash === hash) {
+    origin = null
+    return from.scrollY
+  }
+  // The first arrival after the click is the journey's destination, and the
+  // page standing there is the one that reads the label.
+  if (from.to === null) {
+    from.to = hash
+    return null
+  }
+  // Somewhere else entirely. The journey is over and nobody finished it.
+  origin = null
+  return null
 }

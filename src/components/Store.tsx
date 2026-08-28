@@ -5,7 +5,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
-import { useOwnedPacks } from '../store/useOwnedPacks'
+import { useOwnedPacks, type OwnedState } from '../store/useOwnedPacks'
 import {
   formatDay,
   standingOfGrant,
@@ -15,15 +15,17 @@ import {
 } from '../store/grant'
 import { billingMessage, openBilling, setRenewal, type BillingError } from '../store/billing'
 import { SectionsProvider } from '../lib/sections'
-import { appHash, rememberOrigin, storeShelfId } from '../lib/route'
+import { appHash, rememberOrigin, storeAppHash, STORE_HASH } from '../lib/route'
 import { AppIcon } from './AppIcon'
-import { iconForPage } from '../data/appPages'
-import { Fold, FoldControls } from './Folded'
+import { iconFor } from '../content/resolve'
+import { useSiteContent } from '../content/store'
+import { BackButton, Fold, FoldControls } from './Folded'
 import { STORE_ANSWERS, STORE_BILLING_LINK_NOTICE } from '../data/storeAnswers'
 import {
   STORE_APPS,
   annualSavingCents,
   buyUrl,
+  cheapestPlan,
   formatUsd,
   isTestLink,
   isSubscription,
@@ -33,6 +35,39 @@ import {
   type StorePack,
 } from '../data/store'
 import './Store.css'
+
+/**
+ * The shop, in two views over one set of state.
+ *
+ * ## Why it is two views and not one long page
+ *
+ * It used to be a single scroll: a head, then every app's shelf one after
+ * another, then the money folds. That put a reader who came for one pack past
+ * every other app's cards to reach it, and it grew by a whole screen each time
+ * an app started selling something — a page whose length is the size of the
+ * catalogue is a page that gets worse every time the shop does well.
+ *
+ * So the Store is now an INDEX of app cards, and each card opens that app's own
+ * shop page at `#/store/<app>` where its packs, its prices and its buy buttons
+ * live. `#/store/<app>` used to be the same page scrolled to a shelf; it is a
+ * page of its own now, and `src/lib/route.ts` says so at the route.
+ *
+ * ## What both views carry, and why it is the same components
+ *
+ * The account strip, the `Before You Pay` block and the money folds are drawn
+ * by `AccountStrip`, `BeforeYouPay` and `MoneyAnswers` on BOTH views rather
+ * than on the index alone. Rule 10 of AGENTS.md is that the refund policy is
+ * readable before somebody presses Buy, and Buy now lives on the app's page —
+ * a policy one click behind the button is a policy found the day it is wanted.
+ * One component each, so the two views cannot drift into two answers.
+ *
+ * ## Why the state lives here and not in either view
+ *
+ * `pending` is the pack whose Stripe tab is open, and the watch that polls for
+ * it has a five-minute deadline. Both sit in `Store`, which is the parent of
+ * both views, so walking back to the index while a payment is in flight does
+ * not throw the wait away.
+ */
 
 /** How long to keep asking after a buy before giving the button back. */
 const WAIT_MS = 5 * 60 * 1000
@@ -467,7 +502,11 @@ function PackCard({
         </div>
       </div>
 
-      <h4 className="store__pack-name">{pack.name}</h4>
+      {/* An `h3` because the page's own title is the `h2` above it. On the old
+          single-scroll Store this was an `h4` under a shelf head that was an
+          `h3`; that head is the app card on the index now, so a pack name that
+          stayed an `h4` would skip a level in the outline. */}
+      <h3 className="store__pack-name">{pack.name}</h3>
       <p className="store__pack-tagline">{pack.tagline}</p>
 
       <ul className="store__unlocks">
@@ -866,64 +905,386 @@ function PackCard({
   )
 }
 
-function AppSection({
+/**
+ * What one app's shelf says about THIS account, on the index card.
+ *
+ * Every state gets a sentence, including the awkward ones. A card that simply
+ * showed nothing while the read was in flight, or nothing when it failed, would
+ * be an app whose ownership the reader cannot see — and the whole reason to put
+ * ownership on the index is so they do not have to open two pages to find out
+ * they already bought it.
+ *
+ * The failure wording is the pack card's, on purpose: one refusal said two
+ * different ways in two places is two things to keep in step.
+ */
+function ownedLine(state: OwnedState, ownedHere: number, total: number): string {
+  if (state === 'loading') return 'Checking your account…'
+  if (state === 'signedOut') return 'Sign in to see what you already own here.'
+  if (state === 'error') return "We couldn't check your purchases just now."
+  if (ownedHere === 0) return `Nothing from this app on your account yet.`
+  if (ownedHere === total) return total === 1 ? 'On your account already.' : 'Both packs are on your account.'
+  return `${ownedHere} of ${total} on your account.`
+}
+
+/**
+ * One app on the Store's index: what it is, what it sells, and the way in.
+ *
+ * The WHOLE card opens that app's shop, the way every card on this site that
+ * opens a page does — `.card__cover` first in the card, so it is also first in
+ * the tab order. The link to the app's own page sits above it at z-index 5,
+ * the same arrangement `Apps.tsx` uses for a download button, because a reader
+ * weighing up a pack for an app they have not seen should be one click from
+ * what the app actually is.
+ *
+ * The pack rows are DERIVED from `app.packs` — rule 17. Nothing here types a
+ * pack's name, its price or how many there are, so an app that gains a third
+ * pack gains a third row without this file being opened.
+ */
+function AppCard({
   app,
-  cardState,
-  grantFor,
-  onBuy,
-  onSignIn,
-  onCheck,
+  index,
+  state,
+  ownedHere,
 }: {
   app: StoreApp
-  cardState: (app: StoreApp, pack: StorePack) => CardState
-  grantFor: (appId: string, packId: string) => PackGrant | null
-  onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
-  onSignIn: () => void
-  onCheck: () => void
+  index: number
+  state: OwnedState
+  /** How many of this app's packs this account holds. */
+  ownedHere: number
 }) {
-  const head = useReveal<HTMLElement>('wipe', 0)
+  const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
-  const icon = iconForPage(app.page)
+  const icon = iconFor(useSiteContent(), app.page)
+  const from = cheapestPlan(app)
+  const one = app.packs.length === 1
+  /*
+   * "From" is a claim that there is a dearer way in, so it is only made when
+   * there is: a second pack, or a pack sold on more than one plan. One pack
+   * sold one way has a price, not a starting price, and printing `From $7.99`
+   * over `$7.99` is the shop being vague about the only number it has.
+   */
+  const several = app.packs.length > 1 || (app.packs[0]?.plans?.length ?? 0) > 1
 
   return (
-    /* The id is what `#/store/<app>` lands on, and it is on the SECTION rather
-       than on the title, so arriving here brings the packs with it instead of
-       putting a heading on screen with its shelf below the fold. */
-    <section
-      id={storeShelfId(app.id)}
-      className="store__app"
-      aria-labelledby={`store-${app.id}`}
-    >
-      {/* The head of a shelf is a card that opens the app's own page, the same
-          way every card under Apps and Tools does. Somebody weighing up a pack
-          for an app they have not seen should be one click from what the app
-          actually is, and one click back. */}
-      <article ref={mergeRefs(head, tilt)} className="card store__app-head">
-        <span className="card__spot" aria-hidden="true" />
-        <span className="card__edge" aria-hidden="true" />
-        <a
-          className="card__cover"
-          href={appHash(app.page)}
-          onClick={() => rememberOrigin('the Store')}
-        >
-          <span className="sr-only">Open the {app.title} page</span>
-        </a>
+    <article ref={mergeRefs(reveal, tilt)} className="card store__app">
+      <span className="card__spot" aria-hidden="true" />
+      <span className="card__edge" aria-hidden="true" />
 
-        <div className="store__app-titles">
-          <h3 id={`store-${app.id}`} className="store__app-title">
-            {icon && <AppIcon icon={icon.icon} shape={icon.shape} size={38} />}
+      <a
+        className="card__cover"
+        href={storeAppHash(app.id)}
+        onClick={() => rememberOrigin('the Store')}
+      >
+        <span className="sr-only">
+          Open the {app.title} {one ? 'pack' : 'packs'}
+        </span>
+      </a>
+
+      {/* `--card-layer: auto` so the app-page link inside can rise above
+          `.card__cover`; see base.css. */}
+      <div className="store__app-body">
+        <div className="store__app-head">
+          <h3 className="store__app-title">
+            {icon && <AppIcon icon={icon.icon} shape={icon.shape} size={34} />}
             {app.title}
             <span className="store__app-arrow" aria-hidden="true">
               →
             </span>
           </h3>
-          <p className="store__app-copy">{app.copy}</p>
-          <p className="store__app-availability">{app.availability}</p>
+          <span className="chip chip--hot store__app-status">{app.status}</span>
         </div>
-        <span className="chip chip--hot store__app-status">{app.status}</span>
-      </article>
 
-      {/* A shelf holding ONE pack is told so, because the grid collapses its
+        <p className="store__app-copy">{app.copy}</p>
+
+        {/* Every pack on one line: the name, and the cheapest way in. It is a
+            contents list rather than a sales pitch — the pitch is on the card
+            inside, and repeating it here would be a second copy of the words
+            to keep true. */}
+        <ul className="store__app-packs">
+          {app.packs.map((pack) => {
+            const lead = pack.plans?.[0] ?? null
+            return (
+              <li key={pack.id} className="store__app-pack">
+                <span className="store__app-pack-name">{pack.name}</span>
+                <span className="store__app-pack-price">
+                  {lead ? 'From ' : null}
+                  {formatUsd(pack.priceCents)}
+                  {lead?.cadence ? (
+                    <span className="store__app-pack-cadence">{lead.cadence}</span>
+                  ) : null}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+
+        <p className="store__app-availability">{app.availability}</p>
+
+        <div className="store__app-foot">
+          <p className="store__app-owned" data-state={state}>
+            {state === 'ready' && ownedHere > 0 && (
+              <span className="store__app-owned-tick" aria-hidden="true">
+                <Tick />
+              </span>
+            )}
+            {ownedLine(state, ownedHere, app.packs.length)}
+          </p>
+
+          {/* Not a button: the card itself is the link that opens the packs,
+              and a second control pointing at the same place would be a second
+              tab stop saying the same thing. This is the affordance for it,
+              and it lights with the card. */}
+          <span className="store__app-cta" aria-hidden="true">
+            {one ? 'View The Pack' : 'View The Packs'}
+            {from !== null ? ` · ${several ? 'From ' : ''}${formatUsd(from)}` : null}
+            <span className="store__app-cta-arrow">→</span>
+          </span>
+
+          <a
+            className="store__app-link"
+            href={appHash(app.page)}
+            onClick={() => rememberOrigin('the Store')}
+          >
+            About {app.title}
+            <span className="store__app-link-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+/**
+ * Who the purchase will land on.
+ *
+ * On BOTH views, because a shop that takes money without naming the account it
+ * credits is asking for a support email, and the reader who needs it most is
+ * the one about to press Buy — which is the app view.
+ */
+function AccountStrip({ onOpenAuth }: { onOpenAuth: () => void }) {
+  const { status, user, profile } = useAuth()
+  const who = profile?.display_name || profile?.username || user?.email || null
+
+  return (
+    <div className="store__account" data-signed-in={status === 'signedIn' || undefined}>
+      {status === 'signedIn' ? (
+        <>
+          <span className="store__account-dot" aria-hidden="true" />
+          <span className="store__account-text">
+            Buying as <strong>{who}</strong>, so purchases land here.
+          </span>
+        </>
+      ) : status === 'loading' ? (
+        <span className="store__account-text">Checking your account…</span>
+      ) : (
+        <>
+          <span className="store__account-text">
+            Sign in first, so a purchase has an account to land on.
+          </span>
+          <button type="button" className="store__ghost" onClick={onOpenAuth}>
+            Sign in
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The three things a reader has to know BEFORE the Buy button.
+ *
+ * Above the cards on both views, not folded under them.
+ *
+ * Everything here is also said at length in `storeAnswers.ts`, and being said
+ * there is not enough: a fold is a thing you open when you already suspect
+ * there is something to find, and the three facts most likely to make somebody
+ * NOT press Buy have to be readable before they press it. A refund policy
+ * discovered afterwards is a refund policy nobody agreed to.
+ *
+ * Three lines, and each is a promise in a different direction: what the card
+ * lists is all of it, what is bought once stays bought, and money that has gone
+ * does not come back. The last one ends in the thing a reader can actually do,
+ * because a rule with no way out of it reads as a wall.
+ */
+function BeforeYouPay() {
+  return (
+    <div className="store__terms">
+      <p className="store__terms-title">Before You Pay</p>
+      <ul className="store__terms-list">
+        <li>
+          <strong>What is on the card is what you get.</strong> Everything a pack unlocks is
+          listed on that pack's own card, and that list is the whole of it. Nothing is held
+          back, and nothing turns up later that you have to buy a second time.
+        </li>
+        <li>
+          <strong>A one-time pack is truly yours.</strong> Paid once, kept for good, on your
+          TDG Account rather than on a machine. There is nothing to renew, nothing to
+          activate, and we do not take it back.
+        </li>
+        <li>
+          <strong>Payments are not refundable.</strong> Every sale costs us fees we do not
+          get back, and we are two people rather than a company that can absorb that — so
+          please read the card and be sure before you pay. Anything that renews can be
+          cancelled from its own card whenever you like, and you keep it to the end of the
+          period you have already paid for.
+        </li>
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * Everything about the money, folded shut the way an app page is.
+ *
+ * On both views for the reason `BeforeYouPay` is: the long version of the
+ * refund policy has to be reachable from the page carrying the Buy button, not
+ * only from the one that lists the apps.
+ */
+function MoneyAnswers() {
+  const how = useReveal<HTMLDivElement>('scale', 1)
+
+  return (
+    <div ref={how} className="store__answers">
+      <h3 className="store__answers-title">Before you buy</h3>
+      <p className="store__answers-lede">
+        The whole money side, so none of it has to be guessed at. Open the one you want.
+      </p>
+      <SectionsProvider>
+        <FoldControls />
+        <div className="store__folds">
+          {STORE_ANSWERS.map((section) => (
+            <Fold key={section.id} section={section} prefix="store-sec" level={4} />
+          ))}
+        </div>
+      </SectionsProvider>
+    </div>
+  )
+}
+
+/** The Store's index: one card per app, and the way into each one. */
+function StoreIndex({
+  onOpenAuth,
+  stateFor,
+  ownedIn,
+}: {
+  onOpenAuth: () => void
+  stateFor: (appId: string) => OwnedState
+  ownedIn: (app: StoreApp) => number
+}) {
+  const head = useReveal<HTMLDivElement>('wipe', 0)
+
+  return (
+    <>
+      {/* The same control every routed page on this site opens with, so coming
+          back off the Store is the press it is everywhere else. */}
+      <BackButton fallbackLabel="Home" fallbackHash="#top" />
+
+      <div ref={head} className="store__head">
+        <div className="kicker">
+          <span className="kicker__num">06</span>
+          <span className="kicker__rule" />
+          <span className="kicker__label">Store</span>
+        </div>
+        <h2 className="h2 store__heading">It follows your account, not your machine.</h2>
+        <p className="lede store__lede">
+          A few paid extras for the apps we build. Everything else stays free. These are the
+          pieces that pay for the nights they took. Most are charged once and are yours for
+          good; one is a plan you can change or stop from its own card, and it says so before
+          you click. Either way it sits on your TDG Account rather than on a machine. Open an
+          app below for its packs, its prices and everything that comes with them.
+        </p>
+
+        <AccountStrip onOpenAuth={onOpenAuth} />
+        <BeforeYouPay />
+      </div>
+
+      {/* DERIVED from the catalogue, per rule 17. Adding an app to `STORE_APPS`
+          adds a card here; there is nowhere to forget. */}
+      <div className="store__apps" data-single={STORE_APPS.length === 1 || undefined}>
+        {STORE_APPS.map((app, i) => (
+          <AppCard
+            key={app.id}
+            app={app}
+            index={i}
+            state={stateFor(app.id)}
+            ownedHere={ownedIn(app)}
+          />
+        ))}
+      </div>
+
+      <MoneyAnswers />
+
+      <div className="store__foot">
+        <BackButton fallbackLabel="Home" fallbackHash="#top" tone="quiet" />
+      </div>
+    </>
+  )
+}
+
+/** One app's shop: what it is, and every pack it sells with its buy options. */
+function StoreApp({
+  app,
+  onOpenAuth,
+  cardState,
+  grantFor,
+  onBuy,
+  onCheck,
+}: {
+  app: StoreApp
+  onOpenAuth: () => void
+  cardState: (app: StoreApp, pack: StorePack) => CardState
+  grantFor: (appId: string, packId: string) => PackGrant | null
+  onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
+  onCheck: () => void
+}) {
+  const head = useReveal<HTMLDivElement>('wipe', 0)
+  const icon = iconFor(useSiteContent(), app.page)
+
+  return (
+    <>
+      {/* "Back to the Store" when the reader came from the index, and the same
+          place by hash when they arrived cold from a shared link or from the
+          app's own page. `BackButton` is the app pages' own control, so this
+          reads and behaves exactly like the one on every other routed page. */}
+      <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} />
+
+      <div ref={head} className="store__head">
+        <div className="kicker">
+          <span className="kicker__num">06</span>
+          <span className="kicker__rule" />
+          <span className="kicker__label">Store · {app.title}</span>
+        </div>
+        <h2 className="h2 store__heading store__heading--app">
+          {icon && <AppIcon icon={icon.icon} shape={icon.shape} className="store__heading-icon" />}
+          {app.title}
+        </h2>
+        <p className="lede store__lede">{app.copy}</p>
+
+        <div className="chips store__app-chips">
+          <span className="chip chip--hot">{app.status}</span>
+        </div>
+        <p className="store__availability">{app.availability}</p>
+
+        {/* One click to what the app actually is, and one click back — the same
+            offer the shelf head used to make when it was a card. */}
+        <a
+          className="store__applink"
+          href={appHash(app.page)}
+          onClick={() => rememberOrigin('the Store')}
+        >
+          Read about {app.title}
+          <span className="store__applink-arrow" aria-hidden="true">
+            →
+          </span>
+        </a>
+
+        <AccountStrip onOpenAuth={onOpenAuth} />
+        <BeforeYouPay />
+      </div>
+
+      {/* A shop holding ONE pack is told so, because the grid collapses its
           empty tracks and a lone card would otherwise stretch the page. */}
       <div className="store__packs" data-single={app.packs.length === 1 || undefined}>
         {app.packs.map((pack, i) => (
@@ -936,21 +1297,25 @@ function AppSection({
             state={cardState(app, pack)}
             grant={grantFor(app.id, pack.id)}
             onBuy={(plan) => onBuy(app, pack, plan)}
-            onSignIn={onSignIn}
+            onSignIn={onOpenAuth}
             onCheck={onCheck}
           />
         ))}
       </div>
-    </section>
+
+      <MoneyAnswers />
+
+      <div className="store__foot">
+        <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} tone="quiet" />
+      </div>
+    </>
   )
 }
 
-export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
-  const { status, user, profile } = useAuth()
+export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: string }) {
+  const { user } = useAuth()
   const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
   const blob = useParallax<HTMLDivElement>(-0.12)
-  const head = useReveal<HTMLDivElement>('wipe', 0)
-  const how = useReveal<HTMLDivElement>('scale', 1)
 
   /** The pack whose Stripe tab is open, if any. A `packKey`, never a pack id. */
   const [pending, setPending] = useState<string | null>(null)
@@ -1002,6 +1367,10 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     return { kind: 'buy' }
   }
 
+  /** How many of one app's packs this account holds. Counted, never stored. */
+  const ownedIn = (app: StoreApp) =>
+    app.packs.filter((pack) => owned.has(packKey(app.id, pack.id))).length
+
   const buy = (app: StoreApp, pack: StorePack, plan?: StorePlan) => {
     if (!user) {
       onOpenAuth()
@@ -1014,7 +1383,14 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
     setPending(packKey(app.id, pack.id))
   }
 
-  const who = profile?.display_name || profile?.username || user?.email || null
+  /*
+   * The router only ever hands over an id the catalogue claims — `#/store/x`
+   * for an app we do not sell resolves to the plain Store, in `route.ts`. This
+   * lookup makes the same decision for the same reason rather than trusting
+   * that one: a view that renders nothing for an id it cannot find would be a
+   * blank shop, and the index is the honest answer to "the packs for what?".
+   */
+  const shopFor = app ? (STORE_APPS.find((entry) => entry.id === app) ?? null) : null
 
   return (
     <section id="top" className="section section--blend store">
@@ -1022,115 +1398,18 @@ export function Store({ onOpenAuth }: { onOpenAuth: () => void }) {
       <div ref={blob} className="blob store__blob" aria-hidden="true" />
 
       <div className="shell store__shell">
-        <div ref={head} className="store__head">
-          <div className="kicker">
-            <span className="kicker__num">06</span>
-            <span className="kicker__rule" />
-            <span className="kicker__label">Store</span>
-          </div>
-          <h2 className="h2 store__heading">It follows your account, not your machine.</h2>
-          <p className="lede store__lede">
-            A few paid extras for the apps we build. Everything else stays free. These are the
-            pieces that pay for the nights they took. Most are charged once and are yours for
-            good; one is a plan you can change or stop from its own card, and it says so before
-            you click. Either way it sits on your TDG Account rather than on a machine. Neither
-            app has shipped yet, and what that means for buying today is under the shelf, along
-            with the rest of it.
-          </p>
-
-          <div className="store__account" data-signed-in={status === 'signedIn' || undefined}>
-            {status === 'signedIn' ? (
-              <>
-                <span className="store__account-dot" aria-hidden="true" />
-                <span className="store__account-text">
-                  Buying as <strong>{who}</strong>, so purchases land here.
-                </span>
-              </>
-            ) : status === 'loading' ? (
-              <span className="store__account-text">Checking your account…</span>
-            ) : (
-              <>
-                <span className="store__account-text">
-                  Sign in first, so a purchase has an account to land on.
-                </span>
-                <button type="button" className="store__ghost" onClick={onOpenAuth}>
-                  Sign in
-                </button>
-              </>
-            )}
-          </div>
-
-          {/*
-            Above the shelf, not folded under it.
-
-            Everything here is also said at length in `storeAnswers.ts`, and
-            being said there is not enough: a fold is a thing you open when you
-            already suspect there is something to find, and the three facts
-            most likely to make somebody NOT press Buy have to be readable
-            before they press it. A refund policy discovered afterwards is a
-            refund policy nobody agreed to.
-
-            Three lines, and each is a promise in a different direction: what
-            the card lists is all of it, what is bought once stays bought, and
-            money that has gone does not come back. The last one ends in the
-            thing a reader can actually do, because a rule with no way out of
-            it reads as a wall.
-          */}
-          <div className="store__terms">
-            <p className="store__terms-title">Before You Pay</p>
-            <ul className="store__terms-list">
-              <li>
-                <strong>What is on the card is what you get.</strong> Everything a pack unlocks is
-                listed on its own card above, and that list is the whole of it. Nothing is held
-                back, and nothing turns up later that you have to buy a second time.
-              </li>
-              <li>
-                <strong>A one-time pack is truly yours.</strong> Paid once, kept for good, on your
-                TDG Account rather than on a machine. There is nothing to renew, nothing to
-                activate, and we do not take it back.
-              </li>
-              <li>
-                <strong>Payments are not refundable.</strong> Every sale costs us fees we do not
-                get back, and we are two people rather than a company that can absorb that — so
-                please read the card and be sure before you pay. Anything that renews can be
-                cancelled from its own card whenever you like, and you keep it to the end of the
-                period you have already paid for.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {STORE_APPS.map((app) => (
-          <AppSection
-            key={app.id}
-            app={app}
+        {shopFor ? (
+          <StoreApp
+            app={shopFor}
+            onOpenAuth={onOpenAuth}
             cardState={cardState}
             grantFor={grantFor}
             onBuy={buy}
-            onSignIn={onOpenAuth}
             onCheck={refresh}
           />
-        ))}
-
-        {/* Everything about the money, folded shut the way an app page is, and
-            for the same reason: the shelf is what somebody came for, and seven
-            expanded sections between it and the footer would bury it. The two
-            longest are the ones about a purchase going wrong, because the one
-            that works needs no explaining. */}
-        <div ref={how} className="store__answers">
-          <h3 className="store__answers-title">Before you buy</h3>
-          <p className="store__answers-lede">
-            The whole money side, so none of it has to be guessed at. Open the one you want.
-          </p>
-          <SectionsProvider>
-            <FoldControls />
-            <div className="store__folds">
-              {STORE_ANSWERS.map((section) => (
-                <Fold key={section.id} section={section} prefix="store-sec" level={4} />
-              ))}
-            </div>
-          </SectionsProvider>
-        </div>
+        ) : (
+          <StoreIndex onOpenAuth={onOpenAuth} stateFor={stateFor} ownedIn={ownedIn} />
+        )}
       </div>
     </section>
   )

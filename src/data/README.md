@@ -133,8 +133,9 @@ is not a hedge; it is the only way to still be right in a year. Keep it that way
 
 **But it does now carry a policy, and the policy lives in two places.** Payments
 are not refundable, and that is stated both in the `refunds` section here and in
-the `Before You Pay` block above the shelf in `components/Store.tsx` — short
-version above the fold, long version under it. They are not derived from each
+the `Before You Pay` block above the cards in `components/Store.tsx` — short
+version above the fold, long version under it, and **both on every Store view**,
+because the Buy button now lives on the app's own page at `#/store/<app>`. They are not derived from each
 other and nothing will catch them drifting, so change them in the same sitting.
 Same for the completeness promise: the block says what a card lists is
 everything you get, which makes every pack's `unlocks` in `store.ts` a claim
@@ -155,6 +156,21 @@ raises the target ceiling to 400,000 kbps and the manual spike ceiling to
 3. Entry in `APP_PAGES` in `appPages.ts` using the same slug.
 4. Packs in `store.ts` only if it sells something.
 
+Give the card a `repo:` too — the repository's exact name in TDG-Org. That is
+what lets the card answer for itself whether the app is live: `src/live/`
+checks GitHub at runtime and a deployed app's status caption becomes a real
+`Open` / `Download` button with no further edit here. A hand-written
+`download` (or a tool's `href`) always outranks what discovery finds. The
+field's own doc in `content.ts` has the details, including why a wrong name
+fails quietly.
+
+**An app can also appear here before anyone does any of the above**: a public
+TDG-Org repository tagged with the `tdg-app` topic gets a derived card at the
+end of the Apps grid — title from its name, copy from its description, a
+button when something is deployed. That card is the app's face until its real
+entry is written; writing the entry (whose `repo:` claims the repository)
+is what retires it. See [`../live/README.md`](../live/README.md).
+
 No component changes, and no router changes: `lib/route.ts` takes its accepted
 slugs from the *cards*, so a page with no card is unreachable and a card with no
 page loses its link visibly. That is deliberate — it means the two lists cannot
@@ -166,3 +182,24 @@ order to sell anything is also what gives it a panel, grant switches, an
 overview tile and a Purchases filter. Step 4 above then supplies the name and
 the prices that panel shows. If you are editing `src/dev/` to make a new product
 appear, you are doing it the old way.
+
+## This folder is the default, not the last word
+
+Since 2.0.0 the Developer console's **Content** tab can override any of it at
+runtime: the order of the product cards, whether each is shown, its words, its
+icon, its cover, its access button, and every section of its own page. That
+overlay is one jsonb row in tdg-core and it is read by
+[`src/content/`](../content/README.md), which merges it over what is written
+here.
+
+Nothing about this folder's job changed. It is still where a product's words are
+WRITTEN, it is still what every visitor sees when the overlay says nothing, and
+it is still the fallback when the read fails — so a field nobody has overridden
+goes on tracking this file, and an outage renders the built-in site exactly.
+
+What DID change: `shotForPage`, `iconForPage` and `chipsForPage` are no longer
+in `appPages.ts`. They read a page's own card, and a card can now be renamed or
+re-covered from `#/dev`, so they moved to `src/content/resolve.ts` beside the
+overlay they have to read. MARANATHA's three chips moved to its entry in
+`content.ts` at the same time, which `chipsForPage` had asked for in as many
+words.

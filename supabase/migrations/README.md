@@ -23,6 +23,9 @@ can rebuild, and a change nobody can read the reasoning for six months later.
 | `20260826120000_admin_pack_grants_authoritative.sql` | Applied 2026-08-26. Makes the Developer console's on/off switch write `grants` for grants-aware apps, rather than changing only the legacy `owned_packs` mirror that TDG Veditor does not read. ON becomes a perpetual admin grant, OFF removes it, and one-time-only apps retain the existing `owned_packs` path. This is what let a Theme Pack accidentally put into Ended be granted back normally. |
 | `20260826120000_tdg_account_badges.sql` | Global account badges, and the one public number the site's footer prints. `tdg_account_badges` with RLS on and **no** client policies; the catalogue is `tdg_badge_catalog()` in SQL, for the same reason `tdg_feedback_kinds()` is, so a new badge is a migration and no TypeScript. Two of the six are `derived` — Developer *is* `profiles.is_admin`, Subscriber *is* a paid `subscriptions.tier` — computed on every read rather than stored, because a stored copy is a second opinion that goes stale the moment the flag flips; `tdg_admin_badge_set` refuses one with its own sentence rather than silently doing nothing. Verbs: `tdg_my_badges` (the caller's own, taking no user id on purpose — one that took one would be a profile-scraping endpoint), `tdg_public_stats` (two integers, and **the only function on this project granted to `anon`** — no identity, no refusal, and the footer is on the pages nobody signs in to read), `tdg_admin_badges` (every catalogue row with `held`, so the console draws a full switchboard) and `tdg_admin_badge_set`, both admin verbs opening with `tdg_admin_uid()` and auditing every change through `tdg_admin_log`. `user_id` is ON DELETE CASCADE, the opposite of `tdg_feedback`: a bug report outlives its reporter because the bug is still there, and a badge is a sentence about an account. NOT to be confused with `public.tdg_badges`, which is per-app achievement state and is untouched. |
 
+| `20260828120000_site_content_overrides.sql` | Applied 2026-08-28. `tdg_site_content`, one jsonb row holding what the site's Developer console has changed about our own product cards — their order, whether each is shown, their words, covers, buttons and pages — over the copy written in `src/data/`. RLS on with **no** client policies; the verbs are the whole surface. `tdg_site_content()` is the flat public read and the **second** function on this project granted to `anon` (see the rule below, which this file amends); `tdg_admin_site_content` and `_set` sit behind `tdg_admin_uid()` and every publish writes an audit row. A BEFORE UPDATE trigger keeps the version being REPLACED in `tdg_site_content_history`, capped at 50 — this is the one thing the console changes that every visitor reads, so it is the one thing with something to put back, and a trigger cannot be forgotten by a future writer the way a line in a function can. |
+| `20260828090000_tdg_privacy_and_table_merges.sql` | Applied 2026-08-28. **`tdg_privacy`: one privacy authority for every TDG app**, and three tables that did not need to be their own. A boolean could only ever say "everyone or nobody", so the one thing people actually want to say — *my friends, and not the internet* — had nowhere to live. One row per account, one jsonb of key → audience (`public` / `friends` / `self`), a catalogue in SQL (`tdg_privacy_catalog()`), and **one** function every read on this project asks (`tdg_can_view`), so a new control is a migration and no TypeScript. `profiles.public_profile` / `public_friend_list` stay as the two-state MIRRORS four deployed apps still read, written by `tdg_set_privacy` and forwarded back by a trigger when a legacy client writes them — the trigger's one subtlety is that `false` over an audience already narrower than public leaves it alone, without which every Bible Educator profile save would downgrade "friends only" to "only me". `tdg_is_visible`, `tdg_find_profile`, `tdg_public_friends` and `tdg_add_friend` rewritten to ask it (so friend requests are now something an account has a say in), signatures unchanged. **Merged away:** `bea_public_stats` → its three switches into `tdg_privacy` and its published counters into a new `tdg_badges.published`, table dropped; `bea_streaks` → `tdg_streaks` keyed `(user_id, app)`, the move `tdg_badges` already made over `devfleet_badges`; `mak_typing_rate_limit` → `tdg_rate_limits`, keyed `(user_id, bucket)`, because nothing about counting submissions is typing-shaped. `bea_public_stats_for` is kept as a forwarder answering its exact old shape from the new sources, so a browser still running the pre-merge Bible Educator draws a public page correctly. Adds `tdg_public_profile_stats`, `tdg_publish_stats`, `tdg_rate_take`, and `tdg_my_account_stats()` — the Account page's one round trip, deriving packs from `tdg_store_apps()` and apps and streaks from whatever has written a row, so a product added tomorrow appears with no migration. `devfleet_badges` is deliberately NOT merged: DevFleet reads it directly and returns its row type out of `devfleet_badge_sync`, and that repo was not part of this change. |
+| `20260828093000_tdg_privacy_groups.sql` | Applied 2026-08-28. `tdg_privacy_groups()` — the heading and the line of copy each catalogue group is written under. A separate function rather than two more columns on `tdg_privacy_catalog()`, because widening that one means `drop ... cascade` through the four functions that depend on it to add a line of prose. Deriving the headings from the group ids would have printed `Visibility` / `Page` / `Contact`, which are three category names, and the whole reason the controls are grouped is that each group answers a different question. |
 
 ## Rules
 
@@ -40,14 +43,25 @@ can rebuild, and a change nobody can read the reasoning for six months later.
   admin row to check, so reaching these could only ever produce a refusal and a
   probe endpoint.
 
-  There is exactly **one** exception, `tdg_public_stats()` in
-  `20260826120000_tdg_account_badges.sql`, and what makes it one is that it has
+  There are exactly **two** exceptions, and what makes each one is that it has
   no identity in it at all: no parameter, no `auth.uid()`, no refusal to probe
-  with, and a return shape of two integers that name nobody. It is granted to
+  with, and a return value that names nobody.
+
+  `tdg_public_stats()` in `20260826120000_tdg_account_badges.sql`, granted to
   `anon` because the site's footer is on every page, including all the ones
-  nobody has signed in to read. A second exception needs to clear the same bar,
-  which is a high one — the moment a function can answer differently about
-  different people, it belongs behind `authenticated`.
+  nobody has signed in to read. It returns two integers.
+
+  `tdg_site_content()` in `20260828120000_site_content_overrides.sql`, granted
+  for the same shape of reason: what comes back is the text of a public
+  marketing page, which every visitor is about to be shown anyway, and a site
+  whose home page could only be read by somebody signed in would not be a site.
+  It is deliberately one row and one verb — a function that took a key could
+  answer differently about different keys, and the moment a read can be steered
+  it stops being the flat, identity-free thing that earns the grant.
+
+  A third exception needs to clear the same bar, which is a high one — the
+  moment a function can answer differently about different people, it belongs
+  behind `authenticated`.
 
 ## Applying one
 

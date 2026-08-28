@@ -50,27 +50,40 @@ type Route =
 
 Four things to keep true when you add one:
 
-1. **A route may name a place on the page it opens.** `#/store/veditor` is the
-   Store landed at that shelf. A link that has already said which shelf it means
-   should not make the reader find it again, so anything pointing at one thing on
-   a long page gets this shape rather than a bare page hash.
+1. **A route may put its variable part behind a segment and open a page per
+   value.** `#/store/veditor` is that app's own page of packs. A link that has
+   already said which app it means should not make the reader find it again.
+   (It used to mean "the Store, scrolled to that app's shelf". The shelves are
+   pages now and the hash did not change, which is why every link written to it
+   still works — including the two literals in `data/appPages.ts`.)
 2. **Unknown values fall through, hash untouched.** `#/app/banana` renders home,
-   exactly like `#/banana`. `#/store/banana` renders the Store without a shelf,
-   because it is unmistakably a request for the shop. No "not found" screen and
+   exactly like `#/banana`. `#/store/banana` renders the Store's index, because
+   it is unmistakably a request for the shop. No "not found" screen and
    no redirect: both of those answer the question "is there something here?".
 3. **`same()` has to tell your routes apart**, or effects keyed on the route will
-   not re-run. Two Store routes naming different shelves are two different
-   journeys; treating them as one leaves a reader who clicked the second link
-   standing at the first shelf.
+   not re-run. Two Store routes naming different apps are two different pages;
+   treating them as one leaves a reader who clicked the second link looking at
+   the first app's packs.
 4. **Accepted app slugs come from the CARDS**, in `data/content.ts` — never from
    `appPages.ts`. That file is a large lazy chunk and only a visitor who opens a
    page should pay to download it, so this file must not import it. Every card
    names its page, so the two lists cannot drift without a card visibly losing
    its link.
 
-`rememberOrigin` / `takeOrigin` are how Back from an app page lands at the exact
+`rememberOrigin` / `arriveAt` are how Back from a page lands at the exact
 scroll position the card was clicked from — and only when the hash is the one
 that was left, so somebody who leaves via the nav is not dragged back to it.
+
+**The memory lives exactly one hop, and `arriveAt` is called on EVERY route
+change to keep it that way.** The first arrival after `rememberOrigin` records
+where the journey went and keeps the label for that page's Back control;
+arriving back at where it started restores the scroll and forgets it; arriving
+anywhere else forgets it. It used to be consumed only when landing on home,
+which was right while home was the only page a journey returned to — the Store's
+index is one too now, and so is an app page that sent you to its own packs. A
+memory that outlived its journey put the wrong NAME on the next Back button:
+coming back off `#/store/veditor` left that app's page offering "Back to TDG
+Veditor" while standing on TDG Veditor.
 
 `dev` being listed here is not a leak. Anything the router recognises has to be
 named, and what keeps the console out of everyone's way is that `App.tsx` renders

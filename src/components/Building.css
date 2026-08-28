@@ -1054,6 +1054,13 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* NOT its own stacking context — the same repair `.apps__body` carries, for
+     the same reason: base.css gives every card child `z-index: 1`, and inside
+     that context no z-index could ever lift the Play link above the card's
+     own `.card__cover` at 3. `auto` keeps the body painting above the
+     spotlight (later in the DOM) while letting the one link in here compete
+     with the cover for the click. */
+  --card-layer: auto;
 }
 .building__tags {
   display: flex;
@@ -1117,6 +1124,15 @@
   transition:
     transform 0.3s,
     var(--t-theme);
+}
+/* Above .card__cover, so the one link inside a link-card still gets the
+   click — the element-qualified selector keeps the lift off the `--soon`
+   SPAN, which must NOT intercept clicks meant for the card. Same pair as
+   `.apps__download`; `.building__body` above opts out of being a stacking
+   context so this z-index can actually win. */
+a.building__play {
+  position: relative;
+  z-index: 5;
 }
 .building__play:hover {
   transform: translateY(-3px);

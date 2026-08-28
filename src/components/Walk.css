@@ -79,7 +79,7 @@
    wrapper that stayed put — and neither of them says anything about a margin.
    So it lives here, on the box that is supposed to have it, and `.walk`'s
    border-box top lands exactly where `#origin`'s used to. `scrollIntoView`,
-   `rememberOrigin`, `takeOrigin` and CONTRACT D's dissolve all measure from
+   `rememberOrigin`, `arriveAt` and CONTRACT D's dissolve all measure from
    that line and none of them had to change.
 
    ── and it must NOT have a stacking context ──────────────────────────────

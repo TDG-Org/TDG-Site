@@ -120,6 +120,16 @@ export const CHAPTERS: Chapter[] = [
 export type IconShape = 'tile' | 'glyph'
 
 /**
+ * One 9px mono tag on a card, and on the head of that card's own page.
+ *
+ * Declared once rather than inline on each card type, because `src/content/`
+ * validates a chip arriving from the Developer console against exactly this
+ * shape — and a shape written in three places is three things to keep in step
+ * the day a chip gains a field.
+ */
+export type Chip = { label: string; hot?: boolean }
+
+/**
  * The backdrop a piece of key art is drawn on.
  *
  * A small closed vocabulary on purpose, the same way `pageBlocks.ts` is: each
@@ -199,6 +209,28 @@ export type AppCard = {
    * turns the card into a link, so a card without one goes nowhere.
    */
   page: string
+  /**
+   * The app's repository in the TDG-Org GitHub organisation — the name only,
+   * exact case, the way GitHub spells it: `Bible-Educator`, never a URL.
+   *
+   * It is what lets a card answer for itself whether the app is live.
+   * `src/live/` asks GitHub about the org's repositories and asks GitHub
+   * Pages whether `https://tdg-org.github.io/<repo>/` exists — the second
+   * question works even for a private repository with a public deploy, which
+   * is what Bible Educator is — and a card whose app turns out to be deployed
+   * swaps its status caption for a real link, with no edit here. The repo's
+   * own Website field wins over the derived Pages URL when somebody set one,
+   * and a `#download` anchor in it makes the button say Download rather than
+   * Open. A hand-written `download` on the card outranks all of it: that is a
+   * human decision, and the runtime never argues with one.
+   *
+   * A wrong name fails QUIETLY — the card simply never upgrades — so when an
+   * app first deploys and its button does not appear, this string is the
+   * first thing to check against the repository's real name. Names marked
+   * "expected" below were written before their repos deployed and have not
+   * been checked against a live one yet.
+   */
+  repo?: string
   title: string
   copy: string
   /**
@@ -217,7 +249,7 @@ export type AppCard = {
    * a glyph it is a box drawn about thin air.
    */
   iconShape: IconShape
-  chips: { label: string; hot?: boolean }[]
+  chips: Chip[]
   status: string
   /**
    * Optional real action. When it is present the card renders this link where
@@ -250,6 +282,8 @@ export const APPS: AppCard[] = [
     id: 'app-bible',
     index: '01',
     page: 'bible-educator',
+    // Private repo, public deploy — the probe in src/live/ is what finds it.
+    repo: 'Bible-Educator',
     title: 'Bible Educator',
     copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Download any of the 16 translations once and the whole thing keeps working with the internet off.',
     icon: 'icon-bible-educator.webp',
@@ -273,6 +307,7 @@ export const APPS: AppCard[] = [
     id: 'app-say2quill',
     index: '02',
     page: 'say2quill',
+    repo: 'Say2Quill', // expected name — check against the repo when it first deploys
     title: 'Say2Quill',
     copy: 'Press one key anywhere, speak, and clean formatted text lands in whatever field has focus. The speech runs on your own machine, so there is no cloud and no account.',
     icon: 'icon-say2quill.webp',
@@ -304,6 +339,9 @@ export const APPS: AppCard[] = [
     id: 'app-makullveny',
     index: '03',
     page: 'makullveny',
+    // Named for the claim alone: the hand-written `download` below outranks
+    // discovery, so the runtime never asks anything about this repo.
+    repo: 'Makullveny',
     title: 'Makullveny',
     copy: 'A calm desk for studying. Write and draw straight into books of your own, hand it a syllabus and get the dates back, and drill the hard parts with flashcards. None of it leaves your machine.',
     icon: 'icon-makullveny.webp',
@@ -341,6 +379,7 @@ export const APPS: AppCard[] = [
     id: 'app-devfleet',
     index: '04',
     page: 'devfleet',
+    repo: 'DevFleet', // expected name — check against the repo when it first deploys
     title: 'DevFleet',
     copy: 'Point it at a folder and every git repo becomes a live card. Open up to sixteen panes, each with its own terminal, diff review and notebook.',
     icon: 'icon-devfleet.webp',
@@ -367,6 +406,7 @@ export const APPS: AppCard[] = [
     id: 'app-music',
     index: '05',
     page: 'music-everything',
+    repo: 'Music-Everything', // expected name — check against the repo when it first deploys
     title: 'Music Everything',
     copy: 'Learn music by playing it, not by reading about it. Scales and chords on a piano you can play, your own singing drawn back at you as pitch, and a note track you can export as MIDI.',
     icon: 'icon-music-everything.webp',
@@ -387,6 +427,7 @@ export const APPS: AppCard[] = [
     id: 'app-veditor',
     index: '06',
     page: 'veditor',
+    repo: 'TDG-Veditor', // expected name — check against the repo when it first deploys
     title: 'TDG Veditor',
     copy: 'A desktop video editor: cut on a timeline, grade the colour, mix the audio, then hand it an export pipeline you set up yourself instead of one somebody else chose for you.',
     icon: 'icon-veditor.webp',
@@ -409,6 +450,9 @@ export type ToolCard = {
   index: string
   /** The slug of this tool's own page, in `src/data/appPages.ts`. */
   page: string
+  /** The tool's repository in TDG-Org. Same contract as `AppCard.repo`. A
+   *  hand-written `href` below outranks discovery the way `download` does. */
+  repo?: string
   title: string
   copy: string
   /**
@@ -420,7 +464,7 @@ export type ToolCard = {
   icon: string
   /** Tile or glyph. See `AppCard`'s own field for what it decides. */
   iconShape: IconShape
-  chips: { label: string; hot?: boolean }[]
+  chips: Chip[]
   cta: string
   href?: string
 }
@@ -429,6 +473,9 @@ export const TOOLS: ToolCard[] = [
   {
     index: '07',
     page: 'volume-controller',
+    // Named for the claim alone: the hand-written `href` below outranks
+    // discovery, so the runtime never asks anything about this repo.
+    repo: 'Volume-Controller',
     title: 'Volume Controller',
     icon: 'icon-volume-controller.webp',
     iconShape: 'tile',
@@ -440,6 +487,7 @@ export const TOOLS: ToolCard[] = [
   {
     index: '08',
     page: 'vidhelper',
+    repo: 'VidHelper', // expected name — check against the repo when it first deploys
     title: 'VidHelper',
     icon: 'icon-vidhelper.svg',
     iconShape: 'tile',
@@ -450,6 +498,7 @@ export const TOOLS: ToolCard[] = [
   {
     index: '09',
     page: 'n8-tools',
+    repo: 'N8-Tools', // expected name — check against the repo when it first deploys
     title: 'N8-Tools',
     icon: 'icon-n8-tools.svg',
     iconShape: 'tile',
@@ -463,6 +512,9 @@ export const TOOLS: ToolCard[] = [
 export const MARANATHA = {
   /** Its own page, same as every card under Apps and Tools. */
   page: 'maranatha',
+  /** Same contract as `AppCard.repo`; expected name, unchecked until the game
+   *  first deploys. A Content-tab `href` on the panel outranks discovery. */
+  repo: 'MARANATHA',
   /** Drawn by us: the game has no icon of its own. See the file itself. */
   icon: 'icon-maranatha.svg',
   iconShape: 'tile' as IconShape,
@@ -480,6 +532,17 @@ export const MARANATHA = {
    * component said `IN PLAYTEST` eleven lines above a `status` of `Coming soon`.
    */
   tag: 'IN PLAYTEST',
+  /**
+   * The chips its own page carries under the title.
+   *
+   * They used to be typed inside `chipsForPage()` in `appPages.ts`, which said
+   * in as many words: "If that panel ever gains chips of its own, read them
+   * from there instead." This is that. The Building panel still prints `tag`
+   * and `status` in prose rather than a chip row, so these are the page's — and
+   * each one restates something the facts row directly below it already says,
+   * so there is no second claim to go stale.
+   */
+  chips: [{ label: 'BROWSER' }, { label: 'IN PLAYTEST', hot: true }, { label: 'FREE' }] as Chip[],
   status: 'Coming soon',
   count: '1 in playtest · 3 more queued',
   // The game's own home screen. It carries the wordmark, so the panel does not

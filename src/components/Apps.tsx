@@ -1,10 +1,15 @@
+import { useMemo } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ImageSlot } from './ImageSlot'
 import { AppIcon } from './AppIcon'
-import { APPS, GITHUB_ORG, type AppCard } from '../data/content'
+import { GITHUB_ORG, type AppCard } from '../data/content'
+import { visibleApps } from '../content/resolve'
+import { useSiteContent } from '../content/store'
+import { useDiscoveredApps, useLiveAccess } from '../live/useLive'
+import type { DiscoveredApp } from '../live/types'
 import { appHash, rememberOrigin } from '../lib/route'
 import './Apps.css'
 
@@ -35,6 +40,15 @@ import './Apps.css'
 function AppTile({ app, index }: { app: AppCard; index: number }) {
   const reveal = useReveal<HTMLElement>('card3d', index % 4)
   const tilt = useTilt<HTMLElement>()
+
+  /* Is the app actually deployed? `src/live/` asks GitHub at runtime, and a
+     yes turns the status caption into the same link a hand-written `download`
+     renders — Bible Educator's card is the one this was built for: private
+     repo, public Pages deploy, nothing in `content.ts` to say so. A card that
+     already carries a `download` passes `undefined`, which asks nothing: a
+     human decision outranks discovery (see src/live/README.md). */
+  const live = useLiveAccess(app.download ? undefined : app.repo, app.title)
+  const access = app.download ?? live
 
   return (
     <article ref={mergeRefs(reveal, tilt)} className="card apps__card">
@@ -83,9 +97,9 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
           </span>
         </h3>
         <p className="apps__copy">{app.copy}</p>
-        {app.download ? (
-          <a className="apps__download" href={app.download.href} target="_blank" rel="noopener">
-            {app.download.label}
+        {access ? (
+          <a className="apps__download" href={access.href} target="_blank" rel="noopener">
+            {access.label}
             <span className="apps__download-arrow" aria-hidden="true">
               →
             </span>
@@ -98,7 +112,103 @@ function AppTile({ app, index }: { app: AppCard; index: number }) {
   )
 }
 
+/**
+ * The mark on a discovered card's title row, standing where `AppIcon` stands
+ * on its neighbours. GitHub has no icon to offer for a repository, and a
+ * title row that is the only one in the grid with nothing beside it reads as
+ * a card still loading — so the awkward state gets a face: the app's own
+ * initial, drawn in the same box, radius and hairline ring a tile icon gets.
+ * The real icon arrives with the app's real entry in `content.ts`, which is
+ * also what retires the whole card (see src/live/README.md).
+ */
+function OrgMark({ title }: { title: string }) {
+  return (
+    <span className="apps__orgmark" aria-hidden="true">
+      {title.trim().charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
+/**
+ * A card for an app the catalogue has not been taught yet: a public TDG-Org
+ * repository carrying the `tdg-app` topic that no hand-written card claims.
+ * Rule 17's second half, applied to the org itself — an unknown entry gets a
+ * face rather than being silently absent, and everything on it is derived
+ * from the repository (title from its name, copy from its description, chips
+ * from its state), so the words a component draws are still never typed into
+ * one. The whole card opens the live site when there is one, else the repo:
+ * there is no `#/app/` page to open, because nobody has written one.
+ */
+function OrgTile({ app, position }: { app: DiscoveredApp; position: number }) {
+  const reveal = useReveal<HTMLElement>('card3d', position % 4)
+  const tilt = useTilt<HTMLElement>()
+
+  return (
+    <article ref={mergeRefs(reveal, tilt)} className="card apps__card">
+      <span className="card__spot" aria-hidden="true" />
+      <span className="card__edge" aria-hidden="true" />
+
+      <a className="card__cover" href={app.href} target="_blank" rel="noopener">
+        <span className="sr-only">
+          Open {app.title}
+          {app.access ? '' : ' on GitHub'}
+        </span>
+      </a>
+
+      <div className="apps__shot">
+        {/* No art and no shot, deliberately: the quiet empty frame is the
+            slot's own face for "nothing shipped yet", and in dev it still
+            accepts a dropped preview like any other unfilled slot. */}
+        <ImageSlot id={`org-${app.name}`} placeholder={`Drop a ${app.title} screenshot`} />
+      </div>
+      <div className="apps__body">
+        <div className="badge apps__index">{app.index}</div>
+        <div className="chips apps__chips">
+          {app.chips.map((chip) => (
+            <span key={chip.label} className={chip.hot ? 'chip chip--hot' : 'chip'}>
+              {chip.label}
+            </span>
+          ))}
+        </div>
+        <h3 className="apps__title">
+          <OrgMark title={app.title} />
+          {app.title}
+          <span className="apps__title-arrow" aria-hidden="true">
+            →
+          </span>
+        </h3>
+        <p className="apps__copy">{app.copy}</p>
+        {app.access ? (
+          <a className="apps__download" href={app.access.href} target="_blank" rel="noopener">
+            {app.access.label}
+            <span className="apps__download-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
+        ) : (
+          /* The same words its hand-written neighbours use for the same
+             state — mechanism copy for any undiscovered-yet-undeployed repo,
+             not any one product's. */
+          <div className="apps__status">Coming soon</div>
+        )}
+      </div>
+    </article>
+  )
+}
+
 export function Apps() {
+  /* The cards, in the order and with the words the Developer console's Content
+     tab last published, over the built-in list in `src/data/content.ts`. Rule
+     17: a surface that lists our products derives the list, and it derives it
+     from BOTH sources so a card hidden here cannot still be on the Store or on
+     the Tools shelf. See src/content/README.md. */
+  const doc = useSiteContent()
+  const apps = useMemo(() => visibleApps(doc), [doc])
+
+  /* Cards the org has that the catalogue does not — empty until GitHub
+     answers, and empty is also the honest face for "could not ask". */
+  const discovered = useDiscoveredApps()
+
   /* ── one layer, and it is light rather than landscape ─────────────────────
      `useParallax` writes `centreOffset * -factor`, so a POSITIVE factor climbs
      more slowly than the page and reads as distance. +0.010 is the slowest
@@ -182,8 +292,12 @@ export function Apps() {
         </div>
 
         <div className="apps__grid">
-          {APPS.map((app, i) => (
+          {apps.map((app, i) => (
             <AppTile key={app.id} app={app} index={i} />
+          ))}
+
+          {discovered.map((repo, i) => (
+            <OrgTile key={repo.name} app={repo} position={apps.length + i} />
           ))}
 
           <div ref={more} className="apps__more" data-more>

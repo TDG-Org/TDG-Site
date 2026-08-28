@@ -28,14 +28,35 @@
    light; the block below records why it stopped, and that paragraph is the
    general rule, not a note about one hex.                                  */
 .store {
+  /* `--warm` as a STROKE and `--warm` as TEXT are not the same requirement.
+     The token is tuned to read as a border and a tint, and light theme's
+     `#b8763a` set as 13px type ON a warm tint measured 3.2:1 — under the 4.5
+     rule 14 makes a floor, and the confirm button was worse at 2.7. Mixing a
+     little of the page's own text colour in darkens it in light and lightens
+     it in dark, so ONE expression is right in both: measured 4.9 and 5.4 in
+     light, 9.7 and above in dark. Borders and backgrounds keep plain `--warm`,
+     where the token is already correct.
+
+     Declared on the PAGE rather than on the pack card, which is where it used
+     to live: the index's app cards need the same colour for the same reason,
+     and a second declaration on a second card is the two drifting apart the
+     first time either is tuned. Rule 2's second half. */
+  --warm-text: color-mix(in srgb, var(--warm) 68%, var(--text));
   --tint-top: var(--bg2);
   --tint-mid: #0a0c14;
   --tint-bot: var(--band-apps);
   min-height: 100vh;
   min-height: 100svh;
-  /* The nav sits over the top of the page; without this the kicker starts
-     underneath it on a page that has no hero to absorb the overlap. */
-  padding-top: clamp(104px, 12vw, 156px);
+  /* The nav sits over the top of the page; without this the Back control starts
+     underneath it on a page that has no hero to absorb the overlap.
+
+     The SAME clamp `.appview` uses, and that is the point rather than a
+     coincidence: this page now opens with the same `.appview__back` control the
+     app pages and About open with, so a different number here would start the
+     one control at two different heights depending on which page you reached it
+     from. It used to be `clamp(104px, 12vw, 156px)`, which was correct while
+     the first thing on this page was the kicker — 16px taller at 1440. */
+  padding-top: clamp(96px, 11vw, 140px);
 }
 
 /* Read against the dark block: the ceiling has an owner there and none here.
@@ -98,8 +119,13 @@
 
 /* ── head ─────────────────────────────────────────────────────────────── */
 
+/* The gap under the Back control, and it is `.appview__head`'s number rather
+   than one of this page's own — same reason as the padding above. Without it
+   the kicker's top edge sat on the button's bottom edge, measured 0px, on both
+   Store views. */
 .store__head {
   max-width: 720px;
+  margin-top: clamp(26px, 4vw, 40px);
   margin-bottom: clamp(44px, 6vw, 72px);
 }
 .h2.store__heading {
@@ -187,80 +213,303 @@
   color: var(--text);
 }
 
-/* ── one app's shelf ──────────────────────────────────────────────────── */
+/* ── the way in and the way back ──────────────────────────────────────────
+   Both views open with the app pages' own Back control and close with the
+   quiet one, so leaving the Store is the press it is on every other routed
+   page. The control itself is `.appview__back` in AppPage.css — one
+   implementation, not a second one wearing this page's prefix.             */
 
-/* A shelf is a landing place: `#/store/<app>` scrolls to it, so it clears the
-   fixed nav by the same gap wherever it is opened from. At the smallest desktop
-   height this puts a one-pack shelf on screen whole, head and packs together,
-   which is the entire point of the link naming it. */
-.store__app {
-  scroll-margin-top: calc(var(--nav-h) + 14px);
-  margin-bottom: clamp(48px, 6vw, 80px);
+.store__foot {
+  margin-top: clamp(36px, 5vw, 56px);
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  transition: var(--t-theme);
 }
 
-/* The head of a shelf is a card that opens the app's own page, so it carries
-   the card's own edge and padding rather than the rule it used to sit on. */
-.store__app-head {
+/* ── the index: one card per app ──────────────────────────────────────────
+
+   The Store used to be one scroll with every app's shelf on it, which put a
+   reader who came for one pack past every other app's cards and grew by a
+   screen each time an app started selling something. It is a grid of app cards
+   now, and each card opens that app's own page of packs at `#/store/<app>`.
+
+   Rule 6: the cards are a mirrored pair, so the gap between them and the
+   padding inside them come from ONE pair of variables here and are applied to
+   both. Two literals is how a pair goes lopsided without either number looking
+   wrong on its own.                                                         */
+
+.store__apps {
+  --app-gap: 20px;
+  --app-pad: clamp(20px, 2.6vw, 26px);
+  display: grid;
+  /* `min(100%, 320px)`, not a bare 320px: a grid track whose MINIMUM is wider
+     than its container overflows it, and at 320px the shell is 284px wide. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--app-gap);
+}
+
+/* One app to sell for. `auto-fit` collapses its empty tracks, so without this
+   the lone card stretches the full 1180px and reads as a banner across the page
+   rather than a card on a shelf — the same reservation `.store__packs` makes,
+   off the same shape, so a card is one size wherever it is drawn. */
+.store__apps[data-single] {
+  grid-template-columns: minmax(min(100%, 320px), calc((100% - var(--app-gap)) / 2));
+}
+
+.store__app {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: clamp(20px, 2.6vw, 28px);
-  margin-bottom: 26px;
+  flex-direction: column;
   transition:
     transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
     var(--t-theme);
 }
-.store__app-titles {
-  flex: 1 1 460px;
-  min-width: 0;
+
+/* `auto` rather than the default 1, so the app-page link inside can be given a
+   z-index that clears `.card__cover`. base.css explains the variable; Apps.css
+   is the other caller, for the same reason. */
+.store__app-body {
+  --card-layer: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 14px;
+  padding: var(--app-pad);
+}
+
+.store__app-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
 }
 .store__app-title {
   display: flex;
   /* Centred, so the icon's middle and the title's middle are one line. The
      same rule every title carrying an icon follows; see AppIcon.css. */
   align-items: center;
-  gap: 12px;
-  margin: 0 0 10px;
-  font: 700 clamp(23px, 2.6vw, 30px) / 1.1 var(--font-display);
+  gap: 11px;
+  margin: 0;
+  min-width: 0;
+  font: 700 clamp(21px, 2.3vw, 26px) / 1.15 var(--font-display);
   color: var(--text);
 }
-/* The head opens a page, and should say so before it is hovered. */
+/* The card opens a page, and should say so before it is hovered. */
 .store__app-arrow {
-  font-size: 17px;
+  font-size: 16px;
   color: var(--faint);
   transition:
     transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
     color 0.3s ease;
 }
-.store__app-head[data-lit='true'] .store__app-arrow {
+.store__app[data-lit='true'] .store__app-arrow {
   transform: translateX(4px);
   color: var(--text);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .store__app-arrow {
-    transition: none;
-  }
+/* A tag, and therefore short. A sentence in a 9px mono chip reads as a code
+   block bolted to the side of the card, which is what the first pass shipped. */
+.chip.store__app-status {
+  flex: none;
+  margin-top: 4px;
 }
+
 .store__app-copy {
   margin: 0;
-  max-width: 640px;
-  font: 400 15px/1.65 var(--font-body);
+  font: 400 14px/1.65 var(--font-body);
   color: var(--muted);
 }
+
+/* What is inside, one line per pack, DERIVED from the catalogue. A contents
+   list rather than a pitch: the pitch is on the pack's own card, and a second
+   copy of it here would be a second set of words to keep true. */
+.store__app-packs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--border);
+  overflow: hidden;
+  transition: var(--t-theme);
+}
+.store__app-pack {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 13px;
+  background-color: var(--surface);
+  transition: var(--t-theme);
+}
+.store__app-pack-name {
+  min-width: 0;
+  font: 600 13.5px/1.4 var(--font-body);
+  color: var(--text);
+}
+.store__app-pack-price {
+  flex: none;
+  font: 700 14px/1.4 var(--font-display);
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+/* The `/mo` after an amount, quieter than the number it follows: it is a unit
+   and not a second price. Same decision as `.store__cadence`, one size down. */
+.store__app-pack-cadence {
+  margin-left: 1px;
+  font: 600 0.75em/1 var(--font-display);
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
 .store__app-availability {
+  margin: 0;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--faint);
+}
+
+/* Pushed to the card's floor, so two cards of unequal copy still line up their
+   ownership line, their affordance and their link. */
+.store__app-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  transition: var(--t-theme);
+}
+
+/* What this account holds here, in every state including the awkward ones: a
+   read in flight, a read that failed, and a reader who is not signed in. A card
+   that showed nothing for those would be an app whose ownership cannot be read
+   without opening a second page, which is the whole reason it is on the index.
+   Warm is the one that needs something from the reader; green is what they
+   already have; plain is a fact with nothing to do about it. */
+.store__app-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font: 500 12.5px/1.5 var(--font-body);
+  color: var(--muted);
+}
+.store__app-owned[data-state='error'] {
+  color: var(--warm-text);
+}
+.store__app-owned-tick {
+  display: inline-flex;
+  color: var(--live-fg);
+}
+
+/* Not a control: the whole card is the link that opens the packs, and a second
+   one pointing at the same place would be a second tab stop saying the same
+   thing. This is what that link LOOKS like, and it lights with the card. */
+.store__app-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  padding: 12px 16px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background-color: var(--surface);
+  color: var(--text);
+  font: 600 13.5px var(--font-body);
+  letter-spacing: 0.01em;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    var(--t-theme);
+}
+.store__app[data-lit='true'] .store__app-cta {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+.store__app-cta-arrow {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.store__app[data-lit='true'] .store__app-cta-arrow {
+  transform: translateX(3px);
+}
+
+/* The one real link inside the card-as-link, above `.card__cover` so it still
+   gets its own click. Apps.css does the same for a download button, and names
+   the same reason. */
+.store__app-link {
+  position: relative;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 12.5px var(--font-body);
+  color: var(--accent-2);
+}
+.store__app-link:hover {
+  color: var(--text);
+}
+.store__app-link-arrow {
+  font-size: 11px;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.store__app-link:hover .store__app-link-arrow {
+  transform: translateX(3px);
+}
+
+/* ── one app's own shop page ──────────────────────────────────────────── */
+
+.h2.store__heading--app {
+  display: flex;
+  /* Centred against the title, not its baseline. A 46px mark hung off a 48px
+     baseline sits visibly high; centred, the two share a middle. The app pages
+     make the same call for the same reason; see AppPage.css. */
+  align-items: center;
+  gap: clamp(12px, 1.6vw, 18px);
+}
+.store__heading-icon {
+  --icon-size: clamp(32px, 3.6vw, 42px);
+}
+.chips.store__app-chips {
+  margin-top: 18px;
+}
+.store__availability {
   margin: 12px 0 0;
   max-width: 640px;
   font: 400 13px/1.6 var(--font-body);
   color: var(--faint);
 }
-/* A tag, and therefore short. A sentence in a 9px mono chip reads as a code
-   block bolted to the side of the shelf, which is what the first pass shipped. */
-.chip.store__app-status {
-  flex: none;
-  margin-top: 6px;
+/* One click to what the app actually is, and one click back — the same offer
+   the shelf head used to make when it was a card. */
+.store__applink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font: 500 13.5px var(--font-body);
+  color: var(--accent-2);
+}
+.store__applink:hover {
+  color: var(--text);
+}
+.store__applink-arrow {
+  font-size: 12px;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.store__applink:hover .store__applink-arrow {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store__app-arrow,
+  .store__app-cta-arrow,
+  .store__app-link-arrow,
+  .store__applink-arrow {
+    transition: none;
+  }
 }
 
 /* ── the pack cards ───────────────────────────────────────────────────── */
@@ -283,16 +532,9 @@
   grid-template-columns: minmax(min(100%, 300px), calc((100% - var(--pack-gap)) / 2));
 }
 
+/* `--warm-text` is on `.store` above, not here, so both kinds of card read the
+   one definition. */
 .store__pack {
-  /* `--warm` as a STROKE and `--warm` as TEXT are not the same requirement.
-     The token is tuned to read as a border and a tint, and light theme's
-     `#b8763a` set as 13px type ON a warm tint measured 3.2:1 — under the 4.5
-     rule 14 makes a floor, and the confirm button was worse at 2.7. Mixing a
-     little of the page's own text colour in darkens it in light and lightens
-     it in dark, so ONE expression is right in both: measured 4.9 and 5.4 in
-     light, 9.7 and above in dark. Borders and backgrounds keep plain `--warm`,
-     where the token is already correct. */
-  --warm-text: color-mix(in srgb, var(--warm) 68%, var(--text));
   display: flex;
   flex-direction: column;
   padding: 24px;
