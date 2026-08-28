@@ -236,6 +236,15 @@ whole-card link to `#/store/<app>` with the app's packs listed as a contents row
 for **every** state including "checking", "couldn't check" and "signed out", and
 one real inner link to the app's own page above `.card__cover`.
 
+**A pack this account owns says so on its own row**, printing `OWNED` where the
+price would be — a price is what somebody has still to pay, and both would ask a
+reader scanning a column of amounts to work out which of them still apply. Only
+once that app's shelf is `ready`: asked while the read is in flight or after it
+failed, the set is empty, and marking a row "not owned" from that would be the
+one mistake this page may not make. The two states share one reserved height
+(`--pack-right` on `.store__app-packs`) so a row does not change size the moment
+a purchase lands — measured 39px against 40px before that reservation existed.
+
 `#/store/<app>` draws `StoreApp`: the app's head, then its `PackCard`s
 unchanged. Those cards were lifted from the old single-scroll Store without a
 line of them being re-decided, which is the pattern paying for itself.

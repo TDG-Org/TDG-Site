@@ -323,6 +323,13 @@
    list rather than a pitch: the pitch is on the pack's own card, and a second
    copy of it here would be a second set of words to keep true. */
 .store__app-packs {
+  /* One height for the right-hand slot, whichever of the two things fills it:
+     the price, or OWNED once this account's answer is in. Taken from the
+     price's own line box — `700 14px/1.4` is 19.6 — and declared on the list
+     rather than on either child, per rule 6, so the two cannot drift apart.
+     Measured before it: an owned row was 39px against an unowned 40, which is
+     a shelf that shifts by a pixel when a purchase lands. */
+  --pack-right: 20px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -350,10 +357,43 @@
   color: var(--text);
 }
 .store__app-pack-price {
-  flex: none;
   font: 700 14px/1.4 var(--font-display);
   color: var(--text);
   letter-spacing: -0.01em;
+}
+
+/* Both halves of the right-hand slot, sized from the one variable above. */
+.store__app-pack-price,
+.store__app-pack-owned {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: var(--pack-right);
+}
+
+/* A pack this account already holds, said on the row itself rather than only in
+   the count under the list. The green is the site's `--live-*`, which already
+   means "yours" on the pack card's own Owned pill and on its unlock ticks, so
+   nothing new is being taught here — it is the same colour saying the same
+   thing one level out.
+
+   `align-items: baseline` on the row aligns the amount with the name, and an
+   inline-flex holding an icon has no useful baseline of its own, so this one
+   is centred against the name's own line box instead. Without that the tick
+   hangs a pixel or two low against the price it replaces. */
+.store__app-pack[data-owned] {
+  background-color: var(--live-bg);
+}
+.store__app-pack-owned {
+  align-self: center;
+  gap: 6px;
+  font: 700 12px var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--live-fg);
+}
+.store__app-pack-tick {
+  display: inline-flex;
 }
 /* The `/mo` after an amount, quieter than the number it follows: it is a unit
    and not a second price. Same decision as `.store__cadence`, one size down. */
@@ -473,8 +513,11 @@
 .store__heading-icon {
   --icon-size: clamp(32px, 3.6vw, 42px);
 }
+/* `.chips.appview__chips`'s number, not one of this page's own: it is the same
+   row of chips under the same kind of head, and 18 here against 22 there was
+   two pages disagreeing about one element. */
 .chips.store__app-chips {
-  margin-top: 18px;
+  margin-top: 22px;
 }
 .store__availability {
   margin: 12px 0 0;

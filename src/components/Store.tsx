@@ -944,18 +944,28 @@ function AppCard({
   app,
   index,
   state,
-  ownedHere,
+  owns,
 }: {
   app: StoreApp
   index: number
   state: OwnedState
-  /** How many of this app's packs this account holds. */
-  ownedHere: number
+  /** Does this account hold that pack of this app? */
+  owns: (packId: string) => boolean
 }) {
   const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
   const icon = iconFor(useSiteContent(), app.page)
   const from = cheapestPlan(app)
+  /*
+   * Ownership is only ANSWERED once the shelf is ready. Asked earlier — while
+   * the read is in flight, or after it failed — the set is simply empty, and
+   * marking a row "not owned" from that would be the one mistake this page may
+   * not make: telling somebody they have not bought what they have bought. So
+   * every row keeps its price until there is a real answer, and the line under
+   * them says which of the four states we are in.
+   */
+  const ready = state === 'ready'
+  const ownedHere = ready ? app.packs.filter((pack) => owns(pack.id)).length : 0
   const one = app.packs.length === 1
   /*
    * "From" is a claim that there is a dearer way in, so it is only made when
@@ -996,23 +1006,40 @@ function AppCard({
 
         <p className="store__app-copy">{app.copy}</p>
 
-        {/* Every pack on one line: the name, and the cheapest way in. It is a
-            contents list rather than a sales pitch — the pitch is on the card
+        {/* Every pack on one line: the name, and the cheapest way in — or, once
+            this account's answer is in, that it already owns it. It is a
+            contents list rather than a sales pitch: the pitch is on the card
             inside, and repeating it here would be a second copy of the words
-            to keep true. */}
+            to keep true.
+
+            A price is what somebody has still to pay, so a pack they already
+            own prints OWNED in its place rather than both. Both would ask a
+            reader who is scanning a column of amounts to work out which of them
+            still apply to them, and the amount is on the pack's own card
+            anyway. */}
         <ul className="store__app-packs">
           {app.packs.map((pack) => {
             const lead = pack.plans?.[0] ?? null
+            const held = ready && owns(pack.id)
             return (
-              <li key={pack.id} className="store__app-pack">
+              <li key={pack.id} className="store__app-pack" data-owned={held || undefined}>
                 <span className="store__app-pack-name">{pack.name}</span>
-                <span className="store__app-pack-price">
-                  {lead ? 'From ' : null}
-                  {formatUsd(pack.priceCents)}
-                  {lead?.cadence ? (
-                    <span className="store__app-pack-cadence">{lead.cadence}</span>
-                  ) : null}
-                </span>
+                {held ? (
+                  <span className="store__app-pack-owned">
+                    <span className="store__app-pack-tick" aria-hidden="true">
+                      <Tick />
+                    </span>
+                    Owned
+                  </span>
+                ) : (
+                  <span className="store__app-pack-price">
+                    {lead ? 'From ' : null}
+                    {formatUsd(pack.priceCents)}
+                    {lead?.cadence ? (
+                      <span className="store__app-pack-cadence">{lead.cadence}</span>
+                    ) : null}
+                  </span>
+                )}
               </li>
             )
           })}
@@ -1167,11 +1194,12 @@ function MoneyAnswers() {
 function StoreIndex({
   onOpenAuth,
   stateFor,
-  ownedIn,
+  ownsIn,
 }: {
   onOpenAuth: () => void
   stateFor: (appId: string) => OwnedState
-  ownedIn: (app: StoreApp) => number
+  /** Whether one app's pack is on this account. The card counts its own. */
+  ownsIn: (app: StoreApp, packId: string) => boolean
 }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
 
@@ -1209,7 +1237,7 @@ function StoreIndex({
             app={app}
             index={i}
             state={stateFor(app.id)}
-            ownedHere={ownedIn(app)}
+            owns={(packId) => ownsIn(app, packId)}
           />
         ))}
       </div>
@@ -1367,9 +1395,15 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
     return { kind: 'buy' }
   }
 
-  /** How many of one app's packs this account holds. Counted, never stored. */
-  const ownedIn = (app: StoreApp) =>
-    app.packs.filter((pack) => owned.has(packKey(app.id, pack.id))).length
+  /**
+   * Does this account hold that one pack of that one app?
+   *
+   * Keyed on `packKey`, never on the bare pack id — DevFleet and TDG Veditor
+   * both sell one called `themes`, and a lookup by pack id alone would print
+   * OWNED on the row for the one that was not bought. Same rule the pack cards
+   * keep; see `store/useOwnedPacks.ts`.
+   */
+  const ownsIn = (app: StoreApp, packId: string) => owned.has(packKey(app.id, packId))
 
   const buy = (app: StoreApp, pack: StorePack, plan?: StorePlan) => {
     if (!user) {
@@ -1408,7 +1442,7 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
             onCheck={refresh}
           />
         ) : (
-          <StoreIndex onOpenAuth={onOpenAuth} stateFor={stateFor} ownedIn={ownedIn} />
+          <StoreIndex onOpenAuth={onOpenAuth} stateFor={stateFor} ownsIn={ownsIn} />
         )}
       </div>
     </section>
