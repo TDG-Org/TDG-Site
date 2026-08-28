@@ -337,9 +337,31 @@
 /* The chooser. One track, the options inside it, and the chosen one wearing
    the site's inverted surface — the same "this is the one" the hero's primary
    button uses, so a reader meets one idiom for a chosen thing. */
+/* `flex-wrap` here is not a nicety, it is the fix for a measured clip. The
+   three labels come to 264px of content, and at 320px the row's content box is
+   222px — so without wrapping the group stayed 266px wide inside a 248px row
+   and `Only Me` was cut off by `.acct__rows`' own `overflow: hidden`. A control
+   sliced by a card edge is the same bug whether it is a trash icon or the
+   narrowest of three options, and this one was the option somebody reaches for
+   when they want to be seen by nobody.
+
+   It stays `flex: 0 1 auto` — allowed to shrink, never to grow — so the group
+   is exactly its content's width at every width that fits it, and keeps its
+   own right edge against the row's while the two still share a line.
+   `justify-content: flex-end` is about the group's OWN second line: when the
+   three options split 2 + 1, the odd one hangs under the right-hand end rather
+   than under the left, so the block still reads as one control.
+
+   Measured: 1270px — both rows 64px, both groups 266×31 sharing one x, 13px
+   from the row's right edge. 375px — the row wraps, both groups 266px with
+   nothing cut. 320px — the group shrinks to 222px inside a 222px content box,
+   `scrollWidth` 220, two lines, nothing cut. */
 .acct__seg {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   flex: 0 1 auto;
+  min-width: 0;
   padding: 2px;
   border-radius: 3px;
   border: 1px solid var(--border);
