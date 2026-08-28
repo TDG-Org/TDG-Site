@@ -1,5 +1,13 @@
 import { STORE_APPS, formatUsd, isSubscription, type StorePack } from '../data/store'
-import type { DevAccount, DevCatalog, DevCatalogApp, DevGrant, DevStoreEntry } from './api'
+import { standingOfGrant } from '../store/grant'
+import type {
+  DevAccount,
+  DevCatalog,
+  DevCatalogApp,
+  DevGrant,
+  DevRevocation,
+  DevStoreEntry,
+} from './api'
 import { prettyId } from './format'
 
 /**
@@ -62,6 +70,23 @@ import { prettyId } from './format'
  * panel gains its name, its prose and its amounts. See `src/dev/README.md`.
  */
 
+/**
+ * Makullveny's product id, and the one id in this folder that is written down.
+ *
+ * Rule 17 of `AGENTS.md` forbids naming a product here and this is its stated
+ * exception: Makullveny is a genuinely different SHAPE — a tier ladder plus a
+ * one-time bundle plus themes plus two flags — not the pack-Store shape wearing
+ * a different name, so it keeps a hand-written panel.
+ *
+ * The constant exists because a REVOCATION can name any product at all,
+ * Makullveny included, and `storeApps` grows a panel for every app a block
+ * mentions so that no block is unreachable. Without this the one Makullveny
+ * block would manufacture a second, empty pack Store beside the real panel and
+ * paint it as a red NO TABLE alarm — the console inventing a fault out of a
+ * product it already draws correctly one section up.
+ */
+export const MAK_APP_ID = 'makullveny'
+
 /** One pack, as the console shows it: what it is, and who has heard of it. */
 export type DevStorePack = {
   id: string
@@ -94,6 +119,16 @@ export type DevStorePack = {
   supportsSubscriptionStates: boolean
   /** How it is held, for an app that records that. */
   grant: DevGrant | null
+  /**
+   * The standing block on this pack, or null.
+   *
+   * Its own field rather than a fourth value of `owned`, because it answers a
+   * different question. `owned` is "does this account have it"; this is "may
+   * it". A revoked pack is not owned — the server took the grant when the
+   * block went on — and drawing it as merely not-owned would put a Buy button
+   * in front of somebody we have decided may not buy.
+   */
+  revoked: DevRevocation | null
 }
 
 /**
@@ -155,6 +190,13 @@ export type DevStoreApp = {
   packs: DevStorePack[]
   /** How many of them this account holds. */
   ownedCount: number
+  /**
+   * The block on the WHOLE app, or null. Every pack inside it is out of reach
+   * whether or not it has a block of its own.
+   */
+  revoked: DevRevocation | null
+  /** How many of its packs are individually blocked. Zero when the whole app is. */
+  revokedCount: number
 }
 
 /** `$5.99/mo`, `$7.99`, or null for a pack the shop does not price. */
@@ -199,6 +241,15 @@ export function storeApps(
     : account.store != null && typeof account.store === 'object' ? account.store
     : null
   const held = reported ?? {}
+  /*
+   * Blocks, indexed the way the panels ask for them. A revocation is the same
+   * kind of thing as a holding — a fact about this account and one product —
+   * so it is folded in here rather than read separately by every panel that
+   * needs it, which is what keeps the roster, the panel and the tile from
+   * disagreeing about who may have what.
+   */
+  const blocks = Array.isArray(account?.revocations) ? account.revocations : []
+  const blockOf = new Map(blocks.map((r) => [`${r.app}:${r.pack}`, r]))
 
   const ids = [
     ...STORE_APPS.map((a) => a.id),
@@ -206,8 +257,11 @@ export function storeApps(
     // An account can hold packs in an app neither list mentions — a table
     // dropped, or a grant made before the app was registered. It still gets a
     // panel, because the switch that takes those packs back has to live
-    // somewhere.
-    ...Object.keys(held).filter((id) => !shop.has(id) && !server.has(id)).sort(),
+    // somewhere. A REVOKED app is the same argument one step further: a block
+    // with no panel is a block nobody can lift.
+    ...[...new Set([...Object.keys(held), ...blocks.map((r) => r.app)])]
+      .filter((id) => !shop.has(id) && !server.has(id) && id !== MAK_APP_ID)
+      .sort(),
   ]
 
   return ids.map((id) => {
@@ -217,12 +271,18 @@ export function storeApps(
     const ownedPacks = mine?.packs ?? []
     const grants = mine?.grants ?? {}
 
+    const knownHere = (p: string) =>
+      shp?.packs.some((sp) => sp.id === p) === true || srv?.packs.includes(p) === true
     const packIds = [
       ...(shp?.packs ?? []).map((p) => p.id),
       ...(srv?.packs ?? []).filter((p) => !shp?.packs.some((sp) => sp.id === p)),
-      ...ownedPacks.filter(
-        (p) => !shp?.packs.some((sp) => sp.id === p) && !srv?.packs.includes(p),
-      ),
+      ...ownedPacks.filter((p) => !knownHere(p)),
+      // A pack that is blocked and nothing else — retired from the shop after
+      // it was revoked, say — still gets a tile, or the only way back is SQL.
+      ...blocks
+        .filter((r) => r.app === id && r.pack !== '*' && !knownHere(r.pack))
+        .map((r) => r.pack)
+        .filter((p) => !ownedPacks.includes(p)),
     ]
 
     const packs: DevStorePack[] = packIds.map((packId) => {
@@ -242,8 +302,15 @@ export function storeApps(
         supportsSubscriptionStates:
           sold != null ? isSubscription(sold) : grants[packId]?.kind === 'subscription',
         grant: grants[packId] ?? null,
+        revoked: blockOf.get(`${id}:${packId}`) ?? null,
       }
     })
+
+    // The app-level block covers everything inside it, so a pack's own tile
+    // reads as revoked under it whether or not the pack has a row. Two rows
+    // for one pack cannot happen — the server refuses to write the second —
+    // and this is what makes that guarantee visible one level down.
+    const appBlock = blockOf.get(`${id}:*`) ?? null
 
     const serverState: ServerState =
       listed == null ? 'unknown' : srv != null ? 'listed' : 'absent'
@@ -261,10 +328,36 @@ export function storeApps(
       holdingsKnown: reported != null && mine != null,
       inShop: shp != null,
       hasList: (srv?.packs.length ?? 0) > 0,
-      packs,
+      packs: appBlock ? packs.map((p) => ({ ...p, revoked: p.revoked ?? appBlock })) : packs,
       ownedCount: packs.filter((p) => p.owned).length,
+      revoked: appBlock,
+      revokedCount: appBlock ? 0 : packs.filter((p) => p.revoked).length,
     }
   })
+}
+
+/**
+ * Blocks that landed on no panel at all.
+ *
+ * `storeApps` gives every revoked app a panel, so this is normally empty — and
+ * it is drawn anyway, because the day it is not is the day a block exists that
+ * nothing on this page can lift. Same argument as the badge panel's list of
+ * catalogue rows it could not read: a list that quietly drops what it cannot
+ * place is a list you cannot trust about anything else on it.
+ */
+export function orphanRevocations(
+  a: DevAccount | null | undefined,
+  stores: DevStoreApp[],
+): DevRevocation[] {
+  const rows = Array.isArray(a?.revocations) ? a.revocations : []
+  // Makullveny draws its own; see MAK_APP_ID.
+  const drawn = new Set([MAK_APP_ID, ...stores.map((s) => s.id)])
+  return rows.filter((r) => !drawn.has(r.app))
+}
+
+/** Every block on an account, whatever app it names. */
+export function revocationsOf(a: DevAccount | null | undefined): DevRevocation[] {
+  return Array.isArray(a?.revocations) ? a.revocations : []
 }
 
 /**
@@ -329,6 +422,12 @@ export function grantNote(grant: DevGrant | null): string | null {
   const kind = (grant.kind ?? '').toLowerCase()
   if (kind === 'perpetual' || kind === '') return null
   const ends = on(grant.currentPeriodEnd)
+  // Past tense first, and read through the same `standingOfGrant` the customer's
+  // own card reads through. A grant that is over is also `cancelAtPeriodEnd`,
+  // so the branch below would have printed `ends 25 Aug` about something that
+  // had already ended — the console and the Store describing one row in two
+  // tenses, which is exactly the drift `standingOfGrant` is shared to prevent.
+  if (standingOfGrant(grant).kind === 'lapsed') return ends ? `ended ${ends}` : 'ended'
   if (grant.cancelAtPeriodEnd) return ends ? `ends ${ends}` : 'ending'
   if (grant.status && grant.status !== 'active') return grant.status
   return ends ? `renews ${ends}` : kind

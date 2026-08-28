@@ -245,6 +245,13 @@ one mistake this page may not make. The two states share one reserved height
 (`--pack-right` on `.store__app-packs`) so a row does not change size the moment
 a purchase lands — measured 39px against 40px before that reservation existed.
 
+**A pack this account may not BUY says that instead of a price**, and the row's
+name is struck through. `Not Owned` and `Revoked` are the same absence and
+opposite decisions — the first should be sold, the second must never be — so the
+index draws them differently, and an app revoked whole replaces its availability
+line (an offer) with the block and its reason. See
+[`../store/README.md`](../store/README.md) for where the answer comes from.
+
 `#/store/<app>` draws `StoreApp`: the app's head, then its `PackCard`s
 unchanged. Those cards were lifted from the old single-scroll Store without a
 line of them being re-decided, which is the pattern paying for itself.
@@ -263,8 +270,8 @@ are a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it
 down, and any future app that sells a plan copies it rather than designing
 beside it. In one component:
 
-- A **state machine** with six states, each with its own copy, and a fixed floor
-  so the card never resizes between them.
+- A **state machine** with seven states, each with its own copy, and a fixed
+  floor so the card never resizes between them.
 - **One button per pack, in every state.** A pack sold three ways opens a
   chooser over the card rather than printing three buttons, and a pack already
   subscribed to opens its subscription panel from an explicit **Manage or

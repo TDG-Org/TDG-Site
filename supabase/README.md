@@ -10,7 +10,7 @@ deletes it in a dashboard.
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
 | `functions/tdg-site-deploys/index.ts` | Answers which TDG-Org GitHub Pages sites exist — `live`, `down` or `absent`, in one batched response — for `src/live/`'s deploy discovery. Probed here rather than in the browser because every browser-side miss is a 404 printed in the console, and answered three ways rather than two because of `tdg_site_deploys_seen`: the function remembers every site it has seen answering, which is how a site that was taken DOWN gets `Temporarily unavailable` instead of being un-announced as `Coming soon`. Deployed with `--no-verify-jwt`: the caller is an anonymous visitor and the answer is whether a public website exists. A caller sends repo names only — never a URL — and the function probes only `https://tdg-org.github.io/`. |
-| `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, `tdg_billing_subscription`, and the site-content overlay below. |
+| `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, product revocations and account notices, `tdg_billing_subscription`, and the site-content overlay below. |
 
 ## Why the site cannot do this itself
 
@@ -161,6 +161,78 @@ shape to ask for. `accounts` counts `public.profiles`, which is the same count
 `tdg_admin_overview()` calls `accounts`, so the footer and the console cannot
 disagree. **The site prints it exactly as it comes back**: never rounded, never
 padded, and never replaced by a fallback when the read fails.
+
+## Taking a product away, and saying so
+
+`20260828235900_product_revocations_and_notices.sql` adds two tables that answer
+two questions the console could decide and had nowhere to record.
+
+### `tdg_product_revocations` — may they have this at all?
+
+**A revocation is not "switch the pack off", and the difference is the whole
+reason it has a table.** Switching a pack off says *this account does not have
+this right now*, and the shop's next move is to offer to sell it again — right
+for a refund, a lapse or a mistake, and exactly wrong for an account that must
+not have the product and must not buy it back. Done with the switch alone, the
+block lasts until somebody presses Buy.
+
+One row per `(account, app, pack)`, with `pack = '*'` meaning the whole app —
+a value you can see in a row rather than an absence you have to know how to
+read. It carries the reason, which is written **for the person it is about**:
+they read it on their own Store card, and their app reads it too.
+
+**It remembers exactly what it took.** Revoking has to actually remove the
+access — a block that left `owned_packs` intact would be a notice, not a
+revocation, because every TDG app gates on that column. But removing the grant
+outright would make the decision one-way: restoring would have to invent a
+grant, and an invented grant is a purchase this project never received. So
+`held_before` carries the exact grant (or, for an app with no `grants` column,
+the exact pack ids) that came off, and lifting writes back precisely that —
+`since` included, which is the day the account first got the pack and must not
+move for a developer any more than it moves for a renewal. Measured on a
+round trip: revoke then restore leaves the row identical, and no block behind.
+
+`tdg_my_revocations()` is what an account and its apps read; the table also has
+a plain owner-only `select` policy for an app that would rather read it
+directly. There is no client write policy in either direction —
+`tdg_admin_set_revocation` is the whole write surface, and it opens with
+`tdg_admin_uid()` like every other privileged verb.
+
+**Removing the entitlement is enough to stop an app unlocking the feature. It is
+not enough to explain anything**, and an app that simply finds a pack missing
+offers to sell it — the one sentence a revoked account must never be shown. The
+site's Store draws the state today
+([`src/store/`](../src/store/README.md)); the brief each other app's own session
+needs is [`docs/revocation-app-prompt.md`](../docs/revocation-app-prompt.md).
+
+### `tdg_notices` — and does anybody tell them?
+
+One message to one account about what it owns, written by the developer who made
+the change, from the tick box beside Save. The words are the point: *"we ended
+your Pro Export Pack because the payment was reversed"* is not derivable from a
+status column, which is why `tdg_admin_notify` takes them rather than composing
+them, and why it is its own verb instead of a flag on every entitlement function
+— a signature that never grows means adding the box to another panel is a client
+edit and not a migration.
+
+Delivery is the shape `tdg_feedback_replies` already has and no bigger: it waits
+until the person's own app calls `tdg_my_notices()`, and `tdg_notice_ack()` is
+pressed by them, so **"sent" and "seen" stay different facts**. There is no
+outbound mail on this project and the entitlement path is the last place to add
+a dependency that fails silently at somebody else's SMTP server. The site's half
+is [`src/notices/`](../src/notices/README.md).
+
+Every notice also writes an audit line, so *"did anybody tell them?"* is answered
+in the same place as *"who changed it?"*.
+
+### And one column on `tdg_admin_accounts`
+
+`revocations jsonb`, every block on the account whatever app it names — including
+an app the registry has never heard of, because **a block the console cannot see
+is a block nobody can lift**. Changing a `returns table` needs a drop and a
+recreate, and `DevAccount` in `src/dev/api.ts` is hand-written to match it column
+for column: there is no generated types package here to catch a drift, so the two
+move in the same sitting.
 
 ## Who may see what, and the three tables that stopped being their own
 

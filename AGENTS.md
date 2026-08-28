@@ -55,8 +55,9 @@ protection is RLS on the server.
 | `src/account/` | The account page at `#/account`: what the account is, what it counts, and who may see each part of it. | [`src/account/README.md`](src/account/README.md) |
 | `src/people/` | Somebody else's account, at `#/user/<handle>`: who they are, where you stand with them, and what a block looks like when it is said out loud. | [`src/people/README.md`](src/people/README.md) |
 | `src/badges/` | Global account badges, and the account count the footer prints. | [`src/badges/README.md`](src/badges/README.md) |
-| `src/feedback/` | Send Feedback, and the panel that delivers our replies. | [`src/feedback/README.md`](src/feedback/README.md) |
-| `src/store/` | Reading which packs an account owns. | [`src/store/README.md`](src/store/README.md) |
+| `src/feedback/` | Send Feedback, and the panel that delivers our replies — and, with them, any notice about a change to what an account owns. | [`src/feedback/README.md`](src/feedback/README.md) |
+| `src/notices/` | Messages about what an account owns, written from `#/dev` and waiting for the person they are about. | [`src/notices/README.md`](src/notices/README.md) |
+| `src/store/` | Reading which packs an account owns, and which products it may not. | [`src/store/README.md`](src/store/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
 | `src/dev/` | The internal Developer console at `#/dev`. | [`src/dev/README.md`](src/dev/README.md) |
 | `supabase/` | The edge function and the SQL migrations. Not part of the bundle. | [`supabase/README.md`](supabase/README.md) |
@@ -154,10 +155,16 @@ a checkbox, not a scrollbar, not a stepper arrow, not a focus ring, not an
 autofilled field. `base.css` already handles form controls and the autofill
 highlight; `src/lib/chromeGuard.ts` handles extensions that try to repaint them.
 
-Empty, loading and error states count as states. The Store card has six —
-`checking` · `signedOut` · `error` · `owned` · `waiting` · `buy` — and a fixed
-`min-height` so it never changes size as answers arrive; a shelf that jumps as
-answers land reads as a page still loading.
+Empty, loading and error states count as states. The Store card has seven —
+`checking` · `signedOut` · `error` · `owned` · `waiting` · `buy` · `revoked` —
+and a fixed `min-height` so it never changes size as answers arrive; a shelf
+that jumps as answers land reads as a page still loading.
+
+`revoked` is the one worth reading twice, because it looks like `buy` and means
+the opposite. A product a developer has taken out of an account's reach is
+unowned, and the card must never fall back to offering it: that would be the
+shop taking money for something the database has already decided to refuse. It
+says what, why and when instead — see [`src/store/`](src/store/README.md).
 
 ### 6. Symmetry is structural, never hand-tuned.
 

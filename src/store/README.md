@@ -7,12 +7,13 @@
 | `billing.ts` | The write: change a plan, stop the renewals, start them again. |
 
 ```ts
-const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
+const { stateFor, owned, grantFor, revokedFor, refresh } = useOwnedPacks()
 ```
 
 | | |
 | --- | --- |
 | `stateFor(appId)` | That shelf's state: `loading` · `signedOut` · `ready` · `error`. An id no app claims stays `loading`, never `ready`. |
+| `revokedFor(app, pack?)` | The standing block on that product, or null. Omit the pack to ask about the whole app; a whole-app block answers for every pack in it. |
 | `owned` | A set of `packKey(app, pack)` strings. Meaningful once that app's shelf is `ready`. |
 | `grantFor(app, pack)` | The `grants` entry for one pack, or `null` when that app records none. Never a substitute for `owned`. |
 | `refresh()` | Ask again, now. The hook already asks on its own (see below); this is for a caller that knows something changed. |
@@ -41,6 +42,31 @@ down anywhere — it ASKS for the column and reads the server's own refusal
 (PostgREST `42703`), remembering the answer per table for the life of the tab.
 A schema fact typed into a catalogue goes stale the day the column is added, and
 it fails in the direction that hides a subscription.
+
+## What a revocation is, and why it is not the absence of a grant
+
+A developer can put a product out of an account's reach from `#/dev`: the pack —
+or the whole app — stops being owned, and cannot be bought back. The row lives in
+`tdg_product_revocations` and this hook reads it through `tdg_my_revocations()`,
+over the same RLS the account's own app reads it through, so the shop and the app
+cannot give different answers about the same decision.
+
+**It is a seventh card state and not a variant of `buy`.** A pack that lapsed is
+unowned and the shop should sell it again; a revoked one is unowned and must
+never be offered. The two are the same absence and opposite decisions, and a
+card that fell back to Buy would be taking money for something the database has
+already decided to refuse. So `Store.tsx` draws `revoked` before it draws
+anything else, with the reason we recorded and the date — the only surface the
+person it is about will ever read it on.
+
+The block also removed the entitlement when it went on, and remembers exactly
+what it removed, so lifting it restores the same grant with the same dates.
+Nothing in this folder writes any of that; it reads the answer.
+
+**A failed read is not a revocation.** The blocks are held apart from ownership
+for that reason: a refusal leaves the last answer standing rather than accusing
+somebody of something on a hiccup, which is the same rule the ownership read
+keeps one paragraph up.
 
 ## What a standing is
 

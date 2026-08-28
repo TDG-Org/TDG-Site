@@ -290,6 +290,23 @@ sentence is the rule the Store panels and the Makullveny panel were rebuilt
 around in 2.1.0, and it is worth stating because the page broke it in two
 different ways at once.
 
+### Two nested folds, and the CSS rule that keeps them honest
+
+Panels nest here — every app sits inside **Apps**, and Permissions sits inside
+**Identity** — and until 2.11.0 that was broken in a way that looked like a
+different bug. `DevConsole.css` wrote its open-state rules as
+`.dev__panel[data-open] .dev__panel-region`, a DESCENDANT selector, so opening
+the Apps fold matched every panel inside it as well as the fold itself: each
+app rendered fully expanded, with its chevron rotated and its rule drawn, while
+React went on rendering `aria-expanded="false"` and `inert` on that child's
+region.
+
+The result was a fold that looked open, would not shut, and whose visible
+controls did nothing — and the only thing that put a section right was shutting
+the whole Apps fold and opening it again. Every open-state rule on this page is
+written with child combinators all the way down now, and the comment above them
+says so. **Never `.dev__panel[data-open] .anything` in this file.**
+
 ### A pack is one picker, and `Not Owned` is its first option
 
 A Store pack used to wear two controls: a switch for whether the account had it,
@@ -312,9 +329,93 @@ option that exists only to be wrong. The answer comes from the pack's `plans`,
 not from the app merely having a `grants` column: TDG Veditor's Pro Export Pack
 can recur while its Theme Pack beside it cannot.
 
+**`Revoked` is the last option on every pack, and `Restore What Was Taken` is
+offered while it is the answer.** See *Revoking a product* below for what it
+means; it is in the same picker rather than in a switch beside it because
+`Not Owned` and `Revoked` are the same absence and opposite decisions, and a
+reader has to be able to tell them apart on the tile.
+
 The sentence under each picker is what the Store's own card will say in that
 state, from the same `src/dev/grantShapes.ts` both ends read — so choosing a
 state is choosing a card, and the two cannot drift.
+
+### Ownership stages, and one press writes it
+
+**This is the second surface that stages, and the reason is not the Content
+tab's.** Content stages because it publishes to everybody and is edited by
+typing. Ownership stages because it is not one fact: setting somebody up is a
+plan, a standing, a bundle and two or three packs, and written one press at a
+time those land as separate events, in an order nobody chose, each with its own
+ledger row and its own moment where the account was in a state nobody meant.
+
+The reported version of that: Makullveny's plan was moved to Hearth and saved,
+and the Candle Bundle switch did not follow — because they were two writes and
+only one of them had been pressed. Both stage now.
+
+So the Makullveny panel and every Store panel carry a **save bar**: the list of
+what is waiting in plain words (not a count — a count tells you something is
+waiting and not what), a `Tell Them What Changed` tick, and one `Save Changes`.
+A tile whose value has been chosen and not written says `NOT SAVED` on itself.
+
+**Standing, badges, permissions, the Supporter Badge and the individual themes
+still write on the press**, and each of those is genuinely one fact whose result
+is visible immediately. The hints on them say so, so the difference does not
+read as an inconsistency.
+
+### Telling them what we did
+
+Beside Save is one tick box. Ticked, the save also writes a **notice** to the
+account: a subject, and the words the developer typed — prefilled from the
+staged changes and editable, because "we ended your Pro Export Pack because the
+payment was reversed" is not derivable from a status column.
+
+It waits in `tdg_notices` until the person's own app asks for it, exactly the
+way a feedback reply waits in `tdg_feedback_replies`, and it counts as read only
+when they press Got It. On this site both arrive through the same panel —
+`src/feedback/ReplyInbox.tsx` — because two dialogs opening over each other at
+boot is worse than either. `tdg_admin_notify` is the verb;
+[`src/notices/`](../notices/README.md) owns the client.
+
+Off by default. Sending a message is the one thing on this page that cannot be
+taken back.
+
+### Revoking a product
+
+**Revoking is not switching a pack off, and the difference is the whole point.**
+Off says "they do not have this right now", and the Store's next move is to
+offer to sell it again — right for a refund or a lapse, exactly wrong for an
+account that must not have the product at all. A revocation is a standing row
+with its own reason and its own date, and it survives everything a purchase can
+do.
+
+| | |
+| --- | --- |
+| **One pack** | `Revoked`, the last option in that pack's own picker. |
+| **A whole app** | `Revoke The Whole Of <App>`, its own switch under the tiles. Every pack at once; the pack pickers go dead while it stands, and say why. |
+| **Makullveny** | The same switch, in its own panel. Makullveny has no entitlements table, so the block records the decision and takes nothing off the row — and the panel says exactly that rather than implying an access change it did not make. |
+
+**It takes the access away and remembers what it took.** `held_before` on the
+row carries the exact grant the block removed — dates, and `since`, the day the
+account first got the pack — and lifting writes it straight back. So restoring
+is a recovery and not a guess, which is why the picker offers `Restore What Was
+Taken` as its own option: every other option in that list would be somebody
+choosing a state for a pack whose real one only the server still knows.
+
+**A reason box** sits under the tiles whenever something is staged to revoked.
+It is written for the person it is about — they read it on their own Store card
+and in the app — and it is the Standing & Access box's opposite in that respect.
+
+What the block reaches, today: the entitlement is gone, so every TDG app's
+existing gate is already right, and TDG Site's Store draws a `Revoked` card with
+the reason and the date instead of a Buy button. What it does not reach on its
+own is the *explaining* inside each app — that is
+[`docs/revocation-app-prompt.md`](../../docs/revocation-app-prompt.md), one
+paste per repo.
+
+**A block whose app has no panel is still drawn.** `storeApps` grows a panel for
+every app a revocation names, and anything that still lands nowhere is listed at
+the bottom of the Apps fold with the SQL to lift it — because a block nobody can
+see is a block nobody can lift.
 
 ### Why the states had to be reachable at all
 
@@ -374,6 +475,30 @@ So: two axes, one control each.
 | **Plan** | Only the rungs that are actually rent: No subscription, Lantern, Hearth. `candle` is not offered, because it is not a plan — it is how the ladder reports the bundle. Saving a plan of *No subscription* with the bundle on writes `candle`, which is `higherTier()` from the webhook spelled out. |
 | **Standing** | Only asked when there is a plan to be standing in. With no subscription it is written as `active`, where every account rests, because `free / past_due` is a sentence about nothing. The TDG Core panel does the same. |
 | **Individual Themes** | Still one switch each, because that purchase is a real separate fact. A theme the account has by another door says which — `Unlocked by Candle`, `Unlocked by Hearth` — so switching it off never looks like it will take a theme away that it cannot. |
+
+### And the sentence the two controls could not say between them
+
+All of the above was true and the panel still could not be read. Set the plan to
+Hearth, save, and the Candle Bundle switch stays off — correctly, because the
+flag genuinely has not moved — while the account now has every single thing the
+bundle grants, because **Hearth clears the same gate**. Two honest controls, and
+between them a false answer to the only question a developer is actually asking:
+*does this person have Candle content?*
+
+So the panel answers that itself, first, at the top, computed with Makullveny's
+own rule (`candlePurchased || tier >= hearth`) and nothing else. The theme tiles
+had been saying `Unlocked by Hearth` since the rebuild; what was missing was the
+same sentence about the bundle those themes come in.
+
+**Lantern is the one that surprises people, so it says so out loud.** Read as a
+price list the tiers look cumulative, and they are not: only Hearth clears the
+Candle gate. A Lantern account without the bundle gets a line saying it has no
+marketplace themes, no Journal, no Scroll and the ordinary limits, and that one
+press above fixes it. This console will not claim Lantern includes the bundle
+while `entitlements.js` says it does not — a page that disagreed with the app
+would be lying about what happens when that person opens it. If the ladder is
+meant to be cumulative, that is one line in the Makullveny repo, and this panel
+starts agreeing with it the same day.
 
 ## Badges
 
@@ -679,12 +804,12 @@ reference implementation of the startup reply panel the other apps copy.
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the tick-and-act bulk bar, the report dialog, the reply composer with its delivery state, and copying at every grain — including the identity-free **review** format built for a model to read. |
-| `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, and what to say when the two disagree.** The reason no file here names a product. |
-| `controls.tsx` | Panel, SectionControls with its **section filter**, Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
+| `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, plus every revocation on the account, and what to say when the sources disagree.** The reason no file here names a product — except `MAK_APP_ID`, whose comment says why that one exception exists. |
+| `controls.tsx` | Panel, SectionControls with its **section filter**, Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, **SaveBar** with `useSaveNotice`, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
-| `api.ts` | Every `tdg_admin_*` call, typed. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). |
+| `api.ts` | Every `tdg_admin_*` call, typed — including `setRevocation` and `notify`. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). The account's side of a notice is [`../notices/api.ts`](../notices/README.md). |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |

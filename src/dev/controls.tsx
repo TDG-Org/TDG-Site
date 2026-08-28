@@ -731,6 +731,7 @@ export function Check({
   onChange,
   label,
   disabled,
+  id,
 }: {
   checked: boolean
   indeterminate?: boolean
@@ -738,9 +739,16 @@ export function Check({
   /** What this selects, for a screen reader. The row is the visible label. */
   label: string
   disabled?: boolean
+  /**
+   * For the one case where the visible text IS a label rather than a row: a
+   * `<button>` is a labelable element, so `<label htmlFor>` both names it and
+   * makes the words a second click target — the same wiring `Switch` uses.
+   */
+  id?: string
 }) {
   return (
     <button
+      id={id}
       type="button"
       role="checkbox"
       aria-checked={indeterminate ? 'mixed' : checked}
@@ -871,6 +879,7 @@ export function HoldingTile({
   onChange,
   busy,
   disabled,
+  staged,
 }: {
   name: string
   /** A price, a date, `not sold` — whatever this tile says about itself. */
@@ -884,12 +893,23 @@ export function HoldingTile({
   busy?: boolean
   /** For a tile the server would refuse anyway — an app with no table. */
   disabled?: boolean
+  /**
+   * Chosen here and not written yet.
+   *
+   * The panel stages now (see `SaveBar`), and a picker that shows a new value
+   * with nothing to distinguish it from a saved one is a picker that has told
+   * you a lie about the account. The count above says how many are waiting;
+   * this says WHICH, on the tile itself, where you are looking.
+   */
+  staged?: boolean
 }) {
   const id = useId()
   return (
     <div
       className="dev__hold"
-      data-held={(value !== 'none' && value !== '') || undefined}
+      data-held={(value !== 'none' && value !== '' && value !== 'revoked') || undefined}
+      data-revoked={value === 'revoked' || undefined}
+      data-staged={staged || undefined}
       data-busy={busy || undefined}
       data-disabled={disabled || undefined}
     >
@@ -897,6 +917,7 @@ export function HoldingTile({
         <span className="dev__hold-name" id={`${id}-name`}>
           {name}
         </span>
+        {staged && <span className="dev__hold-staged">NOT SAVED</span>}
         {note && <span className="dev__hold-note">{note}</span>}
       </div>
       <Select
@@ -908,6 +929,187 @@ export function HoldingTile({
         onChange={onChange}
       />
       <p className="dev__hold-what">{what}</p>
+    </div>
+  )
+}
+
+/* ── saving, and saying so ─────────────────────────────────────────────── */
+
+/**
+ * The tick box's own state, and the words it will send.
+ *
+ * Held by a hook rather than by `SaveBar` so the panel that does the SAVING
+ * owns it: the notice has to be sent by the same press that writes the change,
+ * and a component that only draws the box cannot be the one holding what it
+ * says.
+ *
+ * `suggested` is the sentence the panel would write for the changes currently
+ * staged. The box follows it until somebody types, and then stops — an edited
+ * message that silently rewrote itself when one more switch moved would be a
+ * developer sending words they did not choose. `resetKey` puts both back: a
+ * different account, or a save that landed.
+ */
+export type SaveNotice = {
+  tell: boolean
+  setTell: (on: boolean) => void
+  /** What will actually be sent. */
+  body: string
+  setBody: (body: string) => void
+  /** Has it been typed over? Only then is there anything to put back. */
+  edited: boolean
+  reset: () => void
+}
+
+export function useSaveNotice(suggested: string, resetKey: string): SaveNotice {
+  const [tell, setTell] = useState(false)
+  const [typed, setTyped] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTell(false)
+    setTyped(null)
+  }, [resetKey])
+
+  return {
+    tell,
+    setTell,
+    body: typed ?? suggested,
+    setBody: setTyped,
+    edited: typed !== null,
+    reset: () => setTyped(null),
+  }
+}
+
+/**
+ * What is staged, whether to tell them, and the one button that does both.
+ *
+ * ## Why an entitlement panel stages at all
+ *
+ * Almost nothing else on this console does. A switch that changes one person's
+ * account writes the moment it is pressed, because the result is visible and a
+ * staged single fact is a press that did nothing (see `src/dev/README.md`).
+ *
+ * Ownership broke that rule in practice. Setting somebody up is several facts
+ * at once — a plan, a standing, a bundle, three packs — and written one at a
+ * time they land as separate events, in an order nobody chose, each with its
+ * own line in the ledger and its own moment where the account was in a state
+ * that was never intended. The reported version of that: Makullveny's plan
+ * moved to Hearth and its Candle switch did not, because they were two writes
+ * and only one of them had been pressed.
+ *
+ * So a panel about what somebody OWNS stages, shows what it is holding in
+ * words, and writes it in one press. Standing, badges and permissions still
+ * write immediately: each of those is genuinely one fact.
+ *
+ * ## And why the tick box lives here
+ *
+ * Because it is the same press. Changing what somebody owns without telling
+ * them is a decision, not a default, and a checkbox beside the button is where
+ * a decision gets made — not a second dialog afterwards that a tired developer
+ * dismisses. It is off by default: sending a message is the thing that cannot
+ * be taken back.
+ */
+export function SaveBar({
+  changes,
+  onSave,
+  busy,
+  disabled,
+  notice,
+  noticeTo,
+  saveLabel = 'Save Changes',
+  nothingLabel = 'Nothing to save. Every control above matches the account.',
+}: {
+  /** One plain-language line per staged change. Empty means nothing to save. */
+  changes: readonly string[]
+  onSave: () => void
+  busy?: boolean
+  /** For a panel whose writes the server would refuse anyway. */
+  disabled?: boolean
+  notice?: SaveNotice
+  /** Which app the notice is about, in words: "TDG Veditor", "Makullveny". */
+  noticeTo?: string
+  saveLabel?: string
+  nothingLabel?: string
+}) {
+  const id = useId()
+  const dirty = changes.length > 0
+
+  return (
+    <div className="dev__save" data-dirty={dirty || undefined}>
+      <div className="dev__save-what">
+        <span className="dev__save-count">
+          {dirty
+            ? `${changes.length} unsaved change${changes.length === 1 ? '' : 's'}`
+            : 'Saved'}
+        </span>
+        {/* The list, not a number. "3 unsaved changes" tells you there is
+            something to check; it does not tell you what, and a developer who
+            has to re-read six controls to find out will stop reading it. */}
+        {dirty ? (
+          <ul className="dev__save-list">
+            {changes.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="dev__hint">{nothingLabel}</p>
+        )}
+      </div>
+
+      {notice && (
+        <div className="dev__save-tell">
+          <div className="dev__save-tell-row">
+            <Check
+              id={`${id}-tell`}
+              checked={notice.tell}
+              onChange={notice.setTell}
+              label="Tell them what changed"
+              disabled={!dirty}
+            />
+            <div className="dev__save-tell-text">
+              <label className="dev__switch-label" htmlFor={`${id}-tell`}>
+                Tell Them What Changed
+              </label>
+              <p className="dev__hint">
+                {dirty
+                  ? `Waits on their account and opens the next time they use ${noticeTo ?? 'the app'}. Nothing is emailed, and it only counts as read when they press Got It.`
+                  : 'There is nothing to tell them about yet.'}
+              </p>
+            </div>
+          </div>
+
+          {notice.tell && dirty && (
+            <div className="dev__save-msg">
+              <label className="dev__label" htmlFor={`${id}-msg`}>
+                What They Will Read
+              </label>
+              <TextArea
+                id={`${id}-msg`}
+                value={notice.body}
+                onChange={notice.setBody}
+                rows={4}
+                maxLength={2000}
+                placeholder="What changed, and why."
+              />
+              {notice.edited && (
+                <div className="dev__row dev__row--end">
+                  <Button onClick={notice.reset}>Use The Suggested Wording</Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="dev__row dev__row--end">
+        <Button
+          variant="primary"
+          disabled={!dirty || disabled}
+          busy={busy}
+          onClick={onSave}
+        >
+          {saveLabel}
+        </Button>
+      </div>
     </div>
   )
 }

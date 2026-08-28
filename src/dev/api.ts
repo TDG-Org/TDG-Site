@@ -100,6 +100,38 @@ export type DevAccount = {
    * shipped after this file was last edited is in here anyway.
    */
   store: Record<string, DevStoreEntry | undefined>
+  /**
+   * Every product this account may not hold and may not buy.
+   *
+   * An ARRAY and not a per-app field, for the same reason `store` is one
+   * object: a block can name an app this console has never heard of — one
+   * whose table was dropped, one that is a tier ladder rather than a pack
+   * Store — and **a block nobody can see is a block nobody can lift**. So the
+   * server hands over every row it has, and `apps.ts` folds them into the
+   * panels it does draw while `AppsPanel` names any that landed nowhere.
+   */
+  revocations: DevRevocation[]
+}
+
+/** One standing "may not have this, may not buy it" on one account. */
+export type DevRevocation = {
+  /** App id, as `tdg_store_apps()` reports it — or any product id at all. */
+  app: string
+  /** A pack id, or `*` for the whole app. */
+  pack: string
+  /** Why, in the words the account holder is shown. */
+  reason: string | null
+  /**
+   * Did it actually take something away?
+   *
+   * False means the row is a block and nothing more: the account held nothing
+   * at the time, or the product has no entitlements table for the server to
+   * take from. The panel says which, because "revoked" and "revoked, and here
+   * is what came off" are different facts and only one of them is reversible
+   * in the sense a reader assumes.
+   */
+  held: boolean
+  at: string
 }
 
 export type DevOverview = {
@@ -502,6 +534,68 @@ export const moderate = (
 
 export const deleteForever = (userId: string): Promise<null> =>
   rpc<null>('tdg_admin_delete_forever', { p_target: userId })
+
+/* ── revoking, and telling somebody ────────────────────────────────────── */
+
+/**
+ * Put a product out of an account's reach, or give it back.
+ *
+ * This is NOT `setPack(false)` wearing a stronger word, and the difference is
+ * the whole reason it exists. Switching a pack off says "they do not have this
+ * right now", and the Store's next move is to offer to sell it again — right
+ * for a refund or a lapse, exactly wrong for an account that must not have the
+ * product at all. Revoking is a standing fact with its own row, its own reason
+ * and its own date, and it survives everything a purchase can do.
+ *
+ * `pack` is `'*'` for the whole app.
+ *
+ * **It takes the access away and remembers what it took.** The server lifts the
+ * grant (or, for an app that records no grants, the pack ids) into
+ * `held_before` and writes it straight back when the revocation is lifted — so
+ * restoring returns the row as it was, `since` included, rather than inventing
+ * a purchase this project never received. See
+ * supabase/migrations/20260828235900_product_revocations_and_notices.sql.
+ */
+export const setRevocation = (
+  userId: string,
+  app: string,
+  pack: string,
+  on: boolean,
+  reason: string | null = null,
+): Promise<unknown> =>
+  rpc<unknown>('tdg_admin_set_revocation', {
+    p_target: userId,
+    p_app: app,
+    p_pack: pack,
+    p_on: on,
+    p_reason: reason,
+  })
+
+/**
+ * Tell an account what we changed about what it owns.
+ *
+ * Its own verb rather than a flag on every entitlement function: the WORDS are
+ * the point. "We ended your Pro Export Pack because the payment was reversed"
+ * is not derivable from a status column, so the developer who made the change
+ * types it beside the change, and a tick box on a new panel is a client edit
+ * rather than a migration.
+ *
+ * Delivery is the same promise `replyToFeedback` makes and no bigger: it waits
+ * in tdg-core until the person's own app asks. There is no email on this path
+ * and deliberately so — see the migration header.
+ */
+export const notify = (
+  userId: string,
+  app: string,
+  subject: string,
+  body: string,
+): Promise<number> =>
+  rpc<number>('tdg_admin_notify', {
+    p_target: userId,
+    p_app: app,
+    p_subject: subject,
+    p_body: body,
+  })
 
 /* ── feedback writes ───────────────────────────────────────────────────── */
 

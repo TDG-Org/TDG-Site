@@ -6,7 +6,15 @@ import * as api from './api'
 // module. This console is one of its callers. See src/badges/README.md.
 import { adminSetBadge } from '../badges/api'
 import type { AdminBadge } from '../badges/types'
-import { grantNote, storeApps, type DevStoreApp, type DevStorePack } from './apps'
+import {
+  MAK_APP_ID,
+  grantNote,
+  orphanRevocations,
+  revocationsOf,
+  storeApps,
+  type DevStoreApp,
+  type DevStorePack,
+} from './apps'
 import { GRANT_SHAPES, grantArgsFor, holdingOf, holdingsFor, type HoldingId } from './grantShapes'
 import {
   Button,
@@ -17,12 +25,14 @@ import {
   HoldingTile,
   OwnTile,
   Panel,
+  SaveBar,
   Select,
   Switch,
   Tag,
   TextArea,
   TextInput,
   TypeToConfirm,
+  useSaveNotice,
 } from './controls'
 import {
   DURATIONS,
@@ -936,6 +946,11 @@ function AppsPanel({ stores, ...props }: Props & { stores: DevStoreApp[] }) {
   const held = stores.filter((app) => app.ownedCount > 0).length + (holdsMak ? 1 : 0)
   const total = stores.length + 1
   const anyUnknown = stores.some((app) => app.serverState !== 'absent' && !app.holdingsKnown)
+  const blocks = revocationsOf(a)
+  // Blocks that landed on no panel inside this fold. Normally none — every
+  // revoked app grows one — and drawn anyway, because the day there IS one is
+  // the day a block exists that nothing on this page can lift.
+  const orphans = orphanRevocations(a, stores)
 
   return (
     <Panel
@@ -943,21 +958,41 @@ function AppsPanel({ stores, ...props }: Props & { stores: DevStoreApp[] }) {
       title="Apps"
       what="What this account holds in each TDG app: Makullveny's plan, bundle and themes, and every pack Store. Each app opens on its own inside."
       matchCount={matchCount}
+      terms={[blocks.length ? 'revoked revocation blocked' : '']}
       right={
-        anyUnknown ? (
-          // A shut fold must not summarise a missing answer as a number.
-          <Tag tone="warn">NO ANSWER</Tag>
-        ) : (
-          <Tag tone={held ? 'ok' : 'plain'}>
-            {held} OF {total} APPS
-          </Tag>
-        )
+        <span className="dev__tags">
+          {/* A block is the thing you would most want to know from a shut fold,
+              so it is said before the count rather than found inside. */}
+          {blocks.length > 0 && (
+            <Tag tone="bad">
+              {blocks.length} REVOKED
+            </Tag>
+          )}
+          {anyUnknown ? (
+            // A shut fold must not summarise a missing answer as a number.
+            <Tag tone="warn">NO ANSWER</Tag>
+          ) : (
+            <Tag tone={held ? 'ok' : 'plain'}>
+              {held} OF {total} APPS
+            </Tag>
+          )}
+        </span>
       }
     >
       <MakullvenyPanel {...props} />
       {stores.map((app) => (
         <StorePanel key={app.id} {...props} app={app} />
       ))}
+      {orphans.length > 0 && (
+        <p className="dev__warn">
+          {orphans.length === 1 ? 'One product is' : `${orphans.length} products are`} revoked for
+          this account under {orphans.length === 1 ? 'an id' : 'ids'} nothing above draws a panel
+          for: {orphans.map((r) => `${r.app}:${r.pack}`).join(', ')}. The block is real and stands;
+          there is simply no control here to lift it, which means it has to be lifted with{' '}
+          <code className="dev__code">tdg_admin_set_revocation</code> directly. This is drawn rather
+          than skipped because a block nobody can see is a block nobody can lift.
+        </p>
+      )}
     </Panel>
   )
 }
@@ -1002,9 +1037,50 @@ function AppsPanel({ stores, ...props }: Props & { stores: DevStoreApp[] }) {
  *
  * **Standing** is only asked when there is a plan to have a standing, because
  * `free / past_due` is a sentence about nothing.
+ *
+ * ## What was still a lie, and is the reason for the block at the top
+ *
+ * All of the above was true and the panel still could not be read. Set the plan
+ * to Hearth, press Save, and the Candle Bundle switch stayed off — correctly,
+ * because the flag genuinely had not moved — while the account now had every
+ * single thing the bundle grants, because Hearth clears the same gate. Two
+ * controls, both honest about their own column, and between them a false
+ * answer to the only question a developer is actually asking: *does this person
+ * have Candle content?*
+ *
+ * So the panel now answers that question itself, first, out loud, computed with
+ * Makullveny's own rule and nothing else — and the two controls stay exactly
+ * what they were. **The theme tiles already did this** (`Unlocked by Hearth`
+ * has been on them since the rebuild); what was missing was the same sentence
+ * about the bundle those themes come in.
+ *
+ * ## Lantern is the one that surprises people, so it says so
+ *
+ * Read as a price list the tiers look cumulative, and the natural reading of
+ * "Lantern, then Hearth" is that each contains what came before. Makullveny
+ * does not do that: only **Hearth** clears the Candle gate. Lantern is a
+ * subscription with its own features and it carries none of the bundle.
+ *
+ * That is a product decision, it is written down in `entitlements.js` beside
+ * the rule, and this console is not the place to quietly disagree with it — a
+ * page that said Lantern included the bundle would be lying about what the app
+ * will actually do when that person opens it. So it is NAMED instead: a Lantern
+ * account without the bundle gets a line saying it does not have Candle content
+ * and that one press gives it to them. If the ladder is meant to be cumulative,
+ * the change is one line of `entitlements.js` in the Makullveny repo, and this
+ * panel starts agreeing with it the same day.
+ *
+ * ## One Save, because it was two writes that caused the report
+ *
+ * The bundle used to write the instant its switch moved, while the plan waited
+ * for Save. Pressing one and then Save reads as one action and was two, in an
+ * order nobody chose. Now both stage, `SaveBar` lists what is waiting in words,
+ * and one press writes them — bundle first, because
+ * `tdg_admin_set_mak_candle` moves the tier mirror and the subscription write
+ * has to land on top of that rather than under it.
  */
 function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
-  const candle = a.mak_candle_purchased_at != null
+  const savedCandle = a.mak_candle_purchased_at != null
 
   /** The stored tier read as a PLAN: `candle` is the bundle's mirror, so the
    *  subscription behind it is Free. */
@@ -1012,25 +1088,47 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
 
   const [plan, setPlan] = useState(planOf(a.mak_tier))
   const [status, setStatus] = useState(a.mak_status)
+  const [bundle, setBundle] = useState(savedCandle)
+  const [reason, setReason] = useState('')
+
+  const block = revocationsOf(a).find((r) => r.app === MAK_APP_ID) ?? null
+  const [revoke, setRevoke] = useState(block != null)
 
   useEffect(() => {
     setPlan(planOf(a.mak_tier))
     setStatus(a.mak_status)
-  }, [a.user_id, a.mak_tier, a.mak_status])
+    setBundle(savedCandle)
+    setRevoke(block != null)
+    setReason('')
+  }, [a.user_id, a.mak_tier, a.mak_status, savedCandle, block])
 
   /** What actually goes in the column: the plan, or the bundle's mirror under
    *  it. This is `higherTier(existing, 'candle')` from mak-stripe-webhook. */
-  const tierToWrite = plan !== 'free' ? plan : candle ? 'candle' : 'free'
+  const tierToWrite = plan !== 'free' ? plan : bundle ? 'candle' : 'free'
   // No plan means no standing to be in, and the resting row every account
   // starts at is `active`. Writing anything else would be a status describing a
   // subscription that is not there.
   const statusToWrite = plan === 'free' ? 'active' : status
 
-  const dirty = tierToWrite !== a.mak_tier || statusToWrite !== a.mak_status
+  const bundleMoved = bundle !== savedCandle
+  const revokeMoved = revoke !== (block != null)
+
+  /**
+   * What Makullveny will actually unlock, computed with the app's own rule and
+   * not with a second opinion about it.
+   *
+   * `src/entitlements.js`: `candlePurchased || hasMinimumTier(tier, 'hearth')`.
+   * The mirror in the tier column is deliberately not consulted — that is the
+   * whole point of the rule — so an account sitting on `tier = 'candle'` with
+   * no flag reads as locked here, which is exactly what the app does to it.
+   */
+  const unlockedNow = savedCandle || a.mak_tier === 'hearth'
+  const unlockedAfter = bundle || plan === 'hearth'
+  const unlockedBy = bundle ? 'the Candle bundle' : plan === 'hearth' ? 'Hearth' : null
 
   /** The row the old two-control panel could produce: the ladder says Candle,
    *  the flag says no, and the app grants nothing. */
-  const brokenMirror = a.mak_tier === 'candle' && !candle
+  const brokenMirror = a.mak_tier === 'candle' && !savedCandle
 
   const PLANS = [
     { value: 'free', label: 'No subscription' },
@@ -1038,6 +1136,56 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       .filter((t) => t === 'lantern' || t === 'hearth')
       .map((t) => ({ value: t, label: prettyId(t) })),
   ]
+
+  const changes: string[] = [
+    ...(bundleMoved ? [bundle ? 'Candle Bundle → owned' : 'Candle Bundle → not owned'] : []),
+    ...(tierToWrite !== a.mak_tier ? [`Plan → ${prettyId(tierToWrite)}`] : []),
+    ...(statusToWrite !== a.mak_status ? [`Standing → ${statusToWrite}`] : []),
+    ...(revokeMoved ? [revoke ? 'Makullveny → revoked' : 'Makullveny → no longer revoked'] : []),
+  ]
+
+  const notice = useSaveNotice(
+    changes.length === 0
+      ? ''
+      : `We changed what your account has in Makullveny: ${changes
+          .map((c) => c.toLowerCase())
+          .join('; ')}.${reason.trim() ? ` ${reason.trim()}` : ''}`,
+    `${a.user_id}:mak:${a.mak_tier}:${a.mak_status}:${savedCandle}:${block != null}`,
+  )
+
+  const save = () =>
+    run('mak', `Makullveny saved: ${changes.length} change${changes.length === 1 ? '' : 's'}.`, async () => {
+      // Bundle first. `tdg_admin_set_mak_candle` writes the flag AND the tier
+      // mirror, so a subscription write has to land on top of it — the other
+      // order would put the mirror back over the plan that was just chosen.
+      if (bundleMoved) await api.setMakCandle(a.user_id, bundle)
+      // What the row says after that press, so a second write is only asked for
+      // when the ladder still has somewhere to go. Without this, granting the
+      // bundle on a free account wrote `candle` twice and put two lines in
+      // Makullveny's ledger for one decision.
+      const tierAfterCandle = !bundleMoved
+        ? a.mak_tier
+        : bundle
+          ? a.mak_tier === 'lantern' || a.mak_tier === 'hearth'
+            ? a.mak_tier
+            : 'candle'
+          : a.mak_tier === 'candle'
+            ? 'free'
+            : a.mak_tier
+      const statusAfterCandle =
+        bundleMoved && bundle && a.mak_tier !== 'lantern' && a.mak_tier !== 'hearth'
+          ? 'active'
+          : a.mak_status
+      if (tierToWrite !== tierAfterCandle || statusToWrite !== statusAfterCandle) {
+        await api.setMakSubscription(a.user_id, tierToWrite, statusToWrite)
+      }
+      if (revokeMoved) {
+        await api.setRevocation(a.user_id, MAK_APP_ID, '*', revoke, reason.trim() || null)
+      }
+      if (notice.tell && notice.body.trim()) {
+        await api.notify(a.user_id, MAK_APP_ID, 'Your Makullveny Account Changed', notice.body.trim())
+      }
+    })
 
   return (
     <Panel
@@ -1049,12 +1197,41 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
         a.mak_status,
         a.mak_themes,
         a.mak_stripe_customer_id,
-        candle ? 'candle bundle' : '',
+        savedCandle ? 'candle bundle' : '',
         a.mak_support_badge_at ? 'supporter badge' : '',
+        block ? 'revoked revocation blocked' : '',
         'theme market',
       ]}
-      right={<Tag tone={a.mak_tier === 'free' ? 'plain' : 'ok'}>{a.mak_tier.toUpperCase()}</Tag>}
+      right={
+        <span className="dev__tags">
+          {block && <Tag tone="bad">REVOKED</Tag>}
+          <Tag tone={a.mak_tier === 'free' ? 'plain' : 'ok'}>{a.mak_tier.toUpperCase()}</Tag>
+        </span>
+      }
     >
+      {/* The answer to the question the two controls below cannot give between
+          them, first, before anything can be misread. See the header. */}
+      <p className="dev__verdict" data-tone={unlockedNow ? 'ok' : 'plain'}>
+        <strong>Candle content{unlockedNow ? ' is unlocked' : ' is locked'}</strong> — the five
+        marketplace themes, the Journal, the Scroll and the raised capacity limits.{' '}
+        {unlockedNow
+          ? `Makullveny unlocks all of it on ${savedCandle ? 'the Candle bundle below' : 'Hearth'}, because its own rule is candlePurchased || tier >= hearth.`
+          : 'Makullveny gates all of it on candlePurchased || tier >= hearth, and this account clears neither.'}
+      </p>
+
+      {block && (
+        <p className="dev__warn">
+          <strong>Makullveny is revoked for this account.</strong>{' '}
+          {block.reason ? `Reason given: ${block.reason} ` : 'No reason was recorded. '}
+          Set on {fmtDate(block.at)}. Makullveny keeps no{' '}
+          <code className="dev__code">makullveny_entitlements</code> table, so this block took
+          nothing away by itself — the tier and the themes below are still on the row. It is the
+          standing answer that the account may not have the app, it shows on this site&apos;s Store,
+          and Makullveny itself refuses once it reads{' '}
+          <code className="dev__code">tdg_my_revocations()</code>.
+        </p>
+      )}
+
       {brokenMirror && (
         <p className="dev__warn">
           This account&apos;s plan says <code className="dev__code">candle</code> but the Candle
@@ -1066,16 +1243,40 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
       )}
 
       <Switch
-        checked={candle}
-        busy={busy === 'candle'}
-        onChange={(next) =>
-          run('candle', next ? 'Candle bundle granted.' : 'Candle bundle removed.', () =>
-            api.setMakCandle(a.user_id, next),
-          )
-        }
+        checked={bundle}
+        onChange={setBundle}
         label="Candle Bundle"
-        hint="Bought once and kept: every marketplace theme, the Journal, the Scroll and the raised capacity limits. One press writes both the purchase and the tier that mirrors it, the same pair a real Candle checkout writes. It deliberately leaves the Supporter Badge alone — a real purchase sets that too, and a hand grant quietly moving a second switch is what this panel was rebuilt to stop."
+        hint={
+          <>
+            Bought once and kept: every marketplace theme, the Journal, the Scroll and the raised
+            capacity limits. Saving writes both the purchase and the tier that mirrors it, the same
+            pair a real Candle checkout writes. It deliberately leaves the Supporter Badge alone — a
+            real purchase sets that too, and a hand grant quietly moving a second switch is what
+            this panel was rebuilt to stop.
+            {plan === 'hearth' && (
+              <>
+                {' '}
+                <strong>Hearth already unlocks all of it</strong>, bundle or no bundle, so switching
+                this off will not take a single theme away from this account.
+              </>
+            )}
+          </>
+        }
       />
+
+      {plan === 'lantern' && !bundle && (
+        <p className="dev__warn">
+          <strong>Lantern does not include the Candle bundle.</strong> Makullveny unlocks Candle
+          content on <code className="dev__code">candlePurchased || tier &gt;= hearth</code> and
+          nothing else, so a Lantern subscriber without the switch above has no marketplace themes,
+          no Journal, no Scroll and the ordinary capacity limits. Its own comment says why: ranking
+          a one-time purchase inside <code className="dev__code">TIER_ORDER</code> would hand it to
+          every Lantern subscriber because <code className="dev__code">lantern(2) &gt; candle(1)</code>.
+          If Lantern is meant to carry it, that is a change in the Makullveny repo — this page will
+          not say it does while the app says it does not. Meanwhile, one press above gives it to
+          them.
+        </p>
+      )}
 
       <hr className="dev__rule" />
 
@@ -1103,7 +1304,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
         </Field>
       </div>
 
-      {plan === 'free' && candle && (
+      {plan === 'free' && bundle && (
         <p className="dev__panel-quiet">
           With no subscription and the bundle owned, the tier column is written as{' '}
           <code className="dev__code">candle</code>. That is the mirror, not a plan: it is what the
@@ -1111,20 +1312,44 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
         </p>
       )}
 
-      <div className="dev__row dev__row--end">
-        <Button
-          variant="primary"
-          disabled={!dirty}
-          busy={busy === 'mak'}
-          onClick={() =>
-            run('mak', `Makullveny set to ${tierToWrite} / ${statusToWrite}.`, () =>
-              api.setMakSubscription(a.user_id, tierToWrite, statusToWrite),
-            )
-          }
+      {changes.length > 0 && unlockedAfter !== unlockedNow && (
+        <p className="dev__verdict" data-tone={unlockedAfter ? 'ok' : 'warn'}>
+          After saving, Candle content will be{' '}
+          <strong>{unlockedAfter ? 'unlocked' : 'locked'}</strong>
+          {unlockedAfter && unlockedBy ? ` by ${unlockedBy}` : ''}.
+        </p>
+      )}
+
+      <Switch
+        checked={revoke}
+        onChange={setRevoke}
+        tone="danger"
+        label="Revoke Makullveny"
+        hint="The standing answer that this account may not have Makullveny and may not buy it. It is not the same as setting the plan to No subscription: that offers to sell it again, and this does not. The reason below is shown to them."
+      />
+
+      {(revoke || reason) && (
+        <Field
+          label="Reason"
+          hint="Sentence case, written for the person it is about — they see it on their own Store card and in the app. Left blank, the block still stands and simply says nothing about why."
         >
-          Save Plan
-        </Button>
-      </div>
+          <TextInput
+            value={reason}
+            onChange={setReason}
+            maxLength={200}
+            placeholder="Refunded after a chargeback."
+          />
+        </Field>
+      )}
+
+      <SaveBar
+        changes={changes}
+        onSave={save}
+        busy={busy === 'mak'}
+        notice={notice}
+        noticeTo="Makullveny"
+        nothingLabel="Nothing to save. The plan, the standing and the bundle all match the account."
+      />
 
       <hr className="dev__rule" />
 
@@ -1137,12 +1362,12 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
           )
         }
         label="Supporter Badge"
-        hint="The permanent 'supported Mak' marker. Normally set once by a real payment and never cleared, even on a cancel."
+        hint="The permanent 'supported Mak' marker. Normally set once by a real payment and never cleared, even on a cancel. One fact, one press: it does not wait for Save."
       />
 
       <Field
         label="Individual Themes"
-        hint="Themes bought one at a time from the Market page. This switch is that purchase and nothing else: a theme can also be unlocked by the Candle bundle or by Hearth, and where it is, the tile says which — the same four answers the app's own themeEntitlement gives."
+        hint="Themes bought one at a time from the Market page. This switch is that purchase and nothing else: a theme can also be unlocked by the Candle bundle or by Hearth, and where it is, the tile says which — the same four answers the app's own themeEntitlement gives. One fact each, so they write on the press rather than waiting for Save."
       >
         <div className="dev__tiles">
           {catalog.mak_themes.map((theme) => (
@@ -1155,10 +1380,15 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
               // outright says "Owned" already; one the account has by another
               // door needs to say which door, or switching it off looks like it
               // will take the theme away, and it will not.
+              //
+              // Read off the SAVED row, never the staged one: it is a statement
+              // about what is true now, and a tile that said "Unlocked by
+              // Hearth" because somebody had picked Hearth and not yet saved
+              // would be the same kind of lie this panel was rebuilt to remove.
               note={
                 a.mak_themes.includes(theme)
                   ? undefined
-                  : candle
+                  : savedCandle
                     ? 'Unlocked by Candle'
                     : a.mak_tier === 'hearth'
                       ? 'Unlocked by Hearth'
@@ -1222,6 +1452,28 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
  * So: `absent` is an alarm, `unknown` says it does not know and keeps its
  * switches live — the server is the authority and refuses in a sentence written
  * for a human — and holdings nobody reported are never rendered as tiles.
+ *
+ * ## Revoked is a fifth answer, and it is not "not owned"
+ *
+ * `Not Owned` and `Revoked` look identical from the account's side and are
+ * opposite decisions: the first ends with the shop offering to sell the pack,
+ * the second is the standing answer that this account may not have it and may
+ * not buy it. So it is a value of the same picker rather than a switch beside
+ * it — see `grantShapes.ts` — and lifting it offers `Restore What Was Taken`,
+ * because the block carries the exact grant it removed and the server can put
+ * that back rather than making somebody guess at it.
+ *
+ * ## Why this panel stages and the rest of the page does not
+ *
+ * Every other switch here writes on the press, because it changes one fact and
+ * the result is visible. Ownership is not one fact: a person is set up with a
+ * plan, a standing and two or three packs, and written one press at a time
+ * those land as separate events, in an order nobody chose, each with its own
+ * ledger row and its own moment where the account was in a state that was never
+ * meant to exist. So the pickers stage, `SaveBar` says what is waiting in
+ * words, and one press writes the lot — with the tick box that tells the person
+ * what we did, on the same press, because a message about a change is part of
+ * making it and not an afterthought.
  */
 function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }) {
   const entry = a.store?.[app.id]
@@ -1242,34 +1494,144 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
    *  decides whether the note about hand-made subscriptions is worth printing. */
   const rentable = app.packs.filter((pack) => pack.supportsSubscriptionStates)
 
+  /** What each pack is RIGHT NOW, before anything was staged over it. */
+  const current = useMemo(() => {
+    const out: Record<string, HoldingId | null> = {}
+    for (const pack of app.packs) {
+      out[pack.id] = holdingOf(
+        pack.owned,
+        pack.grant,
+        pack.supportsSubscriptionStates,
+        pack.revoked != null,
+      )
+    }
+    return out
+  }, [app.packs])
+
+  const [draft, setDraft] = useState<Record<string, HoldingId | null>>(current)
+  const [revokeApp, setRevokeApp] = useState(app.revoked != null)
+  const [reason, setReason] = useState('')
+
+  /*
+   * The staged edits belong to ONE account's view of ONE app, and both of those
+   * change under the panel: clicking the next person, and a re-read landing
+   * after somebody else's write. Keyed on what the server last said rather than
+   * on the account id alone, so a refresh that changes nothing leaves a
+   * half-made decision alone and one that changes something does not leave a
+   * stale draft sitting on top of it.
+   */
+  const serverKey = `${a.user_id}:${app.id}:${JSON.stringify(current)}:${app.revoked?.at ?? ''}`
+  useEffect(() => {
+    setDraft(current)
+    setRevokeApp(app.revoked != null)
+    setReason('')
+    // `current` is derived from the same read `serverKey` fingerprints, so the
+    // key alone is the honest dependency — listing `current` too would reset
+    // the draft on every render that rebuilt an identical object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverKey])
+
+  const labelOf = (pack: DevStorePack, id: HoldingId | null) =>
+    holdingsFor(pack.supportsSubscriptionStates, pack.revoked != null).find((h) => h.id === id)
+      ?.label ?? 'Unrecognised shape'
+
+  const appRevokeMoved = revokeApp !== (app.revoked != null)
+  // While the whole app is blocked every picker is disabled and every draft
+  // value equals its current one, so this is empty on its own rather than by a
+  // special case — which is what keeps a lift-and-then-edit save from needing
+  // one order of operations in the UI and a different one in `save`.
+  const packMoves = app.packs.filter((pack) => draft[pack.id] !== current[pack.id])
+
+  const changes: string[] = [
+    ...(appRevokeMoved
+      ? [revokeApp ? `${app.title} → revoked, all of it` : `${app.title} → no longer revoked`]
+      : []),
+    ...packMoves.map((pack) => `${pack.name} → ${labelOf(pack, draft[pack.id])}`),
+  ]
+
+  const notice = useSaveNotice(
+    changes.length === 0
+      ? ''
+      : `We changed what your account has in ${app.title}: ${changes
+          .map((c) => c.replace(' → ', ' is now ').toLowerCase())
+          .join('; ')}.${reason.trim() ? ` ${reason.trim()}` : ''}`,
+    serverKey,
+  )
+
+  const wantsReason =
+    revokeApp !== (app.revoked != null) && revokeApp
+      ? true
+      : packMoves.some((pack) => draft[pack.id] === 'revoked')
+
   /**
-   * One choice, one write. Nothing has to be granted before it can be shaped.
+   * One press, in the order the writes actually have to happen.
+   *
+   * Lifting the app-level block comes FIRST, because the server refuses a
+   * pack-level revocation while the whole app is blocked — and putting one on
+   * comes LAST, because it captures everything the packs are holding at the
+   * moment it lands.
    *
    * `tdg_admin_set_pack_grant` writes the grant whether or not the account
    * already held the pack — a BEFORE trigger derives `owned_packs` from it
-   * through `<app>_packs_in_force()` — so going straight from Not Owned to
-   * Subscribed is one call, not a grant followed by a correction. The old
-   * two-control version could not do that, and the perpetual grant it wrote on
-   * the way through left a purchase-event row nobody had asked for.
+   * through `<app>_packs_in_force()` — so Not Owned straight to Subscribed is
+   * one call, not a grant followed by a correction.
    */
-  const setHolding = (pack: DevStorePack, next: HoldingId) => {
-    const key = `${app.id}:${pack.id}`
-    if (next === 'none') {
-      run(key, `${pack.name} revoked.`, () => api.setPack(a.user_id, app.id, pack.id, false))
-      return
-    }
-    // An app whose table has no `grants` column can only hold a pack outright,
-    // and its picker only ever offered those two states.
-    if (!app.hasGrants) {
-      run(key, `${pack.name} granted.`, () => api.setPack(a.user_id, app.id, pack.id, true))
-      return
-    }
-    const shape = GRANT_SHAPES.find((sh) => sh.id === next)
-    if (!shape) return
-    run(key, `${pack.name} is now ${shape.label}.`, () =>
-      api.setPackGrant(a.user_id, app.id, pack.id, grantArgsFor(shape)),
+  const save = () =>
+    run(
+      `store:${app.id}`,
+      `${app.title}: ${changes.length} change${changes.length === 1 ? '' : 's'} saved.`,
+      async () => {
+        const why = reason.trim() || null
+
+        if (appRevokeMoved && !revokeApp) {
+          await api.setRevocation(a.user_id, app.id, '*', false)
+        }
+
+        for (const pack of packMoves) {
+          const next = draft[pack.id]
+          const wasRevoked = pack.revoked != null && app.revoked == null
+
+          if (next === 'revoked') {
+            await api.setRevocation(a.user_id, app.id, pack.id, true, why)
+            continue
+          }
+          if (wasRevoked) {
+            // Puts back exactly what the block took, dates and `since` included.
+            await api.setRevocation(a.user_id, app.id, pack.id, false)
+            // `Restore What Was Taken` IS that call and nothing more, so there
+            // is nothing left to write. Any other choice is a decision on top
+            // of the recovery, and gets written on top of it.
+            if (next === 'restore') continue
+          }
+          if (next === 'none') {
+            await api.setPack(a.user_id, app.id, pack.id, false)
+            continue
+          }
+          // An app whose table has no `grants` column can only hold a pack
+          // outright, and its picker only ever offered those two states.
+          if (!app.hasGrants) {
+            await api.setPack(a.user_id, app.id, pack.id, true)
+            continue
+          }
+          const shape = GRANT_SHAPES.find((sh) => sh.id === next)
+          if (!shape) continue
+          await api.setPackGrant(a.user_id, app.id, pack.id, grantArgsFor(shape))
+        }
+
+        if (appRevokeMoved && revokeApp) {
+          await api.setRevocation(a.user_id, app.id, '*', true, why)
+        }
+
+        if (notice.tell && notice.body.trim()) {
+          await api.notify(
+            a.user_id,
+            app.id,
+            `Your ${app.title} Account Changed`,
+            notice.body.trim(),
+          )
+        }
+      },
     )
-  }
 
   const what = absent
     ? `The site sells ${app.title}'s packs, but TDG Core has no table to record them in, so nothing here can be granted and a real payment would land nowhere.`
@@ -1280,8 +1642,8 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         : !app.inShop
           ? `Store packs for ${app.title}. The console found this app by its entitlements table; the site's shop does not sell it yet, so these packs have names made from their ids and no prices.`
           : app.hasGrants
-            ? 'Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does. Packs sold on a recurring plan also show how that subscription is held; one-time packs stay one-time.'
-            : 'One-time Store packs. Switching one on is a free grant and switching it off is a revoke, and both land in the same ledger a real Stripe payment does.'
+            ? 'Store packs. Choose how each one is held, or put it out of reach entirely, and press Save. A grant and a revoke both land in the same ledger a real Stripe payment does.'
+            : 'One-time Store packs. Choose whether each is held, or put it out of reach entirely, and press Save. A grant and a revoke both land in the same ledger a real Stripe payment does.'
 
   return (
     <Panel
@@ -1302,18 +1664,26 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         app.title,
         ...app.packs.map((p) => `${p.id} ${p.name}`),
         customer,
+        app.revoked || app.revokedCount ? 'revoked revocation blocked' : '',
         'pack store grant revoke',
       ]}
       right={
-        absent ? (
-          <Tag tone="bad">NO TABLE</Tag>
-        ) : unknown || holdingsMissing ? (
-          // A shut panel must not summarise an unknown as a number. "0 OWNED"
-          // is the sentence this whole change exists to stop the page saying.
-          <Tag tone="warn">NO ANSWER</Tag>
-        ) : (
-          <Tag tone={app.ownedCount ? 'ok' : 'plain'}>{app.ownedCount} OWNED</Tag>
-        )
+        <span className="dev__tags">
+          {app.revoked ? (
+            <Tag tone="bad">REVOKED</Tag>
+          ) : (
+            app.revokedCount > 0 && <Tag tone="bad">{app.revokedCount} REVOKED</Tag>
+          )}
+          {absent ? (
+            <Tag tone="bad">NO TABLE</Tag>
+          ) : unknown || holdingsMissing ? (
+            // A shut panel must not summarise an unknown as a number. "0 OWNED"
+            // is the sentence this whole change exists to stop the page saying.
+            <Tag tone="warn">NO ANSWER</Tag>
+          ) : (
+            <Tag tone={app.ownedCount ? 'ok' : 'plain'}>{app.ownedCount} OWNED</Tag>
+          )}
+        </span>
       }
     >
       {absent && (
@@ -1347,6 +1717,19 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         </p>
       )}
 
+      {app.revoked && (
+        <p className="dev__warn">
+          <strong>The whole of {app.title} is revoked for this account.</strong>{' '}
+          {app.revoked.reason ? `Reason given: ${app.revoked.reason} ` : 'No reason was recorded. '}
+          Set on {fmtDate(app.revoked.at)}.{' '}
+          {app.revoked.held
+            ? 'Everything the account held here came off the row and is kept on the block, so lifting it puts back exactly what was taken.'
+            : 'It held nothing here at the time, so nothing came off the row.'}{' '}
+          Its packs cannot be granted or blocked individually while this stands — lift it below
+          first.
+        </p>
+      )}
+
       {/* Tiles ARE the ownership claim, so they are only drawn when there is an
           answer to draw. The absent case keeps them, dead, so the panel can
           still say WHAT the shop sells while its alarm explains why none of it
@@ -1360,42 +1743,88 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
       ) : (
         <div className="dev__holds">
           {app.packs.map((pack) => {
+            const revoked = pack.revoked != null
             // What THIS pack can be. A one-time pack is offered the two states
             // it has; a rented one is offered the six the Store can draw. Not
             // Owned is the first entry of the same list rather than a separate
             // switch, so there is never a press that exists only to unlock the
-            // control you actually wanted.
-            const states = holdingsFor(pack.supportsSubscriptionStates)
-            const current = holdingOf(pack.owned, pack.grant, pack.supportsSubscriptionStates)
-            const chosen = states.find((h) => h.id === current)
+            // control you actually wanted — and Revoked is the last, because it
+            // is the one answer that is about permission rather than ownership.
+            const states = holdingsFor(pack.supportsSubscriptionStates, revoked)
+            const value = draft[pack.id] ?? current[pack.id]
+            const chosen = states.find((h) => h.id === value)
+            const staged = value !== current[pack.id]
             return (
               <HoldingTile
                 key={pack.id}
                 name={pack.name}
-                disabled={absent}
-                busy={busy === `${app.id}:${pack.id}`}
+                disabled={absent || app.revoked != null}
+                staged={staged}
                 // Short, and only when it says something. A note repeating what
                 // every tile would say is a note nobody reads, which is how the
                 // one saying `ends 23 Sep` gets missed. The state's own label
                 // says a pack is rented; `grantNote` adds the date it cannot.
                 note={
-                  grantNote(pack.grant) ??
-                  (!pack.inShop && app.inShop ? 'not sold' : (pack.price ?? undefined))
+                  revoked
+                    ? `blocked ${fmtRelative(pack.revoked!.at)}`
+                    : (grantNote(pack.grant) ??
+                      (!pack.inShop && app.inShop ? 'not sold' : (pack.price ?? undefined)))
                 }
-                value={current ?? ''}
+                value={value ?? ''}
                 options={[
-                  ...(current === null ? [{ value: '', label: 'Unrecognised shape' }] : []),
+                  ...(current[pack.id] === null
+                    ? [{ value: '', label: 'Unrecognised shape' }]
+                    : []),
                   ...states.map((h) => ({ value: h.id, label: h.label })),
                 ]}
                 what={
-                  chosen?.what ??
-                  'Held in a shape this site has no reading for, so no state matches it. Choosing one replaces it.'
+                  revoked && pack.revoked?.reason && value === 'revoked'
+                    ? `${chosen?.what ?? ''} Reason given: ${pack.revoked.reason}`
+                    : (chosen?.what ??
+                      'Held in a shape this site has no reading for, so no state matches it. Choosing one replaces it.')
                 }
-                onChange={(next) => setHolding(pack, next as HoldingId)}
+                onChange={(next) =>
+                  setDraft((d) => ({ ...d, [pack.id]: next as HoldingId }))
+                }
               />
             )
           })}
         </div>
+      )}
+
+      {!absent && (
+        <>
+          <Switch
+            checked={revokeApp}
+            onChange={setRevokeApp}
+            tone="danger"
+            label={`Revoke The Whole Of ${app.title}`}
+            hint="Every pack at once, and the standing answer that this account may not buy any of them. What comes off the row is kept on the block, so lifting it puts back exactly what was taken — dates, and the day they first got each pack."
+          />
+
+          {(wantsReason || reason) && (
+            <Field
+              label="Reason"
+              hint="Sentence case, written for the person it is about — they see it on their own Store card and in the app. It goes on everything this save revokes. Left blank, the block still stands and simply says nothing about why."
+            >
+              <TextInput
+                value={reason}
+                onChange={setReason}
+                maxLength={200}
+                placeholder="Refunded after a chargeback."
+              />
+            </Field>
+          )}
+
+          <SaveBar
+            changes={changes}
+            onSave={save}
+            busy={busy === `store:${app.id}`}
+            notice={notice}
+            noticeTo={app.title}
+            nothingLabel={`Nothing to save. Every pack above matches what this account holds in ${app.title}.`}
+          />
+        </>
       )}
 
       {app.hasGrants && app.holdingsKnown && !absent && rentable.length > 0 && (

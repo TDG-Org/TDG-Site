@@ -24,11 +24,25 @@ import { standingOfGrant, type PackGrant } from '../store/grant'
  * end, and that must not require a migration to add a preset for. The offsets
  * below are only this console's opinion about what "a month from now" means.
  *
- * `lapsed` deliberately sits three days in the PAST. `<app>_packs_in_force()`
- * keeps a failed payment alive for a fortnight's worth of retries, so a date
- * merely a day old still reads as `dunning`; three days past with a `canceled`
- * status is unambiguous, and the pack drops out of `owned_packs` on its own the
- * moment it is written.
+ * ## `lapsed` ends NOW, and used to end three days ago
+ *
+ * The date on a grant is not private bookkeeping: `standingOfGrant` prints it
+ * on the customer's own card, word for word — *"Ended on 25 August 2026. Nothing
+ * is being charged."* So a preset that backdates is a preset that puts a false
+ * sentence on somebody's Store page, and `Ended` backdated by three days: press
+ * it today and the shop told the account it had lapsed the Saturday before.
+ *
+ * The three days were defensive and bought nothing. They were reasoned from
+ * `dunning`'s fortnight of retries — `<app>_packs_in_force()` keeps a *failed
+ * payment* alive while Stripe retries, so a `past_due` row a day old still
+ * reads as in force. `Ended` is not `past_due`. It carries `status =
+ * 'canceled'`, which `veditor_packs_in_force` does not accept at any date and
+ * which `standingOfGrant` reads as lapsed before it looks at the clock. The
+ * pack leaves `owned_packs` the moment the grant is written either way, so the
+ * only thing the offset changed was the date printed at the customer.
+ *
+ * Zero is therefore the honest offset AND the only one that needs no argument:
+ * a developer pressing Ended is ending it now, and the card says so.
  */
 export type GrantShape = {
   /** Matches `PackStanding.kind`, so the current shape can be read back off a grant. */
@@ -93,10 +107,12 @@ export const GRANT_SHAPES: readonly GrantShape[] = [
   {
     id: 'lapsed',
     label: 'Ended',
-    what: 'Over. The pack leaves owned_packs on its own, and the Store offers to sell it again.',
+    what: 'Over as of now. The pack leaves owned_packs on its own, the card says it ended today, and the Store offers to sell it again.',
     kind: 'subscription',
     status: 'canceled',
-    days: -3,
+    // Now, not a backdate. The card prints this date at the customer; see the
+    // header. `canceled` is what takes the pack away, never the clock.
+    days: 0,
     cancelAtPeriodEnd: true,
   },
 ]
@@ -164,7 +180,7 @@ export function shapeOfGrant(grant: PackGrant | null | undefined, owned: boolean
  * actually be, is the same idea `GRANT_SHAPES` already was: the states
  * themselves, named the way the Store names them.
  */
-export type HoldingId = 'none' | GrantShape['id']
+export type HoldingId = 'none' | GrantShape['id'] | 'revoked' | 'restore'
 
 export type Holding = {
   id: HoldingId
@@ -181,6 +197,37 @@ const NOT_HELD: Holding = {
 }
 
 /**
+ * Two states that are not about a grant at all, and belong in this list anyway.
+ *
+ * `Not Owned` and `Revoked` look alike from the account's side — neither of
+ * them has the pack — and they are opposite decisions. Not Owned puts a Buy
+ * button in front of somebody. Revoked is the standing answer that they may not
+ * have it and may not buy it, and it survives everything a purchase can do.
+ * Keeping it out of this list would mean a second switch beside the picker,
+ * which is the two-controls-for-one-fact shape this whole file exists to
+ * remove — and worse, it would make the difference between the two invisible
+ * on the tile, which is the only place a tired developer reads it.
+ *
+ * `Restore What Was Taken` is offered ONLY while a pack is revoked, and it is
+ * the one option here whose answer the console does not know. The block carries
+ * the exact grant it removed and the server writes it back — dates, `since` and
+ * all — so lifting is not "guess what they had", which is what every other
+ * option in the list would make it. Picking a different state instead lifts the
+ * block and then writes that state, which is a decision rather than a recovery.
+ */
+const REVOKED: Holding = {
+  id: 'revoked',
+  label: 'Revoked',
+  what: 'Out of reach: the account cannot hold this and the Store will not sell it. The card says so, with the reason and the date.',
+}
+
+const RESTORE: Holding = {
+  id: 'restore',
+  label: 'Restore What Was Taken',
+  what: 'Lifts the block and writes back exactly the grant it removed — the same dates, and the same day they first got it.',
+}
+
+/**
  * The states THIS pack can be in.
  *
  * A pack the shop sells on a recurring plan gets the six shapes; a one-time
@@ -189,18 +236,24 @@ const NOT_HELD: Holding = {
  * from — on a pack that is only ever bought once, that contrast does not exist
  * and `Owned` is what the card says.
  */
-export function holdingsFor(supportsSubscriptionStates: boolean): Holding[] {
-  if (!supportsSubscriptionStates) {
-    return [
-      NOT_HELD,
-      {
-        id: 'perpetual',
-        label: 'Owned',
-        what: 'Bought once and kept. There is no clock on it and nothing to renew.',
-      },
-    ]
-  }
-  return [NOT_HELD, ...GRANT_SHAPES.map((s) => ({ id: s.id, label: s.label, what: s.what }))]
+export function holdingsFor(
+  supportsSubscriptionStates: boolean,
+  revoked = false,
+): Holding[] {
+  const grants: Holding[] = supportsSubscriptionStates
+    ? GRANT_SHAPES.map((s) => ({ id: s.id, label: s.label, what: s.what }))
+    : [
+        {
+          id: 'perpetual',
+          label: 'Owned',
+          what: 'Bought once and kept. There is no clock on it and nothing to renew.',
+        },
+      ]
+  // Revoked FIRST while it is the answer, because it is the state the tile is
+  // in and a picker whose current value is buried at the bottom reads as a
+  // picker that has not been set.
+  if (revoked) return [REVOKED, RESTORE, NOT_HELD, ...grants]
+  return [NOT_HELD, ...grants, REVOKED]
 }
 
 /**
@@ -214,7 +267,13 @@ export function holdingOf(
   owned: boolean,
   grant: PackGrant | null | undefined,
   supportsSubscriptionStates: boolean,
+  revoked = false,
 ): HoldingId | null {
+  // A block outranks everything below it: the server takes the grant when the
+  // block goes on, so a revoked pack IS unowned — and drawing it as `Not
+  // Owned` would be the tile offering to sell somebody a thing we have decided
+  // they may not buy.
+  if (revoked) return 'revoked'
   if (!owned) return 'none'
   if (!supportsSubscriptionStates) return 'perpetual'
   return shapeOfGrant(grant, owned)

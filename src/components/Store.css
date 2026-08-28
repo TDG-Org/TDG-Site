@@ -1135,6 +1135,83 @@
   color: var(--warm);
 }
 
+/* ── a product this account may not have ───────────────────────────────────
+   The mirror image of `.store__owned`, and deliberately built from the same
+   pill so the two read as one control answering in two directions rather than
+   as a state and an error. Same padding, same radius, same hairline: what
+   changes is the ink, from --live-* to --danger-*.
+
+   It is NOT a `.store__note--warn`. Warm is what this site uses for "something
+   needs you" — a payment retrying, a plan ending — and this needs nothing from
+   the reader. It is a decision that has already been taken, and the honest
+   thing is to say it plainly once, with the reason, rather than to nag in a
+   colour that implies there is a button that fixes it.                        */
+.store__revoked {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--danger-border);
+  background-color: var(--danger-soft);
+  color: var(--text);
+  font: 500 13px/1.5 var(--font-body);
+  max-width: 100%;
+}
+.store__revoked--wide {
+  margin-top: 14px;
+}
+.store__revoked-mark {
+  display: inline-flex;
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+/* The reason, on its own line under the headline: it is a sentence written by a
+   person for the person reading it, and set inline it reads as a subtitle to be
+   skimmed rather than as the answer to "why". */
+.store__revoked-why {
+  display: block;
+  margin-top: 3px;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+/* On the index: the same fact at index size. The card keeps its shape — this
+   takes the availability line's place rather than being added under it, because
+   "a pack bought now unlocks when the first build lands" is an offer, and it
+   must not be made to somebody who cannot buy. */
+.store__app-blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--text);
+}
+.store__app-blocked strong {
+  color: var(--danger);
+}
+.store__app-pack-blocked {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: var(--pack-right);
+  font: 700 12px var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--danger);
+}
+/* The row itself goes quiet: it is still listed, because a contents list that
+   hid what it could not sell would be a shorter list with no explanation, and
+   the name is how somebody knows which pack the sentence below is about. */
+.store__app-pack[data-blocked] .store__app-pack-name {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+
 .store__owned {
   display: inline-flex;
   align-items: center;

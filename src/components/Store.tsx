@@ -5,7 +5,7 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { useAuth } from '../auth/AuthProvider'
-import { useOwnedPacks, type OwnedState } from '../store/useOwnedPacks'
+import { useOwnedPacks, type OwnedState, type Revocation } from '../store/useOwnedPacks'
 import {
   formatDay,
   standingOfGrant,
@@ -79,6 +79,21 @@ type CardState =
   | { kind: 'error' }
   | { kind: 'owned'; justLanded: boolean }
   | { kind: 'waiting' }
+  /**
+   * Out of reach: this account may not have this pack and may not buy it.
+   *
+   * A SEVENTH state and not a variant of `buy`, because the two say opposite
+   * things with the same absence. A pack that lapsed is unowned and the shop
+   * should sell it again; a revoked one is unowned and must never be offered,
+   * and a card that answered "Buy" would be taking money for something the
+   * database will refuse to record.
+   *
+   * It carries the block rather than a flag, because the reason and the date
+   * are the whole point — a card that says only "you cannot have this" is worse
+   * than one that does not mention it, and this is the one place the person it
+   * is about will ever read it.
+   */
+  | { kind: 'revoked'; block: Revocation }
   | { kind: 'buy' }
 
 function Tick() {
@@ -521,6 +536,41 @@ function PackCard({
       </ul>
 
       <div className="store__action">
+        {/*
+          Said first, and said in full. This is the only surface the person it
+          is about will ever see it on, so it carries the three things that make
+          it answerable rather than merely final: what happened, why (in the
+          words a developer wrote FOR them, not a status code), and when. A
+          block with no reason recorded says that too — "no reason was given" is
+          a fact somebody can act on and a silence is not.
+        */}
+        {state.kind === 'revoked' && (
+          <>
+            <p className="store__revoked">
+              <span className="store__revoked-mark" aria-hidden="true">
+                <Cross />
+              </span>
+              <span>
+                <strong>
+                  {state.block.pack === '*'
+                    ? `${appTitle} is not available on this account`
+                    : `${pack.name} is not available on this account`}
+                </strong>
+                <span className="store__revoked-why">
+                  {state.block.reason
+                    ? state.block.reason
+                    : 'No reason was recorded with it.'}
+                </span>
+              </span>
+            </p>
+            <p className="store__note store__note--warn">
+              We removed it on {formatDay(state.block.created_at) ?? 'an earlier date'}, and it
+              cannot be bought again from here. If you think this is wrong, send us feedback from
+              the account menu and we will look at it.
+            </p>
+          </>
+        )}
+
         {state.kind === 'checking' && <p className="store__note store__note--quiet">Checking your account…</p>}
 
         {state.kind === 'signedOut' && (
@@ -945,12 +995,18 @@ function AppCard({
   index,
   state,
   owns,
+  revoked,
+  revokedPack,
 }: {
   app: StoreApp
   index: number
   state: OwnedState
   /** Does this account hold that pack of this app? */
   owns: (packId: string) => boolean
+  /** A block on the whole app, or null. */
+  revoked: Revocation | null
+  /** A block on one of its packs — the app's own when there is one. */
+  revokedPack: (packId: string) => Revocation | null
 }) {
   const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
@@ -965,7 +1021,9 @@ function AppCard({
    * them says which of the four states we are in.
    */
   const ready = state === 'ready'
-  const ownedHere = ready ? app.packs.filter((pack) => owns(pack.id)).length : 0
+  const ownedHere = ready
+    ? app.packs.filter((pack) => revokedPack(pack.id) == null && owns(pack.id)).length
+    : 0
   const one = app.packs.length === 1
   /*
    * "From" is a claim that there is a dearer way in, so it is only made when
@@ -1020,11 +1078,23 @@ function AppCard({
         <ul className="store__app-packs">
           {app.packs.map((pack) => {
             const lead = pack.plans?.[0] ?? null
-            const held = ready && owns(pack.id)
+            const blocked = revokedPack(pack.id) != null
+            const held = ready && !blocked && owns(pack.id)
             return (
-              <li key={pack.id} className="store__app-pack" data-owned={held || undefined}>
+              <li
+                key={pack.id}
+                className="store__app-pack"
+                data-owned={held || undefined}
+                data-blocked={blocked || undefined}
+              >
                 <span className="store__app-pack-name">{pack.name}</span>
-                {held ? (
+                {/* A price is what is still to pay, so a pack this account may
+                    not buy prints why instead. Printing the amount beside a
+                    thing we will refuse to sell is the shop advertising at
+                    somebody it has already turned away. */}
+                {blocked ? (
+                  <span className="store__app-pack-blocked">Not available</span>
+                ) : held ? (
                   <span className="store__app-pack-owned">
                     <span className="store__app-pack-tick" aria-hidden="true">
                       <Tick />
@@ -1045,7 +1115,19 @@ function AppCard({
           })}
         </ul>
 
-        <p className="store__app-availability">{app.availability}</p>
+        {revoked ? (
+          <p className="store__app-blocked">
+            <span className="store__revoked-mark" aria-hidden="true">
+              <Cross />
+            </span>
+            <span>
+              <strong>Not available on this account.</strong>{' '}
+              {revoked.reason ?? 'No reason was recorded with it.'}
+            </span>
+          </p>
+        ) : (
+          <p className="store__app-availability">{app.availability}</p>
+        )}
 
         <div className="store__app-foot">
           <p className="store__app-owned" data-state={state}>
@@ -1195,11 +1277,14 @@ function StoreIndex({
   onOpenAuth,
   stateFor,
   ownsIn,
+  revokedIn,
 }: {
   onOpenAuth: () => void
   stateFor: (appId: string) => OwnedState
   /** Whether one app's pack is on this account. The card counts its own. */
   ownsIn: (app: StoreApp, packId: string) => boolean
+  /** A block on that app, or on one of its packs. Omit the pack for the app. */
+  revokedIn: (app: StoreApp, packId?: string) => Revocation | null
 }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
 
@@ -1238,6 +1323,8 @@ function StoreIndex({
             index={i}
             state={stateFor(app.id)}
             owns={(packId) => ownsIn(app, packId)}
+            revoked={revokedIn(app)}
+            revokedPack={(packId) => revokedIn(app, packId)}
           />
         ))}
       </div>
@@ -1257,6 +1344,7 @@ function StoreApp({
   onOpenAuth,
   cardState,
   grantFor,
+  revoked,
   onBuy,
   onCheck,
 }: {
@@ -1264,6 +1352,15 @@ function StoreApp({
   onOpenAuth: () => void
   cardState: (app: StoreApp, pack: StorePack) => CardState
   grantFor: (appId: string, packId: string) => PackGrant | null
+  /**
+   * A block on the WHOLE app, or null.
+   *
+   * Every card below already says it — `revokedFor` answers with the app's
+   * block for any pack in it — and it is said ONCE up here as well, because a
+   * reader who has to infer "all of it" from the same sentence repeated on
+   * three cards has been made to do arithmetic to find out they are locked out.
+   */
+  revoked: Revocation | null
   onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
   onCheck: () => void
 }) {
@@ -1309,6 +1406,22 @@ function StoreApp({
         </a>
 
         <AccountStrip onOpenAuth={onOpenAuth} />
+        {revoked && (
+          <p className="store__revoked store__revoked--wide">
+            <span className="store__revoked-mark" aria-hidden="true">
+              <Cross />
+            </span>
+            <span>
+              <strong>{app.title} is not available on this account.</strong>
+              <span className="store__revoked-why">
+                {revoked.reason ?? 'No reason was recorded with it.'} We removed it on{' '}
+                {formatDay(revoked.created_at) ?? 'an earlier date'}, and nothing below can be
+                bought from here. If you think this is wrong, send us feedback from the account
+                menu.
+              </span>
+            </span>
+          </p>
+        )}
         <BeforeYouPay />
       </div>
 
@@ -1342,7 +1455,7 @@ function StoreApp({
 
 export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: string }) {
   const { user } = useAuth()
-  const { stateFor, owned, grantFor, refresh } = useOwnedPacks()
+  const { stateFor, owned, grantFor, revokedFor, refresh } = useOwnedPacks()
   const blob = useParallax<HTMLDivElement>(-0.12)
 
   /** The pack whose Stripe tab is open, if any. A `packKey`, never a pack id. */
@@ -1386,6 +1499,12 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
 
   const cardState = (app: StoreApp, pack: StorePack): CardState => {
     const key = packKey(app.id, pack.id)
+    // Before ownership, deliberately. The server takes the grant when a block
+    // goes on, so the two cannot normally both be true — and if a stale read
+    // ever makes them, the honest card is the one that does not tell somebody
+    // they still have what has been taken.
+    const block = revokedFor(app.id, pack.id)
+    if (block) return { kind: 'revoked', block }
     if (owned.has(key)) return { kind: 'owned', justLanded: justLanded.includes(key) }
     if (pending === key) return { kind: 'waiting' }
     const state = stateFor(app.id)
@@ -1438,11 +1557,17 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
             onOpenAuth={onOpenAuth}
             cardState={cardState}
             grantFor={grantFor}
+            revoked={revokedFor(shopFor.id)}
             onBuy={buy}
             onCheck={refresh}
           />
         ) : (
-          <StoreIndex onOpenAuth={onOpenAuth} stateFor={stateFor} ownsIn={ownsIn} />
+          <StoreIndex
+            onOpenAuth={onOpenAuth}
+            stateFor={stateFor}
+            ownsIn={ownsIn}
+            revokedIn={(app, packId) => revokedFor(app.id, packId)}
+          />
         )}
       </div>
     </section>

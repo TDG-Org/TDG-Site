@@ -541,8 +541,21 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
-/* Only an OPEN panel draws the rule, or a shut one ends on a stray line. */
-.dev__panel[data-open] .dev__panel-head {
+/* Only an OPEN panel draws the rule, or a shut one ends on a stray line.
+
+   EVERY open-state rule below is written with child combinators all the way
+   down, and that is load-bearing rather than tidiness. Panels NEST — every app
+   sits inside the Apps fold and Permissions sits inside Identity — so a
+   descendant selector written against `[data-open]` matches the CHILDREN of an
+   open parent as well as the parent itself. Written that way (it was, until
+   2.11.0) opening Apps forced every app inside it to 1fr, rotated its chevron
+   and drew its open rule, while React went on rendering `aria-expanded=false`
+   and `inert` on that child's region: a fold that LOOKED open, would not shut,
+   and whose visible controls did nothing. A shut nested panel is the only
+   thing that put the page right again.
+
+   So: never `.dev__panel[data-open] .anything` on this page. */
+.dev__panel[data-open] > .dev__panel-heading > .dev__panel-head {
   padding-bottom: 12px;
   border-bottom-color: var(--border);
 }
@@ -563,11 +576,11 @@
     border-color 0.2s ease,
     color 0.2s ease;
 }
-.dev__panel-head:hover .dev__panel-chevron {
+.dev__panel-head:hover > .dev__panel-chevron {
   border-color: var(--border-hover);
   color: var(--text);
 }
-.dev__panel[data-open] .dev__panel-chevron {
+.dev__panel[data-open] > .dev__panel-heading > .dev__panel-head > .dev__panel-chevron {
   transform: rotate(90deg);
   border-color: var(--border-hover);
   color: var(--text);
@@ -606,7 +619,7 @@
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.dev__panel[data-open] .dev__panel-region {
+.dev__panel[data-open] > .dev__panel-region {
   grid-template-rows: 1fr;
 }
 .dev__panel-region-inner {
@@ -1461,6 +1474,142 @@
   margin: 0;
   font: 400 11.5px/1.55 var(--font-body);
   color: var(--muted);
+}
+
+/* A pack that is out of reach rather than merely unowned. It is the one tile
+   state that is about PERMISSION, so it takes the danger colour rather than the
+   accent — an account that may not buy something must not read at a glance like
+   an account that has simply not bought it. Same 2px inset rail as `data-held`,
+   in the other ink, so the two are told apart by colour and not by squinting at
+   whether a rail is there at all. */
+.dev__hold[data-revoked] {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+/* Chosen and not written. The panel stages, so a tile showing a value the
+   server has never heard of has to say so ON ITSELF: the count in the save bar
+   answers "is anything waiting", and this answers "which one". */
+.dev__hold[data-staged] {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+.dev__hold-staged {
+  flex: none;
+  font: 700 9px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 2px 5px;
+  border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* ── the answer a panel's controls cannot give between them ───────────────
+   One sentence, at the top of a panel, stating the thing a reader actually
+   came to find out — computed from the app's own rule rather than read off any
+   one control. Makullveny's is the worked case: its plan and its bundle are two
+   honest controls that between them could not answer "does this person have
+   Candle content", because Hearth clears the same gate the bundle does.
+
+   Deliberately not a `.dev__warn`: the ordinary answer here is good news, and a
+   surface that shouts whatever it says is one nobody reads twice.             */
+.dev__verdict {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--text);
+  transition: var(--t-theme);
+}
+.dev__verdict[data-tone='ok'] {
+  border-color: var(--live-border);
+  background-color: var(--live-bg);
+}
+.dev__verdict[data-tone='warn'] {
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 10%, transparent);
+}
+
+/* Two tags where a panel has two things to say about itself at once — a block
+   and a count. One flex row so the pair keeps the gap the rest of the console
+   uses rather than an inline space that changes with the font. */
+.dev__tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ── the save bar ─────────────────────────────────────────────────────────
+   What is staged, whether to tell them, and the one button that does both.
+   See `SaveBar` in controls.tsx for why an ownership panel stages at all.
+
+   It sits on the page's own --bg2 rather than the panel surface, the same step
+   back a nested panel takes, so it reads as a footer belonging to the panel
+   rather than as another control in the run above it.                        */
+.dev__save {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 13px;
+  border-radius: var(--dev-radius);
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  transition:
+    border-color 0.2s ease,
+    var(--t-theme);
+}
+.dev__save[data-dirty] {
+  border-color: var(--accent);
+}
+.dev__save-what {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dev__save-count {
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.dev__save[data-dirty] .dev__save-count {
+  color: var(--accent);
+}
+.dev__save-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font: 400 12.5px/1.7 var(--font-body);
+  color: var(--text);
+}
+.dev__save-list li {
+  overflow-wrap: anywhere;
+}
+.dev__save-tell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+.dev__save-tell-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.dev__save-tell-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dev__save-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* ── badges ───────────────────────────────────────────────────────────── */

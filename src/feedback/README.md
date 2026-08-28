@@ -13,7 +13,7 @@ tab (`src/dev/`), and the server contract both halves speak is
 | --- | --- |
 | `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also every sentence the form shows that is not a label: the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the contact box's placeholder (`CONTACT_PLACEHOLDER`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
 | `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`). |
-| `ReplyInbox.tsx` | The startup panel that delivers a developer's reply, quoted next to what the person originally wrote. Checks once per sign-in; renders nothing when nothing waits. |
+| `ReplyInbox.tsx` | The startup panel that delivers **everything waiting for this account** — a developer's reply, quoted next to what the person originally wrote, and any [notice](../notices/README.md) about a change we made to what they own. Checks once per sign-in; renders nothing when nothing waits. One panel and not two, because two dialogs opening over each other at boot is worse than either, and because there is no difference the reader cares about: both are a message from us. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
 
 ## The loop, end to end

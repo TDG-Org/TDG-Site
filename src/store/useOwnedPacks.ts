@@ -68,8 +68,44 @@ export type OwnedPacks = {
    * perpetual grant — `standingOfGrant` is the one place that reading is made.
    */
   readonly grantFor: (appId: string, packId: string) => PackGrant | null
+  /**
+   * Is this product out of reach — and if so, why and since when?
+   *
+   * `packId` omitted asks about the WHOLE app. A whole-app block covers every
+   * pack in it, so `revokedFor(app, pack)` answers with the app's block when
+   * there is one and the pack's own otherwise: a card never has to ask twice.
+   *
+   * Null is "no block", never "we could not find out". A read that fails leaves
+   * this answering with whatever it last actually knew, for the same reason
+   * ownership does — see the header — and a shop that showed REVOKED because a
+   * request timed out would be accusing somebody of something on a hiccup.
+   */
+  readonly revokedFor: (appId: string, packId?: string) => Revocation | null
   /** Re-ask now, after a purchase or when the tab comes back to the front. */
   readonly refresh: () => void
+}
+
+/**
+ * One standing "you may not have this, and you may not buy it".
+ *
+ * Written from `#/dev`, read here over RLS on `tdg_product_revocations` — the
+ * same one row the account's own app reads, so the shop and the app cannot give
+ * different answers about the same decision.
+ *
+ * It is NOT the absence of a grant. A pack that lapsed is unowned and for sale
+ * again; a revoked one is unowned and stays that way, and the difference is the
+ * whole reason the card has a state of its own for it rather than quietly
+ * falling back to Buy. See
+ * supabase/migrations/20260828235900_product_revocations_and_notices.sql.
+ */
+export type Revocation = {
+  app: string
+  /** A pack id, or `*` when the whole app is out of reach. */
+  pack: string
+  /** Why, in the words the developer wrote for the person reading it. */
+  reason: string | null
+  /** ISO: when it was put on. */
+  created_at: string
 }
 
 /** A tab left open with nobody touching it. The events cover somebody who is here. */
@@ -118,6 +154,17 @@ export function useOwnedPacks(): OwnedPacks {
   const [states, setStates] = useState<Record<string, OwnedState>>(() => everyApp('loading'))
   const [owned, setOwned] = useState<ReadonlySet<string>>(() => new Set<string>())
   const [grants, setGrants] = useState<GrantMap>(() => ({}))
+  /*
+   * `${app}:${pack}` → the block on it, `pack` being `*` for a whole app.
+   *
+   * One read for every product rather than one per shelf, because the table is
+   * one table and a block can name an app this site does not sell — Makullveny
+   * is a tier ladder with no pack Store and can still be revoked. Held as its
+   * own state rather than folded into `owned` so that a failed read leaves the
+   * last answer standing: ownership and permission are different facts and a
+   * missing answer about one must not be read as a claim about the other.
+   */
+  const [blocks, setBlocks] = useState<Readonly<Record<string, Revocation>>>(() => ({}))
   // Bumped by refresh(). A counter rather than calling the query directly, so
   // a refresh that lands after the user signed out cannot revive stale packs.
   const [tick, setTick] = useState(0)
@@ -156,6 +203,7 @@ export function useOwnedPacks(): OwnedPacks {
       answered.current = new Set()
       setOwned(new Set())
       setGrants({})
+      setBlocks({})
       setStates(everyApp('signedOut'))
       return
     }
@@ -165,6 +213,7 @@ export function useOwnedPacks(): OwnedPacks {
       answered.current = new Set()
       setOwned(new Set())
       setGrants({})
+      setBlocks({})
       setStates(everyApp('loading'))
     }
 
@@ -197,6 +246,27 @@ export function useOwnedPacks(): OwnedPacks {
       })
       setStates((prev) => ({ ...prev, [appId]: 'ready' }))
     }
+
+    /*
+     * What this account may not have, in one read.
+     *
+     * It rides the same effect as the shelves — so `refresh()`, the five-minute
+     * re-check and coming back to the tab all re-ask it — but it lands on its
+     * own: a block arriving is not an ownership answer and must not turn a
+     * shelf ready or red. A refusal is left alone entirely, which is the rule
+     * the whole file keeps: only an answer from the server changes anything.
+     */
+    void supabase.rpc('tdg_my_revocations').then(({ data, error }) => {
+      if (cancelled || !live.current || error) return
+      const rows = Array.isArray(data) ? (data as Revocation[]) : []
+      setBlocks(
+        Object.fromEntries(
+          rows
+            .filter((r) => typeof r?.app === 'string' && typeof r?.pack === 'string')
+            .map((r) => [`${r.app}:${r.pack}`, r]),
+        ),
+      )
+    })
 
     // Every shelf at once, each landing on its own: one table refusing must not
     // hold up another, or answer for it.
@@ -292,5 +362,14 @@ export function useOwnedPacks(): OwnedPacks {
     [grants],
   )
 
-  return { stateFor, owned, grantFor, refresh }
+  // The app's block first, always. It covers everything inside it, and a card
+  // that reported its own pack-level block while the whole app was out of reach
+  // would be answering a narrower question than the one being asked.
+  const revokedFor = useCallback(
+    (appId: string, packId?: string): Revocation | null =>
+      blocks[`${appId}:*`] ?? (packId ? (blocks[`${appId}:${packId}`] ?? null) : null),
+    [blocks],
+  )
+
+  return { stateFor, owned, grantFor, revokedFor, refresh }
 }

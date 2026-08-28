@@ -3,28 +3,45 @@ import { useAuth } from '../auth/AuthProvider'
 import { STORE_APPS } from '../data/store'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import { ackReply, fetchInbox, type InboxReply } from './api'
+// The notices folder owns the fact; this panel draws it. See src/notices/api.ts
+// for why they arrive in ONE panel rather than two dialogs over each other.
+import { ackNotice, fetchNotices, type Notice } from '../notices/api'
 import './Feedback.css'
 
 /**
- * The panel that delivers a developer's reply.
+ * The panel that delivers what is waiting for this account.
  *
- * When somebody sends feedback and one of us answers it from the Developer
- * console, the answer waits in tdg-core until the person's app asks for it.
- * On this site, this is the asking: once per sign-in, at boot, and if there
- * is anything waiting it opens over the page — quoted alongside what they
- * originally wrote, because a bare "fixed now!" with no context is a puzzle.
+ * Two things arrive here and both are the same promise. A **reply**: somebody
+ * sent feedback and one of us answered it from the Developer console. A
+ * **notice**: one of us changed what their account owns — granted a pack,
+ * ended a subscription, put a product out of reach — and ticked the box beside
+ * Save that says tell them. Either way the message waits in tdg-core until the
+ * person's own app asks for it, and on this site this is the asking: once per
+ * sign-in, at boot, over the page.
+ *
+ * A reply is quoted alongside what they originally wrote, because a bare "fixed
+ * now!" with no context is a puzzle. A notice needs no quote — it is about
+ * their own account and its subject says which part.
+ *
+ * ## Why they share one panel
+ *
+ * Because two dialogs opening over each other at boot is worse than either, and
+ * because there is no difference the reader cares about: both are a message
+ * from us. Splitting them would also split Got It, and somebody who dismissed
+ * one panel and found a second underneath would reasonably stop reading it.
  *
  * ## Seen means SEEN, and only Got It says it
  *
- * A reply is marked seen only when the reader presses Got It. Escape and the
+ * A message is marked seen only when the reader presses Got It. Escape and the
  * scrim close the panel without acking, so a reflex-dismissal costs nothing:
- * the reply comes back next visit. The console shows the difference — a
- * developer watching "NOT SEEN YET" is watching this exact mechanism — and
- * the panel says which of the two closings is which.
+ * it comes back next visit. The console shows the difference — a developer
+ * watching "NOT SEEN YET" is watching this exact mechanism — and the panel says
+ * which of the two closings is which.
  */
 export function ReplyInbox() {
   const { status, user } = useAuth()
   const [replies, setReplies] = useState<InboxReply[]>([])
+  const [notices, setNotices] = useState<Notice[]>([])
   const [open, setOpen] = useState(false)
   const askedFor = useRef<string | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
@@ -44,9 +61,14 @@ export function ReplyInbox() {
     if (askedFor.current === user.id) return
     askedFor.current = user.id
     let live = true
-    void fetchInbox().then((list) => {
-      if (!live || list.length === 0) return
+    // Both at once, and opened once. Asked separately with a `setOpen` each,
+    // the second answer would re-open a panel the reader had already dealt
+    // with — the same reflex-dismissal problem `gotIt` exists to avoid,
+    // arriving a few hundred milliseconds later.
+    void Promise.all([fetchInbox(), fetchNotices()]).then(([list, waiting]) => {
+      if (!live || (list.length === 0 && waiting.length === 0)) return
       setReplies(list)
+      setNotices(waiting)
       setOpen(true)
     })
     return () => {
@@ -63,6 +85,7 @@ export function ReplyInbox() {
 
   const gotIt = () => {
     for (const r of replies) ackReply(r.reply_id)
+    for (const n of notices) ackNotice(n.id)
     setOpen(false)
   }
 
@@ -78,9 +101,16 @@ export function ReplyInbox() {
     focusFirst: closeRef,
   })
 
-  if (!open || replies.length === 0) return null
+  if (!open || (replies.length === 0 && notices.length === 0)) return null
 
-  const one = replies.length === 1
+  const total = replies.length + notices.length
+  const one = total === 1
+  // What the panel is MOSTLY about, so the title is the true one in the common
+  // case — all replies, or all notices — and an honest compromise in the rare
+  // mixed one. "We Wrote Back" over a message about somebody losing a pack
+  // would be the wrong words on the sentence that matters most.
+  const onlyNotices = replies.length === 0
+  const onlyReplies = notices.length === 0
 
   return (
     <div className="fb__backdrop" {...backdrop}>
@@ -92,7 +122,7 @@ export function ReplyInbox() {
         aria-labelledby="fb-inbox-title"
       >
         <header className="fb__head">
-          <div className="fb__eyebrow">Feedback</div>
+          <div className="fb__eyebrow">{onlyNotices ? 'Your Account' : 'Feedback'}</div>
           <button
             ref={closeRef}
             type="button"
@@ -105,15 +135,42 @@ export function ReplyInbox() {
         </header>
 
         <h2 className="fb__title" id="fb-inbox-title">
-          {one ? 'We Wrote Back' : 'We Wrote Back — ' + replies.length + ' Replies'}
+          {onlyNotices
+            ? one
+              ? 'Something Changed On Your Account'
+              : notices.length + ' Changes On Your Account'
+            : onlyReplies
+              ? one
+                ? 'We Wrote Back'
+                : 'We Wrote Back — ' + replies.length + ' Replies'
+              : total + ' Messages For You'}
         </h2>
         <p className="fb__sub">
-          {one
-            ? 'You sent us feedback, and there is an answer.'
-            : 'You sent us feedback, and there are answers.'}
+          {onlyNotices
+            ? 'We changed what your account has, and this is what we did.'
+            : onlyReplies
+              ? one
+                ? 'You sent us feedback, and there is an answer.'
+                : 'You sent us feedback, and there are answers.'
+              : 'An answer to your feedback, and a change to your account.'}
         </p>
 
         <div className="fb__thread">
+          {/* Notices first. One of them may be somebody finding out they have
+              lost access to something, and that is not a thing to read after
+              two replies about a typo. */}
+          {notices.map((n) => (
+            <div key={'notice-' + n.id} className="fb__item">
+              <p className="fb__quote">
+                <span className="fb__quote-tag">account</span> about {appLabel(n.app)}:
+                <span className="fb__quote-text"> {n.subject}</span>
+              </p>
+              <div className="fb__reply">
+                <p className="fb__reply-body">{n.body}</p>
+                <p className="fb__reply-by">— TDG, {when(n.created_at)}</p>
+              </div>
+            </div>
+          ))}
           {replies.map((r) => (
             <div key={r.reply_id} className="fb__item">
               <p className="fb__quote">
