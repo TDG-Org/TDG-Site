@@ -203,10 +203,27 @@ before the merge draws a public profile page correctly. It joins
 `bea_find_profile` and `bea_is_visible`, which have been forwarders since the
 `bea_*` → `tdg_*` move.
 
-**`devfleet_badges` was deliberately NOT merged**, though `tdg_badges`
-supersedes it and says so in its own comment: DevFleet reads that table
-directly and returns its row type out of `devfleet_badge_sync`, and that repo
-was not open. Retiring it is its own job, done with DevFleet in front of you.
+**`devfleet_badges` was the fourth, and it went on 2026-08-28** — its own
+migration, `20260828170000_devfleet_badges_onto_tdg_badges.sql`, once the
+DevFleet repo was open beside it. It could not ride along with the three above
+because DevFleet read that table directly AND `devfleet_badge_sync` declared
+`returns devfleet_badges`, so the table's row type was in a function signature:
+dropping it needed the app's own edit landing in the same breath, or a `cascade`
+that took the writer with it silently.
+
+Every row moved with its `epoch`, its `earned` dates and its `created_at`
+untouched — a re-stamped epoch re-opens the window the epoch exists to close, and
+a re-stamped `earned` date is a badge quietly re-awarded. **`commits`, the one
+column `tdg_badges` does not name, became `measurements.commits`**, which is the
+only slot that keeps the property it was built to have: `contributions` is
+replaced per machine and then summed across machines, so it would both lower the
+figure on a machine with fewer repositories checked out and count the same
+commits twice across two machines; `measurements` is merged by `tdg_measure_max`,
+an element-wise `greatest()`, and is never summed. **No forwarder was left
+behind**, because unlike the Bible Educator case there was no deployed build to
+keep working: DevFleet is a desktop app with no auto-update, so the only copies
+in the wild are ones somebody installed by hand, and the one account with badges
+was rebuilt in the same work block.
 
 ## Deploying
 
