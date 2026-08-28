@@ -2379,6 +2379,19 @@
 .dev__ov[data-edited] {
   border-left-color: var(--live-border);
 }
+/* A field INSIDE a composite — the cover's own Title, a section's own Tag.
+   It keeps the Reset, which is the whole point of it, and drops the frame: the
+   left rule is what says "this is one overridable thing", and drawing it around
+   every line inside an already-framed cover says it four times about one. The
+   standing BUILT-IN tag goes with it (see `compact` in contentEdit.tsx) — a
+   section editor with four per section and eight sections is thirty-two badges
+   reporting that nothing happened, which is how the one that means something
+   stops being seen. */
+.dev__ov.dev__ov--compact {
+  padding-left: 0;
+  border-left: none;
+}
+
 .dev__ov-head {
   display: flex;
   align-items: center;

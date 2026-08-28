@@ -510,15 +510,60 @@ work behind an unopened tab is still visible, and closing the browser with a
 dirty draft asks first. The draft is held by `DevConsole` rather than by the
 tab, so a trip to Accounts and back does not lose a half-written page.
 
-### The repo is still the source
+### The repo is still the source, and there are four ways back to it
 
 `src/data/content.ts` and `src/data/appPages.ts` are where the words are
 written; this writes an overlay of only what somebody changed. Every field shows
-`BUILT-IN` or `EDITED` with a **Reset** beside it and the repo's own value
-printed underneath, a field typed back to its built-in text drops its override
-so it goes on tracking the repo, and **Reset This Product To Built-In** drops
-all of them at once. [`src/content/README.md`](../content/README.md) has the
-merge rules and why an unreadable document degrades to the built-in card.
+`BUILT-IN` or `EDITED` with the repo's own value printed underneath, and a field
+typed back to its built-in text drops its override so it goes on tracking the
+repo rather than freezing at a copy of today's wording.
+[`src/content/README.md`](../content/README.md) has the merge rules and why an
+unreadable document degrades to the built-in card.
+
+Undoing is at four grains, because the thing you want to put back is usually not
+the thing the one available button would have reset:
+
+| | |
+| --- | --- |
+| **One field** | The `Reset` beside its `EDITED` tag. Fields nested inside a composite — the cover's Title, a section's Tag — carry their own too, in a lighter frame with no standing `BUILT-IN` badge: four of those per section across eight sections is thirty-two badges reporting that nothing happened, which is how the one that means something stops being seen. |
+| **One row** | The `↺` on a page section, matched to the repo **by id** rather than by position — a section moved up the page is still that section, and index matching would offer to reset it to whichever one now sits where it used to. It is drawn only where it would do something: never on a section added here, never on one already identical to its built-in twin. |
+| **One panel** | `Reset Card Words`, `Reset Icon And Cover`, `Reset Access Button`, `Reset Page Header`, `Reset Page Sections`, `Reset On The Site`. Each clears exactly the fields its own panel owns and says how many that is before it is pressed, from the same count its shut-state tag shows. Disabled at zero rather than hidden: a control that vanishes when there is nothing to do is one you have to remember exists. |
+| **One product** | `Reset This Product To Built-In`, in the Overrides panel, which still asks you to type the product's name. |
+
+Two of those are their own kind of undo, because they are not per-field:
+
+- **`Restore The Built-In Order`** puts a whole grid back, not one card. An
+  order is one list, and a single card cannot be returned to its built-in place
+  without saying where the others go — so the button says which grid it affects.
+- Editing a LIST back into agreement with the repo drops its override too, the
+  same way a text field does. It is what makes the small resets add up: reset
+  the last edited line of a cover and the cover as a whole stops being an
+  override, rather than becoming a frozen copy that quietly stops following
+  `src/data/`.
+
+The page facts and links lists have no per-row reset, deliberately: their rows
+have no stable identity, so "the repo's version of row 3" is a question with no
+honest answer once rows have been added or reordered. The list's own Reset and
+each row's Remove are what they get.
+
+### Two states you could reach and could not see
+
+**Taking both covers away** left no field on screen to reset, so `No Cover` used
+to be a one-way door for anybody who did not know about the panel reset. It now
+offers `Put The Built-In Cover Back` whenever the repo has one.
+
+**A screenshot removed while the card draws key art** is invisible from the
+cover editor — that editor only renders in screenshot mode — and it is not
+harmless: `shotForPage` is what puts the picture at the top of the product's own
+PAGE, which the card's cover has nothing to do with. That state now says so and
+carries `Put The Screenshot Back`.
+
+Both were found by the same press. `No Cover` followed by `Screenshot` wrote
+`art: null` and then the shot in two `setCard` calls that each read the SAME
+draft out of one render's closure, so the second built its card from a document
+without the first's change and silently dropped it — key art stayed, key art
+wins on a card, and the button appeared to do nothing at all. `setCardKeys`
+writes both in one go.
 
 ### If two of us edit at once
 

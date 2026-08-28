@@ -29,10 +29,12 @@ import {
   AssetPreview,
   ListOverride,
   Overridden,
+  PanelReset,
   RowField,
   RowList,
   SelectOverride,
   TextOverride,
+  sameJson,
 } from './contentEdit'
 import { fmtRelative } from './format'
 
@@ -171,6 +173,51 @@ function setCard<K extends keyof CardOverride>(
   if (value === undefined) delete card[key]
   else card[key] = value
   return withItem(doc, slug, { card })
+}
+
+/**
+ * Several card keys in ONE write.
+ *
+ * Two `setCard` calls in one handler both read the SAME `draft` out of the
+ * render's closure, so the second builds its card object from a document that
+ * does not have the first's change in it and silently drops it. That is exactly
+ * what the cover's mode buttons did: `set('art', null)` followed by
+ * `set('shot', …)` wrote the shot and lost the removal, so pressing Screenshot
+ * on a card with key art left the key art in place — and key art wins on a
+ * card, so the button appeared to do nothing at all.
+ *
+ * `undefined` removes a key, `null` is a stored null. Same rule as everywhere
+ * else in this file.
+ */
+function setCardKeys(
+  doc: SiteContentDoc,
+  slug: string,
+  patch: Partial<CardOverride>,
+): SiteContentDoc {
+  const card = { ...(itemOf(doc, slug).card ?? {}) } as Record<string, unknown>
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete card[key]
+    else card[key] = value
+  }
+  return withItem(doc, slug, { card: card as CardOverride })
+}
+
+/** The same, for the page half. Used by the per-panel resets. */
+function clearPageKeys(
+  doc: SiteContentDoc,
+  slug: string,
+  keys: readonly string[],
+): SiteContentDoc {
+  const page = { ...(itemOf(doc, slug).page ?? {}) } as Record<string, unknown>
+  for (const key of keys) delete page[key]
+  return withItem(doc, slug, { page: page as PageOverride })
+}
+
+/** How many of a panel's fields are overridden. One answer, used by that
+ *  panel's shut-state tag AND by the count on its Reset, so the two cannot
+ *  disagree about whether anything has been changed. */
+function countKeys(over: object, keys: readonly string[]): number {
+  return keys.filter((k) => k in over).length
 }
 
 function setPage<K extends keyof PageOverride>(
@@ -517,6 +564,21 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
   const set = <K extends keyof CardOverride>(key: K, value: CardOverride[K] | undefined) =>
     setDraft(setCard(draft, slug, key, value))
 
+  /** Several card keys at once — see `setCardKeys` for the bug that needs it. */
+  const setMany = (patch: Partial<CardOverride>) => setDraft(setCardKeys(draft, slug, patch))
+
+  /** Put one panel's worth of card fields back the way the repo has them. */
+  const clearCard = (keys: readonly string[]) =>
+    setDraft(
+      setCardKeys(
+        draft,
+        slug,
+        Object.fromEntries(keys.map((k) => [k, undefined])) as Partial<CardOverride>,
+      ),
+    )
+
+  const clearPage = (keys: readonly string[]) => setDraft(clearPageKeys(draft, slug, keys))
+
   /** How many cards this grid still shows if this one goes. */
   const siblingsLeft =
     item.kind === 'app'
@@ -620,8 +682,37 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
               The order here is the order on the home page. A product added to the repo later lands
               at the end of this list on its own, so a new app appears without anybody republishing.
             </p>
+
+            <div className="dev__row">
+              <Button
+                disabled={draft.order[item.kind === 'app' ? 'apps' : 'tools'].length === 0}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    order: { ...draft.order, [item.kind === 'app' ? 'apps' : 'tools']: [] },
+                  })
+                }
+              >
+                Restore The Built-In Order
+              </Button>
+              <span className="dev__hint">
+                The whole of {GRID_OF[item.kind].where}, not just this card — an order is one list,
+                and a single card cannot be put back without saying where the others go.
+              </span>
+            </div>
           </>
         )}
+
+        <PanelReset
+          label="Reset On The Site"
+          what={
+            hidden
+              ? 'Puts the card back on the site. It does not touch the order.'
+              : 'Nothing to put back: this card is shown, which is what the repo says.'
+          }
+          n={hidden ? 1 : 0}
+          onReset={() => setDraft(withItem(draft, slug, { hidden: undefined }))}
+        />
       </Panel>
 
       {/* ── 2 · the words ────────────────────────────────────────────── */}
@@ -718,6 +809,13 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
           value={card.chips}
           onChange={(v) => set('chips', v)}
         />
+
+        <PanelReset
+          label="Reset Card Words"
+          what="Every word on the card and its chips, back to the repo. The icon, the cover, the button and the page are not touched."
+          n={countKeys(card, WORD_KEYS)}
+          onReset={() => clearCard(WORD_KEYS)}
+        />
       </Panel>
 
       {/* ── 3 · the icon and the cover ───────────────────────────────── */}
@@ -744,6 +842,14 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
           builtInShot={(builtInApp ?? builtInGame)?.shot}
           card={card}
           set={set}
+          setMany={setMany}
+        />
+
+        <PanelReset
+          label="Reset Icon And Cover"
+          what="The icon file, its shape, and whichever cover this card draws, back to the repo."
+          n={countKeys(card, COVER_KEYS)}
+          onReset={() => clearCard(COVER_KEYS)}
         />
       </Panel>
 
@@ -766,6 +872,13 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
           card={card}
           set={set}
         />
+
+        <PanelReset
+          label="Reset Access Button"
+          what="The words on the button and where it opens, back to the repo — including whether this card has one at all."
+          n={countKeys(card, BUTTON_KEYS)}
+          onReset={() => clearCard(BUTTON_KEYS)}
+        />
       </Panel>
 
       {/* ── 5 · the page head ────────────────────────────────────────── */}
@@ -780,6 +893,13 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
             terms={[page.title, over.page?.title, over.page?.lede]}
           >
             <PageHeadEditor page={page} over={over.page ?? {}} slug={slug} c={c} />
+
+            <PanelReset
+              label="Reset Page Header"
+              what="The top of the page — its two sentences, its facts and its links — back to the repo. The sections below are not touched."
+              n={countKeys(over.page ?? {}, HEAD_KEYS)}
+              onReset={() => clearPage(HEAD_KEYS)}
+            />
           </Panel>
 
           <Panel
@@ -798,6 +918,13 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
               builtIn={page.sections}
               value={over.page?.sections}
               onChange={(v) => setDraft(setPage(draft, slug, 'sections', v))}
+            />
+
+            <PanelReset
+              label="Reset Page Sections"
+              what="Every fold on this page and every block inside it, back to the repo."
+              n={over.page?.sections ? 1 : 0}
+              onReset={() => clearPage(['sections'])}
             />
           </Panel>
         </>
@@ -896,11 +1023,14 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
 const WORD_KEYS = ['index', 'title', 'copy', 'status', 'chips', 'heading', 'note', 'tag', 'count'] as const
 const COVER_KEYS = ['icon', 'iconShape', 'art', 'shot'] as const
 const BUTTON_KEYS = ['download', 'cta', 'href'] as const
+// Everything the Page Header panel owns. `sections` is deliberately NOT here:
+// it is the panel below, and its own Reset.
 const HEAD_KEYS = ['index', 'group', 'backHash', 'backLabel', 'title', 'lede', 'intro', 'facts', 'links'] as const
 
-/** How many of a panel's fields are overridden — its whole shut-state summary. */
+/** How many of a panel's fields are overridden — its whole shut-state summary,
+ *  from the same `countKeys` its Reset counts with. */
 function EditedCount({ over, keys }: { over: object; keys: readonly string[] }) {
-  const n = keys.filter((k) => k in over).length
+  const n = countKeys(over, keys)
   return n ? <Tag tone="warn">{n} EDITED</Tag> : <Tag>BUILT-IN</Tag>
 }
 
@@ -1015,12 +1145,15 @@ function CoverEditor({
   builtInShot,
   card,
   set,
+  setMany,
 }: {
   kind: ItemKind
   builtInArt: import('../data/content').KeyArtSpec | undefined
   builtInShot: import('../data/content').Shot | undefined
   card: CardOverride
   set: <K extends keyof CardOverride>(key: K, value: CardOverride[K] | undefined) => void
+  /** Both cover keys in one write. The mode buttons need it: see setCardKeys. */
+  setMany: (patch: Partial<CardOverride>) => void
 }) {
   const art = card.art === undefined ? builtInArt : (card.art ?? undefined)
   const shot = card.shot === undefined ? builtInShot : (card.shot ?? undefined)
@@ -1037,6 +1170,18 @@ function CoverEditor({
     scene: 'pines',
   })
 
+  /*
+   * Edited back into agreement with the repo drops the override, the same way a
+   * text field typed back to its built-in words does. It is what makes the
+   * per-field Resets below add up: reset the last edited line of a cover and
+   * the cover as a whole stops being an override, rather than becoming a frozen
+   * copy of today's repo that quietly stops following it.
+   */
+  const setArt = (next: import('../data/content').KeyArtSpec) =>
+    set('art', sameJson(next, builtInArt) ? undefined : next)
+  const setShot = (next: import('../data/content').Shot) =>
+    set('shot', sameJson(next, builtInShot) ? undefined : next)
+
   return (
     <>
       <Field
@@ -1051,26 +1196,29 @@ function CoverEditor({
           {kind !== 'game' && (
             <Button
               variant={mode === 'art' ? 'primary' : 'ghost'}
-              onClick={() => set('art', art ?? blankArt())}
+              // Where the repo HAS key art, this restores it rather than
+              // starting a blank one. Pressed from No Cover it used to write an
+              // empty spec, so choosing the cover back gave you an empty cover
+              // and the built-in art could only be recovered by hand.
+              onClick={() => set('art', builtInArt ? undefined : blankArt())}
             >
               Key Art
             </Button>
           )}
           <Button
             variant={mode === 'shot' ? 'primary' : 'ghost'}
-            onClick={() => {
-              if (kind !== 'game') set('art', null)
-              set('shot', shot ?? { slug: '', widths: [560, 1120], alt: '' })
-            }}
+            onClick={() =>
+              setMany({
+                ...(kind !== 'game' ? { art: null } : {}),
+                shot: builtInShot ? undefined : { slug: '', widths: [560, 1120], alt: '' },
+              })
+            }
           >
             Screenshot
           </Button>
           <Button
             variant={mode === 'none' ? 'primary' : 'ghost'}
-            onClick={() => {
-              if (kind !== 'game') set('art', null)
-              set('shot', null)
-            }}
+            onClick={() => setMany({ ...(kind !== 'game' ? { art: null } : {}), shot: null })}
           >
             No Cover
           </Button>
@@ -1096,13 +1244,15 @@ function CoverEditor({
             <RowField
               label="Title"
               value={art.title}
-              onChange={(v) => set('art', { ...art, title: v })}
+              builtIn={builtInArt?.title}
+              onChange={(v) => setArt({ ...art, title: v })}
             />
             <RowField
               label="Line"
               area
               value={art.line}
-              onChange={(v) => set('art', { ...art, line: v })}
+              builtIn={builtInArt?.line}
+              onChange={(v) => setArt({ ...art, line: v })}
             />
             <Field
               label="Scene"
@@ -1112,7 +1262,7 @@ function CoverEditor({
                 <select
                   className="dev__select"
                   value={art.scene}
-                  onChange={(e) => set('art', { ...art, scene: e.target.value as KeyArtScene })}
+                  onChange={(e) => setArt({ ...art, scene: e.target.value as KeyArtScene })}
                 >
                   {SCENES.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -1143,7 +1293,7 @@ function CoverEditor({
             >
               <RowList
                 rows={art.facts}
-                onChange={(facts) => set('art', { ...art, facts })}
+                onChange={(facts) => setArt({ ...art, facts })}
                 blank={() => ''}
                 addLabel="Add Fact"
                 nameOf={(f) => f}
@@ -1158,6 +1308,22 @@ function CoverEditor({
             </Field>
           </Overridden>
         </>
+      )}
+
+      {/* A screenshot taken away while the card draws key art is invisible from
+          here — the screenshot editor only renders in `shot` mode — and it is
+          not harmless: `shotForPage` is what puts the picture at the top of
+          this product's own PAGE, which the card's cover has nothing to do
+          with. A state you can reach and cannot see is a bug, so it gets a
+          line and a way back. */}
+      {mode === 'art' && card.shot === null && builtInShot && (
+        <div className="dev__row">
+          <Button onClick={() => set('shot', undefined)}>Put The Screenshot Back</Button>
+          <span className="dev__hint">
+            The screenshot is removed too, so this product&apos;s own page has no picture at the
+            top of it. The card is unaffected — key art wins there either way.
+          </span>
+        </div>
       )}
 
       {mode === 'shot' && shot && (
@@ -1191,36 +1357,41 @@ function CoverEditor({
             <RowField
               label="Name"
               value={shot.slug}
-              onChange={(v) => set('shot', { ...shot, slug: v })}
+              builtIn={builtInShot?.slug}
+              onChange={(v) => setShot({ ...shot, slug: v })}
               placeholder="makullveny"
             />
             <div className="dev__grid2">
               <RowField
                 label="Small width"
                 value={String(shot.widths[0])}
-                onChange={(v) =>
-                  set('shot', { ...shot, widths: [Number(v) || 0, shot.widths[1]] })
-                }
+                builtIn={builtInShot ? String(builtInShot.widths[0]) : undefined}
+                onChange={(v) => setShot({ ...shot, widths: [Number(v) || 0, shot.widths[1]] })}
               />
               <RowField
                 label="Large width"
                 value={String(shot.widths[1])}
-                onChange={(v) =>
-                  set('shot', { ...shot, widths: [shot.widths[0], Number(v) || 0] })
-                }
+                builtIn={builtInShot ? String(builtInShot.widths[1]) : undefined}
+                onChange={(v) => setShot({ ...shot, widths: [shot.widths[0], Number(v) || 0] })}
               />
             </div>
             <RowField
               label="Alt text"
               area
               value={shot.alt}
-              onChange={(v) => set('shot', { ...shot, alt: v })}
+              builtIn={builtInShot?.alt}
+              onChange={(v) => setShot({ ...shot, alt: v })}
             />
             <RowField
               label="Crop"
               value={shot.position ?? ''}
+              builtIn={builtInShot ? (builtInShot.position ?? '') : undefined}
               onChange={(v) =>
-                set('shot', v ? { ...shot, position: v } : { slug: shot.slug, widths: shot.widths, alt: shot.alt })
+                setShot(
+                  v
+                    ? { ...shot, position: v }
+                    : { slug: shot.slug, widths: shot.widths, alt: shot.alt },
+                )
               }
               placeholder="left center"
             />
@@ -1233,11 +1404,24 @@ function CoverEditor({
       )}
 
       {mode === 'none' && (
-        <p className="dev__warn">
-          This card has no cover. The slot keeps the card&apos;s proportions and draws nothing, so
-          the card is shorter than its neighbours in the grid — which is visible immediately on a
-          shelf where every other card has a picture.
-        </p>
+        <>
+          <p className="dev__warn">
+            This card has no cover. The slot keeps the card&apos;s proportions and draws nothing, so
+            the card is shorter than its neighbours in the grid — which is visible immediately on a
+            shelf where every other card has a picture.
+          </p>
+          {(builtInArt || builtInShot) && (
+            <div className="dev__row">
+              <Button onClick={() => setMany({ art: undefined, shot: undefined })}>
+                Put The Built-In Cover Back
+              </Button>
+              <span className="dev__hint">
+                The repo has {builtInArt ? 'key art' : 'a screenshot'} for this card. With both
+                covers taken away there is no field on screen to reset, so the way back is here.
+              </span>
+            </div>
+          )}
+        </>
       )}
     </>
   )
@@ -1568,6 +1752,14 @@ function SectionsEditor({
   value: PageSection[] | undefined
   onChange: (next: PageSection[] | undefined) => void
 }) {
+  const rows = value ?? builtIn
+  /** The repo's version of one section, matched by ID rather than by position:
+   *  a section moved up the page is still the same section, and index matching
+   *  would offer to "reset" it to whichever one now sits where it used to. */
+  const twin = (sec: PageSection) => builtIn.find((b) => b.id === sec.id)
+  const setList = (next: PageSection[]) =>
+    onChange(sameJson(next, builtIn) ? undefined : next)
+
   return (
     <ListOverride
       label="Sections"
@@ -1579,18 +1771,30 @@ function SectionsEditor({
       blank={(): PageSection => ({ id: `section-${Date.now()}`, title: '', what: '', blocks: [] })}
       nameOf={(s) => s.title}
       empty="No sections. The page is its heading, its facts and nothing else."
-      hint="Every section starts shut, so a closed row has to say what is inside it — that one line is what makes an unopened page read as an index rather than as ten mystery headings."
-      render={(section, setSection) => (
+      hint="Every section starts shut, so a closed row has to say what is inside it — that one line is what makes an unopened page read as an index rather than as ten mystery headings. The ↺ on a row puts that one section back the way the repo has it."
+      rowReset={(section) => {
+        const b = twin(section)
+        // Nothing to offer for a section added here, or one already identical
+        // to its built-in twin. A button that would do nothing is a button you
+        // have to press to find that out.
+        if (!b || sameJson(b, section)) return null
+        return () => setList(rows.map((r) => (r.id === section.id ? b : r)))
+      }}
+      render={(section, setSection) => {
+        const b = twin(section)
+        return (
         <>
           <div className="dev__grid2">
             <RowField
               label="Title"
               value={section.title}
+              builtIn={b?.title}
               onChange={(v) => setSection({ ...section, title: v })}
             />
             <RowField
               label="Tag"
               value={section.tag ?? ''}
+              builtIn={b ? (b.tag ?? '') : undefined}
               onChange={(v) =>
                 setSection(
                   v
@@ -1605,6 +1809,7 @@ function SectionsEditor({
             label="What the shut row says"
             area
             value={section.what}
+            builtIn={b?.what}
             onChange={(v) => setSection({ ...section, what: v })}
           />
           <RowField
@@ -1622,7 +1827,8 @@ function SectionsEditor({
             onChange={(blocks) => setSection({ ...section, blocks })}
           />
         </>
-      )}
+        )
+      }}
     />
   )
 }

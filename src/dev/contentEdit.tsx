@@ -1,6 +1,12 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Button, Field, Select, Tag, TextArea, TextInput } from './controls'
 
+/** Two values that serialise the same ARE the same, for an editor whose
+ *  overrides are plain JSON. Used to collapse an override that has been
+ *  edited back into agreement with the repo. */
+export const sameJson = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(a) === JSON.stringify(b)
+
 /**
  * The editing primitives the Content tab is built from.
  *
@@ -45,6 +51,7 @@ export function Overridden({
   children,
   hint,
   was,
+  compact,
 }: {
   label: string
   htmlFor?: string
@@ -55,10 +62,21 @@ export function Overridden({
   hint?: ReactNode
   /** What the repo says, printed under an edited control. */
   was?: ReactNode
+  /**
+   * For a field INSIDE a composite — the cover's own Title, a section's own
+   * Tag. It keeps the Reset, which is the whole point, and drops the frame and
+   * the standing `BUILT-IN` tag: a section editor with four of those per
+   * section and eight sections is thirty-two badges saying nothing happened,
+   * which is how the one badge that means something stops being seen.
+   */
+  compact?: boolean
   children: ReactNode
 }) {
   return (
-    <div className="dev__field dev__ov" data-edited={edited || undefined}>
+    <div
+      className={compact ? 'dev__field dev__ov dev__ov--compact' : 'dev__field dev__ov'}
+      data-edited={edited || undefined}
+    >
       <div className="dev__ov-head">
         <label className="dev__label" htmlFor={htmlFor}>
           {label}
@@ -72,7 +90,7 @@ export function Overridden({
                 Reset
               </button>
             </>
-          ) : (
+          ) : compact ? null : (
             <Tag>BUILT-IN</Tag>
           )}
         </span>
@@ -192,6 +210,7 @@ export function RowList<T>({
   nameOf,
   empty,
   render,
+  rowReset,
 }: {
   rows: T[]
   onChange: (next: T[]) => void
@@ -203,6 +222,14 @@ export function RowList<T>({
   /** What an empty list says. A list with nothing in it is a real state. */
   empty: string
   render: (row: T, set: (next: T) => void, i: number) => ReactNode
+  /**
+   * Put ONE row back the way the repo has it, where that question has an
+   * answer. Return null for a row it does not — a section somebody added here,
+   * or one already identical to its built-in twin — and no button is drawn,
+   * because a reset that would do nothing is a control that has to be pressed
+   * to find that out.
+   */
+  rowReset?: (row: T, i: number) => (() => void) | null
 }) {
   const move = (i: number, by: number) => {
     const next = [...rows]
@@ -221,6 +248,20 @@ export function RowList<T>({
             <span className="dev__rowitem-n">{i + 1}</span>
             <span className="dev__rowitem-name">{nameOf(row, i) || <em>untitled</em>}</span>
             <span className="dev__rowitem-btns">
+              {(() => {
+                const reset = rowReset?.(row, i)
+                return reset ? (
+                  <button
+                    type="button"
+                    className="dev__mini"
+                    aria-label={`Reset ${nameOf(row, i) || `item ${i + 1}`} to the built-in version`}
+                    title="Put this one back the way the repo has it"
+                    onClick={reset}
+                  >
+                    ↺
+                  </button>
+                ) : null
+              })()}
               <button
                 type="button"
                 className="dev__mini"
@@ -275,6 +316,7 @@ export function ListOverride<T>({
   nameOf,
   empty,
   render,
+  rowReset,
 }: {
   label: string
   builtInCount: number
@@ -287,8 +329,19 @@ export function ListOverride<T>({
   nameOf: (row: T, i: number) => string
   empty: string
   render: (row: T, set: (next: T) => void, i: number) => ReactNode
+  rowReset?: (row: T, i: number) => (() => void) | null
 }) {
   const rows = value ?? builtIn
+  /*
+   * Edited back into agreement with the repo drops the override, exactly as a
+   * text field typed back to its built-in words does. An override frozen at a
+   * list identical to today's would silently stop tracking `src/data/`, so the
+   * day somebody fixes that list in the repo the site would go on printing the
+   * old one with nothing on screen to say why.
+   */
+  const set = (next: T[] | undefined) =>
+    onChange(next !== undefined && sameJson(next, builtIn) ? undefined : next)
+
   return (
     <Overridden
       label={label}
@@ -300,12 +353,13 @@ export function ListOverride<T>({
     >
       <RowList
         rows={rows}
-        onChange={onChange}
+        onChange={set}
         blank={blank}
         addLabel={addLabel}
         nameOf={nameOf}
         empty={empty}
         render={render}
+        rowReset={rowReset}
       />
     </Overridden>
   )
@@ -313,7 +367,16 @@ export function ListOverride<T>({
 
 /* ── small shared pieces ───────────────────────────────────────────────── */
 
-/** A plain labelled line inside a row, with no override frame of its own. */
+/**
+ * One line inside a composite — the cover's Title, a section's Tag.
+ *
+ * Give it `builtIn` and it gets its own Reset, in the compact frame: the
+ * composite above it can only be reset WHOLE, and "put the scene back but keep
+ * my new line" was otherwise a thing you had to do by remembering the old value
+ * and retyping it. Without `builtIn` it is what it always was, a plain labelled
+ * field — used where the repo has no counterpart to go back to, such as a row
+ * somebody added here.
+ */
 export function RowField({
   label,
   value,
@@ -321,6 +384,7 @@ export function RowField({
   placeholder,
   area,
   rows = 2,
+  builtIn,
 }: {
   label: string
   value: string
@@ -328,16 +392,81 @@ export function RowField({
   placeholder?: string
   area?: boolean
   rows?: number
+  /** What the repo says for this one line. Undefined where it says nothing. */
+  builtIn?: string
 }) {
   const id = useId()
+  const input = area ? (
+    <TextArea id={id} value={value} onChange={onChange} rows={rows} placeholder={placeholder} />
+  ) : (
+    <TextInput id={id} value={value} onChange={onChange} placeholder={placeholder} />
+  )
+
+  if (builtIn === undefined) {
+    return (
+      <Field label={label} htmlFor={id}>
+        {input}
+      </Field>
+    )
+  }
+
   return (
-    <Field label={label} htmlFor={id}>
-      {area ? (
-        <TextArea id={id} value={value} onChange={onChange} rows={rows} placeholder={placeholder} />
-      ) : (
-        <TextInput id={id} value={value} onChange={onChange} placeholder={placeholder} />
-      )}
-    </Field>
+    <Overridden
+      compact
+      label={label}
+      htmlFor={id}
+      edited={value !== builtIn}
+      onReset={() => onChange(builtIn)}
+      was={builtIn ? <q>{builtIn}</q> : <em>nothing</em>}
+    >
+      {input}
+    </Overridden>
+  )
+}
+
+/**
+ * The reset for one whole panel of the Content tab.
+ *
+ * Between the per-field Reset and the one that puts a whole product back, there
+ * was nothing — so undoing an afternoon on a card's words meant pressing Reset
+ * on six fields in turn, and the only single press available also threw away
+ * the cover and the page you had not touched. This is that middle: it clears
+ * exactly the fields the panel it sits in owns, and it says how many that is
+ * before it is pressed.
+ *
+ * Disabled at zero rather than hidden. A reset that vanishes when there is
+ * nothing to reset is a control you have to remember exists; one that is there
+ * and greyed is an answer to "has anything in here been changed".
+ */
+export function PanelReset({
+  label,
+  what,
+  n,
+  onReset,
+}: {
+  /** Title Case, naming what it puts back: `Reset Card Words`. */
+  label: string
+  what: ReactNode
+  /** How many of this panel's fields are overridden. */
+  n: number
+  onReset: () => void
+}) {
+  return (
+    <>
+      <hr className="dev__rule" />
+      <div className="dev__action dev__action--last">
+        <div className="dev__action-text">
+          <p className="dev__action-title">{label}</p>
+          <p className="dev__hint">{what}</p>
+        </div>
+        <div className="dev__action-controls">
+          <Tag tone={n ? 'warn' : 'plain'}>{n ? `${n} EDITED` : 'BUILT-IN'}</Tag>
+          <Button onClick={onReset} disabled={n === 0}>
+            Reset
+          </Button>
+        </div>
+      </div>
+    </>
   )
 }
 
