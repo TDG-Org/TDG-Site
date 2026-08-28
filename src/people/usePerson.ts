@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { socialAct, type SocialAction } from '../account/api'
+import { graphChanged } from '../account/graphRevision'
 import { profileAt, profileFriends, type ProfileFriend, type PublicProfile } from './api'
 
 /**
@@ -144,6 +145,11 @@ export function usePerson(username: string): PersonPanel {
       setBusy(true)
       void socialAct(action, id)
         .then(read)
+        // Blocking or unfriending from HERE changes the account page's four
+        // lists and four of its counters, and the nav's glance with them. They
+        // are not on screen, and they must not be stale when they next are.
+        // Bumped after the read, for the reason `graphRevision.ts` gives.
+        .then(graphChanged)
         .catch((err: unknown) => {
           if (!live.current) return
           setProblem(err instanceof Error ? err.message : String(err))

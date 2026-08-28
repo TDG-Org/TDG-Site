@@ -16,6 +16,7 @@ are the authority for every sentence below.
 | --- | --- |
 | `types.ts` | `Audience`, `PrivacyControl`, `PrivacyGroup`, `AccountStats`. **No key, audience or app id is written down here.** |
 | `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph — its seven verbs, the people search and the favourite toggle. |
+| `graphRevision.ts` | One number that goes up when this account's social graph changes, and the hook that re-renders on it. What stops three surfaces drawing three different answers at once — see below. |
 | `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |
 | `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
 | `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. |
@@ -186,6 +187,47 @@ is gone when you come back. The read is fixed, and the press goes through
 takes the whole set, and two presses in flight together each send a set computed
 before the other landed, so the loser silently un-stars what the winner just
 starred.
+
+## Three surfaces read the graph, and one press has to reach all of them
+
+`useSocial` re-reads on every press, so the four lists are always right. Nothing
+else was: the counters at the top of this page, the **account menu in the nav** —
+a second `useAccountStats` in a component that has never heard of this page — and
+the Find People directory each read once and never again.
+
+Driven and measured on 2026-08-28, all three wrong at once, all three on screen:
+unfriending somebody from Friends left them in the search results above it still
+chipped **Friend**, with Unfriend and Block under their name; blocking somebody
+from those results left them **unchipped** in that same list; and the tiles went
+on printing a friend count from before the press, as did the nav's glance. A
+panel contradicting itself in three places is not a stale cache, it is a page
+that looks broken.
+
+[`graphRevision.ts`](graphRevision.ts) is the fix: a module-level counter with
+`useSyncExternalStore`, bumped by `useSocial.act` and by
+[`../people/`](../people/README.md)'s `usePerson.act` **after** the verb has
+landed and the graph has been read back. `useAccountStats` and `usePeopleSearch`
+take it as a dependency and re-read.
+
+Three things about it are load-bearing:
+
+- **It is a module-level store, not a prop.** The nav's menu is not inside this
+  page and never will be, so there is no prop to thread and no common parent to
+  hold state on. `useSyncExternalStore` is React's own answer for a value that
+  lives outside React, and it is twenty lines with no dependency (AGENTS.md §1).
+- **It is bumped after the read, never at the press.** The search list used to
+  call its own `reload()` beside a fire-and-forget `act`, which read the world
+  before the write had landed and got back exactly what it already had. That
+  call is gone; this replaces it and covers the presses made elsewhere too.
+- **A star does not bump it.** `tdg_set_favorite` changes no standing, no
+  counter and nothing another surface draws, so a re-read of nine counters and
+  the whole directory for one would be two round trips to redraw the same
+  numbers.
+
+**A re-read after a graph change keeps what is on screen.** The counters blank
+to `Counting…` only when the ACCOUNT changes, where every figure showing belongs
+to somebody else; on a graph change they stay put until the new ones land, or
+one press on one friend would look like the whole page reloading.
 
 ## Your own profile, as everybody else sees it
 

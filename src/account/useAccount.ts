@@ -18,6 +18,7 @@ import {
   type SocialGraph,
 } from './api'
 import { usernameShapeProblem } from '../auth/wording'
+import { graphChanged, useGraphRevision } from './graphRevision'
 import type { Profile } from '../auth/AuthProvider'
 import type { AccountStats, Audience, PrivacyControl, PrivacyGroup } from './types'
 
@@ -49,6 +50,18 @@ export function useAccountStats(): AccountStatsState {
   const { status, user } = useAuth()
   const [state, setState] = useState<AccountStatsState>({ kind: 'checking' })
   const userId = user?.id ?? null
+  /*
+   * Four of these nine counters are the social graph — friends, requests in,
+   * requests out, blocked — so a press in Friends & Social changes what this
+   * is showing. Read once on mount, it went on printing the count from before
+   * the press, on the page where the press was made AND in the nav's account
+   * menu, which is a second copy of this hook in a component that has never
+   * heard of that page. See `graphRevision.ts`.
+   */
+  const revision = useGraphRevision()
+  /** The account the figures on screen belong to, so a re-read can tell a new
+   *  person from a new answer about the same one. */
+  const seen = useRef<string | null>(null)
 
   useEffect(() => {
     if (status === 'loading') {
@@ -63,10 +76,21 @@ export function useAccountStats(): AccountStatsState {
       return
     }
 
-    // Keyed on the account, so switching users re-reads rather than leaving
-    // the previous person's figures on screen. Starting from `checking` again
-    // is deliberate: the old answer is about somebody else.
-    setState({ kind: 'checking' })
+    /*
+     * Two reasons this effect runs, and they want opposite things on screen.
+     *
+     * The ACCOUNT changed: blank to `checking`, because every figure showing
+     * is about somebody else and leaving them up would attribute one person's
+     * streak to another.
+     *
+     * The GRAPH changed: keep them. They are correct until the new ones land,
+     * only one of them is about to move, and blanking eight tiles plus the
+     * nav's glance to `Counting…` for a round trip would make one press on one
+     * friend look like the whole page reloading.
+     */
+    const sameAccount = seen.current === userId
+    seen.current = userId
+    setState((prev) => (sameAccount && prev.kind === 'ok' ? prev : { kind: 'checking' }))
     let cancelled = false
 
     void myAccountStats().then((stats) => {
@@ -77,7 +101,7 @@ export function useAccountStats(): AccountStatsState {
     return () => {
       cancelled = true
     }
-  }, [status, userId])
+  }, [status, userId, revision])
 
   return state
 }
@@ -385,6 +409,11 @@ export function useSocial(): SocialPanel {
       mark(id, true)
       void socialAct(action, id)
         .then(read)
+        // AFTER the verb has landed and the graph has been read back, never at
+        // the press: every other surface drawing this account's standings and
+        // counters re-reads on this, and telling them before the write exists
+        // is telling them to fetch the world they already have.
+        .then(graphChanged)
         .catch((err: unknown) => {
           if (!live.current) return
           setProblem(err instanceof Error ? err.message : String(err))
@@ -449,9 +478,6 @@ export type PeopleSearch = {
    *  fills again reads as a page breaking — so this is how the panel says the
    *  names under it are one query behind. */
   busy: boolean
-  /** Read the current query again — what an action on a result needs, so the
-   *  card it was made on picks up its new standing. */
-  reload: () => void
 }
 
 /**
@@ -483,7 +509,20 @@ export function usePeopleSearch(active: boolean): PeopleSearch {
   const [query, setQuery] = useState('')
   const [state, setState] = useState<PeopleSearchState>({ kind: 'idle' })
   const [busy, setBusy] = useState(false)
-  const [nonce, setNonce] = useState(0)
+  /*
+   * Every result carries where you STAND with that person, so a press
+   * anywhere on this panel can change what is drawn here — including a press
+   * made in one of the four lists below, which this hook would otherwise never
+   * hear about. Driven on 2026-08-28: unfriending somebody from Friends left
+   * them chipped `Friend` in the search results directly above it.
+   *
+   * This replaced a `reload()` the search list called beside its own `act`,
+   * which was wrong twice over: it heard nothing about presses made elsewhere,
+   * and it fired SYNCHRONOUSLY next to a fire-and-forget action, so it re-read
+   * the world before the write had landed and got the answer it already had.
+   * The revision is bumped after the verb resolves. See `graphRevision.ts`.
+   */
+  const revision = useGraphRevision()
 
   useEffect(() => {
     if (!active || status !== 'signedIn') {
@@ -517,15 +556,9 @@ export function usePeopleSearch(active: boolean): PeopleSearch {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [active, status, query, nonce])
+  }, [active, status, query, revision])
 
-  return {
-    query,
-    setQuery,
-    state,
-    busy,
-    reload: useCallback(() => setNonce((n) => n + 1), []),
-  }
+  return { query, setQuery, state, busy }
 }
 
 /* ── editing your own details ──────────────────────────────────────────────── */

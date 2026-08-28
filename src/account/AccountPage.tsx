@@ -691,14 +691,15 @@ function FindPeople({ social }: { social: SocialPanel }) {
              the profile that same card opens. */
           actions={(person) => actionsFor(person.standing ?? 'none')}
           busy={social.busy}
-          onAct={(action, id) => {
-            social.act(action, id)
-            // The result's standing lives on the SEARCH's
-            // answer, not on the graph, so re-reading the
-            // graph alone would leave the card that was just
-            // pressed still offering Add Friend.
-            finder.reload()
-          }}
+          /* No second re-read beside this one. Every result's standing comes
+             from the SEARCH's answer rather than the graph, and this list used
+             to ask for a fresh one right here — synchronously, next to a
+             fire-and-forget action, so it read the world before the write had
+             landed and got back what it already had. `useSocial` bumps the
+             graph revision once the verb resolves and this hook re-reads on
+             that, which also covers a press made in one of the lists below.
+             See `graphRevision.ts`. */
+          onAct={social.act}
         />
       )}
     </AccountSub>
