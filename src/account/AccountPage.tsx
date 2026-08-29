@@ -6,21 +6,14 @@ import { BackButton, FoldControls } from './../components/Folded'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { userHash } from '../lib/route'
-import { SectionsProvider, useSections } from '../lib/sections'
+import { SectionsProvider } from '../lib/sections'
 import { AccountFold, AccountSub } from './AccountFold'
+import { SocialFold } from './SocialFold'
 import { useAppNames } from './appNames'
 import { fmtCount, fmtDay, fmtRelative, prettyId, usernameFreeAt } from './format'
-import { actionsFor, standingChip } from './standing'
-import {
-  useAccountStats,
-  usePeopleSearch,
-  useProfileEditor,
-  usePrivacy,
-  useSocial,
-} from './useAccount'
-import type { Person, SocialAction } from './api'
+import { useAccountStats, useProfileEditor, usePrivacy, useSocial } from './useAccount'
 import type { Audience, PrivacyControl, PrivacyGroup } from './types'
-import type { ProfileField, SocialPanel } from './useAccount'
+import type { ProfileField } from './useAccount'
 import './Account.css'
 
 /**
@@ -66,6 +59,49 @@ import './Account.css'
  * row of default switches, which is the site telling somebody their profile is
  * public when it has no idea what it is. See `useAccount.ts`.
  */
+
+/** The two marks the profile row wears. Inline SVG written where it is used
+ *  (AGENTS.md §5), both carrying `aria-hidden` AND `focusable="false"` — the
+ *  pair `CrossGlyph.tsx` counts. */
+function PersonGlyph() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="8.4" r="4" />
+      <path d="M4.6 20a7.4 7.4 0 0 1 14.8 0" />
+    </svg>
+  )
+}
+
+function LinkGlyph() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+    </svg>
+  )
+}
 
 /** A row of a definition list: one fact, its name, and its value. */
 function Fact({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -421,291 +457,6 @@ function PrivacyList({
   )
 }
 
-/** A filled star for a friend you have starred, an outline for one you have
- *  not. One path each rather than one path with a `fill` toggled, because the
- *  outline needs its own stroke weight to read at 13px — and both carry
- *  `aria-hidden` AND `focusable="false"`, the pair `CrossGlyph.tsx` counts. */
-function Star({ on }: { on: boolean }) {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill={on ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="m12 2.6 2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.45 6.2 20.5l1.1-6.45-4.7-4.6 6.5-.95Z" />
-    </svg>
-  )
-}
-
-/**
- * One person, and what you can do about them.
- *
- * **The buttons come from where you already STAND with them**, not from a
- * fixed set: somebody who asked you gets Accept and Decline, somebody you
- * asked gets Withdraw, a friend gets Unfriend and Block, a blocked account
- * gets Unblock. Drawing all seven and letting the server refuse five would be
- * five buttons that look like actions and are guaranteed to be errors — a
- * mistake Bible Educator's profile page made and fixed, and the reason its
- * README spells the standings out one by one.
- *
- * The four lists know the standing from the list a person came out of, so they
- * pass `actions` directly. A search result has no list behind it and carries
- * its OWN standing from the server, which `actionsFor` in `standing.ts` turns
- * into the same buttons — one table, so a card cannot offer a different set
- * depending on where it was drawn.
- *
- * **Every card is a way into that person's page.** A card that could only be
- * acted on and never read is how a social system ends up with people you can
- * block and cannot look at. A person with no handle has no page — a profile's
- * address is `#/user/<handle>` and there is no other one — so their card keeps
- * its actions and drops the link rather than pointing at nothing.
- */
-function PersonCard({
-  person,
-  actions,
-  busy,
-  onAct,
-  onFavorite,
-}: {
-  person: Person
-  actions: { action: SocialAction; label: string; tone?: 'primary' | 'quiet' }[]
-  busy: boolean
-  onAct: (action: SocialAction, userId: string) => void
-  /** Given only for a friend, because only a friend can be starred — the rule
-   *  `tdg_set_favorite` enforces, drawn rather than left to be refused. */
-  onFavorite?: (userId: string, on: boolean) => void
-}) {
-  const name = person.displayName || person.username || 'A TDG account'
-  const chip = person.standing ? standingChip(person.standing) : null
-  return (
-    <div className="acct__person" data-busy={busy || undefined}>
-      <div className="acct__person-who">
-        <span className="acct__person-top">
-          {onFavorite && (
-            <button
-              type="button"
-              className="acct__star"
-              data-on={person.favorite || undefined}
-              disabled={busy}
-              aria-pressed={person.favorite}
-              // Names the person, not the control: a screen reader moving
-              // through twenty friends would otherwise hear "Favourite"
-              // twenty times with nothing to tell them apart.
-              aria-label={person.favorite ? `Unstar ${name}` : `Star ${name}`}
-              onClick={() => onFavorite(person.userId, !person.favorite)}
-            >
-              <Star on={person.favorite} />
-            </button>
-          )}
-          <span className="acct__person-name">{name}</span>
-          {chip && (
-            <span className="chip acct__person-chip" data-standing={person.standing}>
-              {chip}
-            </span>
-          )}
-        </span>
-        {person.username && <span className="acct__person-handle">@{person.username}</span>}
-        {person.bio && <span className="acct__person-bio">{person.bio}</span>}
-      </div>
-      <div className="acct__person-acts">
-        {person.username && (
-          <a className="appview__ghost acct__person-link" href={userHash(person.username)}>
-            View Profile
-          </a>
-        )}
-        {actions.map((a) => (
-          <button
-            key={a.action}
-            type="button"
-            className="appview__ghost"
-            data-tone={a.tone}
-            disabled={busy}
-            onClick={() => onAct(a.action, person.userId)}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** A list of people with one heading, or the sentence that says there are none. */
-function PeopleList({
-  people,
-  empty,
-  actions,
-  busy,
-  onAct,
-  onFavorite,
-}: {
-  people: Person[]
-  empty: string
-  /** A fixed set for the four lists, or a function for a list whose members
-   *  each carry their own standing — which is every search result. */
-  actions:
-    | { action: SocialAction; label: string; tone?: 'primary' | 'quiet' }[]
-    | ((person: Person) => { action: SocialAction; label: string; tone?: 'primary' | 'quiet' }[])
-  busy: ReadonlySet<string>
-  onAct: (action: SocialAction, userId: string) => void
-  onFavorite?: (userId: string, on: boolean) => void
-}) {
-  if (people.length === 0) return <p className="acct__note">{empty}</p>
-  return (
-    <div className="acct__people">
-      {people.map((person) => (
-        <PersonCard
-          key={person.userId}
-          person={person}
-          actions={typeof actions === 'function' ? actions(person) : actions}
-          busy={busy.has(person.userId)}
-          onAct={onAct}
-          onFavorite={onFavorite}
-        />
-      ))}
-    </div>
-  )
-}
-
-/**
- * How the friends list is ordered, and what to call each way.
- *
- * **Favourites first is the default, and it degrades to A–Z.** Somebody who
- * has never starred anybody sees an alphabetical list, which is exactly what
- * the server sends; somebody who has sees the people they picked at the top.
- * A default that is only right for one of those two would have to be the
- * other one, and then the stars would do nothing until a menu was found.
- *
- * Every sort ends in the same alphabetical tiebreak, so the list is stable:
- * two friends with equal standing on the chosen key never swap places between
- * renders, which is what makes a re-read after an action look like nothing
- * happened rather than like the list reshuffling itself.
- */
-const FRIEND_SORTS = [
-  { id: 'favorites', label: 'Favourites First' },
-  { id: 'az', label: 'Name (A–Z)' },
-  { id: 'za', label: 'Name (Z–A)' },
-] as const
-
-type FriendSort = (typeof FRIEND_SORTS)[number]['id']
-
-const personName = (p: Person) => (p.displayName || p.username || '￿').toLowerCase()
-
-function sortFriends(people: Person[], sort: FriendSort): Person[] {
-  const byName = (a: Person, b: Person) => personName(a).localeCompare(personName(b))
-  const copy = [...people]
-  if (sort === 'za') return copy.sort((a, b) => byName(b, a))
-  if (sort === 'az') return copy.sort(byName)
-  return copy.sort((a, b) => Number(b.favorite) - Number(a.favorite) || byName(a, b))
-}
-
-/** Does what somebody typed appear in this person's name, handle or bio?
- *  Case-folded and accent-blind, so `rose` finds `Rosé` — the same courtesy
- *  the server's own search extends, kept here so the two boxes on this panel
- *  do not behave differently from each other. */
-const fold = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-
-function matches(person: Person, query: string): boolean {
-  const q = fold(query.trim())
-  if (!q) return true
-  return [person.displayName, person.username, person.bio].some(
-    (field) => field && fold(field).includes(q),
-  )
-}
-
-/**
- * Everybody on TDG, and where you stand with each of them.
- *
- * Its own component for one reason: it needs to know whether the section it
- * lives in is OPEN, and `useSections` is only readable from inside the
- * provider. A shut fold that had already searched would be a request made for
- * a panel nobody has looked at — and on a page that already makes six on
- * arrival, the seventh should at least be wanted.
- *
- * It replaced an "Add A Friend" box that took one exact handle and answered
- * only after the request had been sent. Everything that box did, this does:
- * an exact handle still resolves, including one belonging to an account that
- * keeps its page private, and including one belonging to an account that has
- * blocked you. What it adds is the answer BEFORE the press.
- */
-function FindPeople({ social }: { social: SocialPanel }) {
-  const { isOpen } = useSections()
-  const finder = usePeopleSearch(isOpen('social'))
-
-  return (
-    <AccountSub
-      title="Find People"
-      what="Everybody on TDG, whether you know them or not. Leave the box empty to browse, or type a name or a handle. Every result opens their profile."
-    >
-      <div className="acct__ask">
-        <label className="acct__label" htmlFor="acct-find">
-          Search TDG
-          {finder.busy && <span className="acct__field-flag">Searching…</span>}
-        </label>
-        <div className="acct__input-wrap">
-          <input
-            id="acct-find"
-            className="acct__input"
-            value={finder.query}
-            type="search"
-            autoCapitalize="off"
-            spellCheck={false}
-            placeholder="a name, or their @handle"
-            aria-describedby="acct-find-hint"
-            onChange={(e) => finder.setQuery(e.currentTarget.value)}
-          />
-        </div>
-        <p className="acct__hint" id="acct-find-hint">
-          Asking is not the same as becoming friends: they have to accept.
-        </p>
-      </div>
-
-      {finder.state.kind === 'checking' && <p className="acct__note">Looking…</p>}
-      {finder.state.kind === 'error' && (
-        <p className="acct__note acct__note--warn">
-          We couldn't search just now, so this is not showing you a guess. Try
-          again in a moment.
-        </p>
-      )}
-      {finder.state.kind === 'ok' && (
-        <PeopleList
-          people={finder.state.people}
-          empty={
-            finder.query.trim()
-              ? `Nobody on TDG matches “${finder.query.trim()}”. Handles are exact, so check the spelling — and an account that keeps to itself is only found by its full handle.`
-              : 'There is nobody else on TDG yet.'
-          }
-          /* One table, in standing.ts, so a card cannot offer
-             a different set of buttons here than it does on
-             the profile that same card opens. */
-          actions={(person) => actionsFor(person.standing ?? 'none')}
-          busy={social.busy}
-          /* No second re-read beside this one. Every result's standing comes
-             from the SEARCH's answer rather than the graph, and this list used
-             to ask for a fresh one right here — synchronously, next to a
-             fire-and-forget action, so it read the world before the write had
-             landed and got back what it already had. `useSocial` bumps the
-             graph revision once the verb resolves and this hook re-reads on
-             that, which also covers a press made in one of the lists below.
-             See `graphRevision.ts`. */
-          onAct={social.act}
-        />
-      )}
-    </AccountSub>
-  )
-}
-
 export default function AccountPage({
   onOpenAuth,
   onOpenFeedback,
@@ -721,19 +472,13 @@ export default function AccountPage({
   const editor = useProfileEditor()
   const appName = useAppNames()
 
+  /** The moment after Copy Profile Link lands. A moment, not a state: left up
+   *  it would still be claiming a copy made yesterday. */
+  const [copied, setCopied] = useState(false)
+
   const blob = useParallax<HTMLDivElement>(-0.12)
   const head = useReveal<HTMLDivElement>('wipe', 0)
 
-  /* The friends list is filtered and sorted HERE, not by the server.
-     `tdg_my_friends` answers alphabetically and hands over `favorite` and
-     `sort_order` with each row, and this list is the handful of people
-     somebody actually knows — a round trip per keystroke to reorder twenty
-     names would be a request spent on arithmetic the browser already has the
-     data for. The org-wide search is the opposite case and is a real read:
-     it is over every account on the project, and this browser holds none of
-     them. */
-  const [friendQuery, setFriendQuery] = useState('')
-  const [friendSort, setFriendSort] = useState<FriendSort>('favorites')
 
   const name = profile?.display_name || profile?.username || 'Your TDG Account'
   const packs =
@@ -780,10 +525,6 @@ export default function AccountPage({
   }, [stats, appName])
 
   const graph = social.state.kind === 'ok' ? social.state.graph : null
-  const friends = useMemo(
-    () => sortFriends((graph?.friends ?? []).filter((p) => matches(p, friendQuery)), friendSort),
-    [graph, friendQuery, friendSort],
-  )
   const cooldown = usernameFreeAt(profile?.username_changed_at)
 
   return (
@@ -812,21 +553,54 @@ export default function AccountPage({
                 {isAdmin && <span className="chip chip--hot">Developer</span>}
                 <span className="chip">{prettyId(tier ?? 'free')} Plan</span>
               </span>
-              {/* Your own page, as anybody else sees it. It sits with your
-                  identity rather than under Privacy, because the question it
-                  answers is "what do people see", and the honest way to answer
-                  that is to show them the actual page rather than describe it.
-                  Without a handle there is no page: a profile's address is
-                  `#/user/<handle>` and there is no other one, so this says how
-                  to get one instead of linking nowhere. */}
+            </div>
+          )}
+
+          {/* Your own page, as anybody else sees it — and the address to send
+              somebody. TWO REAL BUTTONS, in their own row under the identity.
+              They were one small tinted link at the end of the chips, and it
+              was reported as hard to see: Bible Educator's banner carries
+              `View Public Page` and `Copy Profile Link` as buttons, and a
+              control that answers "what do people see about me" is not a
+              footnote on a row of tags.
+
+              Without a handle there is no page — a profile's address is
+              `#/user/<handle>` and there is no other one — so the row says how
+              to get one instead of offering a button that goes nowhere. */}
+          {status === 'signedIn' && (
+            <div className="acct__self">
               {profile?.username ? (
-                <a className="acct__self-link" href={userHash(profile.username)}>
-                  View Your Public Profile
-                </a>
+                <>
+                  <a className="acct__self-btn" href={userHash(profile.username)}>
+                    <PersonGlyph />
+                    View Public Page
+                  </a>
+                  <button
+                    type="button"
+                    className="acct__self-btn acct__self-btn--quiet"
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}${userHash(profile.username!)}`
+                      // The address bar's own origin and path, never a written
+                      // one: this site is served from a subpath in production
+                      // and from a bare host in development, and a copied link
+                      // that only works on the machine it was copied from is
+                      // worse than no button.
+                      void navigator.clipboard
+                        .writeText(url)
+                        .then(() => setCopied(true))
+                        .catch(() => setCopied(false))
+                        .finally(() => window.setTimeout(() => setCopied(false), 2400))
+                    }}
+                  >
+                    <LinkGlyph />
+                    {copied ? 'Link Copied' : 'Copy Profile Link'}
+                  </button>
+                </>
               ) : (
-                <span className="acct__self-link acct__self-link--off">
-                  Pick a username to get a profile page
-                </span>
+                <p className="acct__self-none">
+                  Pick a username above and you get a profile page — its address is built from your
+                  handle, so there is none until you have one.
+                </p>
               )}
             </div>
           )}
@@ -1105,183 +879,7 @@ export default function AccountPage({
                     : undefined
                 }
               >
-                {social.state.kind === 'checking' && <p className="acct__note">Reading…</p>}
-                {social.state.kind === 'error' && (
-                  <p className="acct__note acct__note--warn">
-                    We couldn't read your friends just now, so this is not showing you a guess.
-                    Nothing has changed.
-                  </p>
-                )}
-
-                {/* A refusal from any of the seven verbs, shown once, where the
-                    presses are. "This account is not taking friend requests" is
-                    a fact about them and worth reading. Outside the guard
-                    below, because a press made on a SEARCH result has to be
-                    able to say why it was refused even when the graph read is
-                    the thing that failed. */}
-                {social.problem && (
-                  <p className="acct__problem" role="alert">
-                    {social.problem}
-                    <button
-                      type="button"
-                      className="acct__problem-x"
-                      aria-label="Dismiss"
-                      onClick={social.dismissProblem}
-                    >
-                      ×
-                    </button>
-                  </p>
-                )}
-
-                {/* Also outside it. Find People is a read of its own, over
-                    accounts this browser holds none of, and it does not need
-                    the graph to work — so a failed graph read costs you your
-                    four lists and not the ability to look anybody up. */}
-                <FindPeople social={social} />
-
-                {graph && (
-                  <>
-                    <AccountSub
-                      title="Waiting On You"
-                      what="People who have asked to be your friend. Declining is quiet: they are not told."
-                    >
-                      <PeopleList
-                        people={graph.incoming}
-                        empty="Nobody is waiting on you."
-                        actions={[
-                          { action: 'accept', label: 'Accept', tone: 'primary' },
-                          { action: 'decline', label: 'Decline' },
-                          { action: 'block', label: 'Block', tone: 'quiet' },
-                        ]}
-                        busy={social.busy}
-                        onAct={social.act}
-                      />
-                    </AccountSub>
-
-                    <AccountSub
-                      title="Friends"
-                      what="Friendship is two-sided, so unfriending ends it for both of you and they are not told. Star the ones you want at the top."
-                    >
-                      {/* Filter and sort sit ABOVE the list and are drawn even
-                          when there is nothing to filter — a control that
-                          appears once a list is long enough is a control
-                          nobody knows exists until the day it arrives. They go
-                          quiet instead: with no friends there is nothing to
-                          arrange and both are disabled, which says so without
-                          moving anything. */}
-                      <div className="acct__listbar">
-                        <div className="acct__input-wrap acct__listbar-find">
-                          <input
-                            id="acct-friend-filter"
-                            className="acct__input"
-                            value={friendQuery}
-                            type="search"
-                            autoCapitalize="off"
-                            spellCheck={false}
-                            disabled={graph.friends.length === 0}
-                            aria-label="Search your friends"
-                            placeholder="Search your friends"
-                            onChange={(e) => setFriendQuery(e.currentTarget.value)}
-                          />
-                        </div>
-                        <div
-                          className="acct__listbar-sort"
-                          data-disabled={graph.friends.length === 0 || undefined}
-                        >
-                          <label className="sr-only" htmlFor="acct-friend-sort">
-                            Sort your friends
-                          </label>
-                          <select
-                            id="acct-friend-sort"
-                            className="acct__select"
-                            value={friendSort}
-                            disabled={graph.friends.length === 0}
-                            onChange={(e) => setFriendSort(e.currentTarget.value as FriendSort)}
-                          >
-                            {FRIEND_SORTS.map((option) => (
-                              <option key={option.id} value={option.id}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                          {/* The native arrow is gone with `appearance: none`,
-                              so the control has to draw its own — rule 5:
-                              nothing here ships wearing the browser's default
-                              look, and a select with no arrow does not read as
-                              a select at all. */}
-                          <span className="acct__select-chevron" aria-hidden="true">
-                            <svg
-                              width="11"
-                              height="11"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              focusable="false"
-                            >
-                              <path d="m6 9 6 6 6-6" />
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* The count is the FILTERED one against the total, so a
-                          search that hides half the list says so rather than
-                          looking like half the friends went missing. */}
-                      {graph.friends.length > 0 && (
-                        <p className="acct__hint acct__listbar-count">
-                          {friendQuery.trim()
-                            ? `${fmtCount(friends.length)} of ${fmtCount(graph.friends.length)} friends match.`
-                            : `${fmtCount(graph.friends.length)} friend${graph.friends.length === 1 ? '' : 's'}.`}
-                        </p>
-                      )}
-
-                      <PeopleList
-                        people={friends}
-                        empty={
-                          graph.friends.length === 0
-                            ? 'No friends yet. Find somebody above and ask.'
-                            : `None of your friends match “${friendQuery.trim()}”.`
-                        }
-                        actions={[
-                          { action: 'remove', label: 'Unfriend' },
-                          { action: 'block', label: 'Block', tone: 'quiet' },
-                        ]}
-                        busy={social.busy}
-                        onAct={social.act}
-                        onFavorite={social.favorite}
-                      />
-                    </AccountSub>
-
-                    <AccountSub
-                      title="Sent By You"
-                      what="Requests you have made that have not been answered yet."
-                    >
-                      <PeopleList
-                        people={graph.outgoing}
-                        empty="You have not asked anybody."
-                        actions={[{ action: 'cancel', label: 'Withdraw' }]}
-                        busy={social.busy}
-                        onAct={social.act}
-                      />
-                    </AccountSub>
-
-                    <AccountSub
-                      title="Blocked"
-                      what="A block ends any friendship and clears anything pending in both directions. Unblocking asks nothing, because it takes nothing away."
-                    >
-                      <PeopleList
-                        people={graph.blocked}
-                        empty="You have not blocked anybody."
-                        actions={[{ action: 'unblock', label: 'Unblock' }]}
-                        busy={social.busy}
-                        onAct={social.act}
-                      />
-                    </AccountSub>
-                  </>
-                )}
+                <SocialFold social={social} />
               </AccountFold>
 
               {/* ── privacy ────────────────────────────────────────────── */}

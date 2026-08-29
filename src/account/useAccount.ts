@@ -492,11 +492,14 @@ export type PeopleSearch = {
  * apply and is not needed: this is a `setTimeout` that fires once per pause
  * and is cleared by the next keystroke, not a loop.
  *
- * ## An empty box is a browse, not an empty state
+ * ## An empty box lists nobody, and that is the point
  *
- * It runs the read with an empty query and gets back the accounts this reader
- * may open. Somebody who has never used this before should see people in it,
- * not an instruction.
+ * It used to browse: an empty query answered with every account on the
+ * project. That is a membership list, it is a fact about other people, and
+ * nobody asked to publish it — the owner reported it in one sentence. Bible
+ * Educator, the app this was asked to be like, has no such thing. So the read
+ * does not fire until two characters are typed, and Postgres refuses below
+ * that floor as well.
  *
  * ## `idle` exists so a shut section costs nothing
  *
@@ -535,10 +538,22 @@ export function usePeopleSearch(active: boolean): PeopleSearch {
       return
     }
 
+    /*
+     * **Nothing is read until something is typed**, and two characters is the
+     * floor. This box used to browse on an empty query and answered with every
+     * account on the project — a membership list nobody asked for, and the
+     * thing the owner reported. The floor is enforced in Postgres as well
+     * (`tdg_search_profiles` returns no rows below it), because a rule that
+     * lives only in a React hook is a rule the next client does not have; this
+     * half is here so the panel does not spend a round trip to be told nothing.
+     */
+    if (query.trim().length < 2) {
+      setState({ kind: 'idle' })
+      setBusy(false)
+      return
+    }
+
     let cancelled = false
-    // The first read has nothing to debounce — a fold opening should not wait
-    // a fifth of a second to start. Only typing does.
-    const wait = query.trim() === '' ? 0 : 220
     setBusy(true)
     const timer = window.setTimeout(() => {
       // `checking` only when there is nothing on screen yet. After that the
@@ -550,7 +565,7 @@ export function usePeopleSearch(active: boolean): PeopleSearch {
         setBusy(false)
         setState(people === null ? { kind: 'error' } : { kind: 'ok', people })
       })
-    }, wait)
+    }, 220)
 
     return () => {
       cancelled = true

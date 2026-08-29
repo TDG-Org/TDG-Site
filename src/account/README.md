@@ -16,6 +16,8 @@ are the authority for every sentence below.
 | --- | --- |
 | `types.ts` | `Audience`, `PrivacyControl`, `PrivacyGroup`, `AccountStats`. **No key, audience or app id is written down here.** |
 | `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph — its seven verbs, the people search and the favourite toggle. |
+| `People.tsx` | A person as a CARD, the grid they sit in, and the search pill. Bible Educator's Friends & Sharing, in this site's materials. |
+| `SocialFold.tsx` | The Friends & Social panel: Find People, and the three views behind it. |
 | `graphRevision.ts` | One number that goes up when this account's social graph changes, and the hook that re-renders on it. What stops three surfaces drawing three different answers at once — see below. |
 | `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |
 | `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
@@ -138,107 +140,129 @@ table, one set of buttons, wherever a person is drawn.
 
 ## Finding people, and arranging the ones you know
 
-Three controls, and only one of them is a request.
+**This panel is Bible Educator's Friends & Sharing, and the shape is not a loose
+resemblance.** It was built as a stack of full-width rows with a directory at
+the top, and the report was two sentences: *"I should not be seeing every single
+user with an account in Friends & Social"* and *"That app's friends list are
+also in cards for each friend/user added. Make it look like that."* Both were
+right. What follows is what that app actually does, read out of
+`src/tabs/profile/friendsPanel.ts` rather than remembered.
 
-**Find People is a real read**, `tdg_search_profiles`, over every account on the
-project — this browser holds none of them. It answers as you type, 220ms after
-you stop, and **an empty box browses rather than refusing**: a directory that
-shows nothing until you have guessed part of a name is one nobody can explore,
-and "type something to search" is the emptiest of the empty states. The
-previous list stays on screen while a new one is in flight and a `Searching…`
-flag carries the news, because a list that empties on every keystroke and fills
-again reads as a page breaking.
+### There is no directory, and there never was one over there
 
-It **replaced the Add A Friend box**, which took one exact handle and answered
-only after the request had been sent. Everything that box did, this does — an
-exact handle still resolves, including one belonging to an account that keeps
-its page private, and including one belonging to an account that has blocked
-you — and it answers BEFORE the press. Two boxes doing one job on one panel
-would be the clutter, not the courtesy. `addFriendByUsername` went with it.
+Bible Educator has a box you type a `@username` into and a box that searches the
+friends you already have. It cannot page through the accounts on the project,
+and neither can this any more: **Find People answers nothing until two
+characters are typed.** A roll-call of everybody who has signed up is a fact
+about other people, and it was published because it happened to be the easiest
+thing to render.
 
-It is its own component (`FindPeople`) for one reason: it needs to know whether
-the fold it lives in is OPEN, and `useSections` is only readable from inside the
-provider. A shut section that had already searched would be a request made for a
-panel nobody has looked at, on a page that already makes six on arrival.
+The floor is in Postgres — `tdg_search_profiles` returns no rows below two
+characters, see
+[`20260829010000_a_people_search_is_not_a_directory.sql`](../../supabase/migrations/README.md)
+— and the hook stops short of the round trip as well. A rule that lives only in
+a React hook is a rule the next client does not have.
 
-**The friends filter and sort are NOT reads.** `tdg_my_friends` answers
-alphabetically and hands over `favorite` and `sort_order` with every row, and
-this list is the handful of people somebody actually knows — a round trip per
-keystroke to reorder twenty names would be a request spent on arithmetic the
-browser already has the data for. Both controls are drawn even when there is
-nothing to arrange, and go quiet instead: a control that appears once a list is
-long enough is a control nobody knows exists until the day it turns up. The
-count above the list is the FILTERED one against the total, so a search that
-hides half the list says so rather than looking like half the friends went
-missing.
+What the box keeps is everything the old **Add A Friend** did: an exact handle
+still resolves, including one belonging to an account that keeps its page
+private and one belonging to an account that has blocked you. It just answers
+with the person's card in front of you instead of after the press.
 
-**Favourites First is the default and degrades to A–Z.** Somebody who has never
-starred anybody sees exactly what the server sent; somebody who has sees the
-people they picked at the top. Every sort ends in the same alphabetical
-tiebreak, so a re-read after an action looks like nothing happened rather than
-like the list reshuffling itself.
+### Three views behind one panel, and the counts ride the buttons
+
+Friends, **Friend Requests** and **Blocked**, reached by two buttons that carry
+their own counts — which is the whole point of putting them there: both are
+answerable from the friends list without going in. Requests and blocks are
+answered rarely, and three sections stacked down one panel made the two you are
+not using into scenery.
+
+The count on Friend Requests is the hot chip and the count on Blocked is quiet.
+Accent means *this needs you*; a block needs nothing, and painting its count the
+same colour would say the opposite of what a block is. Bible Educator's own note
+says exactly that, and it is repeated here because the temptation to make both
+counts look important is real.
+
+### A person is a card
+
+`People.tsx` — a monogram, a name, a handle, and the actions under them, in a
+grid whose track floor is Bible Educator's own 230px. Friends, search results,
+incoming requests, requests you sent and people you have blocked are **one
+component with different actions**, because five lookalike cards would be five
+chances for one to drift, and the drift always shows in the same place: a person
+whose card offers different buttons depending on which list found them.
+
+The one honest translation is the primary action. Over there a card leads with
+**Share With**, because sharing Scripture is what that app's friends are for,
+and Public Profile hangs underneath on its own row. This site has nothing to
+share, so the profile IS the point of a card and it takes the lead. Copying a
+Share button we cannot honour would have been copying the picture rather than
+the reasoning.
+
+**The card leads with the affirmative action and tucks the endings behind a
+toggle.** Accept, Add Friend and Unblock are on the front; Unfriend and Block
+are behind the three-dot button, exactly as they are over there, because a card
+whose front row offers Unfriend and Block is a card about getting rid of
+somebody.
+
+**There is no avatar and the monogram is not a placeholder for one.** There is
+nowhere to upload a picture on this project and nothing that stores one, so two
+letters of somebody's own name is the whole picture — which says more than a
+grey circle with a stranger's outline in it.
+
+### Both endings ask first, in place
+
+Bible Educator opens a confirm dialog for Unfriend and Block, and exports both
+sentences so the two places that can start them cannot ask different questions.
+This site asks the same two questions **in the card**, because AGENTS.md rule 11
+settled that for the Store's money presses: the ask replaces the row it was
+started from rather than opening a second thing over the first. Its two buttons
+are a mirrored pair taking their padding from one variable on the row — measured
+equal, 97px each.
+
+### Sorting, and the one option that is missing
+
+`Name (A–Z)` and `Name (Z–A)`, with **favourites floating to the top of both**.
+That is Bible Educator's rule rather than a mode of its own: a star you press
+should show in whatever order you are reading. `Array.prototype.sort` is stable,
+so the name sort survives inside the starred and unstarred groups.
+
+There is deliberately no **Recently Added**. That app has one because its friend
+list arrives in the order friendships were made; `tdg_my_friends` answers
+alphabetically and keeps no join date, so the same option here could only be a
+guess wearing a real label.
+
+**The friends filter and the sort are NOT reads.** `tdg_my_friends` hands over
+`favorite` with every row and this is the handful of people somebody actually
+knows — a round trip per keystroke to reorder twenty names would be a request
+spent on arithmetic the browser already has. Find People is the opposite case
+and is a real read, over accounts this browser holds none of.
 
 **The star was dead until 2026-08-28.** `tdg_my_friends` returned `favorite`
 false and `sort_order` null for every row — hardcoded — while
 `tdg_set_favorites` and `tdg_set_friend_order` went on writing the two columns
-those values are supposed to come from. A star you press, that saves, and that
-is gone when you come back. The read is fixed, and the press goes through
-`tdg_set_favorite`, a verb that names ONE person and one direction: the plural
-takes the whole set, and two presses in flight together each send a set computed
-before the other landed, so the loser silently un-stars what the winner just
-starred.
-
-## Three surfaces read the graph, and one press has to reach all of them
-
-`useSocial` re-reads on every press, so the four lists are always right. Nothing
-else was: the counters at the top of this page, the **account menu in the nav** —
-a second `useAccountStats` in a component that has never heard of this page — and
-the Find People directory each read once and never again.
-
-Driven and measured on 2026-08-28, all three wrong at once, all three on screen:
-unfriending somebody from Friends left them in the search results above it still
-chipped **Friend**, with Unfriend and Block under their name; blocking somebody
-from those results left them **unchipped** in that same list; and the tiles went
-on printing a friend count from before the press, as did the nav's glance. A
-panel contradicting itself in three places is not a stale cache, it is a page
-that looks broken.
-
-[`graphRevision.ts`](graphRevision.ts) is the fix: a module-level counter with
-`useSyncExternalStore`, bumped by `useSocial.act` and by
-[`../people/`](../people/README.md)'s `usePerson.act` **after** the verb has
-landed and the graph has been read back. `useAccountStats` and `usePeopleSearch`
-take it as a dependency and re-read.
-
-Three things about it are load-bearing:
-
-- **It is a module-level store, not a prop.** The nav's menu is not inside this
-  page and never will be, so there is no prop to thread and no common parent to
-  hold state on. `useSyncExternalStore` is React's own answer for a value that
-  lives outside React, and it is twenty lines with no dependency (AGENTS.md §1).
-- **It is bumped after the read, never at the press.** The search list used to
-  call its own `reload()` beside a fire-and-forget `act`, which read the world
-  before the write had landed and got back exactly what it already had. That
-  call is gone; this replaces it and covers the presses made elsewhere too.
-- **A star does not bump it.** `tdg_set_favorite` changes no standing, no
-  counter and nothing another surface draws, so a re-read of nine counters and
-  the whole directory for one would be two round trips to redraw the same
-  numbers.
-
-**A re-read after a graph change keeps what is on screen.** The counters blank
-to `Counting…` only when the ACCOUNT changes, where every figure showing belongs
-to somebody else; on a graph change they stay put until the new ones land, or
-one press on one friend would look like the whole page reloading.
+those values come from. A star you press, that saves, and that is gone when you
+come back. The read is fixed, and the press goes through `tdg_set_favorite`, a
+verb that names ONE person and one direction: the plural takes the whole set,
+and two presses in flight together each send a set computed before the other
+landed, so the loser silently un-stars what the winner just starred.
 
 ## Your own profile, as everybody else sees it
 
-`View Your Public Profile` sits in the identity row under the page title, not
-under Privacy. The question it answers is *what do people see*, and the honest
-way to answer that is to show the actual page rather than describe it —
-[`../people/`](../people/README.md) draws it, and your own handle opens it.
+**Two real buttons in their own row under the identity**: `View Public Page`
+and `Copy Profile Link`. It was one small tinted link at the end of the row of
+chips, and it was reported as hard to see — Bible Educator's banner carries the
+same pair as buttons, and a control answering *what do people see about me* is
+not a footnote on a row of tags.
+
+Copy takes the address bar's **own** origin and path rather than a written one:
+this site is served from a subpath in production and from a bare host in
+development, and a copied link that only works on the machine it was copied
+from is worse than no button. The confirmation is a moment, not a state — left
+up it would still be claiming a copy made yesterday.
 
 Without a handle there is no page, because a profile's address is
 `#/user/<handle>` and there is no other one. So the row says how to get one
-instead of leaving a gap where everybody else has a link.
+instead of offering a button that goes nowhere.
 
 ## An app is called what it is called, never what the column says
 

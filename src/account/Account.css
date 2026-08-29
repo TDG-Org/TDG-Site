@@ -424,27 +424,36 @@
   overflow-wrap: anywhere;
 }
 
-/* ── people ───────────────────────────────────────────────────────────────
-   One card per person, and the actions on it are decided by where you already
-   STAND with them (see PersonCard). The card wraps its two halves rather than
-   squeezing them, because a name and three buttons do not fit on one line at
-   320px and a button sliced by a card edge is the bug this page already fixed
-   once.                                                                      */
+/* ── people, as cards ─────────────────────────────────────────────────────
+   Bible Educator's Friends & Sharing, in this site's own materials: an
+   auto-filling grid of cards, each a monogram beside a name and a handle with
+   the actions under them. It was a stack of full-width rows, which is a
+   different thing holding the same words — and it was reported as exactly
+   that.
 
-.acct__people {
+   `.card`'s tilt and edge-light are deliberately NOT borrowed. That treatment
+   is for a product card somebody browses; twenty of them lifting under the
+   pointer while you look for one friend is a list that will not sit still.
+   These take the surface and the border and nothing else.                    */
+
+.acct__grid {
+  /* Bible Educator's own floor, kept because the content is the same shape.
+     `min(100%, …)` because a track whose minimum is wider than its container
+     overflows it, and at 320px the shell is 284px (AGENTS.md rule 16). */
+  --acct-card-min: 230px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--acct-card-min)), 1fr));
+  gap: 10px;
+}
+
+.acct__pcard {
+  --acct-pcard-pad: 11px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-.acct__person {
-  --acct-person-pad: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px var(--acct-person-pad);
-  padding: var(--acct-person-pad) calc(var(--acct-person-pad) + 1px);
-  border-radius: 3px;
+  gap: 9px;
+  min-width: 0;
+  padding: var(--acct-pcard-pad) calc(var(--acct-pcard-pad) + 1px);
+  border-radius: 4px;
   border: 1px solid var(--border);
   background-color: var(--surface);
   transition:
@@ -452,46 +461,475 @@
     opacity 0.2s ease,
     var(--t-theme);
 }
-.acct__person:hover {
+.acct__pcard:hover {
   border-color: var(--border-hover);
+}
+/* A starred friend is marked on the CARD as well as on the star, so the group
+   at the top of the list reads as a group rather than as three cards that
+   happen to have a filled glyph in the corner. */
+.acct__pcard[data-fav] {
+  border-color: color-mix(in srgb, var(--warm) 40%, var(--border));
 }
 /* Mid-action the card goes quiet and its buttons are disabled, but nothing
    moves and nothing is replaced: the list is about to be re-read, and a card
    that vanished before the answer arrived would look like the action had
    already happened when it might yet be refused. */
-.acct__person[data-busy] {
+.acct__pcard[data-busy] {
   opacity: 0.6;
 }
-.acct__person-who {
+
+.acct__pcard-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* The monogram. A gradient tile rather than a grey circle with a stranger's
+   outline in it: there is no avatar on this project, nowhere to upload one and
+   nothing that stores one, and two letters of somebody's own name say more
+   than a placeholder person does. */
+.acct__mono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  font: 700 12.5px var(--font-body);
+  letter-spacing: 0.02em;
+  color: var(--invert-fg);
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+}
+
+.acct__pcard-id {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1 1 200px;
-  min-width: min(100%, 200px);
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.acct__person-name {
+.acct__pcard-name {
   font: 600 13.5px var(--font-body);
   color: var(--text);
-  overflow-wrap: anywhere;
+  /* One line with an ellipsis rather than wrapping anywhere: inside a 230px
+     card a long display name wrapped to four lines and pushed the button off
+     the bottom of an otherwise identical neighbour. The whole of it is still
+     on the profile the card opens. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.acct__person-handle {
-  font: 500 11.5px var(--font-mono);
+.acct__pcard-handle {
+  font: 500 11px var(--font-mono);
   letter-spacing: 0.03em;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.acct__person-bio {
-  margin-top: 2px;
-  max-width: 62ch;
-  font: 400 12px/1.5 var(--font-body);
+/* Two lines at most. A bio is context on a card, not the card. */
+.acct__pcard-bio {
+  margin: 0;
+  font: 400 11.5px/1.5 var(--font-body);
   color: var(--faint);
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.acct__person-acts {
+
+/* Where you stand, on a card that is not one of your friends. The two block
+   words are tinted because a card that showed nothing would leave the reader
+   working out why an account has no bio and no buttons. */
+.chip.acct__pcard-chip {
+  flex: none;
+}
+.acct__pcard-chip[data-standing='they_asked'] {
+  color: var(--live-fg);
+  background-color: var(--live-bg);
+  border-color: var(--live-border);
+}
+.acct__pcard-chip[data-standing='blocked'],
+.acct__pcard-chip[data-standing='blocked_by'] {
+  color: var(--warm);
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+
+/* Starring is a toggle and has to read as one BEFORE it is pressed: an outline
+   star that fills. It reserves its box on every friend card, so a list where
+   one person is starred is not a list where one card is 17px narrower. */
+.acct__star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.12s ease,
+    var(--t-theme);
+}
+.acct__star:hover:not(:disabled) {
+  color: var(--warm);
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+.acct__star:active:not(:disabled) {
+  transform: scale(0.88);
+}
+.acct__star[data-on] {
+  color: var(--warm);
+}
+.acct__star:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.acct__star:disabled {
+  cursor: not-allowed;
+}
+
+/* The action row. The way into the person's page leads and takes the width —
+   on this site a profile IS what a card is for, where Bible Educator's card
+   leads with Share With and hangs the profile underneath it. */
+.acct__pcard-foot {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.acct__pcard-foot > .appview__ghost {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+}
+.acct__pcard-foot a.acct__pcard-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+/* Somebody with no handle has no page. The slot keeps its size, so a grid of
+   cards does not develop a short one. */
+.acct__pcard-open--none {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: italic 400 11.5px var(--font-body);
+  color: var(--faint);
+}
+
+/* The toggle for what a card does not lead with. Square, so it cannot be
+   mistaken for one of the actions beside it. */
+.acct__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  flex: none;
+  padding: 0;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.acct__more:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+.acct__more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.acct__more:disabled {
+  cursor: not-allowed;
+}
+.acct__pcard-more {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
 }
+.acct__pcard-more > .appview__ghost {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+/* ── the ask, in place ────────────────────────────────────────────────────
+   Unfriending and blocking are asked about first, and the question replaces
+   the row it was started from rather than opening a dialog over the card —
+   AGENTS.md rule 11 settled that for the Store's money presses, and this is
+   the same shape of question.                                               */
+
+.acct__ask-inline {
+  --acct-ask-pad: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--acct-ask-pad);
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--warm) 34%, var(--border));
+  background-color: color-mix(in srgb, var(--warm) 7%, transparent);
+}
+.acct__ask-q {
+  margin: 0;
+  font: 400 11.5px/1.5 var(--font-body);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+/* A mirrored pair under rule 6: both take their padding from ONE variable on
+   the row, because `flex: 1 1 0` with `border-box` splits only what is left
+   after each item's own padding — which is how this site's ghost and buy
+   paddings once made a pair 241px and 249px. */
+.acct__ask-pair {
+  --acct-ask-btn-pad: 10px;
+  display: flex;
+  gap: 6px;
+}
+.acct__ask-pair > .appview__ghost {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  padding-inline: var(--acct-ask-btn-pad);
+}
+.acct__ask-yes {
+  border-color: color-mix(in srgb, var(--warm) 50%, transparent);
+  color: var(--warm);
+}
+
+/* ── the bar over a list ──────────────────────────────────────────────── */
+
+.acct__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.acct__bar-count {
+  margin-top: -4px;
+}
+.acct__view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+/* The count rides INSIDE the button, which is why it needs no margin of its
+   own. Friend Requests wears the hot chip and Blocked a quiet one: accent
+   means "this needs you", and a block needs nothing — painting its count the
+   same colour would say the opposite of what a block is. */
+.chip.acct__count {
+  min-width: 18px;
+  justify-content: center;
+}
+
+/* A search box that looks like one: the glyph inside the pill, never a bare
+   search input wearing a placeholder (rule 5). Bible Educator's `.searchwrap`,
+   in this site's tokens. */
+.acct__seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+  padding-left: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  color: var(--faint);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.acct__seek:hover {
+  border-color: var(--border-hover);
+}
+.acct__seek:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--text);
+}
+.acct__seek[data-disabled] {
+  opacity: 0.55;
+}
+.acct__seek-glyph {
+  flex: none;
+}
+.acct__seek-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 13px 8px 0;
+  border: 0;
+  background-color: transparent;
+  font: 400 13px var(--font-body);
+  color: var(--text);
+}
+.acct__seek-input:focus {
+  outline: none; /* the pill draws it, above */
+}
+.acct__seek-input::placeholder {
+  color: var(--faint);
+  opacity: 0.8;
+}
+/* Chrome paints its own clear button into a search input. It is unstyleable
+   and matches nothing else here, so it goes. */
+.acct__seek-input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.acct__bar-sort {
+  position: relative;
+  display: inline-flex;
+  /* STRETCH, so the select fills it: the pill and the select are a mirrored
+     pair on this row and their heights must come from one place rather than
+     from two sets of paddings that happen to agree. */
+  align-items: stretch;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.acct__bar-sort[data-disabled] {
+  opacity: 0.55;
+}
+.acct__select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 8px 30px 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--bg2);
+  color: var(--text);
+  font: 400 13px var(--font-body);
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    var(--t-theme);
+}
+.acct__select:hover:not(:disabled) {
+  border-color: var(--border-hover);
+}
+.acct__select:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.acct__select:disabled {
+  cursor: not-allowed;
+}
+/* The popup list is drawn by the OS. These two do land in Firefox and Chrome
+   on Windows, and they are what stops the list rendering white-on-white in
+   dark mode. */
+.acct__select option {
+  background-color: var(--bg2);
+  color: var(--text);
+}
+.acct__select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  pointer-events: none;
+  color: var(--muted);
+}
+
+/* Requests are two lists under one view, each with its own heading. */
+.acct__views {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.acct__view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.acct__view-title {
+  margin: 0;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── your own page, and its address ───────────────────────────────────────
+   Two real buttons in their own row under the identity. This was one small
+   tinted link at the end of the chips and was reported as hard to see; Bible
+   Educator's banner carries the same pair as buttons, and a control that
+   answers "what do people see about me" is not a footnote on a row of tags. */
+
+.acct__self {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.acct__self-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
+  font: 600 12.5px var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    var(--t-theme);
+}
+.acct__self-btn:hover {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.acct__self-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* The second of a pair, and quieter: copying the address is what you do once
+   you have decided to send it, and two equally weighted buttons would be a
+   choice nobody is being asked to make. */
+.acct__self-btn--quiet {
+  border-color: var(--border);
+  background-color: transparent;
+  color: var(--muted);
+}
+.acct__self-btn--quiet:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background-color: transparent;
+}
+.acct__self-none {
+  margin: 0;
+  max-width: 62ch;
+  font: 400 12px/1.6 var(--font-body);
+  color: var(--faint);
+}
+
 /* Block and Unfriend are quieter than Accept, because one of them is the thing
    you came to do and the other two are what you do to somebody once. Never a
    danger colour: these are reversible, and painting them red would put a
@@ -508,21 +946,6 @@
 }
 
 /* ── asking somebody ──────────────────────────────────────────────────── */
-
-.acct__ask {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.acct__ask-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.acct__ask-row .acct__input-wrap {
-  flex: 1 1 200px;
-  min-width: min(100%, 200px);
-}
 
 /* ── privacy ──────────────────────────────────────────────────────────── */
 
@@ -750,7 +1173,11 @@
   .acct__row-text,
   .acct__seg,
   .acct__seg-btn,
-  .acct__person,
+  .acct__pcard,
+  .acct__star,
+  .acct__seek,
+  .acct__select,
+  .acct__self-btn,
   .acct__app,
   .acct__input-wrap,
   .acct__input,
@@ -759,218 +1186,3 @@
   }
 }
 
-/* ── finding people, and arranging the ones you know ──────────────────────
-   Added with the profile pages (v2.10.0). Everything here is either a control
-   the two lists share or the one thing a person card gained: a way in.       */
-
-/* Your own profile, from the identity row under the page title. It is a link
-   rather than a button because it opens a page, and it takes the handle's own
-   colour so the two read as one thought — "this is who you are, and this is
-   what that looks like to somebody else". */
-.acct__self-link {
-  font: 600 12px var(--font-body);
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease,
-    var(--t-theme);
-}
-.acct__self-link:hover {
-  border-bottom-color: var(--accent);
-}
-.acct__self-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 1px;
-}
-/* No handle, no page. It keeps the row's shape and says what to do about it,
-   rather than leaving a gap where everybody else has a link. */
-.acct__self-link--off {
-  color: var(--faint);
-  border-bottom: 0;
-  font-weight: 400;
-  font-style: italic;
-}
-
-/* The bar over a list: a filter on the left, a sort on the right. Both are
-   drawn even when the list is empty — a control that appears once a list is
-   long enough is a control nobody knows exists until the day it turns up —
-   and they go quiet together from ONE variable rather than two literals. */
-.acct__listbar {
-  --acct-listbar-gap: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: var(--acct-listbar-gap);
-}
-.acct__listbar-find {
-  flex: 1 1 200px;
-  min-width: min(100%, 200px);
-}
-.acct__listbar-sort {
-  position: relative;
-  display: inline-flex;
-  /* STRETCH, not center, and the select fills it. The two controls on this bar
-     are a mirrored pair under AGENTS.md rule 6, so their heights must come from
-     one place rather than from two sets of paddings that happen to agree: the
-     search box and the select were measured at 38.25px and 38px, a quarter of a
-     pixel apart because a 13.5px/1.5 line box and a 13px normal one round
-     differently. Matched by construction here, so neither can drift when the
-     other's font moves. */
-  align-items: stretch;
-  min-width: 0;
-  flex: 0 1 auto;
-}
-.acct__listbar-sort[data-disabled] {
-  opacity: 0.55;
-}
-.acct__listbar-count {
-  margin-top: -8px;
-}
-
-/* A select that looks like this site rather than like Windows. The twin of
-   `.dev__select`, deliberately not an import of it: that file is the Developer
-   console's and is documented as internal, the same reason `format.ts` is a
-   copy. What the two must keep agreeing on is that neither ever ships the
-   native control (rule 5). */
-.acct__select {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  min-width: 0;
-  padding: 9px 32px 9px 12px;
-  border-radius: 2px;
-  border: 1px solid var(--border);
-  background-color: var(--bg2);
-  color: var(--text);
-  font: 400 13px var(--font-body);
-  cursor: pointer;
-  outline: none;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    var(--t-theme);
-}
-.acct__select:hover:not(:disabled) {
-  border-color: var(--border-hover);
-}
-.acct__select:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-.acct__select:disabled {
-  cursor: not-allowed;
-}
-.acct__listbar-sort .acct__select {
-  height: 100%;
-}
-/* The popup list is drawn by the OS. These two do land in Firefox and Chrome
-   on Windows, and they are what stops the list rendering white-on-white in
-   dark mode. */
-.acct__select option {
-  background-color: var(--bg2);
-  color: var(--text);
-}
-.acct__select-chevron {
-  position: absolute;
-  right: 11px;
-  /* The wrapper stretches, so the chevron has to say where it sits itself. */
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  pointer-events: none;
-  color: var(--muted);
-}
-
-/* Chrome paints its own clear button into a search input. It is unstyleable
-   and matches nothing else here, so it goes; clearing the box is Escape and
-   selecting the text, the same as every other field on this page. */
-.acct__input[type='search']::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-/* ── a person, with a way in ──────────────────────────────────────────── */
-
-/* The star, the name and the standing chip sit on one line so the name keeps
-   its place whether or not the other two are drawn. */
-.acct__person-top {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* Starring is a toggle, and it has to read as one BEFORE it is pressed:
-   an outline star that fills. It reserves its box in every friend card, so a
-   list where one person is starred is not a list where one row is 13px wider
-   than the others. */
-.acct__star {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 auto;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  background: none;
-  color: var(--faint);
-  cursor: pointer;
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    var(--t-theme);
-}
-.acct__star:hover:not(:disabled) {
-  color: var(--warm);
-  border-color: color-mix(in srgb, var(--warm) 35%, transparent);
-}
-.acct__star[data-on] {
-  color: var(--warm);
-}
-.acct__star:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.acct__star:disabled {
-  cursor: not-allowed;
-}
-
-/* Where you stand with somebody, on their card. The two block words are
-   tinted for the reason the profile page tints them: a page that showed
-   nothing would leave the reader working out why an account has no bio and no
-   buttons. Every colour is a token, so both themes resolve. */
-.acct__person-chip[data-standing='friend'] {
-  color: var(--live-fg);
-  background-color: var(--live-bg);
-  border-color: var(--live-border);
-}
-.acct__person-chip[data-standing='blocked'],
-.acct__person-chip[data-standing='blocked_by'] {
-  color: var(--warm);
-  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
-  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
-}
-
-/* A ghost button and a link dressed as one must be the same height, and an
-   `<a>` has no button box. The mirrored half of the pair, taking its sizing
-   from the same rule rather than from a second set of numbers (rule 6). */
-.acct__person-acts a.acct__person-link {
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .acct__self-link,
-  .acct__star,
-  .acct__select {
-    transition: var(--t-theme);
-  }
-}
