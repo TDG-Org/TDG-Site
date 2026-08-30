@@ -504,8 +504,9 @@ export function Nav({
   const route = useRoute()
   const [scrolled, setScrolled] = useState(false)
   // A press of the mark counts up rather than flipping a flag: the count is the
-  // strip's `key`, so pressing it again mid-roll remounts the strip and the
-  // keyframes restart from the beginning instead of finishing the old run.
+  // strip's `key`, so pressing it again mid-roll remounts the strip. The mark
+  // is NOT remounted — it is the link, and a keyboard press must not lose its
+  // focus — so its own animations are rewound by hand in the effect below.
   const [bless, setBless] = useState(0)
   const blessTimer = useRef<number | undefined>(undefined)
   // Whether the link row has to stand down for the words. Measured, never
@@ -520,6 +521,7 @@ export function Nav({
   const indicator = useRef<HTMLSpanElement | null>(null)
   const linkRow = useRef<HTMLDivElement | null>(null)
   const actions = useRef<HTMLDivElement | null>(null)
+  const markwrap = useRef<HTMLDivElement | null>(null)
   const strip = useRef<HTMLSpanElement | null>(null)
   const progress = useRef<HTMLDivElement | null>(null)
   const panel = useRef<HTMLDivElement | null>(null)
@@ -534,43 +536,70 @@ export function Nav({
   }
 
   /**
-   * How much bar the blessing actually has, and what to do when it is not
-   * enough.
+   * Rewind the sword, and work out how much bar the words have.
    *
-   * Measured off the rendered boxes rather than gated on a breakpoint, because
-   * the width the bar runs out of room at is not a number anybody can write
-   * down: it moves with the seven links' own text, with the Developer tab a
-   * developer adds to them, with the Sign in button becoming an avatar, and
-   * with the browser's font. Measured here: at 1440px the mark is 350px clear
-   * of the links and the strip wants 155; at 1000px it is 133px clear, and the
-   * words would have crossed Origin and Apps.
+   * REWIND FIRST, because this is the bug the flourish shipped with. The strip
+   * is keyed on the press count and remounts, so its animations restart; the
+   * mark cannot be remounted — it is the link home, and re-creating it under a
+   * keyboard press would drop the focus — so `data-bless` merely stays true
+   * across a second press, the mark's CSS animations never see a change, and
+   * they carry on from wherever the first press left them. Press twice and the
+   * words rolled out beside a cross that had already finished turning and had
+   * no reason to turn again. Setting `currentTime` to 0 on everything under the
+   * wrapper restarts the whole timeline together — the sword, the glint on its
+   * pseudo-element, and the strip that was already at zero anyway.
    *
-   * Whichever box is to the right decides which answer is right — see the two
+   * Then the room. Measured off the rendered boxes rather than gated on a
+   * breakpoint, because the width the bar runs out of room at is not a number
+   * anybody can write down: it moves with the seven links' own text, with the
+   * Developer tab a developer adds to them, with the Sign in button becoming an
+   * avatar, and with the browser's font.
+   *
+   * It measures from the POINT — where the blade will end, computed the same
+   * way the stylesheet computes it, off an untransformed wrapper whose box is
+   * the mark's own. Everything past that point scales with `--bless-size`: the
+   * blade's reach, the air after it, the words. So one ratio sizes all of it,
+   * and the variable goes on the wrapper because the sword reads it too — size
+   * the phrase alone and the sword would still be aiming at where the words
+   * used to start.
+   *
+   * Whichever box is to the right decides which answer is right; see the two
    * floors above. The phrase always plays, at every width, because a press that
    * does nothing on some monitors is worse than either answer.
    *
-   * `offsetWidth` rather than a rect, and the size is cleared before reading
-   * it: this runs again on every press, so it has to measure what the strip
-   * wants rather than what the last press left it at. The strip's width is
-   * stable from the first frame either way — the arm grows by `scaleX` and the
-   * words are revealed by `clip-path`, so neither disturbs the box being read.
+   * Under prefers-reduced-motion there is no blade, and the strip sits back at
+   * the crossbar half a mark to the left of the point this measures from. The
+   * arithmetic survives it: the fits-as-written test shifts by the same amount
+   * on both sides and is exact, and the shrunk case comes out 4.5 * (s/17 - 1)
+   * pixels short of what it predicted, which is never positive. It can only
+   * ever be too careful there, never too tight.
    */
   useEffect(() => {
+    const w = markwrap.current
     const s = strip.current
-    if (!bless || !s) {
+    if (!bless || !w || !s) {
       setBlessQuiet(false)
       return
     }
+    w.getAnimations({ subtree: true }).forEach((a) => {
+      a.currentTime = 0
+    })
+
     // `offsetParent` is null while the row is display:none — under 821px there
     // are no links in the bar at all, and the actions are the neighbour.
     const row = linkRow.current
     const beside = row && row.offsetParent !== null ? row : actions.current
-    s.style.removeProperty('--bless-size')
+    w.style.removeProperty('--bless-size')
     setBlessQuiet(false)
     if (!beside) return
 
-    const room = beside.getBoundingClientRect().left - s.getBoundingClientRect().left - 14
-    const wants = s.offsetWidth
+    // The stylesheet's own expression for the point, in JS: the mark's centre
+    // across, plus the half height the quarter turn swings the stem's end out
+    // to. The wrapper is never transformed, so its box is the mark's at rest.
+    const box = w.getBoundingClientRect()
+    const point = box.left + box.width / 2 + box.height / 2
+    const wants = s.getBoundingClientRect().right - point
+    const room = beside.getBoundingClientRect().left - point - 14
     if (room >= wants) return
 
     const size = (room / wants) * BLESS_SIZE
@@ -578,7 +607,7 @@ export function Nav({
       setBlessQuiet(true)
       return
     }
-    s.style.setProperty('--bless-size', `${Math.max(size, BLESS_MIN_BESIDE_ACTIONS).toFixed(1)}px`)
+    w.style.setProperty('--bless-size', `${Math.max(size, BLESS_MIN_BESIDE_ACTIONS).toFixed(1)}px`)
   }, [bless])
 
   // Nav state is driven by a sentinel at the very top of the page, not by a
@@ -737,7 +766,7 @@ export function Nav({
             Where the words sit is derived from that quarter turn rather than
             typed; Nav.css carries the derivation and the two landmarks it can
             aim at. Nothing here places a word by hand, at any width or size. */}
-        <div className="nav__markwrap" data-bless={bless > 0 || undefined}>
+        <div ref={markwrap} className="nav__markwrap" data-bless={bless > 0 || undefined}>
           <a href="#top" className="nav__mark" aria-label="TDG home" onClick={sayBlessing}>
             <span className="nav__mark-bar" />
             <span className="nav__mark-bar" />
@@ -746,7 +775,6 @@ export function Nav({
           {bless > 0 && (
             <span key={bless} ref={strip} className="nav__bless" aria-hidden="true">
               <span className="nav__bless-aura" />
-              <span className="nav__bless-arm" />
               <span className="nav__bless-clip">
                 {BLESSING.map((word, i) => (
                   <span
