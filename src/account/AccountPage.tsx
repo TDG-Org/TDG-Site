@@ -8,6 +8,7 @@ import { useReveal } from '../hooks/useReveal'
 import { userHash } from '../lib/route'
 import { SectionsProvider } from '../lib/sections'
 import { AccountFold, AccountSub } from './AccountFold'
+import { CloudFold } from '../cloud/CloudFold'
 import { SocialFold } from './SocialFold'
 import { useAppNames } from './appNames'
 import { fmtCount, fmtDay, fmtRelative, prettyId, usernameFreeAt } from './format'
@@ -784,6 +785,14 @@ export default function AccountPage({
                   </>
                 )}
               </AccountFold>
+
+              {/* ── tdg cloud ──────────────────────────────────────────────
+                  The whole surface lives in src/cloud/ — this page only gives
+                  it a row, so the fold, the Store shelf and the Developer
+                  console all read the same state from the same folder. Coming
+                  Soon until TDG Core's launch flag flips; the management face
+                  behind it is already built. */}
+              <CloudFold />
 
               {/* ── app stats ──────────────────────────────────────────── */}
               <AccountFold

@@ -18,6 +18,7 @@ are the authority for every sentence below.
 | `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph — its seven verbs, the people search and the favourite toggle. |
 | `People.tsx` | A person as a CARD, the grid they sit in, and the search pill. Bible Educator's Friends & Sharing, in this site's materials. |
 | `SocialFold.tsx` | The Friends & Social panel: Find People, and the three views behind it. |
+| *(from `src/cloud/`)* `CloudFold.tsx` | The TDG Cloud fold this page mounts between Your Stats and App Stats — Coming Soon until TDG Core opens the door, the plan/storage/data controls after. It lives with the rest of the Cloud surface; see [`src/cloud/README.md`](../cloud/README.md). |
 | `Friends.tsx` | Everything about drawing the friends list, shared by the section and the See All panel: the sort, the search-and-sort bar, the count line, the column measurement, and the panel itself. |
 | `graphRevision.ts` | One number that goes up when this account's social graph changes, and the hook that re-renders on it. What stops three surfaces drawing three different answers at once — see below. |
 | `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |

@@ -23,6 +23,11 @@ import {
 } from './controls'
 import { FeedbackTab, feedbackHaystacks } from './FeedbackTab'
 import { ContentTab, useSiteContentDraft } from './ContentTab'
+// The Cloud verbs live with the surface that owns them, like the badge and
+// site-content clients do. See src/cloud/README.md.
+import { getCloudConfig, getCloudMetrics, getRetentionReport } from '../cloud/api'
+import type { CloudConfigMeta, RetentionRow } from '../cloud/api'
+import { CloudTab } from './CloudTab'
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
@@ -53,11 +58,12 @@ import './DevConsole.css'
 /** The server clamps every ledger read to this, so asking for more is a lie. */
 const LEDGER_CAP = 1000
 
-type Tab = 'accounts' | 'content' | 'feedback' | 'purchases' | 'audit'
+type Tab = 'accounts' | 'content' | 'cloud' | 'feedback' | 'purchases' | 'audit'
 
 const TABS: { id: Tab; label: string; what: string }[] = [
   { id: 'accounts', label: 'Accounts', what: 'Find anyone, and change anything about them.' },
   { id: 'content', label: 'Content', what: 'What this site says about our apps, and which ones it shows.' },
+  { id: 'cloud', label: 'Cloud', what: 'TDG Cloud: the launch switch, plans and prices, usage, economics and retention.' },
   { id: 'feedback', label: 'Feedback', what: 'What users sent us from inside the apps, and our replies.' },
   { id: 'purchases', label: 'Purchases', what: 'Every payment and free grant TDG has recorded.' },
   { id: 'audit', label: 'Audit Log', what: 'Every action a developer has taken, in every app.' },
@@ -145,6 +151,15 @@ function DevConsoleBody({
 
   const [allFeedback, setAllFeedback] = useState<DevFeedback[]>([])
   const [feedbackState, setFeedbackState] = useState<'loading' | 'ready' | 'error'>('loading')
+
+  /* TDG Cloud's three reads: the config document the tab edits, the metrics
+   * (a read with a snapshot side effect), and the retention report. Held here
+   * so all three hang off the one Refresh, like everything else. */
+  const [cloudConfig, setCloudConfig] = useState<CloudConfigMeta | null>(null)
+  const [cloudConfigState, setCloudConfigState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [cloudMetrics, setCloudMetrics] = useState<Record<string, unknown> | null>(null)
+  const [cloudMetricsState, setCloudMetricsState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [cloudRetention, setCloudRetention] = useState<RetentionRow[] | null>(null)
 
   const [busy, setBusy] = useState<string | null>(null)
   const detailRef = useRef<HTMLDivElement | null>(null)
@@ -319,6 +334,33 @@ function DevConsoleBody({
     }
   }, [])
 
+  const cloudSeq = useRef(0)
+  const loadCloud = useCallback(async () => {
+    const seq = ++cloudSeq.current
+    setCloudConfigState((s) => (s === 'ready' ? s : 'loading'))
+    setCloudMetricsState((s) => (s === 'ready' ? s : 'loading'))
+    try {
+      const [cfg, metrics, retention] = await Promise.all([
+        getCloudConfig(),
+        getCloudMetrics(),
+        getRetentionReport(),
+      ])
+      if (seq !== cloudSeq.current) return false
+      setCloudConfig(cfg)
+      setCloudConfigState('ready')
+      setCloudMetrics(metrics)
+      setCloudMetricsState('ready')
+      setCloudRetention(retention)
+      return true
+    } catch {
+      if (seq === cloudSeq.current) {
+        setCloudConfigState((s) => (s === 'ready' ? s : 'error'))
+        setCloudMetricsState((s) => (s === 'ready' ? s : 'error'))
+      }
+      return false
+    }
+  }, [])
+
   /* ── Refresh: the whole page, without losing the page ─────────────────
    *
    * The five reads above, together, and NOT a reload. A reload would answer the
@@ -342,6 +384,7 @@ function DevConsoleBody({
         loadCatalog(),
         loadLedger(),
         loadFeedback(),
+        loadCloud(),
         // The published site content, on the same Refresh as everything else.
         // A panel with its own quiet fetch is a second refresh button that
         // refreshes less; see README, "Adding a new kind of verb".
@@ -367,6 +410,7 @@ function DevConsoleBody({
       loadCatalog,
       loadLedger,
       loadFeedback,
+      loadCloud,
       content.reload,
       loadRoster,
       loadHistory,
@@ -604,6 +648,9 @@ function DevConsoleBody({
   const sectionCounts: Record<Tab, number | null> = {
     accounts: shownRows.length,
     content: null,
+    // Cloud is settings and figures rather than a filterable list, so — like
+    // Content — a count would be a claim rather than an absence.
+    cloud: null,
     feedback: shownFeedback.length,
     purchases: shownEvents.length,
     audit: shownAudit.length,
@@ -701,6 +748,11 @@ function DevConsoleBody({
                 {t.id === 'content' && content.dirty && (
                   <Tag tone="warn">{content.edits} UNSAVED</Tag>
                 )}
+                {/* The one flag that changes what the Store sells. LIVE has to
+                    be visible from every tab, not only inside this one. */}
+                {t.id === 'cloud' &&
+                  (cloudConfig?.doc as { availability?: { available?: boolean } } | undefined)
+                    ?.availability?.available === true && <Tag tone="warn">LIVE</Tag>}
               </span>
               <span className="dev__tab-what">{t.what}</span>
             </button>
@@ -767,6 +819,18 @@ function DevConsoleBody({
         )}
 
         {tab === 'content' && <ContentTab c={content} />}
+
+        {tab === 'cloud' && (
+          <CloudTab
+            config={cloudConfig}
+            configState={cloudConfigState}
+            metrics={cloudMetrics}
+            metricsState={cloudMetricsState}
+            retention={cloudRetention}
+            push={push}
+            onSaved={() => void loadCloud()}
+          />
+        )}
 
         {tab === 'feedback' && (
           <FeedbackTab

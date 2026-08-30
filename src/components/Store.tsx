@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
-import { MODAL_LAYER, useEscape } from '../lib/modal'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
@@ -19,6 +18,8 @@ import { appHash, rememberOrigin, storeAppHash, STORE_HASH } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { iconFor } from '../content/resolve'
 import { useSiteContent } from '../content/store'
+import { PlanPanel, PlanRow, planNote } from './PlanChooser'
+import { CloudShelf } from '../cloud/CloudShelf'
 import { BackButton, Fold, FoldControls } from './Folded'
 import { STORE_ANSWERS, STORE_BILLING_LINK_NOTICE } from '../data/storeAnswers'
 import {
@@ -153,136 +154,12 @@ function Cross() {
   )
 }
 
-/**
- * The one line under a plan's name, in the words the money is actually in.
- *
- * Written off the plan's KIND rather than its id-by-id, so a fourth plan on
- * some future pack still gets a sentence instead of a blank. Nothing here
- * names an amount: the row beside it already carries the only copy of that.
+/*
+ * `PlanPanel`, `PlanRow` and `planNote` used to be defined here and moved to
+ * `PlanChooser.tsx` when the Cloud shelf arrived — rule 11 is kept by every
+ * chooser on this site BEING that one component, so a third shop could not be
+ * allowed to grow a lookalike. Nothing about them changed in the move.
  */
-function planNote(plan: StorePlan): string {
-  if (plan.id === 'monthly') return 'Billed every month. Cancel any time.'
-  if (plan.id === 'annual') return 'Billed once a year. Cancel any time.'
-  return 'Paid once. Yours for good, no renewal.'
-}
-
-/**
- * The panel every chooser on a pack card is drawn in.
- *
- * There are two of them now — choosing a plan before buying, and changing or
- * stopping one afterwards — and rule 11 of AGENTS.md is that a pack sold more
- * than one way looks the SAME wherever it appears. That promise is kept
- * mechanically here rather than by two files agreeing: both choosers are this
- * component, so the scrim, the head, the dialog role, Escape, the focus and the
- * animation cannot drift apart.
- *
- * Drawn OVER the card and never pushed into it, for the reason `Store.css`
- * sets out at length: the packs sit in a grid row, a grid row stretches its
- * siblings to the tallest of them, and an expansion in the flow would grow
- * BOTH cards and leave a hole under the other one's button.
- *
- * `step` re-runs the focus. The subscription panel replaces its own rows with a
- * confirm question in place, and focus that stayed on a button which no longer
- * exists is a keyboard reader stranded on the page behind the panel.
- */
-function PlanPanel({
-  label,
-  title,
-  step,
-  onClose,
-  children,
-}: {
-  /** Names the pack, per rule 14: a dialog says what it is about. */
-  label: string
-  /** The 10px mono head. Title Case. */
-  title: string
-  /** Changes when the panel's contents are replaced, so focus follows. */
-  step: string
-  onClose: () => void
-  children: ReactNode
-}) {
-  const panel = useRef<HTMLDivElement>(null)
-
-  // Put the keyboard where the choice is. The first row rather than the close
-  // button: this panel's actions are all reversible or confirmed, and landing
-  // on Close would make the keyboard route to the thing the panel exists for
-  // the longest one on the card.
-  useEffect(() => {
-    panel.current
-      ?.querySelector<HTMLButtonElement>('.store__plan, .store__ask-row button')
-      ?.focus({ preventScroll: true })
-  }, [step])
-
-  // Escape backs out of it the way it backs out of every other thing that
-  // opens on this site — through the SAME stack, so the press goes to whatever
-  // is painted in front and to nothing else. Still deliberately not `useModal`:
-  // that locks the page's scroll for a dialog covering all of it, and this one
-  // is anchored inside a card that is a third of the page and leaves the rest
-  // scrolling. `useEscape` is that ordering without the lock; a listener of its
-  // own is what had a panel closing underneath the auth modal opened over it.
-  useEscape({ open: true, onClose, layer: MODAL_LAYER.storePlan })
-
-  return (
-    <>
-      {/* A press anywhere else closes it. A button rather than a bare div so it
-          is a real click target with real semantics, and hidden from a screen
-          reader because Escape is its keyboard equivalent and a second "close"
-          in the tab order is noise. */}
-      <button
-        type="button"
-        className="store__plans-scrim"
-        tabIndex={-1}
-        aria-hidden="true"
-        onClick={onClose}
-      />
-      <div ref={panel} className="store__plans" role="dialog" aria-label={label}>
-        <div className="store__plans-head">
-          <p className="store__plans-title">{title}</p>
-          <button type="button" className="store__plans-close" onClick={onClose}>
-            <span className="sr-only">Close this panel</span>
-            <Cross />
-          </button>
-        </div>
-        {children}
-      </div>
-    </>
-  )
-}
-
-/**
- * One row of a chooser: a name, a line saying what it does, and the money.
- *
- * The money column is reserved in EVERY row, empty where there is nothing to
- * say, for the reason the saving badge is: a column present on one row and
- * absent from another makes those rows different heights, which is the same
- * unevenness the chooser was built to remove, one level down.
- */
-function PlanRow({
-  label,
-  note,
-  money,
-  tone,
-  onClick,
-}: {
-  label: string
-  note: string
-  money?: ReactNode
-  /** `leave` draws the row as the way out. Nothing else is ever tinted. */
-  tone?: 'leave'
-  onClick: () => void
-}) {
-  return (
-    <li>
-      <button type="button" className="store__plan" data-tone={tone} onClick={onClick}>
-        <span className="store__plan-text">
-          <span className="store__plan-label">{label}</span>
-          <span className="store__plan-note">{note}</span>
-        </span>
-        <span className="store__plan-money">{money}</span>
-      </button>
-    </li>
-  )
-}
 
 /**
  * Where the subscription panel is, once it is open.
@@ -890,7 +767,7 @@ function PackCard({
                     <PlanRow
                       key={plan.id}
                       label={plan.label}
-                      note={planNote(plan)}
+                      note={planNote(plan.id)}
                       /*
                         The saving belongs UNDER THE AMOUNT it is about, not
                         beside the plan's name: it is a fact about the money,
@@ -1312,6 +1189,19 @@ function StoreIndex({
         <AccountStrip onOpenAuth={onOpenAuth} />
         <BeforeYouPay />
       </div>
+
+      {/*
+        TDG Cloud, above the app cards — its own area, not one of them.
+
+        Deliberately NOT an entry in STORE_APPS, and that is rule 17's own
+        exception ("a genuinely different shape"): the apps below sell packs
+        that unlock features, Cloud sells one pooled storage allowance with a
+        usage meter, a retention promise and a launch flag TDG Core owns. Its
+        plans, quotas, prices and availability all arrive from
+        tdg_cloud_public_config() at runtime (src/cloud/), so launch day is a
+        flag flip and not a deploy of this file.
+      */}
+      <CloudShelf onOpenAuth={onOpenAuth} />
 
       {/* DERIVED from the catalogue, per rule 17. Adding an app to `STORE_APPS`
           adds a card here; there is nowhere to forget. */}

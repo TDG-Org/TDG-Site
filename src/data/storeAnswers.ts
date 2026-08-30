@@ -349,4 +349,45 @@ export const STORE_ANSWERS: PageSection[] = [
       },
     ],
   },
+  {
+    id: 'cloud',
+    title: 'TDG Cloud, and what happens to hosted data',
+    what: 'One pooled storage plan for your whole account, and the promise about your data when a plan ends.',
+    tag: 'COMING SOON',
+    blocks: [
+      {
+        kind: 'text',
+        text: 'TDG Cloud is one storage allowance for your whole TDG Account, shared by every compatible TDG app: your projects, saves, settings and media, synced across your machines. The two plans, their storage and their prices are on the Cloud section at the top of this Store, and everything below stays true whatever those numbers are on the day you read this.',
+      },
+      {
+        kind: 'note',
+        text: 'It is not on sale yet. The plans are shown so you know what is coming and what it will cost; the button says Coming Soon rather than opening a checkout, and nothing about Cloud can be bought until it says otherwise, here, first.',
+      },
+      {
+        kind: 'features',
+        items: [
+          {
+            name: 'One pool, not one per app',
+            text: 'Every compatible app draws from the same allowance, so you never hit "full" in one app while paying for empty space in another. The Account page shows the total, and what each app is using of it.',
+          },
+          {
+            name: 'Only your real work counts',
+            text: 'Apps sync the things you made — projects, documents, saves, settings — and never caches, temporary files, logs or anything they can simply rebuild. Storage you pay for is not spent on housekeeping.',
+          },
+          {
+            name: 'When it fills up',
+            text: 'New uploads and sync pause at your limit, and you are warned well before that. Nothing already hosted is touched: it all stays readable and downloadable while you clear space or move to the bigger plan.',
+          },
+          {
+            name: 'Cancelling does not delete anything',
+            text: 'Stop the plan and it runs to the end of what you paid for, like every other plan on this shelf. After that your hosted data goes read-only — still yours to browse, download and delete — for the retention window the Cloud section states, before it is removed. Resubscribe inside that window and everything picks up exactly where it left off.',
+          },
+          {
+            name: 'Your data is yours to take',
+            text: 'The Account page lists everything you host, lets you download any of it, and can delete all of it in one confirmed press — whether or not a plan is active. Leaving TDG Cloud never requires writing to anybody.',
+          },
+        ],
+      },
+    ],
+  },
 ]

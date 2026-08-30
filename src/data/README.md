@@ -62,6 +62,7 @@ has never bent, and it is the half that costs money when it does.
 | `pageBlocks.ts` | The block types a folded page is built from. Small on purpose. |
 | `store.ts` | **The shop catalogue: what is sold, what it costs, and the live Stripe links.** Read its header before touching a number. |
 | `storeAnswers.ts` | The Store's prose — the whole money side, the shared **Billing Link Missing** notice, and not one amount in it. |
+| `cloud.ts` | TDG Cloud's built-in copy: the two plans' names, quotas, prices and unlock lists, plus the byte/quota formatters and the saving that is computed rather than typed. **The failure mode, not the source** — TDG Core's `tdg_cloud_config` owns the live numbers, this is what renders when that read has not answered, and it can never sell anything: payment links only ever come from the server. See [`src/cloud/`](../cloud/README.md). |
 
 ## `pageBlocks.ts` is a vocabulary, and it stays small
 

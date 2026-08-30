@@ -28,7 +28,8 @@ shared primitives every one of these builds on live in
 | --- | --- |
 | `AppPage.tsx` | One app's own page. **Knows nothing about any particular app** — everything comes from `data/appPages.ts`. |
 | `About.tsx` | About TDG. Deliberately the same page as an app page, and carries **no stylesheet of its own**: a second one would be the two starting to drift, and this page's whole job is to look like it belongs beside the eleven it links to. |
-| `Store.tsx` | The shop, in **two views over one set of state**: `#/store` is an index of one card per app, `#/store/<app>` is that app's own page of packs with the buy and manage panels on them. Both open and close with the app pages' own `BackButton`. Read it with `data/store.ts` and `store/useOwnedPacks.ts` — see below. |
+| `Store.tsx` | The shop, in **two views over one set of state**: `#/store` is an index of one card per app, `#/store/<app>` is that app's own page of packs with the buy and manage panels on them. Both open and close with the app pages' own `BackButton`. Read it with `data/store.ts` and `store/useOwnedPacks.ts` — see below. The index opens with the TDG Cloud shelf, which lives in [`src/cloud/`](../cloud/README.md) because it is a whole surface, not a card. |
+| `PlanChooser.tsx` | `PlanPanel`, `PlanRow` and `planNote`, lifted out of `Store.tsx` the day the Cloud shelf arrived. Rule 11 — a thing sold more than one way looks the same wherever it appears — is kept by every chooser on this site BEING this one component: the pack cards, the Cloud shelf and the Account page's Cloud manage panel all mount it. It imports `Store.css` itself, so the panel is dressed on pages the Store chunk never loads on. |
 
 ### Always on screen
 

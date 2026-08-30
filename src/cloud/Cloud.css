@@ -1,0 +1,458 @@
+/* ── TDG Cloud, everywhere it is drawn ─────────────────────────────────────
+   The Store's Cloud shelf and the Account page's Cloud fold. Every colour is
+   a token or a color-mix of one (AGENTS rule 2), so both themes come free;
+   the plan chooser inside these surfaces is `PlanChooser.tsx`, dressed by
+   `Store.css`, which that file imports for itself.
+
+   The two plan cards are a PAIR, so everything mirrored about them — padding,
+   gap, radius, the action row's floor — is a variable on their common parent
+   (`.cloud__plans`), applied identically to both (rule 6). Never a literal on
+   one card that the other does not read. */
+
+.cloud__panel {
+  padding: 26px 24px;
+  margin-bottom: 26px;
+  /* A quiet wash of the accent over the card surface, so the shelf reads as
+     its own area without inventing a second card language. */
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent 52%
+  );
+}
+
+.cloud__body {
+  display: grid;
+  gap: 20px;
+}
+
+.cloud__head {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.cloud__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 700 clamp(22px, 3.4vw, 28px) / 1.15 var(--font-display, var(--font-body));
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.cloud__title-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.cloud__lede {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* ── the pair ── */
+
+.cloud__plans {
+  --cloud-plan-pad: 20px;
+  --cloud-plan-gap: 12px;
+  --cloud-plan-radius: 3px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.cloud__plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cloud-plan-gap);
+  padding: var(--cloud-plan-pad);
+  border: 1px solid var(--border);
+  border-radius: var(--cloud-plan-radius);
+  background-color: var(--surface);
+  /* Clips the chooser's scrim to this card, the way `.card` does for a pack. */
+  overflow: hidden;
+  transition: border-color 0.25s ease, var(--t-theme);
+}
+.cloud__plan:hover {
+  border-color: var(--border-hover);
+}
+.cloud__plan[data-held] {
+  border-color: color-mix(in srgb, var(--live-border) 70%, var(--border));
+}
+
+.cloud__plan-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cloud__plan-name {
+  margin: 0;
+  font: 650 16.5px/1.2 var(--font-body);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* The allowance is the product, so it is the biggest thing on the card. */
+.cloud__plan-quota {
+  font: 700 22px/1 var(--font-body);
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.cloud__plan-tagline {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.cloud__unlocks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.cloud__unlocks li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+.cloud__unlock-tick {
+  display: inline-flex;
+  flex: none;
+  margin-top: 2px;
+  color: var(--live-fg);
+}
+
+.cloud__plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.cloud__plan-amount {
+  font: 700 21px/1 var(--font-body);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.cloud__plan-cadence {
+  margin-left: 2px;
+  font: 500 12.5px/1 var(--font-body);
+  color: var(--muted);
+}
+
+.cloud__plan-alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* The saving: set at reading size in the live green, exactly the weight the
+   chooser rows give it — it decides the sale, so it is never a 9px chip. */
+.cloud__plan-save {
+  padding: 2px 7px;
+  border: 1px solid var(--live-border);
+  border-radius: 2px;
+  font: 700 12.5px/1.3 var(--font-body);
+  color: var(--live-fg);
+  background-color: var(--live-bg);
+  white-space: nowrap;
+}
+
+/* The action row: the chooser's anchor, with one floor for every state so the
+   pair cannot fall out of step as answers arrive (the same reservation
+   `.store__action` makes on a pack card). */
+.cloud__action {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: auto;
+  min-height: 96px;
+}
+.cloud__action .store__buy,
+.cloud__action .store__ghost {
+  width: 100%;
+}
+
+/* Coming Soon: unmistakably a button that does nothing yet — the shape of the
+   Buy button it will become, in the surface's own quiet colours, with no
+   hover life. Never `display: none` and never missing: a plan with no CTA
+   reads as a card that failed to load. */
+.cloud__soon {
+  border-color: var(--border-hover);
+  background-color: color-mix(in srgb, var(--surface) 60%, transparent);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.cloud__soon:disabled {
+  opacity: 1;
+}
+.cloud__soon:hover {
+  transform: none;
+  filter: none;
+}
+
+/* ── this account's strip ── */
+
+.cloud__mine {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--live-border);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--live-bg) 60%, transparent);
+}
+
+.cloud__mine-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cloud__mine-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 13px/1.4 var(--font-body);
+  color: var(--text);
+}
+.cloud__mine-tick {
+  display: inline-flex;
+  color: var(--live-fg);
+}
+
+.cloud__mine-link {
+  font: 600 12.5px/1.4 var(--font-body);
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cloud__mine-link:hover {
+  text-decoration: underline;
+}
+.cloud__mine-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── the usage bar, shared by the shelf and the Account fold ── */
+
+.cloud__bar {
+  height: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
+  overflow: hidden;
+}
+.cloud__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 85%, transparent),
+    var(--accent)
+  );
+  transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cloud__bar[data-tone='warn'] .cloud__bar-fill {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--warm) 80%, transparent),
+    var(--warm)
+  );
+}
+
+.cloud__foot {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--faint);
+}
+
+/* ── the Account fold's own pieces ── */
+
+.cloud__acct {
+  display: grid;
+  gap: 18px;
+}
+
+.cloud__acct-figures {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.cloud__acct-figures strong {
+  color: var(--text);
+}
+
+.cloud__apps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cloud__apps li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.cloud__apps .cloud__app-bytes {
+  font: 600 12.5px/1.4 var(--font-mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.cloud__warn {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warm) 48%, transparent);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.cloud__warn strong {
+  color: var(--warm-text, var(--text));
+}
+
+/* The manage button's host inside the fold: the chooser needs a positioned
+   ancestor with clipping, the way a card gives it one on the shelf. */
+.cloud__managehost {
+  position: relative;
+  overflow: hidden;
+  max-width: 420px;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+/* ── the fold's file browser and its one dangerous button ── */
+
+.cloud__appfiles {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.cloud__files li {
+  flex-wrap: wrap;
+}
+.cloud__file-name {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 500 12px/1.5 var(--font-mono);
+  color: var(--text);
+}
+
+.cloud__app-meta {
+  color: var(--muted);
+}
+
+.cloud__delete {
+  display: grid;
+  justify-items: start;
+}
+
+.cloud__danger {
+  border-color: color-mix(in srgb, var(--warm) 48%, transparent);
+  color: var(--warm-text, var(--text));
+}
+.cloud__danger:hover {
+  background-color: color-mix(in srgb, var(--warm) 14%, transparent);
+}
+
+.cloud__confirm {
+  width: min(100%, 220px);
+  padding: 9px 12px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background-color: var(--surface);
+  color: var(--text);
+  font: 600 13px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.cloud__confirm:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cloud__delete-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cloud__delete-row .store__buy {
+  width: auto;
+}
+.cloud__delete-row .store__buy:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+/* ── reduced motion, and the small screens ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud__bar-fill {
+    transition: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .cloud__panel {
+    padding: 20px 16px;
+  }
+  .cloud__plans {
+    --cloud-plan-pad: 16px;
+  }
+  .cloud__mine-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}

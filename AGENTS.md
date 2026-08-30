@@ -58,6 +58,7 @@ protection is RLS on the server.
 | `src/feedback/` | Send Feedback, and the panel that delivers our replies — and, with them, any notice about a change to what an account owns. | [`src/feedback/README.md`](src/feedback/README.md) |
 | `src/notices/` | Messages about what an account owns, written from `#/dev` and waiting for the person they are about. | [`src/notices/README.md`](src/notices/README.md) |
 | `src/store/` | Reading which packs an account owns, and which products it may not. | [`src/store/README.md`](src/store/README.md) |
+| `src/cloud/` | TDG Cloud, built and dormant: the Store's plan shelf, the Account fold, and the console's launch/economics tab, all reading TDG Core's `tdg_cloud_config`. | [`src/cloud/README.md`](src/cloud/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
 | `src/dev/` | The internal Developer console at `#/dev`. | [`src/dev/README.md`](src/dev/README.md) |
 | `supabase/` | The edge function and the SQL migrations. Not part of the bundle. | [`supabase/README.md`](supabase/README.md) |

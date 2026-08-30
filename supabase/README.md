@@ -10,6 +10,9 @@ deletes it in a dashboard.
 | `functions/tdg-site-account/index.ts` | Turns "username **or** email + password" into a session, and sends a password-reset link for either. |
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
 | `functions/tdg-site-deploys/index.ts` | Answers which TDG-Org GitHub Pages sites exist — `live`, `down` or `absent`, in one batched response — for `src/live/`'s deploy discovery. Probed here rather than in the browser because every browser-side miss is a 404 printed in the console, and answered three ways rather than two because of `tdg_site_deploys_seen`: the function remembers every site it has seen answering, which is how a site that was taken DOWN gets `Temporarily unavailable` instead of being un-announced as `Coming soon`. Deployed with `--no-verify-jwt`: the caller is an anonymous visitor and the answer is whether a public website exists. A caller sends repo names only — never a URL — and the function probes only `https://tdg-org.github.io/`. |
+| `functions/cloud-stripe-webhook/index.ts` | Stripe → TDG Cloud plan ownership: writes `cloud_entitlements.grants` from checkout and subscription events, stamps the billing cadence into the grant, and maps live price ids to packs so a portal plan change between Standard and Studio moves the grant. Deployed with `--no-verify-jwt`; the refetch is the authentication, exactly like the veditor and devfleet webhooks it is a sibling of. |
+| `functions/cloud-maintenance/index.ts` | The deliberate arm of Cloud retention: the lapsed-accounts report, expired-reservation reaping, and — double-gated on the caller being a developer AND `availability.auto_purge` in config — the purge, through the Storage API because a `storage.objects` row deleted by SQL strands its blob (the platform refuses it now). Dry-run by default. |
+| `functions/cloud-provision/index.ts` | The one-run tool that created TDG Cloud's Stripe objects — two products, four prices, four **deactivated** Managed Payments payment links, the webhook endpoint — and wrote every id and URL into `tdg_cloud_config`. The deployed copy is a retired stub; redeploy this source with a fresh nonce in `PROVISION_KEY` to reprice, then retire it again. |
 | `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, product revocations and account notices, `tdg_billing_subscription`, and the site-content overlay below. |
 
 ## Why the site cannot do this itself
@@ -403,6 +406,42 @@ decides here instead. Both verbs are `authenticated` only; `anon` gets 42501.
 
 The site's end is `AccountSetup` in `src/auth/AuthProvider.tsx` and the third
 mode of `src/components/AuthModal.tsx`.
+
+## TDG Cloud, built and dormant
+
+`20260830120000_tdg_cloud.sql` (and the hardening file beside it) is the whole
+Cloud backend: registry-shaped `cloud_entitlements` (which is what grew the
+Developer console's cloud panel with no code), the `cloud_purchase_events`
+ledger, the one-row `tdg_cloud_config` every surface reads, the private
+`tdg-cloud` bucket with owner-only policies, the reservation-gated upload path
+(`tdg_cloud_begin_upload` is the only door, and a guard trigger under the RLS
+refuses reservation-less objects whatever role writes them), trigger-maintained
+usage accounting and file catalogue, metered downloads, per-app sync state,
+derived read-only retention, and the admin config/metrics/retention verbs. The
+site's half is [`src/cloud/`](../src/cloud/README.md); the brief for each
+app's own session is [`docs/cloud-app-prompt.md`](../docs/cloud-app-prompt.md).
+
+**Why it is dormant, and what dormant means.** `availability.available` in
+`tdg_cloud_config` is false: the Store shows the plans as Coming Soon with no
+payment links (the public config nulls them while unavailable), no ordinary
+account can reserve an upload (`TDGC1`), and the four Stripe payment links are
+DEACTIVATED besides — two independent locks. `dev_testing: true` lets
+developer accounts drive the entire path today, which is how it was verified.
+
+**The launch checklist**, in order, on the day the economics say go:
+
+1. Stripe dashboard → Payment Links → activate the four links tagged
+   `app=cloud` (`Cloud Standard`/`Cloud Studio` × monthly/annual).
+2. `#/dev` → Cloud tab → check the plans and prices still say what you mean →
+   flip **Available** on, tick the launch confirmation, Save. The Store sells
+   within a minute; the apps' `tdg_cloud_status()` flips with it.
+3. Optional, later: add the two Cloud products to the Stripe billing portal
+   configuration so Change Plan offers the in-portal switcher (it falls back
+   to the plain portal until then); enable `pg_cron` + `pg_net` or a schedule
+   to call `cloud-maintenance` (`reap` weekly; `purge` only after flipping
+   `auto_purge` on, when you are ready for retention to have teeth).
+
+Nothing in any repo changes on launch day. That is the point.
 
 ## Deploying
 
