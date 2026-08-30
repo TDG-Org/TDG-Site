@@ -5,6 +5,7 @@
 | `useOwnedPacks.ts` | The read: which packs this account holds, and how it holds each one. |
 | `grant.ts` | What "how it holds it" MEANS — the shape, and the sentence the card prints. |
 | `billing.ts` | The write: change a plan, stop the renewals, start them again. |
+| `sale.ts` | Whether a pack may be bought AT ALL — which is a question about the app, not the account. |
 
 ```ts
 const { stateFor, owned, grantFor, revokedFor, refresh } = useOwnedPacks()
@@ -51,7 +52,7 @@ or the whole app — stops being owned, and cannot be bought back. The row lives
 over the same RLS the account's own app reads it through, so the shop and the app
 cannot give different answers about the same decision.
 
-**It is a seventh card state and not a variant of `buy`.** A pack that lapsed is
+**It is its own card state and not a variant of `buy`.** A pack that lapsed is
 unowned and the shop should sell it again; a revoked one is unowned and must
 never be offered. The two are the same absence and opposite decisions, and a
 card that fell back to Buy would be taking money for something the database has
@@ -67,6 +68,44 @@ Nothing in this folder writes any of that; it reads the answer.
 for that reason: a refusal leaves the last answer standing rather than accusing
 somebody of something on a hiccup, which is the same rule the ownership read
 keeps one paragraph up.
+
+## And the shop can be shut for reasons that are nothing to do with the account
+
+`sale.ts` answers a different question from everything above it: not *may THEY
+have this*, but *may ANYBODY buy it yet*. A pack is a key, and this shop does not
+sell keys to doors that do not exist — so a pack whose app has not shipped has
+no Buy button, and `Store.tsx` draws `closed` instead.
+
+```ts
+const sale = useSaleState(app)          // 'open' | 'soon' | 'down'
+const words = saleWording('soon', 'TDG Veditor')   // { name, line, short }
+```
+
+**It is derived from the same answer the app's own card uses**, in this order: a
+hand-written access on the resolved card (a `download`, including one the
+Developer console's Content tab has set — a human decision, and the runtime
+never argues with one), then `released` in the catalogue, then `src/live/`'s
+runtime read of GitHub. Launch day therefore opens the shop with nothing here
+edited and no deploy.
+
+**`released` may only ever RAISE the answer.** `src/live/` is allowed to fail —
+GitHub rate-limits, and it returns the same `null` for "never shipped" as for
+"could not ask" — so a hiccup must never be able to close a launched app's shop.
+The written floor is what stops it. In the other direction nothing is needed:
+"could not ask" is not a confirmed way in, so it sells nothing, which is the
+safe end of the same trade.
+
+`down` is kept apart from `soon` for the reason [`../live/`](../live/README.md)
+keeps them apart: telling somebody who used the app yesterday that it has not
+launched is a lie by omission, and the shop has no more licence to tell it than
+the card does.
+
+**Shut means the shop, never the account.** `closed` replaces `buy` and
+`signedOut` and nothing else, so `owned` still says Owned, a failed ownership
+read still says the read failed, and **Manage or Cancel Plan** is drawn on every
+current subscription whatever the shelf is doing. A shop that could stop
+somebody cancelling by going off sale would be the dark pattern rule 11 exists
+to forbid, wearing a launch date.
 
 ## What a standing is
 

@@ -74,6 +74,77 @@ export async function getCloudMetrics(): Promise<Record<string, unknown>> {
     : {}
 }
 
+/**
+ * One account's whole Cloud standing, for the Developer console.
+ *
+ * The same picture `tdg_cloud_status()` gives a person about themselves —
+ * `useCloudStatus.ts` reads that one — answered about SOMEBODY ELSE. It has to
+ * be its own verb rather than a parameter on that one: `tdg_cloud_status` takes
+ * the uuid from the caller's token and never from an argument, and that is
+ * exactly what makes it safe to grant to every account.
+ *
+ * Every field is read defensively, because a console that threw on a shape it
+ * did not recognise would take the whole account page down with it.
+ */
+export type CloudAccountStanding = {
+  /** Cloud is on sale for everybody. */
+  available: boolean
+  /** Cloud works for THIS account — launched, or the developer/tester door. */
+  enabledForThem: boolean
+  plan: { pack: string; name: string | null } | null
+  quotaBytes: number
+  /** A per-account bump written into config, in GB, or null. */
+  quotaOverrideGb: number | null
+  usedBytes: number
+  reservedBytes: number
+  freeBytes: number
+  files: number
+  perApp: { app: string; bytes: number; files: number }[]
+  egress: { monthBytes: number; allowanceBytes: number }
+  retention: { state: 'none' | 'read_only' | 'purge_eligible'; lapsedAt: string | null; deadline: string | null }
+}
+
+function num(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0
+}
+
+export async function getCloudAccount(userId: string): Promise<CloudAccountStanding> {
+  const { data, error } = await supabase.rpc('tdg_admin_cloud_account', { p_target: userId })
+  if (error) throw toError(error)
+  const d = (data !== null && typeof data === 'object' && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : {}) as Record<string, unknown>
+  const plan = d.plan as Record<string, unknown> | null
+  const egress = (d.egress ?? {}) as Record<string, unknown>
+  const retention = (d.retention ?? {}) as Record<string, unknown>
+  const retState = String(retention.state ?? 'none')
+  return {
+    available: d.available === true,
+    enabledForThem: d.enabled_for_them === true,
+    plan:
+      plan !== null && typeof plan === 'object' && typeof plan.pack === 'string'
+        ? { pack: plan.pack, name: typeof plan.name === 'string' ? plan.name : null }
+        : null,
+    quotaBytes: num(d.quota_bytes),
+    quotaOverrideGb: typeof d.quota_override_gb === 'number' ? d.quota_override_gb : null,
+    usedBytes: num(d.used_bytes),
+    reservedBytes: num(d.reserved_bytes),
+    freeBytes: num(d.free_bytes),
+    files: num(d.files),
+    perApp: Array.isArray(d.per_app)
+      ? (d.per_app as Record<string, unknown>[])
+          .filter((r) => typeof r?.app === 'string')
+          .map((r) => ({ app: String(r.app), bytes: num(r.bytes), files: num(r.files) }))
+      : [],
+    egress: { monthBytes: num(egress.month_bytes), allowanceBytes: num(egress.allowance_bytes) },
+    retention: {
+      state: retState === 'read_only' || retState === 'purge_eligible' ? retState : 'none',
+      lapsedAt: typeof retention.lapsed_at === 'string' ? retention.lapsed_at : null,
+      deadline: typeof retention.deadline === 'string' ? retention.deadline : null,
+    },
+  }
+}
+
 export type RetentionRow = {
   user_id: string
   username: string | null

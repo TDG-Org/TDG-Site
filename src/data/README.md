@@ -118,6 +118,17 @@ Read the header. It is long because the situation is:
 - Ownership is never decided here. It lives in `<app>_entitlements` on TDG Core,
   written only by that app's Stripe webhook, read back over RLS by
   `store/useOwnedPacks.ts`. This file only names the things ownership is about.
+- **Whether a pack is ON SALE is not decided here either, and that is newer.**
+  A pack is a key, and the shop does not sell keys to doors that do not exist —
+  so the Buy button is gated on whether the app itself is out, which
+  `store/sale.ts` derives at runtime from the same answer that app's own card
+  gives. Two fields here follow from that. `released` is the written FLOOR: it
+  may only ever raise the runtime answer, never lower it, so a GitHub
+  rate-limit cannot shut a launched app's shop. And `availability` is now the
+  note for once the shop is OPEN — it used to promise *"a pack bought now sits
+  on your account and unlocks the moment the first build lands"*, which the
+  shop was actually taking money against, and the shut sentence is derived so
+  it cannot go stale on launch day when nobody is reading this file.
 - **The Developer console reads this file too**, for the names and prices beside
   its grant switches. It does not read it for *which apps exist* — it asks the
   database that — so an app here with no `<app>_entitlements` table shows up at
@@ -156,7 +167,9 @@ raises the target ceiling to 400,000 kbps and the manual spike ceiling to
 1. Card in `APPS` or `TOOLS` in `content.ts`, with a `page:` slug and its icon.
 2. Icon art in `public/assets/`, referenced through `lib/asset.ts`.
 3. Entry in `APP_PAGES` in `appPages.ts` using the same slug.
-4. Packs in `store.ts` only if it sells something.
+4. Packs in `store.ts` only if it sells something. `released: false` until it
+   ships — the runtime opens the shop on its own when the card gets a real way
+   in, so this is a floor rather than a switch somebody has to remember.
 
 Give the card a `repo:` too — the repository's exact name in TDG-Org. That is
 what lets the card answer for itself whether the app is live: `src/live/`

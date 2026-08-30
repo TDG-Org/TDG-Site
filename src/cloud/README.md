@@ -13,7 +13,7 @@ against live tables; what makes it Coming Soon is one flag in
 | `CloudShelf.tsx` | The Store index's Cloud area: the two plan cards, priced from config, with every state given a face — Coming Soon (a disabled button that says so), on sale, held (usage meter + manage), revoked, could-not-check. Buying reuses the one `PlanChooser` and the pack cards' five-minute payment watch. |
 | `CloudFold.tsx` | The Account page's fold: Coming Soon until Core opens the door for the account, then the management surface — plan and standing, the pooled meter, per-app usage and sync, warnings, browse/download every hosted file, and delete-all behind a typed confirmation. |
 | `CloudManage.tsx` | Manage or Cancel Plan, mounted by BOTH surfaces above so rule 11 is kept mechanically. `tdg-site-billing` already handles `app: 'cloud'` because it resolves apps through the registry — cancelling is `cancel_at_period_end`, and the panel says what retention means before the press. |
-| `api.ts` | The `tdg_admin_cloud_*` verbs behind the Developer console's Cloud tab (config read/write, metrics, retention report). Here rather than in `src/dev/api.ts` for the badge-client reason: the folder that owns the surface owns its client. |
+| `api.ts` | The `tdg_admin_cloud_*` verbs behind the Developer console (config read/write, metrics, retention report, and `getCloudAccount` — one account's whole standing for the **TDG Core & Cloud** panel, which `tdg_cloud_status()` cannot answer because it takes the uuid from the caller's own token and never from a parameter). Here rather than in `src/dev/api.ts` for the badge-client reason: the folder that owns the surface owns its client. |
 | `Cloud.css` | Both surfaces' clothes, tokens only, both themes. The plan cards are a mirrored pair and take their measurements from variables on their common parent (rule 6). |
 
 ## Where the truth lives
@@ -29,7 +29,11 @@ only while the availability flag is on.
 **Ownership is `cloud_entitlements`**, registry-shaped, written only by
 `cloud-stripe-webhook` and the `tdg_admin_*` verbs — which is why the
 Developer console grew a `cloud` panel, the Purchases filter a `cloud` source
-and the overview a tile with **no code written for them**.
+and the overview a tile with **no code written for them**. That panel is now
+mounted inside **TDG Core & Cloud** rather than in the Apps fold — Cloud belongs
+to the account rather than to one app — but it is the same generic Store panel,
+with the same pack pickers, the same revocation switch and the same reset. The
+lift is one filter in `AccountDetail`; nothing about the discovery changed.
 
 **Enforcement is in Postgres** (rule 12). `tdg_cloud_begin_upload` is the only
 door to an upload reservation, the storage policies and a guard trigger demand

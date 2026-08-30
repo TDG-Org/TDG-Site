@@ -1,4 +1,5 @@
-import { STORE_APPS, formatUsd, isSubscription, type StorePack } from '../data/store'
+import { STORE_APPS, formatUsd, isSubscription, type StoreApp, type StorePack } from '../data/store'
+import { CLOUD_PLANS } from '../data/cloud'
 import { standingOfGrant } from '../store/grant'
 import type {
   DevAccount,
@@ -86,6 +87,35 @@ import { prettyId } from './format'
  * product it already draws correctly one section up.
  */
 export const MAK_APP_ID = 'makullveny'
+
+/**
+ * TDG Cloud's product id, and the second — and last — id written down here.
+ *
+ * Rule 17 forbids naming a product in this folder and this is its other stated
+ * exception, for the same reason the Store's own index states it: Cloud is
+ * deliberately not an entry in `STORE_APPS` (`Store.tsx` says why — it sells
+ * one pooled allowance with a meter, a retention promise and a launch flag,
+ * not packs that unlock features), so the merge below has no shop entry to
+ * take a name or a sentence from and would call it `Cloud` off its id.
+ *
+ * That id is also what routes it: `cloud_entitlements` is registry-shaped, so
+ * the server discovers it like any app, and `AccountDetail` lifts this one
+ * panel out of the Apps fold and into the TDG Core & Cloud panel — the two
+ * account-wide subscriptions read together, which is how a developer actually
+ * reads them.
+ *
+ * Nothing else about it is special-cased. Its packs, its grant pickers, its
+ * revocation switch and its reset are the same `StorePanel` every other app
+ * gets, which is the whole point of the registry shape.
+ */
+export const CLOUD_APP_ID = 'cloud'
+
+/** The two facts the shop would have carried, for the one product that has no
+ *  shop entry to carry them. Title Case name, sentence-case line, rule 7. */
+const CLOUD_WORDS = {
+  title: 'TDG Cloud',
+  copy: 'Pooled storage every TDG app can sync into — one allowance across all of them, on two plans. Ownership is a plan, not a pack, and the quota it buys is read from the Cloud tab’s config.',
+}
 
 /** One pack, as the console shows it: what it is, and who has heard of it. */
 export type DevStorePack = {
@@ -208,6 +238,47 @@ function priceOf(pack: StorePack | undefined): string | null {
   return `${formatUsd(pack.priceCents)}${lead?.cadence ?? ''}`
 }
 
+/** What the SHOP sells under one item id: its name, its cheapest amount, and
+ *  whether it recurs. Three fields, because that is all the tiles read. */
+type SoldItem = { id: string; name: string; price: string | null; recurs: boolean }
+
+/**
+ * Everything the site sells for one app, from whichever catalogue holds it.
+ *
+ * Two catalogues, because there are two shapes: `STORE_APPS` for the pack
+ * Stores, and `src/data/cloud.ts` for TDG Cloud, which the Store's index draws
+ * as its own shelf rather than as one of the app cards (see `CLOUD_APP_ID`).
+ * Without this second arm the console would call Cloud's plans `Standard` and
+ * `Studio` off their ids, price them at nothing, and print the sentence it
+ * prints for an app the shop has never heard of — three wrong things about the
+ * one product this file was told about twice.
+ *
+ * The built-in copy is the right source here for the same reason it is the
+ * Store's fallback: TDG Core owns the live numbers, and a console tile wants a
+ * name and a ballpark, not a round trip. The Cloud tab is where the authority
+ * is read and edited.
+ */
+function soldItemsOf(appId: string, shp: StoreApp | undefined): SoldItem[] {
+  if (shp) {
+    return shp.packs.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: priceOf(p),
+      recurs: isSubscription(p),
+    }))
+  }
+  if (appId === CLOUD_APP_ID) {
+    return CLOUD_PLANS.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: `${formatUsd(p.monthlyCents)}/mo`,
+      // Every Cloud plan is rented; there is no outright Cloud.
+      recurs: true,
+    }))
+  }
+  return []
+}
+
 /**
  * Every app the console should draw a Store panel for, in the order to draw
  * them, merged from the server's list and the site's shop.
@@ -271,11 +342,12 @@ export function storeApps(
     const ownedPacks = mine?.packs ?? []
     const grants = mine?.grants ?? {}
 
+    const sold = soldItemsOf(id, shp)
     const knownHere = (p: string) =>
-      shp?.packs.some((sp) => sp.id === p) === true || srv?.packs.includes(p) === true
+      sold.some((sp) => sp.id === p) || srv?.packs.includes(p) === true
     const packIds = [
-      ...(shp?.packs ?? []).map((p) => p.id),
-      ...(srv?.packs ?? []).filter((p) => !shp?.packs.some((sp) => sp.id === p)),
+      ...sold.map((p) => p.id),
+      ...(srv?.packs ?? []).filter((p) => !sold.some((sp) => sp.id === p)),
       ...ownedPacks.filter((p) => !knownHere(p)),
       // A pack that is blocked and nothing else — retired from the shop after
       // it was revoked, say — still gets a tile, or the only way back is SQL.
@@ -286,13 +358,13 @@ export function storeApps(
     ]
 
     const packs: DevStorePack[] = packIds.map((packId) => {
-      const sold = shp?.packs.find((p) => p.id === packId)
+      const item = sold.find((p) => p.id === packId)
       return {
         id: packId,
-        name: sold?.name ?? prettyId(packId),
-        price: priceOf(sold),
+        name: item?.name ?? prettyId(packId),
+        price: item?.price ?? null,
         onServer: srv?.packs.includes(packId) ?? false,
-        inShop: sold != null,
+        inShop: item != null,
         owned: ownedPacks.includes(packId),
         // For a pack the site sells, its checkout plans are authoritative even
         // when a broken old grant claims otherwise. That is what keeps an
@@ -300,7 +372,7 @@ export function storeApps(
         // controls. A server-only pack has no catalogue answer, so an existing
         // subscription grant is the honest fallback and still gets a face.
         supportsSubscriptionStates:
-          sold != null ? isSubscription(sold) : grants[packId]?.kind === 'subscription',
+          item != null ? item.recurs : grants[packId]?.kind === 'subscription',
         grant: grants[packId] ?? null,
         revoked: blockOf.get(`${id}:${packId}`) ?? null,
       }
@@ -317,8 +389,8 @@ export function storeApps(
 
     return {
       id,
-      title: shp?.title ?? prettyId(id),
-      copy: shp?.copy ?? null,
+      title: shp?.title ?? (id === CLOUD_APP_ID ? CLOUD_WORDS.title : prettyId(id)),
+      copy: shp?.copy ?? (id === CLOUD_APP_ID ? CLOUD_WORDS.copy : null),
       entitlementsTable: srv?.entitlements_table ?? shp?.entitlementsTable ?? null,
       eventsTable: srv?.events_table ?? null,
       hasGrants: srv?.has_grants ?? false,
@@ -326,7 +398,7 @@ export function storeApps(
       onServer: serverState === 'listed',
       // An app the server never mentioned has no holdings to have reported.
       holdingsKnown: reported != null && mine != null,
-      inShop: shp != null,
+      inShop: sold.length > 0,
       hasList: (srv?.packs.length ?? 0) > 0,
       packs: appBlock ? packs.map((p) => ({ ...p, revoked: p.revoked ?? appBlock })) : packs,
       ownedCount: packs.filter((p) => p.owned).length,
@@ -350,8 +422,13 @@ export function orphanRevocations(
   stores: DevStoreApp[],
 ): DevRevocation[] {
   const rows = Array.isArray(a?.revocations) ? a.revocations : []
-  // Makullveny draws its own; see MAK_APP_ID.
-  const drawn = new Set([MAK_APP_ID, ...stores.map((s) => s.id)])
+  // Makullveny draws its own; see MAK_APP_ID. Cloud's panel is drawn too, in
+  // the TDG Core & Cloud panel rather than in the Apps fold — so the caller's
+  // `stores` no longer holds it and a Cloud block would otherwise be reported
+  // as a block nothing on the page can lift, which is the exact opposite of
+  // true. `storeApps` grows a panel for any revoked app, so a Cloud block
+  // always has one.
+  const drawn = new Set([MAK_APP_ID, CLOUD_APP_ID, ...stores.map((s) => s.id)])
   return rows.filter((r) => !drawn.has(r.app))
 }
 

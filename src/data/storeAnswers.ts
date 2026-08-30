@@ -53,8 +53,19 @@ import type { PageSection } from './pageBlocks'
  * stay true when a second pack gains a plan, which is the only version of this
  * section that will not go stale on its own.
  *
+ * ## The same lesson again, about apps that had not shipped
+ *
+ * This file used to say *"Neither app has shipped. Buying today means paying
+ * for something you cannot use yet"* — accurate on the day it was written, and
+ * a promise the shop was actually taking money against. The shop does not any
+ * more: a pack goes on sale when its app does, decided at runtime by
+ * `src/store/sale.ts`. So the prose here counts no apps and names none. It
+ * states the RULE, which stays true whichever app is out on the day somebody
+ * reads it, and lets the card say which side of the rule that pack is on.
+ *
  * Facts checked against: `src/data/store.ts` (what is sold, the links, the
- * currency), `src/components/Store.tsx` (the buy flow and the five minutes it
+ * currency), `src/store/sale.ts` (when a pack may be bought at all),
+ * `src/components/Store.tsx` (the buy flow and the five minutes it
  * watches for), `src/store/useOwnedPacks.ts` (how ownership is read, and that a
  * revoked pack leaves), `src/dev/README.md` and `src/dev/AccountDetail.tsx` (a
  * pack can be granted or revoked by hand, and both land in the ledger).
@@ -74,16 +85,25 @@ export const STORE_ANSWERS: PageSection[] = [
   {
     id: 'what',
     title: 'What you are buying',
-    what: 'Which parts are paid, what stays free, and the fact that neither app is out yet.',
+    what: 'Which parts are paid, what stays free, and why a pack goes on sale only once its app is out.',
     tag: 'READ FIRST',
     blocks: [
       {
         kind: 'text',
-        text: 'Two apps have anything to sell: DevFleet and TDG Veditor. Everything on this shelf is an extra beside an app that is free, and the app is not the thing being sold. Each card above says what its own app leaves free, and that part does not change when you buy a pack.',
+        text: 'Everything on this shelf is an extra beside an app that is free, and the app is not the thing being sold. Each card above says what its own app leaves free, and that part does not change when you buy a pack.',
       },
       {
+        /*
+         * This block used to say "Neither app has shipped. Buying today means
+         * paying for something you cannot use yet", and the shop sold on that
+         * footing. It does not any more — a pack goes on sale when its app
+         * does — so the note says the rule rather than counting apps. Same
+         * argument as the plans section in this file's header: a sentence
+         * about what is on the shelf today is a sentence that goes stale on a
+         * day nobody is reading this file.
+         */
         kind: 'note',
-        text: 'Neither app has shipped. Buying today means paying for something you cannot use yet: the pack sits on your account and turns on when the first build lands. If that is not a trade you want to make, wait. The apps themselves will be free when they arrive either way.',
+        text: 'A pack only goes on sale once the app it unlocks is out. Until then its card says so where the Buy button would be, and nothing on it can be bought — a key to a door that does not exist yet is not something we are willing to take money for. The apps themselves are free when they arrive either way.',
       },
       {
         kind: 'facts',
@@ -94,7 +114,7 @@ export const STORE_ANSWERS: PageSection[] = [
           { label: 'Currency', value: 'US dollars, whichever country you are in' },
           { label: 'The price', value: 'On the card above, and it is the number Stripe charges' },
           { label: 'What you get', value: 'Everything the card lists, and that list is all of it' },
-          { label: 'Usable today', value: 'Not yet. Both apps are still in development' },
+          { label: 'On sale', value: 'Only while its app is out. The card says which, and it is never guesswork' },
         ],
       },
     ],
@@ -237,7 +257,7 @@ export const STORE_ANSWERS: PageSection[] = [
           },
           {
             title: 'Sign in inside the app',
-            text: 'The app reads the same answer this page does, so once it can reach the server it will see the pack. Neither app has shipped yet, so for now this step is one to keep for later.',
+            text: 'The app reads the same answer this page does, so once it can reach the server it will see the pack. Sign out and back in inside the app if it is still showing the free set.',
           },
           {
             title: 'Write to us',
@@ -254,7 +274,7 @@ export const STORE_ANSWERS: PageSection[] = [
   {
     id: 'trouble',
     title: 'When something else goes wrong',
-    what: 'Wrong account, a refused card, a test checkout, and an app that is not out yet.',
+    what: 'Wrong account, a refused card, a test checkout, and a shelf with no Buy button on it.',
     tag: 'TROUBLE',
     blocks: [
       {
@@ -273,8 +293,12 @@ export const STORE_ANSWERS: PageSection[] = [
             text: 'A test-mode checkout is a real page that refuses every real card without saying why it refused. If a pack here is ever pointed at one, its card says so in plain words before you click, and that pack is not on sale yet.',
           },
           {
-            name: 'The app is not out yet',
-            text: 'That is the state of both apps today. There is nothing to install, and a pack you buy waits on your account until the first build lands. Nothing expires while it waits.',
+            name: 'There is no Buy button on the card',
+            text: 'Then the app that pack unlocks is not out, and we will not sell a key to a door that does not exist yet. The card says so where the button would be, the price stays on it so you can see what it will cost, and it becomes a Buy button on its own the day the app ships — there is no list to join and nothing to come back and check.',
+          },
+          {
+            name: 'It says the app is temporarily unavailable',
+            text: 'That means the app WAS live and has stopped answering, so its packs are off sale until it is back. Nothing is wrong with your account, nothing you already own is touched, and anything that renews goes on running and can still be cancelled from its own card.',
           },
           {
             name: 'You paid twice for the same pack',

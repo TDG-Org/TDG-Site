@@ -1209,6 +1209,63 @@
   text-transform: uppercase;
   color: var(--danger);
 }
+
+/* ── the app is not out, so its packs are not on sale ──────────────────────
+   Deliberately NOT `.store__revoked` in another colour, and not
+   `.store__note--warn` either. Red is a decision taken against this account
+   and warm is "something needs you"; this is neither. Nobody has done anything
+   wrong, there is no button that fixes it, and the honest register is the
+   site's own quiet one — a hairline box in --border and --muted, the same
+   family as `.store__billing-note` without borrowing its warmth.
+
+   It sits where the Buy button would have been, and `.store__action`'s
+   `min-height: 104px` already reserves that room, so a card does not change
+   height when an app goes live under a reader.                               */
+.store__soon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background-color: color-mix(in srgb, var(--text) 4%, transparent);
+  max-width: 100%;
+  transition: var(--t-theme);
+}
+/* Title Case and set as a name, because it IS one — the state's name, the same
+   way `Owned` is. Not a `.chip`: a chip on this site is a 9px mono tag for a
+   status nobody reads twice, and this is the line that answers the question a
+   reader came with. */
+.store__soon-name {
+  font: 600 13px/1.4 var(--font-body);
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.store__soon-line {
+  font: 400 12.5px/1.6 var(--font-body);
+  color: var(--muted);
+}
+/* In the app page's head, under the chips, where the availability note is. */
+.store__soon--wide {
+  margin-top: 14px;
+  max-width: 640px;
+}
+/* On the index card it takes the availability line's place, so it wears that
+   line's shape rather than adding a box to a card that has none: same size,
+   same colour, one weight on the name so the state still reads first. */
+.store__soon--card {
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.store__soon--card .store__soon-name {
+  font-size: 12.5px;
+}
+.store__soon--card .store__soon-line {
+  color: var(--faint);
+}
 /* The row itself goes quiet: it is still listed, because a contents list that
    hid what it could not sell would be a shorter list with no explanation, and
    the name is how somebody knows which pack the sentence below is about. */

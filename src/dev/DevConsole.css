@@ -1771,6 +1771,19 @@
   color: var(--text);
 }
 
+/* ── reset ────────────────────────────────────────────────────────────────
+   The one control on a Store panel that does not wait for Save, so it gets a
+   block of its own rather than sitting in the panel's flow as a loose button:
+   what it will do has to be readable in the same glance as the button that
+   does it. Column, left-aligned, the panel body's own gap one notch tighter —
+   the sentence and its button are one thing.                                 */
+.dev__reset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+}
+
 /* ── log rows ─────────────────────────────────────────────────────────── */
 
 .dev__log {

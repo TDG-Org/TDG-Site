@@ -13,6 +13,7 @@ import {
   type PackStanding,
 } from '../store/grant'
 import { billingMessage, openBilling, setRenewal, type BillingError } from '../store/billing'
+import { saleWording, useSaleState, type SaleState } from '../store/sale'
 import { SectionsProvider } from '../lib/sections'
 import { appHash, rememberOrigin, storeAppHash, STORE_HASH } from '../lib/route'
 import { AppIcon } from './AppIcon'
@@ -95,7 +96,38 @@ type CardState =
    * is about will ever read it.
    */
   | { kind: 'revoked'; block: Revocation }
+  /**
+   * The shop is shut for this app, because the app itself is not available.
+   *
+   * An EIGHTH state and not a quiet `buy` with the button removed. A pack
+   * nobody can buy has to say why, or the card is a price list with a hole
+   * where its action was — which reads as a page that failed to load, and
+   * gives a reader nothing to come back for. It is also not `revoked`: that is
+   * about this account and carries a reason we wrote for them, and this is
+   * about the app and is true for everybody.
+   *
+   * It replaces `buy` and `signedOut` and nothing else. Owning, waiting,
+   * checking and the failed read all keep their faces — a shut shop is no
+   * reason to stop telling somebody what they already own, and every Manage or
+   * Cancel Plan on this page goes on working while it is shut.
+   */
+  | { kind: 'closed'; why: Exclude<SaleState, 'open'> }
   | { kind: 'buy' }
+
+/**
+ * The two states that OFFER to sell, replaced when the shop is shut.
+ *
+ * A wrapper rather than a branch inside `cardState`, so the precedence that
+ * file argues for is untouched: `revoked` still outranks ownership, a failed
+ * read still says the read failed rather than being overwritten by a fact about
+ * the app, and `checking` still says it is checking. Only the two answers that
+ * end in a Buy button are the shop's to withdraw.
+ */
+function withSale(state: CardState, sale: SaleState): CardState {
+  if (sale === 'open') return state
+  if (state.kind === 'buy' || state.kind === 'signedOut') return { kind: 'closed', why: sale }
+  return state
+}
 
 function Tick() {
   return (
@@ -203,6 +235,9 @@ function PackCard({
   const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
   const owned = state.kind === 'owned'
+  /** What a shut shop says here, or null while it is open. One read of the
+   *  wording, so the name and the line cannot come from two calls. */
+  const shut = state.kind === 'closed' ? saleWording(state.why, appTitle) : null
   const testMode = isTestLink(pack)
   const subscription = isSubscription(pack)
   const plans = pack.plans ?? []
@@ -449,6 +484,20 @@ function PackCard({
         )}
 
         {state.kind === 'checking' && <p className="store__note store__note--quiet">Checking your account…</p>}
+
+        {/*
+          A shut shop, said where the Buy button would have been, because that
+          is where a reader is looking for it. The whole list of what the pack
+          unlocks stays above it: a catalogue is still worth reading, and
+          somebody deciding whether to wait for the app wants to know what
+          waiting gets them.
+        */}
+        {shut && (
+          <p className="store__soon">
+            <span className="store__soon-name">{shut.name}</span>
+            <span className="store__soon-line">{shut.short}</span>
+          </p>
+        )}
 
         {state.kind === 'signedOut' && (
           <>
@@ -889,6 +938,11 @@ function AppCard({
   const tilt = useTilt<HTMLElement>()
   const icon = iconFor(useSiteContent(), app.page)
   const from = cheapestPlan(app)
+  // The same question the app's own shop page asks, asked here too — a card
+  // that showed prices with no hint that nothing can be bought would send a
+  // reader one click to find out. See `src/store/sale.ts`.
+  const sale = useSaleState(app)
+  const shut = sale === 'open' ? null : saleWording(sale, app.title)
   /*
    * Ownership is only ANSWERED once the shelf is ready. Asked earlier — while
    * the read is in flight, or after it failed — the set is simply empty, and
@@ -992,6 +1046,12 @@ function AppCard({
           })}
         </ul>
 
+        {/* Three answers, most specific first. A block is about THIS account
+            and outranks everything; a shut shop is about the app and is true
+            for everybody; the catalogue's own note is what stands when neither
+            applies. Only ever one of them, because a card that printed both a
+            block and a sale note would be asking a locked-out reader to work
+            out which sentence was about them. */}
         {revoked ? (
           <p className="store__app-blocked">
             <span className="store__revoked-mark" aria-hidden="true">
@@ -1001,6 +1061,11 @@ function AppCard({
               <strong>Not available on this account.</strong>{' '}
               {revoked.reason ?? 'No reason was recorded with it.'}
             </span>
+          </p>
+        ) : shut ? (
+          <p className="store__soon store__soon--card">
+            <span className="store__soon-name">{shut.name}</span>
+            <span className="store__soon-line">{shut.line}</span>
           </p>
         ) : (
           <p className="store__app-availability">{app.availability}</p>
@@ -1278,6 +1343,11 @@ function StoreApp({
 }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
   const icon = iconFor(useSiteContent(), app.page)
+  // Whether this app's packs may be bought at all. Asked ONCE for the page and
+  // handed to every card, so two packs of one app can never disagree about
+  // whether their app exists — see `src/store/sale.ts`.
+  const sale = useSaleState(app)
+  const shut = sale === 'open' ? null : saleWording(sale, app.title)
 
   return (
     <>
@@ -1316,10 +1386,29 @@ function StoreApp({
         </h2>
         <p className="lede store__lede">{app.copy}</p>
 
+        {/* No derived chip beside the written one. The box below says the same
+            state in the same words, immediately under it, and a 9px tag
+            repeating the heading of the thing it sits on top of is a word to
+            read that answers nothing. */}
         <div className="chips store__app-chips">
           <span className="chip chip--hot">{app.status}</span>
         </div>
-        <p className="store__availability">{app.availability}</p>
+        {/* Said once at the top as well as on every card, the same argument the
+            whole-app block makes one paragraph down: a reader who has to infer
+            "none of them" from the same sentence repeated on three cards has
+            been made to do arithmetic to find out the shop is shut.
+
+            It REPLACES the catalogue's own availability note rather than
+            sitting beside it, so there is only ever one sentence here about
+            whether these packs can be bought, and it is the derived one. */}
+        {shut ? (
+          <p className="store__soon store__soon--wide">
+            <span className="store__soon-name">{shut.name}</span>
+            <span className="store__soon-line">{shut.line}</span>
+          </p>
+        ) : (
+          <p className="store__availability">{app.availability}</p>
+        )}
 
         {/* Above the terms, not below them: a block on this whole app is the
             more urgent of the two, and it decides whether the terms are worth
@@ -1354,9 +1443,12 @@ function StoreApp({
             appId={app.id}
             appTitle={app.title}
             index={i}
-            state={cardState(app, pack)}
+            state={withSale(cardState(app, pack), sale)}
             grant={grantFor(app.id, pack.id)}
-            onBuy={(plan) => onBuy(app, pack, plan)}
+            /* Belt as well as braces: no card draws a Buy button while the
+               shop is shut, and the one press that spends money still refuses
+               to fire on its own account rather than trusting that. */
+            onBuy={(plan) => sale === 'open' && onBuy(app, pack, plan)}
             onSignIn={onOpenAuth}
             onCheck={onCheck}
           />

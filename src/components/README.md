@@ -274,8 +274,13 @@ are a **fixed pattern**: rule 11 of [`AGENTS.md`](../../AGENTS.md) writes it
 down, and any future app that sells a plan copies it rather than designing
 beside it. In one component:
 
-- A **state machine** with seven states, each with its own copy, and a fixed
-  floor so the card never resizes between them.
+- A **state machine** with eight states, each with its own copy, and a fixed
+  floor so the card never resizes between them. The eighth is `closed` — the
+  app this pack unlocks is not out, so there is no Buy button and the card says
+  which of the two reasons that is. It replaces `buy` and `signedOut` only:
+  `owned`, `waiting`, `checking`, `error` and `revoked` are untouched, because a
+  shut shop is no reason to stop telling somebody what they already own or to
+  take away the button that cancels it. See [`../store/`](../store/README.md).
 - **One button per pack, in every state.** A pack sold three ways opens a
   chooser over the card rather than printing three buttons, and a pack already
   subscribed to opens its subscription panel from an explicit **Manage or

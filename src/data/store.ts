@@ -98,10 +98,51 @@ export type StoreApp = {
   copy: string
   /** UPPERCASE, short: a status TAG, the same shape every chip on the site is. */
   status: string
-  /** Sentence case: the honest note about availability, which is a sentence and
-   *  therefore never a chip: the site's chips are 9px mono tags, and a sentence
-   *  wearing one reads as a code block bolted to the side of the shelf. */
+  /**
+   * Sentence case: the note that stands once the shop is OPEN — one line about
+   * what having a pack for this app is like. Never a chip: the site's chips are
+   * 9px mono tags, and a sentence wearing one reads as a code block bolted to
+   * the side of the shelf.
+   *
+   * **It does not say whether the packs are on sale**, and it used to. That
+   * sentence is DERIVED now — `saleWording()` in `src/store/sale.ts` — because
+   * a hand-written "not out yet" beside a shelf the runtime had just opened is
+   * the shop contradicting itself, and it would have gone stale in exactly the
+   * direction nobody checks: on launch day, when nobody is reading this file.
+   */
   availability: string
+  /**
+   * Is the APP out — the written answer, and only a FLOOR.
+   *
+   * Nothing on this shelf may be bought while the app it unlocks does not
+   * exist. That is not a policy the Store invented: a pack is a key, and
+   * selling a key to a door nobody can reach is money taken for nothing, on a
+   * date we cannot promise. So `src/store/sale.ts` gates every Buy button on
+   * whether the app is available, reading the SAME answer the app's own card
+   * reads — a hand-written access, the Developer console's override, or
+   * `src/live/` finding a real deploy — so launch day opens the shop with
+   * nothing here to edit.
+   *
+   * This field is what that runtime answer cannot be trusted to say on its
+   * own, in ONE direction. `src/live/` is allowed to fail: GitHub rate-limits
+   * at 60 unauthenticated requests an hour, and it answers `null` for "never
+   * shipped" and for "could not ask" alike. Read as the whole truth, a hiccup
+   * would quietly shut a launched app's shop, which is a revenue bug that
+   * fails silently and looks exactly like working software.
+   *
+   * So the runtime may only ever RAISE this. `true` says the app is out and
+   * its packs sell whatever GitHub manages to answer; `false` leaves the
+   * decision to the live read, which can open the shop and can never close one
+   * this file has already opened. Set it in the same sitting the app ships —
+   * and if it is forgotten, the live read has already opened the shop anyway,
+   * which is the safe way round for a field to go stale.
+   *
+   * An app that will never ship simply stays `false` for ever and never
+   * becomes live, so nothing here has to encode "never" as a third value: the
+   * shelf stays a catalogue, `availability` is where that is SAID, and the
+   * people who already own packs keep their cards and their Cancel buttons.
+   */
+  released: boolean
   /**
    * The table this app's ownership lives in, on the shared TDG Core project.
    *
@@ -136,7 +177,13 @@ export const STORE_APPS: StoreApp[] = [
     entitlementsTable: 'devfleet_entitlements',
     copy: 'Every git repo on your machine as a live card, up to sixteen panes at once, each with its own terminal, diff review and notebook. DevFleet itself is free and every feature in it stays free. This one pack is only a change of scenery.',
     status: 'IN DEVELOPMENT',
-    availability: 'A pack bought now sits on your account and unlocks the moment the first build lands.',
+    // This used to read "A pack bought now sits on your account and unlocks the
+    // moment the first build lands", and the shop sold on that promise while
+    // DevFleet did not exist. It is not a promise we can keep on a date, so the
+    // shelf is a catalogue until the app is out (`released` above) and the
+    // sentence that says so is derived. This is the line for once it IS out.
+    availability: 'The pack sits on your TDG Account rather than on a machine, so it is there on every computer you install DevFleet on.',
+    released: false,
     packs: [
       {
         id: 'themes',
@@ -159,7 +206,8 @@ export const STORE_APPS: StoreApp[] = [
     entitlementsTable: 'veditor_entitlements',
     copy: 'A desktop video editor with a timeline, effects, colour and audio, plus an export and format-conversion pipeline you set up the way you want it. The editor itself is free, and importing anything is free. These two packs unlock the extras.',
     status: 'IN DEVELOPMENT',
-    availability: 'Packs bought now sit on your account and unlock the moment the first build lands.',
+    availability: 'Both packs sit on your TDG Account rather than on a machine, so they are there on every computer you install the editor on.',
+    released: false,
     packs: [
       {
         id: 'themes',

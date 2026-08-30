@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { DevAccount, DevAuditRow, DevCatalog, DevEvent } from './api'
+import type { DevAccount, DevAuditRow, DevCatalog, DevEvent, DevReset } from './api'
 import * as api from './api'
+import { getCloudAccount, type CloudAccountStanding } from '../cloud/api'
 // The badge verbs live with the rest of the badge surface rather than in
 // `./api`, because the site's footer and every other TDG app call the same
 // module. This console is one of its callers. See src/badges/README.md.
 import { adminSetBadge } from '../badges/api'
 import type { AdminBadge } from '../badges/types'
 import {
+  CLOUD_APP_ID,
   MAK_APP_ID,
   grantNote,
   orphanRevocations,
@@ -34,6 +36,7 @@ import {
   TypeToConfirm,
   useSaveNotice,
 } from './controls'
+import { formatBytes, formatQuota } from '../data/cloud'
 import {
   DURATIONS,
   fmtDate,
@@ -124,6 +127,16 @@ export function AccountDetail(props: Props) {
   // the site sells. Nothing below names an app: add a product and a panel
   // appears here on its own. See `apps.ts`.
   const stores = useMemo(() => storeApps(catalog, account), [catalog, account])
+  /*
+   * TDG Cloud is discovered exactly like the rest and then drawn somewhere
+   * else: it is an account-wide subscription, not a thing you can do inside one
+   * app, so it reads beside TDG Core rather than after four apps. It is lifted
+   * out here — one filter, at the one place both lists are built — rather than
+   * by either panel knowing to skip it, which is how a product ends up drawn
+   * twice or not at all.
+   */
+  const cloud = useMemo(() => stores.find((s) => s.id === CLOUD_APP_ID) ?? null, [stores])
+  const apps = useMemo(() => stores.filter((s) => s.id !== CLOUD_APP_ID), [stores])
 
   return (
     <div className="dev__detail">
@@ -181,8 +194,8 @@ export function AccountDetail(props: Props) {
           which is the panel directly below. So "change the fact and the badge
           follows" still points at something the reader can see from here. */}
       <BadgesPanel {...props} />
-      <CorePanel {...props} />
-      <AppsPanel {...props} stores={stores} />
+      <CorePanel {...props} cloud={cloud} />
+      <AppsPanel {...props} stores={apps} />
       <HistoryPanel {...props} />
     </div>
   )
@@ -484,7 +497,67 @@ function PermissionsPanel({
 
 /* ── TDG-wide subscription ─────────────────────────────────────────────── */
 
-function CorePanel({ account: a, catalog, run, busy }: Props) {
+/**
+ * This account's TDG Cloud standing, re-read whenever its plan moves.
+ *
+ * `tdg_cloud_status()` cannot answer this: it takes the uuid from the caller's
+ * own token and never from a parameter, which is exactly what makes it safe to
+ * hand every account. So the console has its own verb — see
+ * `src/cloud/api.ts` — and this is the hook around it.
+ *
+ * Keyed on the cloud entry of the account payload rather than on a counter, so
+ * a grant written two lines below re-reads the bytes it may have changed, and
+ * clicking through the roster does not.
+ */
+function useCloudAccount(userId: string, key: string) {
+  const [state, setState] = useState<
+    | { kind: 'loading' }
+    | { kind: 'error'; message: string }
+    | { kind: 'ready'; cloud: CloudAccountStanding }
+  >({ kind: 'loading' })
+
+  useEffect(() => {
+    let live = true
+    setState({ kind: 'loading' })
+    getCloudAccount(userId).then(
+      (cloud) => live && setState({ kind: 'ready', cloud }),
+      (e: unknown) =>
+        live &&
+        setState({
+          kind: 'error',
+          message: e instanceof Error ? e.message : 'The Cloud read did not come back.',
+        }),
+    )
+    return () => {
+      live = false
+    }
+  }, [userId, key])
+
+  return state
+}
+
+/**
+ * The two subscriptions that belong to the ACCOUNT rather than to one app: the
+ * TDG Core tier, and the TDG Cloud plan and the storage it is holding.
+ *
+ * ## Why they are one panel
+ *
+ * Cloud used to sit in the Apps fold, because `cloud_entitlements` is
+ * registry-shaped and `storeApps()` discovers it like any other product — which
+ * is the right mechanism and the wrong place. Every other panel in there is
+ * about one app: what this person can do inside DevFleet, inside Veditor. Core
+ * and Cloud are the two things that are true of the whole account whatever they
+ * open, and reading one to decide about the other meant scrolling past four
+ * apps to do it.
+ *
+ * Nothing about Cloud is special-cased to get here. Its packs, its grant
+ * pickers, its revocation switch and its reset are the same `StorePanel` every
+ * discovered app gets; `AccountDetail` simply hands this one panel here instead
+ * of to `AppsPanel`, and Cloud's own numbers — quota, bytes, retention — sit
+ * above it as facts, because a plan you cannot see the storage behind is a
+ * number with nothing to check it against.
+ */
+function CorePanel({ account: a, catalog, run, busy, cloud, ...rest }: Props & { cloud: DevStoreApp | null }) {
   const [tier, setTier] = useState(a.core_tier)
   const [status, setStatus] = useState(a.core_status)
 
@@ -498,14 +571,44 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
   const statusToWrite = tier === 'free' ? 'active' : status
   const dirty = tier !== a.core_tier || statusToWrite !== a.core_status
 
+  const cloudKey = JSON.stringify(a.store?.[CLOUD_APP_ID] ?? null)
+  const cloudState = useCloudAccount(a.user_id, cloudKey)
+  const held = cloudState.kind === 'ready' ? cloudState.cloud : null
+  const noAnswer = cloudState.kind === 'loading' ? 'reading…' : 'unknown'
+
   return (
     <Panel
-      title="TDG Core Subscription"
-      what="The one tier every TDG app can gate on. Setting it here is a free grant: no Stripe, no charge, and it takes effect the next time the app reads it."
+      /* Explicit, and not the title `Panel` would default to. The title moved
+         when Cloud joined it, and a section whose id follows its heading loses
+         which-sections-are-open across the rename — for every developer, once,
+         silently. Same reason the Store panels are keyed on the app id. */
+      id="core"
+      title="TDG Core & Cloud"
+      what="The two subscriptions that belong to the account rather than to one app: the tier every TDG app can gate on, and the TDG Cloud plan with the storage behind it."
       writes="public.subscriptions"
-      terms={[a.core_tier, a.core_status, a.core_stripe_customer_id, 'tier plan free grant']}
+      terms={[
+        a.core_tier,
+        a.core_status,
+        a.core_stripe_customer_id,
+        'tier plan free grant',
+        'cloud storage quota plan',
+        ...(cloud?.packs.map((p) => `${p.id} ${p.name}`) ?? []),
+      ]}
       right={
-        <Tag tone={a.core_tier === 'free' ? 'plain' : 'ok'}>{a.core_tier.toUpperCase()}</Tag>
+        <span className="dev__tags">
+          <Tag tone={a.core_tier === 'free' ? 'plain' : 'ok'}>{a.core_tier.toUpperCase()}</Tag>
+          {/* A shut panel must not summarise an answer that has not arrived,
+              the rule the Store panels' NO ANSWER tag already keeps. */}
+          {cloudState.kind === 'loading' ? (
+            <Tag tone="plain">CLOUD …</Tag>
+          ) : cloudState.kind === 'error' ? (
+            <Tag tone="warn">CLOUD NO ANSWER</Tag>
+          ) : (
+            <Tag tone={held?.plan ? 'ok' : 'plain'}>
+              {held?.plan ? `CLOUD ${held.plan.pack.toUpperCase()}` : 'NO CLOUD'}
+            </Tag>
+          )}
+        </span>
       }
     >
       {a.core_row_count > 1 && (
@@ -562,6 +665,86 @@ function CorePanel({ account: a, catalog, run, busy }: Props) {
           Save Subscription
         </Button>
       </div>
+
+      <hr className="dev__rule" />
+
+      {/* ── TDG Cloud ─────────────────────────────────────────────────────
+          The numbers first, then the plan controls. A quota with no bytes
+          beside it is a claim with nothing to check it against, and "how much
+          are they actually holding" is the question a developer opens this for
+          — the plan is usually already visible from the tag on the shut
+          panel. */}
+      {/* The server's own words go LAST, in a clause of their own. Dropped
+          mid-sentence they run into the next one — the messages are written to
+          be read whole and none of them ends in a full stop. */}
+      {cloudState.kind === 'error' && (
+        <p className="dev__warn">
+          <strong>Could not read this account&apos;s Cloud.</strong> It is <strong>not</strong>{' '}
+          saying they have no plan: the plan controls below read the account payload and are
+          unaffected, and only the numbers are missing. Press <strong>Refresh</strong> to ask
+          again. The server said: {cloudState.message}
+        </p>
+      )}
+
+      {held && !held.enabledForThem && (
+        <p className="dev__panel-quiet">
+          TDG Cloud does not work for this account yet — it is not launched, and this account is
+          neither a developer nor on the tester list. A plan granted below is real and sits on the
+          row; it simply unlocks nothing until the <strong>Cloud</strong> tab opens the door. That
+          is the launch flag, not anything about this person.
+        </p>
+      )}
+
+      {/* One word for "we have not been told", used by every row rather than a
+          dash on some and `unknown` on others: four facts answering a failed
+          read four different ways reads as four different failures. `—` is for
+          a value that is genuinely nothing, and a read that did not come back
+          is not nothing. */}
+      <div className="dev__facts dev__facts--tight">
+        <Fact
+          label="Cloud plan"
+          value={held ? (held.plan?.name ?? held.plan?.pack ?? 'none') : noAnswer}
+        />
+        <Fact
+          label="Storage used"
+          value={
+            held
+              ? `${formatBytes(held.usedBytes)} of ${held.quotaBytes > 0 ? formatBytes(held.quotaBytes) : 'no quota'}`
+              : noAnswer
+          }
+        />
+        <Fact label="Files" value={held ? String(held.files) : noAnswer} />
+        <Fact
+          label="Downloads this month"
+          value={held ? formatBytes(held.egress.monthBytes) : noAnswer}
+        />
+        {held && held.quotaOverrideGb != null && (
+          <Fact
+            label="Quota override"
+            value={`${formatQuota(held.quotaOverrideGb)} (set in the Cloud tab)`}
+          />
+        )}
+        {held && held.retention.state !== 'none' && (
+          <Fact
+            label="Retention"
+            value={
+              held.retention.state === 'purge_eligible'
+                ? `past the deadline (${fmtDate(held.retention.deadline)}) — purgeable`
+                : `read-only until ${fmtDate(held.retention.deadline)}`
+            }
+          />
+        )}
+      </div>
+
+      {cloud ? (
+        <StorePanel {...rest} account={a} catalog={catalog} run={run} busy={busy} app={cloud} />
+      ) : (
+        <p className="dev__warn">
+          <code className="dev__code">public.cloud_entitlements</code> is not in the app registry,
+          so there is no plan to grant or take back here. That table is what registers TDG Cloud;
+          without it the Store shelf, the Account fold and this panel all have nothing to read.
+        </p>
+      )}
     </Panel>
   )
 }
@@ -1434,6 +1617,120 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
   )
 }
 
+/* ── forgetting what this console did ──────────────────────────────────── */
+
+/**
+ * Reset one whole product back to what was paid for.
+ *
+ * ## Why it is a press and not a picker value
+ *
+ * Every control on the Store panel above stages: it says what the account WILL
+ * hold, and Save writes the lot in one go. That works because each of those is
+ * a decision whose result is already on screen before the press. A reset is
+ * not — the server decides what Stripe is on the record for, and the honest
+ * preview of "reset" is a shrug. So it is one press, it asks first, and it
+ * reports what it did afterwards rather than what it was going to do.
+ *
+ * The per-PACK reset is a picker value, because at that scale it composes with
+ * the other packs' decisions in the same save. This is the whole-app one.
+ *
+ * ## Why it asks
+ *
+ * Lifting a block forgets `held_before`. Where that was a real purchase the
+ * reset writes it straight back, so nothing is lost; where it was a hand
+ * grant, it is gone and somebody has to make it again. That is recoverable and
+ * it is not free, which is exactly the size of thing that gets a confirm in
+ * place rather than a typed phrase — `TypeToConfirm` is for what cannot be
+ * undone at all.
+ */
+function ResetProduct({
+  title,
+  disabled,
+  busy,
+  why,
+  onReset,
+}: {
+  title: string
+  disabled?: boolean
+  busy?: boolean
+  /** Why it cannot be done, in a sentence, or null when it can. */
+  why: string | null
+  onReset: () => void
+}) {
+  const [asking, setAsking] = useState(false)
+
+  return (
+    <div className="dev__reset">
+      <p className="dev__panel-quiet">
+        <strong>Reset {title}</strong> forgets what this console did to it. Every hand-made grant
+        comes off, every block is lifted, and what a real Stripe payment put there stays — so the
+        account is left holding exactly what it paid for. It does not wait for Save.
+      </p>
+
+      {why && <p className="dev__warn">{why}</p>}
+
+      {asking && !disabled ? (
+        <div className="dev__confirm">
+          <p className="dev__confirm-copy">
+            Reset every {title} product on this account? Grants only this console explains are taken
+            back and any block is lifted. Anything Stripe actually paid for is left exactly as it
+            is, dates included.
+          </p>
+          <div className="dev__row">
+            <Button
+              variant="danger"
+              busy={busy}
+              onClick={() => {
+                onReset()
+                setAsking(false)
+              }}
+            >
+              Yes, Reset {title}
+            </Button>
+            <Button onClick={() => setAsking(false)}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <Button variant="danger" disabled={disabled} busy={busy} onClick={() => setAsking(true)}>
+          Reset {title}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/**
+ * What a reset actually did, said in the server's own answer.
+ *
+ * A toast cannot carry this: the press exists BECAUSE its outcome was not
+ * knowable in advance, so "done" would be the console declining to say what it
+ * had just done to somebody's purchases. Three facts, and the third is the one
+ * that explains the other two — what Stripe is on the record for on this
+ * account is why anything survived.
+ */
+function ResetReport({ resets, app }: { resets: DevReset[]; app: DevStoreApp }) {
+  const nameOf = (id: string) => app.packs.find((p) => p.id === id)?.name ?? prettyId(id)
+  const list = (ids: string[]) => ids.map(nameOf).join(', ')
+  const removed = [...new Set(resets.flatMap((r) => r.removed))]
+  // App-wide by construction — it is every pack Stripe has ever touched here,
+  // not only the ones this press was scoped to — so it is worded that way.
+  const paid = [...new Set(resets.flatMap((r) => r.paid_for))]
+  const blocks = resets.reduce((n, r) => n + r.blocks_lifted, 0)
+
+  return (
+    <p className="dev__panel-quiet">
+      <strong>Reset.</strong>{' '}
+      {removed.length > 0
+        ? `Took back ${removed.length === 1 ? '1 grant' : `${removed.length} grants`} nothing but this console explained: ${list(removed)}. `
+        : 'There was no hand-made grant left to take back. '}
+      {blocks > 0 && `${blocks === 1 ? 'One block' : `${blocks} blocks`} lifted. `}
+      {paid.length > 0
+        ? `Stripe is on the record for ${list(paid)} on this account, so that is what is left standing.`
+        : `Stripe is on the record for nothing on this account, so nothing was kept.`}
+    </p>
+  )
+}
+
 /* ── one pack Store, for whichever app this is ─────────────────────────── */
 
 /**
@@ -1511,6 +1808,18 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   /** Packs the shop rents rather than sells outright, held or not. It is what
    *  decides whether the note about hand-made subscriptions is worth printing. */
   const rentable = app.packs.filter((pack) => pack.supportsSubscriptionStates)
+  /**
+   * Can this app be reset at all?
+   *
+   * The server refuses without a `<app>_purchase_events` ledger — with no
+   * record of what Stripe granted, a reset could only guess — and there is
+   * nothing to reset when the table does not exist. Both are drawn as an
+   * absent option with a sentence rather than as a control that fails on
+   * contact, which is the same position `BadgesPanel` takes about a derived
+   * badge. `unknown` keeps the option: the server is the authority and says so
+   * in words if it disagrees.
+   */
+  const resettable = !absent && !(app.onServer && app.eventsTable == null)
 
   /** What each pack is RIGHT NOW, before anything was staged over it. */
   const current = useMemo(() => {
@@ -1529,6 +1838,18 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   const [draft, setDraft] = useState<Record<string, HoldingId | null>>(current)
   const [revokeApp, setRevokeApp] = useState(app.revoked != null)
   const [reason, setReason] = useState('')
+  /**
+   * What the last reset on this panel actually did.
+   *
+   * A reset is the one press here whose OUTCOME the console cannot predict —
+   * the server decides what Stripe is on the record for — so a toast saying
+   * "done" would be the page refusing to say what it had just done to
+   * somebody's purchases. Kept per ACCOUNT rather than per read: the re-read
+   * that follows the write changes `serverKey`, so keying it there would
+   * blank the answer in the same tick it arrived.
+   */
+  const [reset, setReset] = useState<DevReset[]>([])
+  useEffect(() => setReset([]), [a.user_id, app.id])
 
   /*
    * The staged edits belong to ONE account's view of ONE app, and both of those
@@ -1550,8 +1871,9 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   }, [serverKey])
 
   const labelOf = (pack: DevStorePack, id: HoldingId | null) =>
-    holdingsFor(pack.supportsSubscriptionStates, pack.revoked != null).find((h) => h.id === id)
-      ?.label ?? 'Unrecognised shape'
+    holdingsFor(pack.supportsSubscriptionStates, pack.revoked != null, resettable).find(
+      (h) => h.id === id,
+    )?.label ?? 'Unrecognised shape'
 
   const appRevokeMoved = revokeApp !== (app.revoked != null)
   // While the whole app is blocked every picker is disabled and every draft
@@ -1567,7 +1889,28 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
     ...packMoves.map((pack) => `${pack.name} → ${labelOf(pack, draft[pack.id])}`),
   ]
 
-  const notice = useSaveNotice(noticeFrom(app.title, changes, reason), serverKey)
+  /*
+   * The customer's version of the same list.
+   *
+   * Every other entry is a STATE, and `noticeFrom` turns `X → Subscribed` into
+   * "X is now Subscribed", which reads. A reset is not a state: "Pro Export
+   * Pack is now Reset To What Was Paid For" is a control's name posted through
+   * somebody's letterbox. What actually happened to them is worth one plain
+   * clause, so the two lists are allowed to differ by exactly that clause —
+   * the developer's list above stays the precise one.
+   */
+  const noticeLines = [
+    ...(appRevokeMoved
+      ? [revokeApp ? `${app.title} → revoked, all of it` : `${app.title} → no longer revoked`]
+      : []),
+    ...packMoves.map((pack) =>
+      draft[pack.id] === 'reset'
+        ? `${pack.name} → back to what your payments say`
+        : `${pack.name} → ${labelOf(pack, draft[pack.id])}`,
+    ),
+  ]
+
+  const notice = useSaveNotice(noticeFrom(app.title, noticeLines, reason), serverKey)
 
   const wantsReason =
     revokeApp !== (app.revoked != null) && revokeApp
@@ -1593,6 +1936,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
       `${app.title}: ${changes.length} change${changes.length === 1 ? '' : 's'} saved.`,
       async () => {
         const why = reason.trim() || null
+        const undone: DevReset[] = []
 
         if (appRevokeMoved && !revokeApp) {
           await api.setRevocation(a.user_id, app.id, '*', false)
@@ -1601,6 +1945,16 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         for (const pack of packMoves) {
           const next = draft[pack.id]
           const wasRevoked = pack.revoked != null && app.revoked == null
+
+          // First, because it is not a decision to make on top of the others:
+          // it is the absence of one. The server lifts this pack's block,
+          // drops what only a hand grant explained, and leaves what Stripe
+          // paid for — so nothing else in this loop has anything left to say
+          // about this pack.
+          if (next === 'reset') {
+            undone.push(await api.resetProduct(a.user_id, app.id, pack.id))
+            continue
+          }
 
           if (next === 'revoked') {
             await api.setRevocation(a.user_id, app.id, pack.id, true, why)
@@ -1632,6 +1986,8 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         if (appRevokeMoved && revokeApp) {
           await api.setRevocation(a.user_id, app.id, '*', true, why)
         }
+
+        if (undone.length > 0) setReset(undone)
 
         if (notice.tell && notice.body.trim()) {
           await api.notify(
@@ -1761,7 +2117,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
             // switch, so there is never a press that exists only to unlock the
             // control you actually wanted — and Revoked is the last, because it
             // is the one answer that is about permission rather than ownership.
-            const states = holdingsFor(pack.supportsSubscriptionStates, revoked)
+            const states = holdingsFor(pack.supportsSubscriptionStates, revoked, resettable)
             const value = draft[pack.id] ?? current[pack.id]
             const chosen = states.find((h) => h.id === value)
             const staged = value !== current[pack.id]
@@ -1842,6 +2198,37 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
         notice={notice}
         noticeTo={app.title}
         nothingLabel={`Nothing to save. Every pack above matches what this account holds in ${app.title}.`}
+      />
+
+      {/* What the last reset did, in the words the server answered with.
+          Drawn until another account is selected, because the whole point of
+          the press is that its result was not knowable beforehand. */}
+      {reset.length > 0 && <ResetReport resets={reset} app={app} />}
+
+      <hr className="dev__rule" />
+
+      {/* The whole app at once, and the one control on this panel that does
+          NOT wait for Save. It is not a state to stage — every picker above
+          says what the account WILL hold, and this says "forget what we said",
+          which has no staged form: there is nothing to preview, because the
+          server decides what survives. Same shape Makullveny's one-press
+          switches take, and it says so. */}
+      <ResetProduct
+        title={app.title}
+        disabled={!resettable}
+        busy={busy === `reset:${app.id}`}
+        why={
+          absent
+            ? `There is no public.${app.entitlementsTable ?? `${app.id}_entitlements`} table, so there is nothing on a row to reset.`
+            : app.eventsTable == null && app.onServer
+              ? `${app.id} keeps no public.${app.id}_purchase_events ledger, so there is no record of what Stripe granted and a reset here could only guess. The server refuses it, and this says so rather than offering a press that cannot work.`
+              : null
+        }
+        onReset={() =>
+          run(`reset:${app.id}`, `${app.title}: reset to what was paid for.`, async () => {
+            setReset([await api.resetProduct(a.user_id, app.id, '*')])
+          })
+        }
       />
 
       {app.hasGrants && app.holdingsKnown && !absent && rentable.length > 0 && (

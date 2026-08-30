@@ -14,7 +14,7 @@ deletes it in a dashboard.
 | `functions/cloud-maintenance/index.ts` | The deliberate arm of Cloud retention: the lapsed-accounts report, expired-reservation reaping, and — double-gated on the caller being a developer AND `availability.auto_purge` in config — the purge, through the Storage API because a `storage.objects` row deleted by SQL strands its blob (the platform refuses it now). Dry-run by default. |
 | `functions/cloud-provision/index.ts` | The one-run tool that created TDG Cloud's Stripe objects — two products, four prices, four **deactivated** Managed Payments payment links, the webhook endpoint — and wrote every id and URL into `tdg_cloud_config`. The deployed copy is a retired stub; redeploy this source with a fresh nonce in `PROVISION_KEY` to reprice, then retire it again. |
 | `functions/tdg-store-verify/index.ts` | Answers whether Stripe still agrees with what the Store advertises: every app-tagged payment link's real amount, cadence and active state; the Cloud config held against Stripe in both directions (a configured link must exist, sell exactly the configured cents, and be active if and only if Cloud is on sale); and the three app webhook endpoints' health. `npm run verify:store` reads the catalogue out of `store.ts` and POSTs it for per-link verdicts. Deployed `--no-verify-jwt` for the `tdg-site-deploys` reason: no identity in, nothing non-public out — the Stripe key stays in the environment and only its conclusions leave. |
-| `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, product revocations and account notices, `tdg_billing_subscription`, and the site-content overlay below. |
+| `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, product revocations, the product reset and account notices, `tdg_billing_subscription`, and the site-content overlay below. |
 
 ## Why the site cannot do this itself
 
@@ -208,6 +208,46 @@ offers to sell it — the one sentence a revoked account must never be shown. Th
 site's Store draws the state today
 ([`src/store/`](../src/store/README.md)); the brief each other app's own session
 needs is [`docs/revocation-app-prompt.md`](../docs/revocation-app-prompt.md).
+
+### `tdg_admin_reset_product` — forget that we touched this
+
+`20260830140000_reset_a_product_to_what_was_paid_for.sql`. The console can
+already set a pack to Not Owned, and that is a DECISION. What it could not say
+was *forget I touched this* — and that is the one wanted most often, because
+this console's whole purpose is trying states out on real accounts. A reset
+removes what only this console explains and leaves everything else exactly as it
+was; what is left is what the money says.
+
+**Two signals decide what Stripe is responsible for**, and both already existed:
+a `subscriptionId` on the grant (only a webhook writes one — `tdg_admin_set_pack_grant`
+refuses to invent one, because that id is the only handle the Store's Cancel
+button has), and a row in `<app>_purchase_events` whose `stripe_event_id` is not
+an `admin:<uuid>` one. Either claim keeps the grant. **The function only ever
+removes**, so a purchase Stripe has already taken back stays taken back.
+
+**Blocks come off first and hand back what they took**, then one filter decides
+the lot. Filtering first would read a row with the interesting part missing —
+`held_before` is where a block keeps the grant it lifted — so a revoked real
+purchase would silently stay gone and a revoked hand grant would vanish
+uncounted. In that order both halves fall out: a revoked real purchase comes
+back, a revoked hand grant does not.
+
+It **refuses for an app with no ledger** (`22023`, in a sentence): there would be
+no record of what Stripe granted, so a reset there could only guess, and a guess
+about money is what this whole family of functions exists not to make. It also
+refuses a per-pack reset under a whole-app block, the same refusal
+`tdg_admin_set_revocation` makes and for the same reason. Every pack it takes
+back gets an `<app>.admin.reset` ledger row so Purchases shows the reset beside
+the grants it undid, and one audit line names the counts.
+
+### `tdg_admin_cloud_account` — one account's Cloud, for the console
+
+Same migration. `tdg_cloud_status()` takes the uuid from the caller's own token
+and never from a parameter, which is exactly what makes it safe to grant to
+every authenticated account — and exactly why it cannot answer about somebody
+else. So the console has its own verb, opening with `tdg_admin_uid()` like every
+other admin read, answering the same shape minus the warnings: those are
+sentences written for the account holder, and a developer reads the numbers.
 
 ### `tdg_notices` — and does anybody tell them?
 

@@ -571,6 +571,42 @@ export const setRevocation = (
     p_reason: reason,
   })
 
+/** What one reset actually did, so the console can say it rather than imply it. */
+export type DevReset = {
+  app: string
+  /** The pack it was scoped to, or `*` for the whole app. */
+  pack: string
+  /** Pack ids the reset took back, because nothing but this console explained them. */
+  removed: string[]
+  /** Pack ids Stripe is on the record for on this account. These survive. */
+  paid_for: string[]
+  blocks_lifted: number
+}
+
+/**
+ * Forget everything this console did to one product on one account.
+ *
+ * Not `setPack(false)` on each pack in turn, and not a lift of every block:
+ * those are DECISIONS, and this is the absence of one. It removes the grants
+ * that only a hand grant explains, lifts the blocks in scope, and leaves
+ * standing whatever Stripe actually paid for — so what is left is what the
+ * money says, which is what "reset" has to mean on a page whose whole job is
+ * trying states out on real accounts.
+ *
+ * `pack` is `'*'` for the whole app. The server decides what counts as a real
+ * purchase — a `subscriptionId` only a webhook can write, or a ledger row that
+ * is not an `admin:` one — and refuses outright for an app with no ledger,
+ * because a reset that could only guess is a guess about money. The whole
+ * argument is in
+ * supabase/migrations/20260830140000_reset_a_product_to_what_was_paid_for.sql.
+ */
+export const resetProduct = (
+  userId: string,
+  app: string,
+  pack = '*',
+): Promise<DevReset> =>
+  rpc<DevReset>('tdg_admin_reset_product', { p_target: userId, p_app: app, p_pack: pack })
+
 /**
  * Tell an account what we changed about what it owns.
  *

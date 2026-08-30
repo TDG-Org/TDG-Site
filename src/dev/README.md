@@ -54,7 +54,7 @@ done to the account, then what they hold.
 | **Identity** | Who the account is. The read-only facts it was created with, the name, handle, bio and privacy we can change, and — in a fold of its own — **Permissions**. |
 | **Standing & Access** | Account management: suspend, hide, soft-delete, sign out everywhere, delete forever. It is what you reach for when somebody reports abuse, so it is near the top rather than under a screen of pack switches. |
 | **Badges** | The global marks, under the two panels owning the facts a derived badge follows. |
-| **TDG Core Subscription** | The one tier every TDG app can gate on, directly above the apps that gate on it. |
+| **TDG Core & Cloud** | The two subscriptions that belong to the ACCOUNT rather than to one app: the tier every TDG app can gate on, and the TDG Cloud plan with the storage behind it. Directly above the apps that gate on them. |
 | **Apps** | One fold holding Makullveny and every pack Store, each with its own fold inside. |
 | **This Account's History** | Every payment, grant and moderation action, for this account. |
 
@@ -69,6 +69,27 @@ below a screen and a half of pack switches. Shut, the run of sections is short
 enough to read as an index. Open, every app is inside it exactly as it was, and
 Expand All still reaches all of them, because `sections.tsx` holds one open set
 for the whole page rather than a flag per panel.
+
+**Cloud is discovered like an app and drawn like a subscription.**
+`cloud_entitlements` is registry-shaped, so `tdg_store_apps()` finds it and it
+gets the same Store panel every app gets — the same pack pickers, the same
+revocation switch, the same reset. What changed is where that panel is mounted:
+`AccountDetail` lifts it out of the Apps fold and into **TDG Core & Cloud**,
+because it is not a thing you can do inside one app. Everything else in that
+fold is *what this person can do inside DevFleet, inside Veditor*; Core and
+Cloud are true of the whole account whatever they open, and reading one to
+decide about the other used to mean scrolling past four apps. The lift is one
+filter at the one place both lists are built, so no panel can be drawn twice or
+dropped.
+
+Above the plan controls sit Cloud's own numbers — plan, storage used against
+quota, files, this month's metered downloads, any quota override, and the
+retention standing when there is one. They come from `tdg_admin_cloud_account`,
+the console's own verb: `tdg_cloud_status()` takes the uuid from the caller's
+token and never from a parameter, which is exactly what makes it safe to grant
+to every account, so it cannot answer about somebody else. A failed read says so
+and leaves the plan controls alone — they read the account payload and are
+unaffected — rather than drawing a plan as absent.
 
 **A parent fold cannot hide a matching child.** A `Panel` that does not match
 the page search removes itself, so the Apps fold counts its children's own
@@ -373,6 +394,11 @@ means; it is in the same picker rather than in a switch beside it because
 `Not Owned` and `Revoked` are the same absence and opposite decisions, and a
 reader has to be able to tell them apart on the tile.
 
+**`Reset To What Was Paid For` is last of all**, and it is the one entry in the
+list that is not a state — see *Resetting a product* below. It sits with
+`Restore` while a pack is revoked, and at the bottom otherwise, so it can never
+sit where the eye looks for the pack's current value.
+
 The sentence under each picker is what the Store's own card will say in that
 state, from the same `src/dev/grantShapes.ts` both ends read — so choosing a
 state is choosing a card, and the two cannot drift.
@@ -454,6 +480,52 @@ paste per repo.
 every app a revocation names, and anything that still lands nowhere is listed at
 the bottom of the Apps fold with the SQL to lift it — because a block nobody can
 see is a block nobody can lift.
+
+### Resetting a product
+
+**This console's whole job is trying states out on real accounts, and until now
+there was no way back.** Three days of testing leave a row full of hand-made
+grants and lifted-and-relaid blocks, and putting it right by hand means
+remembering which of them was real — which nothing on this page records. So
+there is a reset, and what it means is *forget we touched this*.
+
+| | |
+| --- | --- |
+| **One pack** | `Reset To What Was Paid For`, the last option in that pack's picker. It stages and saves with everything else, because at that scale it composes with the other packs' decisions. |
+| **A whole app** | `Reset <App>`, its own block under the Save bar. It asks first and **does not wait for Save** — there is nothing to preview, because the server decides what survives. |
+
+**What survives is what Stripe is on the record for**, decided in Postgres by
+two signals that already existed and neither of which is a new column to keep in
+step:
+
+- a `subscriptionId` on the grant. Only a webhook ever writes one — the section
+  above is why — so a grant carrying one is Stripe's, including one a developer
+  has since edited to move a period end for support;
+- a row in `<app>_purchase_events` for that pack whose `stripe_event_id` is not
+  an `admin:<uuid>` one. Admin writes stamp themselves that way; a real delivery
+  carries Stripe's own `evt_…`.
+
+Anything either signal claims is kept. **The reset only ever removes**, so a
+purchase Stripe has already taken back stays taken back: there is no shape of
+this that hands somebody a pack they did not pay for.
+
+**Blocks come off first, and hand back what they took.** A block does not merely
+mark a pack — it lifts the grant off the row into `held_before` — so filtering
+first would read a row with the interesting part missing: a revoked real
+purchase would silently stay gone, and a revoked hand grant would disappear
+without being counted, so the answer would say "nothing removed" about a press
+that changed what the account owns. Blocks off, what they held back on, then one
+filter over the lot. Both halves of the promise fall out of that order.
+
+**It refuses for an app with no ledger**, in a sentence, and the option is
+absent rather than dead: with no record of what Stripe granted, a reset there
+would be a guess wearing the word reset.
+
+**It says what it did afterwards**, in the server's own answer — what was taken
+back, how many blocks were lifted, and what Stripe is on the record for on that
+account, which is why anything survived. A toast saying "done" would be the
+console declining to say what it had just done to somebody's purchases, and this
+is the one press here whose outcome was not knowable before it.
 
 ### Why the states had to be reachable at all
 
@@ -872,17 +944,17 @@ reference implementation of the startup reply panel the other apps copy.
 | File | What it is |
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the five tabs, the roster, and the one action runner every write goes through. |
-| `AccountDetail.tsx` | The panels for one account, in six top-level sections. Two of them nest: Permissions sits inside Identity, and Makullveny plus a Store panel per app sit inside Apps. Each states what it is and names the table it writes. |
+| `AccountDetail.tsx` | The panels for one account, in six top-level sections. Three of them nest: Permissions sits inside Identity, Cloud's own Store panel sits inside TDG Core & Cloud, and Makullveny plus a Store panel per remaining app sit inside Apps. Each states what it is and names the table it writes. |
 | `CloudTab.tsx` | The Cloud tab: the staged config editor with its launch confirmation, the metrics and economics readout, and the retention report. Its verbs come from `src/cloud/api.ts`. |
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the tick-and-act bulk bar, the report dialog, the reply composer with its delivery state, and copying at every grain — including the identity-free **review** format built for a model to read. |
-| `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, plus every revocation on the account, and what to say when the sources disagree.** The reason no file here names a product — except `MAK_APP_ID`, whose comment says why that one exception exists. |
+| `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, plus every revocation on the account, and what to say when the sources disagree.** The reason no file here names a product — except `MAK_APP_ID` and `CLOUD_APP_ID`, whose comments say why those two exceptions exist. |
 | `controls.tsx` | Panel, SectionControls (the search box and Expand / Collapse All), Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, **SaveBar** with `useSaveNotice`, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
-| `api.ts` | Every `tdg_admin_*` call, typed — including `setRevocation` and `notify`. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). The account's side of a notice is [`../notices/api.ts`](../notices/README.md). |
+| `api.ts` | Every `tdg_admin_*` call, typed — including `setRevocation`, `resetProduct` and `notify`. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). The account's side of a notice is [`../notices/api.ts`](../notices/README.md). |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
 | `devMode.ts` | The show-the-tab switch. localStorage, per device. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
@@ -1015,6 +1087,7 @@ What is still worth doing, and both are optional:
 | | Why |
 | --- | --- |
 | `public.<app>_known_packs()` returning `text[]` | Gives the tiles a catalogue instead of only what an account happens to hold, and holds grants to that list. Without it any well-formed pack id is accepted. |
+| `public.<app>_purchase_events` | Joins the merged Purchases ledger — and it is what makes **Reset** possible, because it is the only record of which grants came from Stripe rather than from this page. Without it the reset option is absent, with a sentence saying why. |
 | An entry in `STORE_APPS` (`src/data/store.ts`) | Gives the panel the app's real name, its prose and its prices. Without it the console titles the app from its id. |
 
 Neither blocks the other and neither blocks the console. See `apps.ts`.

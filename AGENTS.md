@@ -157,16 +157,28 @@ a checkbox, not a scrollbar, not a stepper arrow, not a focus ring, not an
 autofilled field. `base.css` already handles form controls and the autofill
 highlight; `src/lib/chromeGuard.ts` handles extensions that try to repaint them.
 
-Empty, loading and error states count as states. The Store card has seven —
-`checking` · `signedOut` · `error` · `owned` · `waiting` · `buy` · `revoked` —
-and a fixed `min-height` so it never changes size as answers arrive; a shelf
-that jumps as answers land reads as a page still loading.
+Empty, loading and error states count as states. The Store card has eight —
+`checking` · `signedOut` · `error` · `owned` · `waiting` · `buy` · `revoked` ·
+`closed` — and a fixed `min-height` so it never changes size as answers arrive;
+a shelf that jumps as answers land reads as a page still loading.
 
 `revoked` is the one worth reading twice, because it looks like `buy` and means
 the opposite. A product a developer has taken out of an account's reach is
 unowned, and the card must never fall back to offering it: that would be the
 shop taking money for something the database has already decided to refuse. It
 says what, why and when instead — see [`src/store/`](src/store/README.md).
+
+`closed` is the same argument about the APP rather than the account. **A pack
+is a key, and this shop does not sell keys to doors that do not exist yet**: a
+card whose app is not out draws no Buy button, and says which of the two
+reasons it is — not shipped, or shipped and temporarily not answering — where
+the button would have been. It replaces `buy` and `signedOut` and nothing else,
+so an owner still sees `owned` and every **Manage or Cancel Plan** goes on
+working while the shop is shut. The answer is derived at runtime from the same
+resolution the app's own card uses, so launch day opens the shop with nothing
+to edit and no deploy; `src/store/sale.ts` holds it, and the one written field
+behind it (`released` in `src/data/store.ts`) may only ever raise the answer,
+never lower it.
 
 ### 6. Symmetry is structural, never hand-tuned.
 

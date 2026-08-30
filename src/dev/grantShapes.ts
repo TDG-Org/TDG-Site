@@ -180,7 +180,7 @@ export function shapeOfGrant(grant: PackGrant | null | undefined, owned: boolean
  * actually be, is the same idea `GRANT_SHAPES` already was: the states
  * themselves, named the way the Store names them.
  */
-export type HoldingId = 'none' | GrantShape['id'] | 'revoked' | 'restore'
+export type HoldingId = 'none' | GrantShape['id'] | 'revoked' | 'restore' | 'reset'
 
 export type Holding = {
   id: HoldingId
@@ -228,6 +228,30 @@ const RESTORE: Holding = {
 }
 
 /**
+ * The third option whose answer this console does not know, and the only one
+ * that is not a decision at all.
+ *
+ * Every other entry in this list SAYS something about the account: they have
+ * it, they do not, they may not. This one says *forget that we said anything*
+ * — the grants only a hand grant explains come off, the blocks come off, and
+ * whatever Stripe actually paid for is left standing. It is the option a
+ * developer wants after an afternoon of trying states out on a real person's
+ * row, and until now the only way back was remembering which of the six states
+ * had been real, which nothing on this page records.
+ *
+ * It belongs in this list rather than beside it for `Restore`'s reason one turn
+ * further on: a second control for "what does this account hold" is the
+ * two-controls-for-one-fact shape the whole file exists to remove. The server
+ * decides what survives — see `tdg_admin_reset_product` — and the console shows
+ * what it did afterwards rather than predicting it.
+ */
+const RESET: Holding = {
+  id: 'reset',
+  label: 'Reset To What Was Paid For',
+  what: 'Forgets what this console did to this pack: any hand-made grant comes off and any block is lifted. What Stripe actually paid for stays, and that is what the account is left holding.',
+}
+
+/**
  * The states THIS pack can be in.
  *
  * A pack the shop sells on a recurring plan gets the six shapes; a one-time
@@ -239,6 +263,10 @@ const RESTORE: Holding = {
 export function holdingsFor(
   supportsSubscriptionStates: boolean,
   revoked = false,
+  /** Can this app be reset at all? False for one with no purchase ledger,
+   *  where the server refuses — an option that can only fail is worse than no
+   *  option, which is this folder's own position (see `BadgesPanel`). */
+  resettable = true,
 ): Holding[] {
   const grants: Holding[] = supportsSubscriptionStates
     ? GRANT_SHAPES.map((s) => ({ id: s.id, label: s.label, what: s.what }))
@@ -249,11 +277,14 @@ export function holdingsFor(
           what: 'Bought once and kept. There is no clock on it and nothing to renew.',
         },
       ]
+  const undo: Holding[] = resettable ? [RESET] : []
   // Revoked FIRST while it is the answer, because it is the state the tile is
   // in and a picker whose current value is buried at the bottom reads as a
-  // picker that has not been set.
-  if (revoked) return [REVOKED, RESTORE, NOT_HELD, ...grants]
-  return [NOT_HELD, ...grants, REVOKED]
+  // picker that has not been set. Reset sits with the other recovery option
+  // there, and last of all otherwise: it is the one entry that is not a state,
+  // so it must never sit where the eye looks for the current one.
+  if (revoked) return [REVOKED, RESTORE, ...undo, NOT_HELD, ...grants]
+  return [NOT_HELD, ...grants, REVOKED, ...undo]
 }
 
 /**
