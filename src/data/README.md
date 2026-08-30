@@ -57,7 +57,7 @@ has never bent, and it is the half that costs money when it does.
 | File | What it holds |
 | --- | --- |
 | `content.ts` | The home page's catalogue: nav links, the hero taglines, the seven Origin chapters, the Apps / Tools cards, the MARANATHA panel the Building section draws, what is queued next, and the shared `Shot` and `IconShape` types. Every card names its own `page:` slug. The sections' own headings and ledes are in the section components, per the line above. |
-| `appPages.ts` | One page per app, tool and game. The biggest file here (~2,300 lines) and deliberately so — it is content, and it is lazily loaded. |
+| `appPages.ts` | One page per app, tool and game. The biggest file here (~2,300 lines) and deliberately so — it is content, and it is lazily loaded. **Do not hand-write a `links` entry pointing at `#/store/<app>`** — `AppPage.tsx` derives that control from `STORE_APPS` and drops a duplicate, so a typed one is a second copy to keep true (rule 17). |
 | `about.ts` | The About page, in the same block vocabulary as an app page. |
 | `pageBlocks.ts` | The block types a folded page is built from. Small on purpose. |
 | `store.ts` | **The shop catalogue: what is sold, what it costs, and the live Stripe links.** Read its header before touching a number. |

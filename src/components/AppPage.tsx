@@ -2,8 +2,9 @@ import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { SectionsProvider } from '../lib/sections'
 import { asset } from '../lib/asset'
-import { rememberOrigin } from '../lib/route'
-import { BackButton, Fold, FoldControls } from './Folded'
+import { rememberOrigin, storeAppHash } from '../lib/route'
+import { STORE_APPS } from '../data/store'
+import { BackButton, Fold, FoldControls, OnwardButton, PageNav } from './Folded'
 import { AppIcon } from './AppIcon'
 import type { AppPage as AppPageData } from '../data/appPages'
 import { chipsFor, iconFor, shotFor } from '../content/resolve'
@@ -57,9 +58,31 @@ function AppPageBody({ page }: { page: AppPageData }) {
 
   const ask = liveRepoForPage(doc, page.slug)
   const live = useLiveAccess(ask.repo, page.title, ask.verb)
-  const liveLink =
-    live?.kind === 'live' && !(page.links ?? []).some((l) => l.href === live.href) ? live : null
   const liveDown = live?.kind === 'down'
+
+  /* ── the way on, DERIVED (rule 17) ───────────────────────────────────────
+     Does this app sell anything? The catalogue answers, matched on the page
+     the Store's own card already names, so an app added to `STORE_APPS`
+     tomorrow gets its control here without anybody editing this file or that
+     app's prose. It used to be a hand-typed line in `links` on exactly two
+     pages, which is the shape rule 17 exists to stop: a third app would have
+     shipped with a shop nothing on its page pointed at, and the failure would
+     have been silent. */
+  const shop = STORE_APPS.find((a) => a.page === page.slug) ?? null
+  const shopHash = shop ? storeAppHash(shop.id) : null
+  const shopLabel = shop
+    ? shop.packs.length === 1
+      ? 'See the pack in the Store'
+      : 'See the packs in the Store'
+    : null
+
+  /* A link the overlay or the data file still writes by hand to the place the
+     control above already goes is dropped, not drawn twice — the same dedupe
+     the live link does one line down. The two built-in ones went with this
+     edit; a stored document written before it can still carry one. */
+  const links = (page.links ?? []).filter((l) => l.href !== shopHash)
+  const liveLink =
+    live?.kind === 'live' && !links.some((l) => l.href === live.href) ? live : null
 
   return (
     <section id="top" className="section section--blend appview">
@@ -67,7 +90,12 @@ function AppPageBody({ page }: { page: AppPageData }) {
       <div ref={blob} className="blob appview__blob" aria-hidden="true" />
 
       <div className="shell appview__shell">
-        <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} />
+        <PageNav>
+          <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} />
+          {shopHash && shopLabel && (
+            <OnwardButton href={shopHash} label={shopLabel} from={page.title} />
+          )}
+        </PageNav>
 
         <div ref={head} className="appview__head">
           <div className="kicker">
@@ -103,9 +131,9 @@ function AppPageBody({ page }: { page: AppPageData }) {
             </dl>
           )}
 
-          {((page.links && page.links.length > 0) || liveLink || liveDown) && (
+          {(links.length > 0 || liveLink || liveDown) && (
             <div className="appview__links">
-              {(page.links ?? []).map((link) =>
+              {links.map((link) =>
                 link.external ? (
                   <a
                     key={link.href}
@@ -197,7 +225,12 @@ function AppPageBody({ page }: { page: AppPageData }) {
         </div>
 
         <div className="appview__foot">
-          <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} tone="quiet" />
+          <PageNav>
+            <BackButton fallbackLabel={page.backLabel} fallbackHash={page.backHash} tone="quiet" />
+            {shopHash && shopLabel && (
+              <OnwardButton href={shopHash} label={shopLabel} from={page.title} tone="quiet" />
+            )}
+          </PageNav>
         </div>
       </div>
     </section>

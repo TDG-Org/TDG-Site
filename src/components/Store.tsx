@@ -20,7 +20,7 @@ import { iconFor } from '../content/resolve'
 import { useSiteContent } from '../content/store'
 import { PlanPanel, PlanRow, planNote } from './PlanChooser'
 import { CloudShelf } from '../cloud/CloudShelf'
-import { BackButton, Fold, FoldControls } from './Folded'
+import { BackButton, Fold, FoldControls, OnwardButton, PageNav } from './Folded'
 import { STORE_ANSWERS, STORE_BILLING_LINK_NOTICE } from '../data/storeAnswers'
 import {
   STORE_APPS,
@@ -1284,8 +1284,25 @@ function StoreApp({
       {/* "Back to the Store" when the reader came from the index, and the same
           place by hash when they arrived cold from a shared link or from the
           app's own page. `BackButton` is the app pages' own control, so this
-          reads and behaves exactly like the one on every other routed page. */}
-      <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} />
+          reads and behaves exactly like the one on every other routed page.
+
+          Beside it, the way ON — this app's own page. The two pages are each
+          other's onward link now: `#/app/veditor` offers "See the packs in the
+          Store" in this exact row, and this offers the way back into the
+          prose. It used to be a link further down the head, which was one
+          control to the same place in a different shape on each side of the
+          same pair; rule 6 says a mirrored pair takes its shape from one
+          place. Nothing was lost in the move — same words, same destination,
+          same single tab stop, now where the reader is already looking for a
+          way out of the page. */}
+      <PageNav>
+        <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} />
+        <OnwardButton
+          href={appHash(app.page)}
+          label={`Read about ${app.title}`}
+          from="the Store"
+        />
+      </PageNav>
 
       <div ref={head} className="store__head">
         <div className="kicker">
@@ -1303,19 +1320,6 @@ function StoreApp({
           <span className="chip chip--hot">{app.status}</span>
         </div>
         <p className="store__availability">{app.availability}</p>
-
-        {/* One click to what the app actually is, and one click back — the same
-            offer the shelf head used to make when it was a card. */}
-        <a
-          className="store__applink"
-          href={appHash(app.page)}
-          onClick={() => rememberOrigin('the Store')}
-        >
-          Read about {app.title}
-          <span className="store__applink-arrow" aria-hidden="true">
-            →
-          </span>
-        </a>
 
         {/* Above the terms, not below them: a block on this whole app is the
             more urgent of the two, and it decides whether the terms are worth
@@ -1362,7 +1366,15 @@ function StoreApp({
       <MoneyAnswers />
 
       <div className="store__foot">
-        <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} tone="quiet" />
+        <PageNav>
+          <BackButton fallbackLabel="the Store" fallbackHash={STORE_HASH} tone="quiet" />
+          <OnwardButton
+            href={appHash(app.page)}
+            label={`Read about ${app.title}`}
+            from="the Store"
+            tone="quiet"
+          />
+        </PageNav>
       </div>
     </>
   )

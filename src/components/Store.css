@@ -550,32 +550,16 @@
   font: 400 13px/1.6 var(--font-body);
   color: var(--faint);
 }
-/* One click to what the app actually is, and one click back — the same offer
-   the shelf head used to make when it was a card. */
-.store__applink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  font: 500 13.5px var(--font-body);
-  color: var(--accent-2);
-}
-.store__applink:hover {
-  color: var(--text);
-}
-.store__applink-arrow {
-  font-size: 12px;
-  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.store__applink:hover .store__applink-arrow {
-  transform: translateX(3px);
-}
+/* `.store__applink` is GONE. It was one click to what the app actually is,
+   sitting in this head — and it is now the `OnwardButton` in the page's nav
+   row, opposite Back, because the app's own page offers the way here in that
+   exact row and a mirrored pair is drawn from one place (rule 6). Same words,
+   same destination, one tab stop either way. */
 
 @media (prefers-reduced-motion: reduce) {
   .store__app-arrow,
   .store__app-cta-arrow,
-  .store__app-link-arrow,
-  .store__applink-arrow {
+  .store__app-link-arrow {
     transition: none;
   }
 }

@@ -62,13 +62,31 @@
   max-width: 900px;
 }
 
-/* ── back ─────────────────────────────────────────────────────────────── */
+/* ── back, and the way on ─────────────────────────────────────────────────
+ *
+ * ONE control, drawn twice and mirrored. `.appview__back` is the element
+ * `BackButton` and `OnwardButton` both render, and everything that decides how
+ * it looks — the two paddings, the gap, the nudge the arrow makes on hover —
+ * is a variable set here and FLIPPED by `data-dir='on'`. Rule 6: a pair takes
+ * its numbers from one place and applies them in mirror image, so the two
+ * cannot end up different heights on the row they share.
+ *
+ * `--nav-pad-lead` is the padding on the side the arrow is on, whichever side
+ * that is; `--nav-pad-trail` the other. Back's arrow leads, so its lead side
+ * is the left; onward's trails, so its lead side is the right.
+ */
 
 .appview__back {
+  --nav-pad-lead: 12px;
+  --nav-pad-trail: 15px;
+  /* Which way the arrow leans on hover: out of the button, along its own
+     direction of travel. One value, negated for the mirror. */
+  --nav-nudge: -3px;
+
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 15px 9px 12px;
+  padding: 9px var(--nav-pad-trail) 9px var(--nav-pad-lead);
   border-radius: 2px;
   border: 1px solid var(--border);
   background-color: var(--surface);
@@ -81,6 +99,11 @@
     color 0.2s ease,
     var(--t-theme);
 }
+.appview__back[data-dir='on'] {
+  --nav-pad-lead: 15px;
+  --nav-pad-trail: 12px;
+  --nav-nudge: 3px;
+}
 .appview__back:hover {
   border-color: var(--border-hover);
   color: var(--text);
@@ -90,15 +113,35 @@
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .appview__back:hover .appview__back-arrow {
-  transform: translateX(-3px);
+  transform: translateX(var(--nav-nudge));
 }
+/* Quiet drops the border and the padding on the OUTER edge only — the edge
+   the button is aligned to — so a quiet Back sits flush left and a quiet
+   onward flush right, and the pair still reads as one row. */
 .appview__back[data-tone='quiet'] {
   border-color: transparent;
   background-color: transparent;
-  padding-left: 0;
+  --nav-pad-lead: 0;
+}
+.appview__back[data-tone='quiet'][data-dir='on'] {
+  --nav-pad-lead: 15px;
+  --nav-pad-trail: 0;
 }
 .appview__back[data-tone='quiet']:hover {
   color: var(--text);
+}
+
+/* The row the two share. `space-between` puts Back on the leading edge and the
+   way on against the trailing one; a page with only a Back button renders the
+   same row with one child, so its button lands in exactly the same place it
+   did before this row existed. Wraps at narrow widths — at 320px the two do
+   not fit side by side, and a squashed pair is worse than a stacked one. */
+.appview__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .appview__foot {

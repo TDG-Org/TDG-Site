@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { sectionDomId, useSections } from '../lib/sections'
-import { hasOrigin, originLabel } from '../lib/route'
+import { hasOrigin, originLabel, rememberOrigin } from '../lib/route'
 import type { PageBlock, PageSection } from '../data/pageBlocks'
 // One stylesheet for both folded pages. It is still named for the app pages
 // because that is where it was written and renaming a file another branch is
@@ -260,4 +260,71 @@ export function BackButton({
       Back to {where}
     </button>
   )
+}
+
+/**
+ * The way ON, and the mirror image of `BackButton`.
+ *
+ * Every routed page on this site has carried a way back since the first one
+ * shipped, and nothing has carried a way FORWARD: the only onward links were
+ * hand-typed into one page's `links` row, so an app that sold packs had a
+ * control pointing at its shop only if somebody had remembered to write one.
+ * A reader who cannot see that the shop exists does not have the shop
+ * (CLAUDE.md: a feature I cannot find is a feature I do not have), and the
+ * asymmetry read as a dead end — Back out to the list, hunt for the Store,
+ * find the app again.
+ *
+ * It is the SAME element as `BackButton`, mirrored: one class, one set of
+ * padding variables flipped by `data-dir`, the arrow on the trailing edge and
+ * leaning the other way on hover. Rule 6 — a pair takes its numbers from one
+ * place and applies them in mirror image — so the two cannot drift into
+ * different heights, radii or letter-spacing on the row they share.
+ *
+ * `from` is what the page being LEFT should be called on the Back control of
+ * the page being opened, and it is required rather than optional for the
+ * reason `rememberOrigin` exists: without it the next page offers whatever
+ * label opened this one, which is a small lie told exactly when somebody is
+ * trying to get back. See lib/route.ts.
+ */
+export function OnwardButton({
+  href,
+  label,
+  from,
+  tone,
+}: {
+  /** Where it goes. An in-site hash: this is a journey, not an exit. */
+  href: string
+  /** What it says. Sentence case, like `Back to Apps` beside it. */
+  label: string
+  /** What the page it leaves is called, for the next page's Back control. */
+  from: string
+  tone?: 'quiet'
+}) {
+  return (
+    <a
+      className="appview__back"
+      data-dir="on"
+      data-tone={tone}
+      href={href}
+      onClick={() => rememberOrigin(from)}
+    >
+      {label}
+      <span className="appview__back-arrow" aria-hidden="true">
+        →
+      </span>
+    </a>
+  )
+}
+
+/**
+ * The row a page's Back control and its onward control share.
+ *
+ * A row rather than two loose controls because they are a pair: Back on the
+ * leading edge, onward on the trailing one, and the same row whether or not
+ * there is anything to go on to — a page with only a Back button renders the
+ * identical element with one child, so its button sits exactly where every
+ * other page's does.
+ */
+export function PageNav({ children }: { children: ReactNode }) {
+  return <div className="appview__nav">{children}</div>
 }

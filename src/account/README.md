@@ -23,7 +23,7 @@ are the authority for every sentence below.
 | `graphRevision.ts` | One number that goes up when this account's social graph changes, and the hook that re-renders on it. What stops three surfaces drawing three different answers at once — see below. |
 | `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |
 | `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
-| `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. |
+| `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. `useAppWhere()` — where to SEND somebody from it: that app's own page, and its packs when it sells any. Both derived through the content overlay, both allowed to answer nothing. |
 | `format.ts` | `fmtDay`, `fmtRelative`, `prettyId`, `fmtCount`, `usernameFreeAt`. A deliberate twin of `src/dev/format.ts` — see below. |
 | `AccountFold.tsx` | `AccountFold` and `AccountSub`: one section of the page, open or shut. |
 | `AccountPage.tsx` | The page at `#/account`, in its own lazy chunk. |
@@ -330,6 +330,15 @@ The App Stats section builds its rows from the UNION of three answers: what has
 synced a badge, what owns a pack, and what has counted a day. An app can be in
 any one without the others, so anything narrower would leave out an app whose
 only mark on the account is a pack somebody bought.
+
+Each row also carries the way OUT of it — the app's own page, and its packs in
+the Store where it sells any — from `useAppWhere()`. Both links are derived
+from the same card catalogue the names come from, so an app that starts selling
+gets its Store link here without an edit, and an id with no card (`tdg-site`,
+or one a migration added after this build shipped) keeps its row and its name
+and simply gets no links. A row that says you own something and gives you
+nowhere to open it is a dead end at the exact moment somebody wants to go and
+use the thing.
 
 ## The route is not gated, and that is the point
 

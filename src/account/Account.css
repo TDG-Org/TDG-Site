@@ -393,6 +393,35 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
+/* The way out of the row: the app's own page, and its packs where it sells
+   any. The Store's own card link is the shape being reused — same size, same
+   accent, same 3px arrow nudge — because these two do the same job on two
+   pages and a reader should not have to learn a second look for it. Wraps,
+   because at 320px a card is 284px wide and two of these do not fit on a
+   line. */
+.acct__app-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+.acct__app-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 12.5px var(--font-body);
+  color: var(--accent-2);
+}
+.acct__app-link:hover {
+  color: var(--text);
+}
+.acct__app-link-arrow {
+  font-size: 11px;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.acct__app-link:hover .acct__app-link-arrow {
+  transform: translateX(3px);
+}
+
 .acct__app-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
@@ -1329,6 +1358,7 @@
   .acct__people-x,
   .acct__self-btn,
   .acct__app,
+  .acct__app-link-arrow,
   .acct__input-wrap,
   .acct__input,
   .acct__primary {

@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { resolvedApps } from '../content/resolve'
 import { useSiteContent } from '../content/store'
+import { STORE_APPS } from '../data/store'
+import { appHash, storeAppHash } from '../lib/route'
 import { prettyId } from './format'
 
 /**
@@ -43,5 +45,51 @@ export function useAppNames(): (appId: string) => string {
       if (app.backend) byBackend.set(app.backend, app.title)
     }
     return (appId: string) => byBackend.get(appId) ?? prettyId(appId)
+  }, [doc])
+}
+
+/** Where an app the database named can be READ about, and bought for. */
+export type AppWhere = {
+  /** That app's own page on this site, or null when it has no card. */
+  page: string | null
+  /** That app's packs in the Store, or null when it sells nothing. */
+  store: string | null
+}
+
+const NOWHERE: AppWhere = { page: null, store: null }
+
+/**
+ * Where to SEND somebody from an app the database named.
+ *
+ * The companion to `useAppNames`, and it exists for the same reason: the
+ * account page lists apps by their database id — one row saying an account has
+ * owned the Theme Pack since March — and until this it named them and stopped
+ * there. A row that says you own something, with nothing on it to open, is a
+ * dead end at the exact moment somebody wants to go and use the thing
+ * (CLAUDE.md: a feature I cannot find is a feature I do not have).
+ *
+ * Both answers are DERIVED, and both may be null. `backend` on the card
+ * catalogue is the id-to-page mapping, read through the overlay so a page
+ * renamed from `#/dev` is renamed here too; `STORE_APPS` matched on that page
+ * is whether there is a shop. An id with no card — `tdg-site`, an app added by
+ * a migration after this build shipped — still gets its ROW and its name from
+ * `useAppNames`; it simply gets no links, which is the honest answer rather
+ * than a link to `#/app/undefined` (rule 17: an unknown entry gets a face, not
+ * a guess).
+ */
+export function useAppWhere(): (appId: string) => AppWhere {
+  const doc = useSiteContent()
+
+  return useMemo(() => {
+    const byBackend = new Map<string, AppWhere>()
+    for (const app of resolvedApps(doc)) {
+      if (!app.backend) continue
+      const shop = STORE_APPS.find((s) => s.page === app.page)
+      byBackend.set(app.backend, {
+        page: appHash(app.page),
+        store: shop ? storeAppHash(shop.id) : null,
+      })
+    }
+    return (appId: string) => byBackend.get(appId) ?? NOWHERE
   }, [doc])
 }

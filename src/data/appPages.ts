@@ -866,7 +866,9 @@ const DEVFLEET: AppPage = {
     { label: 'Panes at once', value: 'Up to sixteen, stacked or tiled' },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
-  links: [{ label: 'The DevFleet Theme Pack is in the Store', href: '#/store/devfleet' }],
+  /* No hand-typed link to this app's packs. `AppPage.tsx` derives the way on
+     from `STORE_APPS` and draws it as the mirror of the Back control, so an
+     app that starts selling gets one without an edit here (rule 17). */
   sections: [
     {
       id: 'guide',
@@ -1391,7 +1393,9 @@ const VEDITOR: AppPage = {
     },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
-  links: [{ label: 'Veditor packs are in the Store', href: '#/store/veditor' }],
+  /* No hand-typed link to this app's packs. `AppPage.tsx` derives the way on
+     from `STORE_APPS` and draws it as the mirror of the Back control, so an
+     app that starts selling gets one without an edit here (rule 17). */
   sections: [
     {
       id: 'guide',

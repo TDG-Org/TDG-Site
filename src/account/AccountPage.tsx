@@ -5,12 +5,12 @@ import { useMyBadges } from '../badges/useBadges'
 import { BackButton, FoldControls } from './../components/Folded'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
-import { userHash } from '../lib/route'
+import { rememberOrigin, userHash } from '../lib/route'
 import { SectionsProvider } from '../lib/sections'
 import { AccountFold, AccountSub } from './AccountFold'
 import { CloudFold } from '../cloud/CloudFold'
 import { SocialFold } from './SocialFold'
-import { useAppNames } from './appNames'
+import { useAppNames, useAppWhere } from './appNames'
 import { fmtCount, fmtDay, fmtRelative, prettyId, usernameFreeAt } from './format'
 import { useAccountStats, useProfileEditor, usePrivacy, useSocial } from './useAccount'
 import type { Audience, PrivacyControl, PrivacyGroup } from './types'
@@ -472,6 +472,7 @@ export default function AccountPage({
   const social = useSocial()
   const editor = useProfileEditor()
   const appName = useAppNames()
+  const appWhere = useAppWhere()
 
   /** The moment after Copy Profile Link lands. A moment, not a state: left up
    *  it would still be claiming a copy made yesterday. */
@@ -513,6 +514,9 @@ export default function AccountPage({
       .map((id) => ({
         id,
         title: appName(id),
+        /* Where this row can send somebody. Null for an id with no card, and
+           the row draws no links rather than a broken one. */
+        where: appWhere(id),
         since: s.apps[id]?.since ?? null,
         earned: Object.keys(s.apps[id]?.earned ?? {}).length,
         packs: s.packs[id] ?? [],
@@ -523,7 +527,7 @@ export default function AccountPage({
       // only exists because the registry found its table.
       .filter((a) => a.since || a.earned || a.packs.length || a.streak)
       .sort((a, b) => a.title.localeCompare(b.title))
-  }, [stats, appName])
+  }, [stats, appName, appWhere])
 
   const graph = social.state.kind === 'ok' ? social.state.graph : null
   const cooldown = usernameFreeAt(profile?.username_changed_at)
@@ -818,6 +822,44 @@ export default function AccountPage({
                     {apps.map((app) => (
                       <div key={app.id} className="acct__app">
                         <span className="acct__app-name">{app.title}</span>
+                        {/* The way out of the row. It listed what an account
+                            owns in an app and gave no way to open the app —
+                            a dead end at the moment somebody wants to go and
+                            use the thing. Both links are derived (rule 17), so
+                            an app that starts selling gets its Store link here
+                            without an edit, and an id with no card gets no
+                            links rather than a guess at one. `rememberOrigin`
+                            is what makes the page they land on say "Back to
+                            Your Account" instead of the label of whatever
+                            journey opened this one. */}
+                        {(app.where.page || app.where.store) && (
+                          <div className="acct__app-links">
+                            {app.where.page && (
+                              <a
+                                className="acct__app-link"
+                                href={app.where.page}
+                                onClick={() => rememberOrigin('Your Account')}
+                              >
+                                About {app.title}
+                                <span className="acct__app-link-arrow" aria-hidden="true">
+                                  →
+                                </span>
+                              </a>
+                            )}
+                            {app.where.store && (
+                              <a
+                                className="acct__app-link"
+                                href={app.where.store}
+                                onClick={() => rememberOrigin('Your Account')}
+                              >
+                                Its packs in the Store
+                                <span className="acct__app-link-arrow" aria-hidden="true">
+                                  →
+                                </span>
+                              </a>
+                            )}
+                          </div>
+                        )}
                         <dl className="acct__app-facts">
                           <div className="acct__app-fact">
                             <dt>Since</dt>
