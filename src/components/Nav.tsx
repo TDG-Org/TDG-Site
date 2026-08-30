@@ -22,6 +22,51 @@ import './Nav.css'
  */
 const DEV_LINK = { href: DEV_HASH, label: 'Developer' } as const
 
+/**
+ * What the mark says when you press it.
+ *
+ * Three words rather than one string because each one rolls out on its own
+ * beat — the stagger is `--i` in Nav.css and it is read off the index, so a
+ * fourth word would join the roll without a second number being written down.
+ */
+const BLESSING = ['Jesus', 'Loves', 'You'] as const
+
+/**
+ * How long the whole flourish lives, roll-out through roll-up, in ms.
+ *
+ * It must outlast the CSS timeline: `--bless-life` in Nav.css is 4.25s and the
+ * last word starts 180ms late, so 4600 leaves the strip mounted for ~170ms
+ * after the last frame of it is invisible. Unmounting early would snap the
+ * words off mid-roll.
+ *
+ * The one `setTimeout` this drives is the narrow exemption AGENTS.md rule 9
+ * describes, and it is worth saying why out loud: it is not animation — every
+ * moving pixel is a CSS keyframe on the compositor and this clock ticks once,
+ * not per frame; the shared frame loop would have to be held awake at 60Hz for
+ * four seconds to do a thing that happens once; and it ends by itself and is
+ * cleared on unmount and on a second press, so nothing outlives the strip.
+ */
+const BLESS_MS = 4600
+
+/** The size the phrase wants, and must match `--bless-size` in Nav.css. */
+const BLESS_SIZE = 17
+
+/**
+ * How small the phrase may be shrunk before shrinking is the wrong answer.
+ *
+ * Two floors because the two things it can run into are not the same thing. To
+ * its right on a wide bar is the LINK ROW, which can be dimmed for four seconds
+ * and lose nothing — every link keeps its hit area, its tab stop and its focus
+ * ring — so below 13px the links stand down and the phrase stays full size. To
+ * its right on a phone is the ACTIONS group: the burger, the theme switch and
+ * Sign in, which are controls, and dimming a control somebody is reaching for
+ * is not a flourish. That side never dims; the phrase shrinks instead, and 10px
+ * is as small as it goes. Measured at 320px — the narrowest this site supports —
+ * the room left is 106px against a 155px strip, which lands at 11.7px.
+ */
+const BLESS_MIN_BESIDE_LINKS = 13
+const BLESS_MIN_BESIDE_ACTIONS = 10
+
 /** What both the bar and the panel render, whichever list an entry came from. */
 type NavLink = { href: string; label: string }
 
@@ -285,16 +330,19 @@ function AccountGlance() {
 function AccountMenu({
   open,
   setOpen,
+  onOpenAuth,
   onOpenFeedback,
   onAccountPage,
 }: {
   open: boolean
   setOpen: (v: boolean) => void
+  /** Reopens the auth modal, which is where an unfinished account is finished. */
+  onOpenAuth: () => void
   onOpenFeedback: () => void
   /** True while `#/account` is already the page, so the door says so. */
   onAccountPage: boolean
 }) {
-  const { user, profile, signOut, isAdmin } = useAuth()
+  const { user, profile, setup, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
   const ref = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -333,6 +381,36 @@ function AccountMenu({
         <div className="nav__account-name">{profile?.display_name || profile?.username || 'Signed in'}</div>
         {profile?.username && <div className="nav__account-handle">@{profile.username}</div>}
         {user?.email && <div className="nav__account-email">{user.email}</div>}
+        {/* The way back to a form that opens once and can be dismissed.
+            Without it, an account that came back from Google without a
+            username or a password has a gap it can neither see from here nor
+            reopen — and the panel above is exactly where that gap SHOWS, as a
+            missing handle under a name that says "Signed in". Rendered only
+            while something is genuinely outstanding, so it is never a control
+            that does nothing. */}
+        {setup && (
+          <button
+            type="button"
+            className="nav__account-finish"
+            onClick={() => {
+              setOpen(false)
+              // Focus back to the trigger before the modal opens, for the
+              // reason Send Feedback below gives: a closed panel is `inert`,
+              // and an inert button is not a live element to return focus to.
+              triggerRef.current?.focus()
+              onOpenAuth()
+            }}
+          >
+            <span className="nav__account-finish-label">Finish Setting Up</span>
+            <span className="nav__account-finish-why">
+              {setup.needsUsername && setup.needsPassword
+                ? 'No username or password yet'
+                : setup.needsUsername
+                  ? 'No username yet'
+                  : 'No password yet'}
+            </span>
+          </button>
+        )}
         <AccountGlance />
         {/* The door to everything this panel cannot hold: the whole privacy
             list, every counter, the badges with their blurbs, and the account's
@@ -425,6 +503,14 @@ export function Nav({
   const devMode = useDevMode()
   const route = useRoute()
   const [scrolled, setScrolled] = useState(false)
+  // A press of the mark counts up rather than flipping a flag: the count is the
+  // strip's `key`, so pressing it again mid-roll remounts the strip and the
+  // keyframes restart from the beginning instead of finishing the old run.
+  const [bless, setBless] = useState(0)
+  const blessTimer = useRef<number | undefined>(undefined)
+  // Whether the link row has to stand down for the words. Measured, never
+  // guessed — see the effect below.
+  const [blessQuiet, setBlessQuiet] = useState(false)
   // One at a time: the two panels hang off the same bar and would otherwise
   // overlap on a phone, where both are within a thumb's reach of each other.
   const [openPanel, setOpenPanel] = useState<'menu' | 'account' | null>(null)
@@ -432,8 +518,68 @@ export function Nav({
   const setMenuOpen = (v: boolean) => setOpenPanel(v ? 'menu' : null)
   const sentinel = useRef<HTMLDivElement | null>(null)
   const indicator = useRef<HTMLSpanElement | null>(null)
+  const linkRow = useRef<HTMLDivElement | null>(null)
+  const actions = useRef<HTMLDivElement | null>(null)
+  const strip = useRef<HTMLSpanElement | null>(null)
   const progress = useRef<HTMLDivElement | null>(null)
   const panel = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => () => window.clearTimeout(blessTimer.current), [])
+
+  /** Say it. Re-pressing restarts the roll rather than queueing a second one. */
+  const sayBlessing = () => {
+    window.clearTimeout(blessTimer.current)
+    setBless((n) => n + 1)
+    blessTimer.current = window.setTimeout(() => setBless(0), BLESS_MS)
+  }
+
+  /**
+   * How much bar the blessing actually has, and what to do when it is not
+   * enough.
+   *
+   * Measured off the rendered boxes rather than gated on a breakpoint, because
+   * the width the bar runs out of room at is not a number anybody can write
+   * down: it moves with the seven links' own text, with the Developer tab a
+   * developer adds to them, with the Sign in button becoming an avatar, and
+   * with the browser's font. Measured here: at 1440px the mark is 350px clear
+   * of the links and the strip wants 155; at 1000px it is 133px clear, and the
+   * words would have crossed Origin and Apps.
+   *
+   * Whichever box is to the right decides which answer is right — see the two
+   * floors above. The phrase always plays, at every width, because a press that
+   * does nothing on some monitors is worse than either answer.
+   *
+   * `offsetWidth` rather than a rect, and the size is cleared before reading
+   * it: this runs again on every press, so it has to measure what the strip
+   * wants rather than what the last press left it at. The strip's width is
+   * stable from the first frame either way — the arm grows by `scaleX` and the
+   * words are revealed by `clip-path`, so neither disturbs the box being read.
+   */
+  useEffect(() => {
+    const s = strip.current
+    if (!bless || !s) {
+      setBlessQuiet(false)
+      return
+    }
+    // `offsetParent` is null while the row is display:none — under 821px there
+    // are no links in the bar at all, and the actions are the neighbour.
+    const row = linkRow.current
+    const beside = row && row.offsetParent !== null ? row : actions.current
+    s.style.removeProperty('--bless-size')
+    setBlessQuiet(false)
+    if (!beside) return
+
+    const room = beside.getBoundingClientRect().left - s.getBoundingClientRect().left - 14
+    const wants = s.offsetWidth
+    if (room >= wants) return
+
+    const size = (room / wants) * BLESS_SIZE
+    if (beside === row && size < BLESS_MIN_BESIDE_LINKS) {
+      setBlessQuiet(true)
+      return
+    }
+    s.style.setProperty('--bless-size', `${Math.max(size, BLESS_MIN_BESIDE_ACTIONS).toFixed(1)}px`)
+  }, [bless])
 
   // Nav state is driven by a sentinel at the very top of the page, not by a
   // scroll listener, so it stays correct whichever element owns the scroll.
@@ -573,15 +719,55 @@ export function Nav({
   return (
     <>
       <div ref={sentinel} className="nav__sentinel" aria-hidden="true" />
-      <nav className="nav" data-scrolled={scrolled} data-over-dark={overDark}>
+      <nav
+        className="nav"
+        data-scrolled={scrolled}
+        data-over-dark={overDark}
+        data-bless-quiet={blessQuiet || undefined}
+      >
         <div className="nav__veil" aria-hidden="true" />
 
-        <a href="#top" className="nav__mark" aria-label="TDG home">
-          <span className="nav__mark-bar" />
-          <span className="nav__mark-bar" />
-        </a>
+        {/* The mark keeps its own job — it is still the link home — and gains a
+            second one: it says who the site is for. The wrapper exists only to
+            give the strip something to hang off, and it is `flex: none` around
+            a 15x24 mark, so the bar's layout is the layout it always had.
 
-        <div className="nav__links" onPointerLeave={() => indicator.current?.style.setProperty('opacity', '0')}>
+            Everything about where the words sit is derived rather than typed:
+            `left: 100%` is the crossbar's right end because the crossbar IS the
+            mark's full width, and the strip's own 4px height centres its
+            children on the crossbar's centre line. The words cannot drift off
+            the arm, at any width or font size, because nothing puts them there
+            by hand. */}
+        <div className="nav__markwrap" data-bless={bless > 0 || undefined}>
+          <a href="#top" className="nav__mark" aria-label="TDG home" onClick={sayBlessing}>
+            <span className="nav__mark-bar" />
+            <span className="nav__mark-bar" />
+          </a>
+
+          {bless > 0 && (
+            <span key={bless} ref={strip} className="nav__bless" aria-hidden="true">
+              <span className="nav__bless-aura" />
+              <span className="nav__bless-arm" />
+              <span className="nav__bless-clip">
+                {BLESSING.map((word, i) => (
+                  <span
+                    key={word}
+                    className="nav__bless-word"
+                    style={{ '--i': i } as React.CSSProperties}
+                  >
+                    {word}
+                  </span>
+                ))}
+              </span>
+            </span>
+          )}
+        </div>
+
+        <div
+          ref={linkRow}
+          className="nav__links"
+          onPointerLeave={() => indicator.current?.style.setProperty('opacity', '0')}
+        >
           <span ref={indicator} className="nav__indicator" aria-hidden="true" />
           {anchors.map(barLink)}
           {/* Five places on this page, then two pages. Decorative and
@@ -591,7 +777,7 @@ export function Nav({
           {routes.map(barLink)}
         </div>
 
-        <div className="nav__actions">
+        <div ref={actions} className="nav__actions">
           <button
             type="button"
             className="nav__burger"
@@ -612,6 +798,7 @@ export function Nav({
             <AccountMenu
               open={openPanel === 'account'}
               setOpen={(v) => setOpenPanel(v ? 'account' : null)}
+              onOpenAuth={onOpenAuth}
               onOpenFeedback={onOpenFeedback}
               onAccountPage={route.kind === 'account'}
             />

@@ -89,6 +89,260 @@
   background: #fff;
 }
 
+/* ── the blessing ──────────────────────────────────────────────────────────
+   Press the mark and it says who the site is for: the crossbar's arm grows to
+   the right, the words unroll along it a beat apart, they hold, and then they
+   roll up out of the top and the arm draws back in. Four and a quarter seconds,
+   once per press, and the mark still goes home.
+
+   ALIGNMENT IS DERIVED, NOT TYPED, and that is the whole trick to it. The strip
+   is `left: 100%` of a wrapper that fits the mark exactly, so it starts at the
+   right end of the crossbar because the crossbar IS the mark's full width
+   (`.nav__mark-bar:last-child` above is `left: 0; width: 15px`). It is `top: 7px`
+   and `height: 4px` — the crossbar's own offset and thickness — and it centres
+   its children on that 4px line, so the arm and the words share the crossbar's
+   centre line by construction. Change the mark's geometry and two numbers move
+   together; nothing here needs re-tuning by eye.
+
+   Every moving pixel is a compositor property — transform, opacity, clip-path —
+   and the strip is mounted only while it is playing, so a nav that is not being
+   pressed costs exactly what it cost before. `--bless-life` is the one duration
+   the four keyframe timelines share, and Nav.tsx's BLESS_MS outlasts it.       */
+
+.nav__markwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.nav__bless {
+  position: absolute;
+  left: 100%;
+  top: 7px;
+  height: 4px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  /* It hangs over the link row's side of the bar and must never eat a click
+     meant for a link, or for the mark it grew out of. */
+  pointer-events: none;
+  --bless-life: 4.25s;
+  /* The phrase's size, and every horizontal measure in the strip is a multiple
+     of it — so shrinking the strip to fit a narrow bar is ONE number, written
+     by the effect in Nav.tsx, and the arm's 4px height is left alone. A
+     `transform: scale()` would have taken that 4px with it and left a step
+     where the arm meets the crossbar. */
+  --bless-size: 17px;
+  --bless-slack: calc(var(--bless-size) * 0.7);
+}
+
+/* The arm the words ride out on: the crossbar continuing, at the crossbar's own
+   4px, dissolving into the warm before it reaches the first word. It grows by
+   `scaleX` rather than by `width` so the strip's box never changes size — a
+   width animation here would re-lay-out the fixed bar on every frame. */
+.nav__bless-arm {
+  flex: none;
+  width: calc(var(--bless-size) * 1.5);
+  height: 4px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--text) 0%, var(--warm) 58%, transparent 100%);
+  animation: nav-bless-arm var(--bless-life) cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+/* The window the words roll through. The 12px of vertical padding is slack, not
+   spacing — it is taken straight back off as margin, so the strip's height is
+   still the crossbar's 4px — and it is what lets a glyph tilt and rise inside
+   the clip without being sheared at the start of the roll. */
+.nav__bless-clip {
+  display: flex;
+  align-items: baseline;
+  font-size: var(--bless-size);
+  gap: 0.34em;
+  margin: calc(var(--bless-slack) * -1) 0 calc(var(--bless-slack) * -1) 0.55em;
+  padding: var(--bless-slack) 0.3em var(--bless-slack) 0;
+  perspective: 460px;
+  clip-path: inset(0 100% 0 0);
+  animation: nav-bless-clip var(--bless-life) cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+.nav__bless-word {
+  display: inline-block;
+  /* line-height 1 is what puts the phrase on the crossbar's line and keeps it
+     there at every size. Cormorant's own metrics are ascent 16 / descent 5 per
+     17px em, so with a 17px line box the baseline sits 0.8235em down and the
+     cap height reaches 0.647em up from it: the cap band's top is 0.1765em below
+     the box top and its baseline is 0.1765em above the box bottom. Those two
+     are equal, and they stay equal at any size — so centring the LINE BOX on
+     the crossbar centres the letters on it. Measured at 1280px: crossbar centre
+     32.0, word box centre 32.0, cap band centre 32.0. */
+  font: 600 1em/1 var(--font-serif);
+  letter-spacing: 0.055em;
+  color: var(--text);
+  transform-origin: 50% 100%;
+  backface-visibility: hidden;
+  opacity: 0;
+  animation: nav-bless-word var(--bless-life) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  /* One beat per word, read off the index Nav.tsx writes. */
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+/* The light it arrives in. Sized off the strip it sits behind rather than a
+   width typed here, so it grows with the words if the phrase ever changes. */
+.nav__bless-aura {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--bless-size) * -0.8);
+  right: calc(var(--bless-size) * -1);
+  height: calc(var(--bless-size) * 2.7);
+  border-radius: 999px;
+  transform: translateY(-50%) scale(0.72);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--warm) 24%, transparent),
+    transparent 100%
+  );
+  filter: blur(7px);
+  opacity: 0;
+  animation: nav-bless-aura var(--bless-life) ease both;
+}
+
+/* Over the hero the chrome stays light in BOTH themes — the same reason the
+   mark's own bars go #fff eight rules up, and the same reason .nav__split
+   carries a literal. These are not theme colours. */
+.nav[data-over-dark='true'] .nav__bless-word {
+  color: #fff;
+}
+.nav[data-over-dark='true'] .nav__bless-arm {
+  background: linear-gradient(90deg, #fff 0%, #f5c98a 58%, transparent 100%);
+}
+.nav[data-over-dark='true'] .nav__bless-aura {
+  background: radial-gradient(closest-side, rgba(245, 201, 138, 0.3), transparent 100%);
+}
+
+/* The mark answers the press it just took: a flare on the beat the arm leaves
+   it, then a held glow for as long as the words are up. */
+.nav__markwrap[data-bless] .nav__mark {
+  animation: nav-bless-mark var(--bless-life, 4.25s) ease both;
+}
+
+@keyframes nav-bless-arm {
+  0% {
+    transform: scaleX(0);
+  }
+  14%,
+  82% {
+    transform: scaleX(1);
+  }
+  95%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes nav-bless-clip {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  14%,
+  82% {
+    clip-path: inset(0 0 0 0);
+  }
+  /* Out through the top, which is the half of it the eye reads as "rolled up". */
+  100% {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+@keyframes nav-bless-word {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translateY(0.55em) rotateX(-88deg);
+  }
+  16%,
+  82% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1em) rotateX(70deg);
+  }
+}
+
+@keyframes nav-bless-aura {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.72);
+  }
+  20%,
+  78% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.9);
+  }
+}
+
+@keyframes nav-bless-mark {
+  0%,
+  100% {
+    transform: none;
+    filter: none;
+  }
+  9% {
+    transform: scale(1.16);
+    filter: drop-shadow(0 0 11px var(--cross-glow));
+  }
+  24%,
+  82% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 7px var(--cross-glow));
+  }
+}
+
+/* Asked for less motion, you still get the message — it simply arrives and
+   leaves rather than rolling. Same lifetime, same place, no travel, no tilt.  */
+@media (prefers-reduced-motion: reduce) {
+  .nav__bless-arm {
+    transform: scaleX(1);
+    animation-name: nav-bless-fade;
+  }
+  .nav__bless-clip {
+    clip-path: none;
+    animation-name: nav-bless-fade;
+  }
+  .nav__bless-word {
+    transform: none;
+    animation-name: nav-bless-fade;
+    animation-delay: 0s;
+  }
+  .nav__bless-aura {
+    transform: translateY(-50%);
+    animation-name: nav-bless-fade;
+  }
+  .nav__markwrap[data-bless] .nav__mark {
+    animation: none;
+  }
+}
+
+@keyframes nav-bless-fade {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* ── links ─────────────────────────────────────────────────────────────── */
 
 .nav__links {
@@ -96,6 +350,15 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  transition: opacity 0.45s ease;
+}
+/* The link row standing down for the blessing, on the widths where the bar is
+   so full that the phrase would have had to shrink below reading size to fit
+   beside it. Which widths those are is measured in Nav.tsx, not guessed at with
+   a breakpoint. Opacity only: every link keeps its hit area, its tab stop and
+   its focus ring for the whole four seconds. */
+.nav[data-bless-quiet='true'] .nav__links {
+  opacity: 0.07;
 }
 .nav__indicator {
   position: absolute;
@@ -260,6 +523,48 @@
   font: 400 12px var(--font-body);
   color: var(--muted);
   overflow-wrap: anywhere;
+}
+
+/* ── finish setting up ─────────────────────────────────────────────────────
+   The way back to a form that opens once and can be dismissed. It sits
+   directly under the identity block because that block is where the gap
+   SHOWS: an account that came back from Google has no handle line and its
+   name reads "Signed in", and a missing line explains nothing on its own.
+
+   Drawn in --warm, the site's one "look at this" colour — the same one the
+   developer dot and a failed badge read wear — rather than as a third quiet
+   button beside Send Feedback and Sign out. Two lines, because the label and
+   the reason are one thought: what to press, and what is missing.
+
+   Only rendered while something is genuinely outstanding, so this is never a
+   control that does nothing (AGENTS.md rule 5).                              */
+
+.nav__account-finish {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--warm);
+  border-radius: 2px;
+  background-color: transparent;
+  text-align: left;
+  transition:
+    background 0.2s ease,
+    var(--t-theme);
+}
+.nav__account-finish:hover {
+  background-color: var(--accent-soft);
+}
+.nav__account-finish-label {
+  display: block;
+  font: 600 12px var(--font-body);
+  color: var(--warm);
+}
+.nav__account-finish-why {
+  display: block;
+  margin-top: 2px;
+  font: 400 11px var(--font-body);
+  color: var(--muted);
 }
 /* ── the glance ────────────────────────────────────────────────────────────
    Three counts and the day the account began, between the identity and the
