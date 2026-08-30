@@ -53,11 +53,26 @@
 
 /* ── wordmark ──────────────────────────────────────────────────────────── */
 
+/* The mark's geometry is written down once, here, because four things are read
+   off it now: the cross, the sword that cross turns a quarter turn into, where
+   that sword's point lands, and where the words line up with the point. Change
+   a number here and all four move together. */
+.nav__markwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+  --mark-w: 15px;
+  --mark-h: 24px;
+  --mark-thick: 4px;
+  --mark-crossbar: 7px;
+}
+
 .nav__mark {
   position: relative;
   display: block;
-  width: 15px;
-  height: 24px;
+  width: var(--mark-w);
+  height: var(--mark-h);
   flex: none;
   transition:
     transform 1.6s cubic-bezier(0.16, 0.84, 0.24, 1),
@@ -76,51 +91,60 @@
   left: 50%;
   top: 0;
   transform: translateX(-50%);
-  width: 4px;
-  height: 24px;
+  width: var(--mark-thick);
+  height: var(--mark-h);
 }
 .nav__mark-bar:last-child {
   left: 0;
-  top: 7px;
-  width: 15px;
-  height: 4px;
+  top: var(--mark-crossbar);
+  width: var(--mark-w);
+  height: var(--mark-thick);
 }
 .nav[data-over-dark='true'] .nav__mark-bar {
   background: #fff;
 }
 
 /* ── the blessing ──────────────────────────────────────────────────────────
-   Press the mark and it says who the site is for: the crossbar's arm grows to
-   the right, the words unroll along it a beat apart, they hold, and then they
-   roll up out of the top and the arm draws back in. Four and a quarter seconds,
-   once per press, and the mark still goes home.
+   Press the mark and it says who the site is for. The cross takes a quarter
+   turn and is a sword, pointed at the words; a beam of light leaves the point
+   and the words unroll along it a beat apart; they hold; then they roll up out
+   of the top, the beam draws back into the point, and the sword turns back into
+   the cross. Four and a quarter seconds, once per press, and the mark still
+   goes home.
 
-   ALIGNMENT IS DERIVED, NOT TYPED, and that is the whole trick to it. The strip
-   is `left: 100%` of a wrapper that fits the mark exactly, so it starts at the
-   right end of the crossbar because the crossbar IS the mark's full width
-   (`.nav__mark-bar:last-child` above is `left: 0; width: 15px`). It is `top: 7px`
-   and `height: 4px` — the crossbar's own offset and thickness — and it centres
-   its children on that 4px line, so the arm and the words share the crossbar's
-   centre line by construction. Change the mark's geometry and two numbers move
-   together; nothing here needs re-tuning by eye.
+   THE QUARTER TURN IS WHY THE SWORD COSTS NOTHING TO DRAW. A cross already IS a
+   sword lying on its side: rotate this one -90deg about its own centre and the
+   long stem becomes a 24px blade running left to right, the crossbar becomes a
+   15px guard standing across it, and the 9px of stem above the crossbar becomes
+   the grip behind the guard. Two bars, no new shapes — the only thing added is
+   the point, which is a five-vertex `clip-path` on the blade morphing from a
+   rectangle to the same rectangle with its end drawn down to a spike, and the
+   guard drawing itself in to 78% so it reads as a crossguard rather than half a
+   crucifix.
 
-   Every moving pixel is a compositor property — transform, opacity, clip-path —
-   and the strip is mounted only while it is playing, so a nav that is not being
-   pressed costs exactly what it cost before. `--bless-life` is the one duration
-   the four keyframe timelines share, and Nav.tsx's BLESS_MS outlasts it.       */
+   ALIGNMENT IS DERIVED, NOT TYPED, and the quarter turn is what it is derived
+   from. Rotating about the mark's centre sends the stem's far end to
+   `50% + var(--mark-h) / 2` across and to the mark's own middle down — so that
+   is where the strip starts and what line it sits on, written as that
+   expression rather than as the 19.5px and 12px it happens to work out to. The
+   strip is `var(--mark-thick)` tall and centres its children on that line, so
+   the beam and the words share the blade's centre line by construction. Under
+   `prefers-reduced-motion` there is no quarter turn, so the strip goes back to
+   the crossbar's own line — the last rule in this block, and the only place two
+   placements exist.
 
-.nav__markwrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: none;
-}
+   Every moving pixel is transform, opacity or clip-path, and the two filters
+   are held still through the long middle rather than animated across it. The
+   strip is mounted only while it is playing, so a mark nobody has pressed costs
+   exactly what it cost before. `--bless-life` is the one duration all eight
+   timelines share, and Nav.tsx's BLESS_MS outlasts it.                        */
 
 .nav__bless {
   position: absolute;
-  left: 100%;
-  top: 7px;
-  height: 4px;
+  /* the point of the sword, and the line it points along */
+  left: calc(50% + var(--mark-h) / 2);
+  top: calc(50% - var(--mark-thick) / 2);
+  height: var(--mark-thick);
   display: flex;
   align-items: center;
   white-space: nowrap;
@@ -130,31 +154,31 @@
   --bless-life: 4.25s;
   /* The phrase's size, and every horizontal measure in the strip is a multiple
      of it — so shrinking the strip to fit a narrow bar is ONE number, written
-     by the effect in Nav.tsx, and the arm's 4px height is left alone. A
-     `transform: scale()` would have taken that 4px with it and left a step
-     where the arm meets the crossbar. */
+     by the effect in Nav.tsx, and the blade's own thickness is left alone. A
+     `transform: scale()` would have taken the beam's thickness with it and left
+     a step where the beam meets the point. */
   --bless-size: 17px;
   --bless-slack: calc(var(--bless-size) * 0.7);
 }
 
-/* The arm the words ride out on: the crossbar continuing, at the crossbar's own
-   4px, dissolving into the warm before it reaches the first word. It grows by
-   `scaleX` rather than by `width` so the strip's box never changes size — a
-   width animation here would re-lay-out the fixed bar on every frame. */
+/* The light the point throws at the words. Half the blade's thickness, because
+   a beam as thick as the blade would meet a spike head-on and read as a blunt
+   join; at half it reads as light leaving a point, which is what it is. */
 .nav__bless-arm {
   flex: none;
   width: calc(var(--bless-size) * 1.5);
-  height: 4px;
+  height: calc(var(--mark-thick) / 2);
   transform-origin: left center;
   transform: scaleX(0);
-  background: linear-gradient(90deg, var(--text) 0%, var(--warm) 58%, transparent 100%);
+  background: linear-gradient(90deg, var(--text) 0%, var(--warm) 52%, transparent 100%);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--warm) 55%, transparent));
   animation: nav-bless-arm var(--bless-life) cubic-bezier(0.16, 0.84, 0.24, 1) both;
 }
 
-/* The window the words roll through. The 12px of vertical padding is slack, not
+/* The window the words roll through. The vertical padding is slack, not
    spacing — it is taken straight back off as margin, so the strip's height is
-   still the crossbar's 4px — and it is what lets a glyph tilt and rise inside
-   the clip without being sheared at the start of the roll. */
+   still the blade's — and it is what lets a glyph tilt and rise inside the clip
+   without being sheared at the start of the roll. */
 .nav__bless-clip {
   display: flex;
   align-items: baseline;
@@ -169,17 +193,18 @@
 
 .nav__bless-word {
   display: inline-block;
-  /* line-height 1 is what puts the phrase on the crossbar's line and keeps it
+  /* line-height 1 is what puts the phrase on the blade's line and keeps it
      there at every size. Cormorant's own metrics are ascent 16 / descent 5 per
      17px em, so with a 17px line box the baseline sits 0.8235em down and the
      cap height reaches 0.647em up from it: the cap band's top is 0.1765em below
      the box top and its baseline is 0.1765em above the box bottom. Those two
      are equal, and they stay equal at any size — so centring the LINE BOX on
-     the crossbar centres the letters on it. Measured at 1280px: crossbar centre
-     32.0, word box centre 32.0, cap band centre 32.0. */
+     the blade centres the letters on it. Measured at 1280px: blade centre 32.0,
+     word box centre 32.0, cap band centre 32.0. */
   font: 600 1em/1 var(--font-serif);
   letter-spacing: 0.055em;
   color: var(--text);
+  text-shadow: 0 0 0.6em color-mix(in srgb, var(--warm) 34%, transparent);
   transform-origin: 50% 100%;
   backface-visibility: hidden;
   opacity: 0;
@@ -215,41 +240,193 @@
   color: #fff;
 }
 .nav[data-over-dark='true'] .nav__bless-arm {
-  background: linear-gradient(90deg, #fff 0%, #f5c98a 58%, transparent 100%);
+  background: linear-gradient(90deg, #fff 0%, #f5c98a 52%, transparent 100%);
 }
 .nav[data-over-dark='true'] .nav__bless-aura {
   background: radial-gradient(closest-side, rgba(245, 201, 138, 0.3), transparent 100%);
 }
 
-/* The mark answers the press it just took: a flare on the beat the arm leaves
-   it, then a held glow for as long as the words are up. */
+/* ── the sword ─────────────────────────────────────────────────────────── */
+
 .nav__markwrap[data-bless] .nav__mark {
-  animation: nav-bless-mark var(--bless-life, 4.25s) ease both;
+  animation: nav-bless-mark var(--bless-life, 4.25s) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* The point. Five vertices at both ends of the morph, because a `clip-path`
+   only interpolates between polygons with the same vertex count — the resting
+   shape is the bar's own rectangle written as five points rather than four. */
+.nav__markwrap[data-bless] .nav__mark-bar:first-child {
+  animation: nav-bless-blade var(--bless-life, 4.25s) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.nav__markwrap[data-bless] .nav__mark-bar:last-child {
+  animation: nav-bless-guard var(--bless-life, 4.25s) cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The glint, struck on the point at the instant the blade lands and again as it
+   turns back. It sits on the wrapper rather than inside the mark, so the mark's
+   quarter turn does not spin it, and it is placed by the same expression the
+   strip is — the sword's point is one place, named once. */
+.nav__markwrap[data-bless]::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--mark-h) / 2);
+  top: 50%;
+  width: calc(var(--mark-h) * 0.62);
+  height: calc(var(--mark-h) * 0.62);
+  margin: calc(var(--mark-h) * -0.31) 0 0 calc(var(--mark-h) * -0.31);
+  clip-path: polygon(
+    50% 0%,
+    59% 41%,
+    100% 50%,
+    59% 59%,
+    50% 100%,
+    41% 59%,
+    0% 50%,
+    41% 41%
+  );
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--warm) 30%, #fff) 0%,
+    var(--warm) 44%,
+    transparent 78%
+  );
+  opacity: 0;
+  pointer-events: none;
+  animation: nav-bless-glint var(--bless-life, 4.25s) ease both;
+}
+.nav[data-over-dark='true'] .nav__markwrap[data-bless]::after {
+  background: radial-gradient(closest-side, #fff 0%, #f5c98a 44%, transparent 78%);
+}
+
+/* The flourish is in the two middle stops, not in the easing: the mark swells
+   as it swings and settles back to its own size the moment the blade lands. It
+   has to settle to exactly scale(1), because the point is where the beam starts
+   and 6%% of 12px would have put the two of them a pixel apart. */
+@keyframes nav-bless-mark {
+  0% {
+    transform: rotate(0deg) scale(1);
+    filter: none;
+  }
+  7% {
+    transform: rotate(-52deg) scale(1.14);
+    filter: drop-shadow(0 0 8px var(--cross-glow))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--warm) 55%, transparent));
+  }
+  12%,
+  88% {
+    transform: rotate(-90deg) scale(1);
+    filter: drop-shadow(0 0 6px var(--cross-glow))
+      drop-shadow(0 0 12px color-mix(in srgb, var(--warm) 45%, transparent));
+  }
+  94% {
+    transform: rotate(-38deg) scale(1.12);
+    filter: drop-shadow(0 0 8px var(--cross-glow))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--warm) 55%, transparent));
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+    filter: none;
+  }
+}
+
+/* Nine vertices, and the resting shape is the bar's own rectangle written with
+   all nine of them on its border — a `clip-path` only interpolates between
+   polygons of equal vertex count, so the rectangle has to be spelled out in the
+   sword's own alphabet. Reading down the bar, which is the sword read from
+   pommel to point: the grip is half width to 30%, flares to the full width by
+   38% where the guard crosses it, narrows a little as it runs to 82%, and comes to a point
+   at the bottom. That is what stops it reading as a cross lying down. */
+@keyframes nav-bless-blade {
+  0% {
+    clip-path: polygon(0 0, 100% 0, 100% 30%, 100% 38%, 100% 82%, 50% 100%, 0 82%, 0 38%, 0 30%);
+  }
+  12%,
+  88% {
+    clip-path: polygon(
+      25% 0,
+      75% 0,
+      75% 30%,
+      100% 38%,
+      88% 82%,
+      50% 100%,
+      12% 82%,
+      0 38%,
+      25% 30%
+    );
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 30%, 100% 38%, 100% 82%, 50% 100%, 0 82%, 0 38%, 0 30%);
+  }
+}
+
+/* The crossbar drawing itself into a crossguard: shorter, and finer than the
+   blade it crosses, which is the difference between a guard and half a crucifix.
+   Scaled about its own centre, so the centre stays on the line the quarter turn
+   sends the words along. */
+@keyframes nav-bless-guard {
+  0% {
+    transform: scale(1, 1);
+  }
+  12%,
+  88% {
+    transform: scale(0.7, 0.75);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes nav-bless-glint {
+  0%,
+  8% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-30deg);
+  }
+  13% {
+    opacity: 1;
+    transform: scale(1.15) rotate(0deg);
+  }
+  21%,
+  84% {
+    opacity: 0;
+    transform: scale(0.45) rotate(18deg);
+  }
+  90% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(0deg);
+  }
+  97%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35) rotate(-16deg);
+  }
 }
 
 @keyframes nav-bless-arm {
-  0% {
+  0%,
+  12% {
     transform: scaleX(0);
   }
-  14%,
-  82% {
+  22%,
+  84% {
     transform: scaleX(1);
   }
-  95%,
+  93%,
   100% {
     transform: scaleX(0);
   }
 }
 
 @keyframes nav-bless-clip {
-  0% {
+  0%,
+  16% {
     clip-path: inset(0 100% 0 0);
   }
-  14%,
-  82% {
+  26%,
+  80% {
     clip-path: inset(0 0 0 0);
   }
   /* Out through the top, which is the half of it the eye reads as "rolled up". */
+  93%,
   100% {
     clip-path: inset(100% 0 0 0);
   }
@@ -257,15 +434,16 @@
 
 @keyframes nav-bless-word {
   0%,
-  4% {
+  16% {
     opacity: 0;
     transform: translateY(0.55em) rotateX(-88deg);
   }
-  16%,
-  82% {
+  28%,
+  80% {
     opacity: 1;
     transform: none;
   }
+  93%,
   100% {
     opacity: 0;
     transform: translateY(-1em) rotateX(70deg);
@@ -277,38 +455,30 @@
     opacity: 0;
     transform: translateY(-50%) scale(0.72);
   }
-  20%,
+  24%,
   78% {
     opacity: 1;
     transform: translateY(-50%) scale(1);
   }
+  93%,
   100% {
     opacity: 0;
     transform: translateY(-50%) scale(0.9);
   }
 }
 
-@keyframes nav-bless-mark {
-  0%,
-  100% {
-    transform: none;
-    filter: none;
-  }
-  9% {
-    transform: scale(1.16);
-    filter: drop-shadow(0 0 11px var(--cross-glow));
-  }
-  24%,
-  82% {
-    transform: scale(1.04);
-    filter: drop-shadow(0 0 7px var(--cross-glow));
-  }
-}
-
 /* Asked for less motion, you still get the message — it simply arrives and
-   leaves rather than rolling. Same lifetime, same place, no travel, no tilt.  */
+   leaves rather than rolling, and the cross stays a cross, because a quarter
+   turn and a struck glint are exactly the two things that request is about.
+   With no quarter turn there is no sword point to aim at, so the strip goes
+   back to where the crossbar's own arm ends: same derivation, other landmark. */
 @media (prefers-reduced-motion: reduce) {
+  .nav__bless {
+    left: 100%;
+    top: var(--mark-crossbar);
+  }
   .nav__bless-arm {
+    height: var(--mark-thick);
     transform: scaleX(1);
     animation-name: nav-bless-fade;
   }
@@ -325,8 +495,18 @@
     transform: translateY(-50%);
     animation-name: nav-bless-fade;
   }
-  .nav__markwrap[data-bless] .nav__mark {
+  /* Named a bar at a time on purpose: the two sword rules above are
+     `:first-child` / `:last-child`, and a plain `.nav__mark-bar` here is one
+     class short of them — it lost, silently, and left a visitor who asked for
+     less motion a cross whose stem had been sharpened into a blade it was never
+     going to turn. */
+  .nav__markwrap[data-bless] .nav__mark,
+  .nav__markwrap[data-bless] .nav__mark-bar:first-child,
+  .nav__markwrap[data-bless] .nav__mark-bar:last-child {
     animation: none;
+  }
+  .nav__markwrap[data-bless]::after {
+    display: none;
   }
 }
 

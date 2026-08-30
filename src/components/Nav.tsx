@@ -728,16 +728,15 @@ export function Nav({
         <div className="nav__veil" aria-hidden="true" />
 
         {/* The mark keeps its own job — it is still the link home — and gains a
-            second one: it says who the site is for. The wrapper exists only to
-            give the strip something to hang off, and it is `flex: none` around
-            a 15x24 mark, so the bar's layout is the layout it always had.
+            second one: it says who the site is for, and turns a quarter turn
+            into a sword to point at it while it does. The wrapper exists only
+            to give the strip and the glint something to hang off, and it is
+            `flex: none` around a 15x24 mark, so the bar's layout is the layout
+            it always had — a rotation moves no other box.
 
-            Everything about where the words sit is derived rather than typed:
-            `left: 100%` is the crossbar's right end because the crossbar IS the
-            mark's full width, and the strip's own 4px height centres its
-            children on the crossbar's centre line. The words cannot drift off
-            the arm, at any width or font size, because nothing puts them there
-            by hand. */}
+            Where the words sit is derived from that quarter turn rather than
+            typed; Nav.css carries the derivation and the two landmarks it can
+            aim at. Nothing here places a word by hand, at any width or size. */}
         <div className="nav__markwrap" data-bless={bless > 0 || undefined}>
           <a href="#top" className="nav__mark" aria-label="TDG home" onClick={sayBlessing}>
             <span className="nav__mark-bar" />
