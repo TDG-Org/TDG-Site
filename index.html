@@ -3,12 +3,47 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TDG · The Disciples of God</title>
+    <!-- ── the NAME, and it is not the same string as the share card's ──────
+         This is what a bookmark is saved as and what a Home Screen tile is
+         labelled, on every platform: Safari's Add Bookmark pre-fills from
+         <title>, and iOS falls back to it for a web clip when nothing more
+         specific is offered. It used to read "TDG · The Disciples of God",
+         which is the lockup rather than the name — so the site arrived on a
+         phone called something no list of our apps calls it.
+
+         The lockup is not gone; it is on the share card below, where a
+         headline is what is wanted. A tab, a bookmark and an icon want a
+         NAME. -->
+    <title>TDG Site</title>
     <meta
       name="description"
       content="Brothers building software, games, and tools for the glory of Jesus."
     />
+    <!-- Said again for the two surfaces that will not read <title>: iOS reads
+         apple-mobile-web-app-title for the Home Screen label (and the manifest's
+         short_name after it), Windows reads application-name for a pinned site.
+         All four say "TDG Site" — see AGENTS.md rule 18. -->
+    <meta name="apple-mobile-web-app-title" content="TDG Site" />
+    <meta name="application-name" content="TDG Site" />
+
+    <!-- ── the ICON, and why a vector is not enough on its own ──────────────
+         favicon.svg is theme-aware and stays the browser tab's icon. Safari
+         will not read an SVG for apple-touch-icon, though, so with only that
+         link an iPhone built its Home Screen tile out of a SCREENSHOT of this
+         page. icons/ holds the raster family: opaque, square, no baked corner
+         radius, the mark inside the 80% every platform mask agrees is safe.
+         scripts/icons.mjs draws them all from CrossGlyph's own path. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <!-- display is "browser" on purpose. A standalone web app on iOS keeps its
+         own storage and sends every out-of-scope navigation to Safari — which
+         is exactly what sign-in does, since signInWithOAuth leaves for the
+         provider and comes back. Installed standalone, the round trip would
+         land the session in Safari and leave the tile still signed out. The
+         icon and the name are what this file is fixing; the browser stays. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#07070a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />

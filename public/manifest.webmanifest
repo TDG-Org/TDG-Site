@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "TDG Site",
+  "short_name": "TDG Site",
+  "description": "Brothers building software, games, and tools for the glory of Jesus.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#07070a",
+  "theme_color": "#07070a",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -69,7 +69,7 @@ fix the README.
 
 ---
 
-## 2 · The seventeen rules
+## 2 · The eighteen rules
 
 ### 1. A catalogue is data. A section's own headline is not.
 
@@ -448,6 +448,40 @@ all map `visibleApps()` / `visibleTools()` / `visibleGame()`, so a card hidden
 in one place cannot still be printed in another. That is the same rule this one
 already was — one derived list, no second copy — with one more thing folded into
 the derivation.
+
+### 18. The page says what it is called and what it looks like, everywhere.
+
+A phone is allowed to keep this site. Safari's **Add to Home Screen** turns it
+into a tile with a name and an icon, and both of those come from `<head>` — not
+from anything on the page, and not from anything a visitor can correct.
+
+Get either wrong and the failure is silent and permanent: the owner reported
+this site arriving on an iPhone with **no icon at all** and called **"TDG · The
+Disciples of God"**. Both were exactly what the markup asked for. The only icon
+link was `favicon.svg`, and **Safari will not read an SVG for
+`apple-touch-icon`** — with no raster to take, iOS makes the tile out of a
+*screenshot of the page*. The name came from `<title>`, which held the lockup
+rather than the name.
+
+So four things, and they are checked together because three of them right is
+still a wrong tile:
+
+| | |
+| --- | --- |
+| **The name is the NAME** | `TDG Site`, in `<title>`, `apple-mobile-web-app-title`, `application-name`, and the manifest's `name` and `short_name`. A bookmark takes `<title>`; iOS takes the apple meta first and `short_name` after it. The lockup is a headline and it belongs on the share card, where `og:title` still carries it. |
+| **The icon is a raster, and it is opaque** | 180 px for `apple-touch-icon`, 192 and 512 in the manifest. iOS masks the tile itself, so the file carries **no rounded corners and no alpha**: a baked radius gets masked twice into dark wedges, and an alpha channel is composited on black first. Both read as "the icon does not fit", which is the report this rule came from. |
+| **The mark sits inside the safe circle** | Every platform mask is different and Android's is the tightest: the centred circle of 80% diameter. `scripts/icons.mjs` sizes the cross to 62% of the tile for that reason, and says so at the constant. |
+| **`display` is a decision, not a default** | It is `browser` here on purpose. A standalone iOS web app keeps its **own** storage and sends every out-of-scope navigation to Safari — which is what `signInWithOAuth` does — so installed standalone, the round trip would leave the session in Safari and the tile still signed out. Say why in `index.html` if you ever change it. |
+
+The icons are **generated and committed**, by `scripts/icons.mjs`, from
+`CrossGlyph.tsx`'s own path and `tokens.css`'s `--cross-stop-*`. It needs
+`sharp`, which is deliberately not in `package.json` — see the file's header for
+why the tool stays out of a bundle that is already flagged at 500 kB, and rule 2
+for why the colours are not typed a second time.
+
+**This rule is about every TDG app, not only this one.** Each of ours that opens
+in a browser owns the same four lines in its own `<head>`, with its own name and
+its own art.
 
 ---
 
