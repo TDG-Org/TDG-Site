@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { useAuth } from '../auth/AuthProvider'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import {
+  appName,
   CONTACT_PLACEHOLDER,
   FEEDBACK_KINDS,
   fetchQuota,
@@ -29,7 +30,22 @@ import './Feedback.css'
  * Unlike the auth modal, this one themes with the page: it is part of the
  * site, not a gate in front of it.
  */
-export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function FeedbackDialog({
+  open,
+  onClose,
+  app,
+}: {
+  open: boolean
+  onClose: () => void
+  /**
+   * Which app this report is ABOUT, when the reader did not arrive from this
+   * site. Set by `#/feedback/<app>`, and the reason that route exists: several
+   * of our apps have no sign-in of their own, so their Send Feedback opens
+   * this form, and without this every one of those reports would land in the
+   * console labelled `tdg-site`.
+   */
+  app?: string
+}) {
   const { status, profile, user } = useAuth()
 
   const [kind, setKind] = useState<string | null>(null)
@@ -169,7 +185,7 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
     }
     setError(null)
     setSending(true)
-    const answer = await submitFeedback({ kind, message: message.trim(), contact })
+    const answer = await submitFeedback({ kind, message: message.trim(), contact, app })
     setSending(false)
     if (answer.error) {
       setError(answer.error)
@@ -199,7 +215,11 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
         aria-labelledby="fb-title"
       >
         <header className="fb__head">
-          <div className="fb__eyebrow">Feedback</div>
+          {/* The eyebrow names the APP when the report is not about this site.
+              A reader who pressed Send Feedback inside MARANATHA and landed on
+              a browser tab is entitled to see, before they type, that the words
+              are still going where they meant them to. */}
+          <div className="fb__eyebrow">{app ? `Feedback · ${appName(app)}` : 'Feedback'}</div>
           <button
             ref={closeRef}
             type="button"
@@ -247,8 +267,9 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
               Tell Us What You Think
             </h2>
             <p className="fb__sub">
-              It goes straight to the two of us, with your account attached — so if it needs an
-              answer, we can put one back in front of you, right here.
+              {app
+                ? `This goes to the two of us as a report about ${appName(app)}, with your account attached — so if it needs an answer, we can put one back in front of you.`
+                : 'It goes straight to the two of us, with your account attached — so if it needs an answer, we can put one back in front of you, right here.'}
             </p>
 
             <form className="fb__form" onSubmit={handleSubmit}>

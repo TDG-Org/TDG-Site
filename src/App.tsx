@@ -73,6 +73,16 @@ export default function App() {
   const { oauthError, recovery, setup, isAdmin } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  /**
+   * Which app a `#/feedback/<app>` arrival is about, held for as long as the
+   * dialog is open.
+   *
+   * Kept here rather than read from the route at submit time, because the hash
+   * is put back to home the moment the dialog opens — see the effect below —
+   * so by the time somebody presses Send there is nothing left in it to read,
+   * and the report would file itself under this site.
+   */
+  const [feedbackApp, setFeedbackApp] = useState<string | undefined>(undefined)
   const route = useRoute()
 
   /*
@@ -103,6 +113,51 @@ export default function App() {
   useEffect(() => {
     if (oauthError || recovery || setup) setAuthOpen(true)
   }, [oauthError, recovery, setup])
+
+  /*
+   * `#/feedback` and `#/feedback/<app>`: the address our OTHER apps point at.
+   *
+   * Several of ours have no sign-in of their own — MARANATHA, N8-Tools,
+   * VidHelper, Say2Quill, the Socials tracker — so they cannot carry a feedback
+   * form: a report needs an account for the reply to have anywhere to go. Their
+   * Send Feedback opens this instead, and the segment is what files the report
+   * against the app the reader was actually using.
+   *
+   * It opens the dialog over HOME rather than being a page of its own, because
+   * feedback is a dialog everywhere else on this site and a second, page-shaped
+   * one would be a different thing wearing the same name.
+   *
+   * **The hash is replaced immediately, and that is not tidiness.** Left in
+   * place it would reopen the form on every refresh and on every Back that
+   * lands here — including the Back somebody presses right after sending — and
+   * `replaceState` rather than a push keeps that Back going where the reader
+   * expects rather than into a dialog they have already dealt with. The app id
+   * moves into state in the same breath, which is why `feedbackApp` exists.
+   */
+  useEffect(() => {
+    if (route.kind !== 'feedback') return
+    setFeedbackApp(route.app)
+    setFeedbackOpen(true)
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    /*
+     * And then SAY the hash changed, because `replaceState` does not.
+     *
+     * Without this the router's state stays on `feedback` while the address bar
+     * says home, and `same()` in lib/route.ts then swallows the next arrival:
+     * two feedback routes are the same route unless they name different apps,
+     * so a second press of the same Send Feedback link — closing the dialog and
+     * opening it again, which is one press in another app of ours — produced a
+     * hashchange that changed nothing, and the form did not reopen. Found by
+     * driving `#/feedback` and then `#/feedback/<bad id>` in one page load:
+     * the second one left the hash sitting in the address bar and no dialog.
+     *
+     * Telling the router to re-read settles it on `home`, which is what the
+     * address now says, so the next `#/feedback` is a real change again. The
+     * listener reads `window.location.hash` rather than the event, so a bare
+     * Event carries everything it needs.
+     */
+    window.dispatchEvent(new Event('hashchange'))
+  }, [route])
 
   // Leaving or entering a page swaps the whole document, and the browser has
   // already done whatever it was going to do with the hash by the time React
@@ -196,7 +251,7 @@ export default function App() {
 
   return (
     <div className="page">
-      <Nav onOpenAuth={() => setAuthOpen(true)} onOpenFeedback={() => setFeedbackOpen(true)} />
+      <Nav onOpenAuth={() => setAuthOpen(true)} onOpenFeedback={() => { setFeedbackApp(undefined); setFeedbackOpen(true) }} />
       {showDev ? (
         <main>
           {/* The chunk is local and small; the placeholder only stops the
@@ -224,7 +279,7 @@ export default function App() {
           <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
             <AccountPage
               onOpenAuth={() => setAuthOpen(true)}
-              onOpenFeedback={() => setFeedbackOpen(true)}
+              onOpenFeedback={() => { setFeedbackApp(undefined); setFeedbackOpen(true) }}
             />
           </Suspense>
         </main>
@@ -280,7 +335,11 @@ export default function App() {
       <Footer />
       <Cursor />
       <AuthModal open={authOpen} initialTab="login" onClose={() => setAuthOpen(false)} />
-      <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        app={feedbackApp}
+      />
       {/* Renders nothing until a developer's reply is actually waiting. */}
       <ReplyInbox />
     </div>

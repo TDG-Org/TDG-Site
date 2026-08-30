@@ -12,9 +12,35 @@ tab (`src/dev/`), and the server contract both halves speak is
 | File | What it is |
 | --- | --- |
 | `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also every sentence the form shows that is not a label: the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the contact box's placeholder (`CONTACT_PLACEHOLDER`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
-| `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`). |
+| `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`) — and from `#/feedback`, see below. |
 | `ReplyInbox.tsx` | The startup panel that delivers **everything waiting for this account** — a developer's reply, quoted next to what the person originally wrote, and any [notice](../notices/README.md) about a change we made to what they own. Checks once per sign-in; renders nothing when nothing waits. One panel and not two, because two dialogs opening over each other at boot is worse than either, and because there is no difference the reader cares about: both are a message from us. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
+
+## `#/feedback` — this form is also the OTHER apps' form
+
+Several TDG apps have no sign-in at all: MARANATHA, N8-Tools, VidHelper,
+Say2Quill, the Socials tracker. They cannot carry a feedback form of their own,
+because a report has to be attached to an account for the reply to have anywhere
+to be delivered — so their Send Feedback opens **this** dialog in a browser,
+through `#/feedback/<app>`.
+
+**The segment is the whole point.** It sets `submitFeedback`'s `app`, so the
+report is filed against the app the reader was actually using. Without it every
+report from every one of those apps would arrive in the console labelled
+`tdg-site`, which is exactly what the console's per-app view exists to prevent.
+The dialog says which app it is about, in the eyebrow and in its opening line,
+because somebody who pressed a button inside a game and landed on a browser tab
+is entitled to see that their words are still going where they meant them.
+
+`appName()` in `api.ts` is what turns an id into a name, and it is shared with
+the inbox so the two can never disagree. It reads the catalogue rather than a
+typed list, and an id the catalogue has never heard of still gets a face made
+out of itself — rule 17, both halves.
+
+The routing half of this (why it renders home with the dialog over it, why the
+hash is replaced immediately, and why the id is validated against the server's
+shape rather than a list) is in
+[`../lib/README.md`](../lib/README.md#routets).
 
 ## The loop, end to end
 

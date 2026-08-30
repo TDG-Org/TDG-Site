@@ -47,6 +47,7 @@ type Route =
   | { kind: 'account' }
   | { kind: 'profile'; username: string }
   | { kind: 'store'; app?: string }
+  | { kind: 'feedback'; app?: string }
   | { kind: 'dev' }
   | { kind: 'app'; slug: string }
 ```
@@ -61,6 +62,30 @@ handle pasted the way people write it works; a bare `#/user/` has named nobody
 and falls through to home. `decodeURIComponent` is wrapped, because it THROWS on
 a lone `%` and an exception here would take the whole render down rather than
 landing on a page. See [`../people/README.md`](../people/README.md).
+
+`#/feedback` **exists for the other apps, not for this one.** Several of ours
+have no sign-in at all — MARANATHA, N8-Tools, VidHelper, Say2Quill, the Socials
+tracker — so they cannot carry a feedback form: a report needs an account for
+the reply to have anywhere to go. Their Send Feedback opens this address in a
+browser, and `#/feedback/<app>` files the report against the app the reader was
+actually using rather than against the site they landed on. Without the segment
+every one of those reports would arrive in the console labelled `tdg-site`,
+which is the one thing the console's per-app view exists to prevent.
+
+Two things about it are worth reading before changing either. It renders **home
+with the dialog over it**, because feedback is a dialog everywhere else on this
+site and a second, page-shaped one would be a different thing wearing the same
+name. And `App.tsx` **replaces the hash the moment the dialog opens** — left in
+place it would reopen the form on every refresh and on every Back that lands
+here, including the Back somebody presses right after sending. The app id moves
+into React state in the same breath, which is why `App.tsx` holds a
+`feedbackApp` rather than reading `route.app` at submit time.
+
+The id is checked against the SERVER's own shape (`^[a-z0-9][a-z0-9-]{1,31}$`,
+the CHECK on `tdg_feedback.app`) rather than against a list of today's apps, so
+an app that starts reporting tomorrow needs no edit here. One that misses the
+shape is dropped and the report is filed under the site — the reader still gets
+the form. `feedbackHash(appId)` builds the address, so nothing concatenates it.
 
 Four things to keep true when you add one:
 

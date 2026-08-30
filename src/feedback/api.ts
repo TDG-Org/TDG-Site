@@ -1,3 +1,5 @@
+import { APPS, MARANATHA, TOOLS } from '../data/content'
+import { STORE_APPS } from '../data/store'
 import { supabase } from '../lib/supabase'
 
 /**
@@ -68,9 +70,20 @@ export async function submitFeedback(input: {
   kind: string
   message: string
   contact: string
+  /**
+   * Which app the report is ABOUT, when it is not this site.
+   *
+   * `#/feedback/<app>` sets it, and that route exists for the several apps of
+   * ours with no sign-in of their own: they cannot carry the form, so their
+   * Send Feedback opens this site's, and this is what stops every one of those
+   * reports arriving in the console labelled `tdg-site`. The route has already
+   * checked the id against the server's own shape, so an unrecognised value
+   * cannot reach here — see `feedbackHash` in src/lib/route.ts.
+   */
+  app?: string
 }): Promise<{ id: number | null; error: string | null }> {
   const { data, error } = await supabase.rpc('tdg_feedback_submit', {
-    p_app: FEEDBACK_APP_ID,
+    p_app: input.app || FEEDBACK_APP_ID,
     p_kind: input.kind,
     p_message: input.message,
     p_app_version: __TDG_SITE_VERSION__,
@@ -298,4 +311,40 @@ export async function describePlatform(): Promise<string> {
     : 'unknown browser'
 
   return `${os} · ${browser}`.trim()
+}
+
+/**
+ * What to CALL an app, from its feedback id.
+ *
+ * One place, because two surfaces need it and they must not disagree: the send
+ * form says which app a `#/feedback/<app>` report will be filed against, and
+ * the inbox says which app a reply is about.
+ *
+ * **Read from the catalogue rather than typed**, so a name here cannot drift
+ * from the name on that app's card — the feedback ids ARE the cards' page
+ * slugs. It reads `content.ts` directly rather than through `src/content/`,
+ * which rule 17 asks of a surface that DRAWS products. This draws none: it is
+ * one label on one report, wanted outside React, and a title overridden at
+ * runtime would only make the dialog disagree with what the console has already
+ * stored against the report.
+ *
+ * An id the catalogue has never heard of still gets a face rather than being
+ * dropped — rule 17's other half. The `app` column is open by design, so an app
+ * that starts reporting tomorrow is a name made out of its own id today, which
+ * is legible and honest, and becomes its real name the moment it has a card.
+ */
+const CATALOGUE: ReadonlyArray<{ id: string; title: string }> = [
+  ...APPS.map((a) => ({ id: a.page, title: a.title })),
+  ...TOOLS.map((t) => ({ id: t.page, title: t.title })),
+  { id: MARANATHA.page, title: MARANATHA.title },
+]
+
+export function appName(id: string): string {
+  const known = CATALOGUE.find((a) => a.id === id) ?? STORE_APPS.find((a) => a.id === id)
+  if (known) return known.title
+  return id
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((w) => (w.toLowerCase() === 'tdg' ? 'TDG' : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
 }

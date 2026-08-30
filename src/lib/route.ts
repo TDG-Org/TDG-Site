@@ -77,6 +77,30 @@ export type Route =
    * that app's packs rather than a page with somebody else's on it too.
    */
   | { kind: 'store'; app?: string }
+  /**
+   * Send Feedback, opened by its own address rather than from the account menu.
+   *
+   * **This route exists for the OTHER apps.** Several of ours have no sign-in
+   * at all — MARANATHA, N8-Tools, VidHelper, Say2Quill, the Socials tracker —
+   * so they cannot carry the feedback form themselves: a report needs an
+   * account for the reply to have anywhere to go. Their Send Feedback opens
+   * this address in a browser instead, and `#/feedback/<app>` files the report
+   * against the app the reader was actually using rather than against the site
+   * they landed on. Without the segment, every report from every app would
+   * arrive in the console labelled `tdg-site`, which is the one thing the
+   * console's per-app view exists to prevent.
+   *
+   * It renders HOME with the dialog over it, because feedback is a dialog and
+   * not a page. Closing it puts the hash back to home, so a refresh does not
+   * reopen a form somebody already dealt with.
+   *
+   * The app id is validated against the server's own shape, not against a list
+   * of today's apps: `tdg_feedback.app` is `^[a-z0-9][a-z0-9-]{1,31}$` and
+   * deliberately open, so an app that starts reporting tomorrow needs no edit
+   * here. An id that does not fit the shape is dropped and the report is filed
+   * under the site, which is where the reader is.
+   */
+  | { kind: 'feedback'; app?: string }
   | { kind: 'dev' }
   | { kind: 'app'; slug: string }
 
@@ -84,6 +108,29 @@ export const ABOUT_HASH = '#/about'
 export const STORE_HASH = '#/store'
 export const ACCOUNT_HASH = '#/account'
 export const DEV_HASH = '#/dev'
+export const FEEDBACK_HASH = '#/feedback'
+
+/**
+ * The shape `tdg_feedback.app` accepts, said again here.
+ *
+ * A copy of a server CHECK is normally the thing this project refuses to
+ * write. This one earns it: the alternative is passing an id straight through
+ * to `tdg_feedback_submit` and letting Postgres refuse it, which turns a
+ * mistyped link into an error message on a form somebody has already filled
+ * in. Validating the ROUTE means a bad id costs nothing — the report is simply
+ * filed under the site. It is the shape and not a list on purpose: see the
+ * `feedback` arm of `Route`.
+ */
+const APP_ID = /^[a-z0-9][a-z0-9-]{1,31}$/
+
+/**
+ * The address another TDG app points its Send Feedback at, filed under that
+ * app. Exported so nothing has to concatenate the string, the way `appHash`
+ * and `storeAppHash` exist — and so the one place that builds it is the one
+ * place to read when an app asks what its link should be.
+ */
+export const feedbackHash = (appId?: string) =>
+  appId && APP_ID.test(appId) ? `${FEEDBACK_HASH}/${appId}` : FEEDBACK_HASH
 
 /** The hash that opens one app's own page. */
 export const appHash = (slug: string) => `#/app/${slug}`
@@ -150,6 +197,13 @@ export function routeFromHash(hash: string): Route {
     return STORE_APPS.some((a) => a.id === app) ? { kind: 'store', app } : { kind: 'store' }
   }
   if (key === 'account') return { kind: 'account' }
+  if (key === 'feedback') return { kind: 'feedback' }
+  if (key.startsWith('feedback/')) {
+    // A shape, not a catalogue, and an id that misses it is dropped rather
+    // than refused: the reader still gets the form, filed under the site.
+    const app = key.slice(9)
+    return APP_ID.test(app) ? { kind: 'feedback', app } : { kind: 'feedback' }
+  }
   if (key === 'dev') return { kind: 'dev' }
   if (key.startsWith('user/')) {
     // Lower-cased with the rest of the hash above, which is right: handles are
@@ -175,6 +229,9 @@ const same = (a: Route, b: Route) => {
   // treating them as one would leave a reader who clicked the second link
   // looking at the first app's packs.
   if (a.kind === 'store' && b.kind === 'store') return a.app === b.app
+  // Two feedback routes naming different apps file under different apps, so a
+  // reader who followed the second link must not get the first one's form.
+  if (a.kind === 'feedback' && b.kind === 'feedback') return a.app === b.app
   // Two profiles are two people. Following a friend-of-a-friend from one
   // profile to the next is a hashchange within one route kind, and treating
   // them as the same route would leave the second reader looking at the first

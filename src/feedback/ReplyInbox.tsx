@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { STORE_APPS } from '../data/store'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
-import { ackReply, fetchInbox, type InboxReply } from './api'
+import { ackReply, appName, fetchInbox, FEEDBACK_APP_ID, type InboxReply } from './api'
 // The notices folder owns the fact; this panel draws it. See src/notices/api.ts
 // for why they arrive in ONE panel rather than two dialogs over each other.
 import { ackNotice, fetchNotices, type Notice } from '../notices/api'
@@ -200,21 +199,17 @@ export function ReplyInbox() {
   )
 }
 
-/** What to call the app a report came from, in a sentence. */
+/**
+ * What to call the app a report came from, in a sentence.
+ *
+ * The NAME itself is `appName` in api.ts, shared with the send form so the two
+ * cannot disagree about what an app is called. Only the one special case is
+ * here: a report filed under this site reads "this site" rather than "TDG
+ * Site", because it is being read ON the site.
+ */
 function appLabel(id: string): string {
-  if (id === 'tdg-site') return 'this site'
-  const sold = STORE_APPS.find((a) => a.id === id)
-  if (sold) return sold.title
-  // An app the shop has no copy for still gets a legible name. Deliberately
-  // not imported from src/dev/ — that folder is a lazy chunk only developers'
-  // browsers ever fetch, and this panel is for everybody.
-  return id
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((w) => (w.toLowerCase() === 'tdg' ? 'TDG' : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(' ')
+  return id === FEEDBACK_APP_ID ? 'this site' : appName(id)
 }
-
 function clip(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max - 1).trimEnd() + '…'
 }

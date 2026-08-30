@@ -569,6 +569,18 @@ export const TOOLS: ToolCard[] = [
 export const MARANATHA = {
   /** Its own page, same as every card under Apps and Tools. */
   page: 'maranatha',
+  /**
+   * The game's NAME, in the form it is always written in.
+   *
+   * Every card under Apps and Tools has carried a `title` from the start; this
+   * panel did not, because it draws a `heading` instead and had nothing else to
+   * name itself to. It does now: a feedback report filed from inside the game
+   * says which app it is about, and the name has to survive being derived from
+   * an id — `maranatha` prettified is `Maranatha`, and this game is written in
+   * capitals everywhere it appears (rule 7 keeps a proper noun in its own
+   * form). See `appName` in src/feedback/api.ts.
+   */
+  title: 'MARANATHA',
   /** Same contract as `AppCard.repo`; expected name, unchecked until the game
    *  first deploys. A Content-tab `href` on the panel outranks discovery. */
   repo: 'MARANATHA',
