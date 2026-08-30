@@ -59,6 +59,15 @@ Rotates toward the cursor and sets the two custom properties the spotlight
 **A tap has no cursor to tilt toward**, so on a device without hover it returns
 without attaching anything and cards stay flat.
 
+**The settle is `.card`'s, not the hook's.** This writes `transform` straight
+onto the element on every `pointermove` and writes the rest pose back on
+`pointerleave`, so a card with no `transition` on `transform` snaps flat in one
+frame the moment the pointer goes. That line lives once, on `.card` in
+`base.css`; it used to be copied into five card rules across five stylesheets,
+which is exactly how `.cloud__panel` — the sixth card written — was born without
+it and jumped. Tilt something that is not a `.card` and it needs its own
+(`.origin__row` is the one, at a gentler 0.95s).
+
 Because this leaves a 3D transform on the element, **`getBoundingClientRect()`
 inside a card returns projected sizes** — two identical elements at different
 heights measure a pixel or two apart. Use `offsetWidth` / `offsetHeight` when

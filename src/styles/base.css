@@ -477,6 +477,21 @@ stop {
   isolation: isolate;
   overflow: hidden;
   transform-style: preserve-3d;
+  /* The settle for `useTilt`, and it lives HERE because a card without it does
+     not merely look different — it is broken. The hook writes `transform`
+     straight onto the element on every pointermove and writes the rest pose
+     back on pointerleave, so with no transition the card snaps flat in a single
+     frame the moment the pointer goes. This line used to be copied into five
+     card rules across five stylesheets, which is exactly why the sixth card to
+     be written — `.cloud__panel`, the TDG Cloud shelf — was born without it and
+     jumped. One card language, one settle.
+
+     Safe against the reveal, which owns `transform` on its way in: `paint()` in
+     useReveal.ts sets an inline `transition: none` while it is running and
+     clears it on the frame it lands. */
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    var(--t-theme);
 }
 .card:hover {
   border-color: var(--border-hover);

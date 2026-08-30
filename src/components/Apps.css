@@ -295,12 +295,6 @@
   gap: 20px;
 }
 
-.apps__card {
-  transition:
-    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-    var(--t-theme);
-}
-
 /* Bleeds to the card's own edges (top corners clip via the card's radius +
    overflow:hidden) rather than sitting inset. Same idea as .building__art. */
 .apps__shot {

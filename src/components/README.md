@@ -259,7 +259,10 @@ line of them being re-decided, which is the pattern paying for itself.
 
 Three blocks are drawn on **both** and are one component each — `AccountStrip`,
 `BeforeYouPay`, `MoneyAnswers` — so the two views cannot answer differently
-about who is buying, what the refund policy is, or how the money works. The buy
+about who is buying, what the refund policy is, or how the money works.
+`AccountStrip` renders *inside* `BeforeYouPay`'s header rather than as a band of
+its own, and the three terms sit abreast in a grid: as two stacked full-width
+boxes they cost 318px of the first screen between them and 206px is enough. The buy
 watch (`pending`, and the five-minute poll after a checkout opens) lives in
 `Store` itself, the parent of both, so walking back to the index mid-payment
 does not throw the wait away.

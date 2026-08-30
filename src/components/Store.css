@@ -126,7 +126,12 @@
 .store__head {
   max-width: 720px;
   margin-top: clamp(26px, 4vw, 40px);
-  margin-bottom: clamp(44px, 6vw, 72px);
+  /* The air between the head and the terms panel that now always follows it on
+     both views — the same 26px the account band used to take. The clamp that
+     used to be here separated the head from the shelf, and it moved down onto
+     `.store__terms` with the panel: leaving it here as well put 78px between
+     the lede and the panel where there had been 26. */
+  margin-bottom: 26px;
 }
 .h2.store__heading {
   margin-top: 18px;
@@ -136,35 +141,38 @@
 }
 
 /* Who the purchase will land on. A shop that takes money without naming the
-   account it credits is asking for a support email. */
+   account it credits is asking for a support email — but it does not need a
+   band of its own to say so, and it used to have one directly above a second
+   band saying the terms. It is a status now, and it sits in the terms panel's
+   header, which is the only other place on this page that talks about paying.
+
+   Signed in it is a pill, because that is the state with something to reassure
+   about; signed out it is a line and a button, and a tinted pill around a
+   call to action would read as a warning rather than an invitation. */
 .store__account {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 26px;
-  padding: 12px 16px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  transition: var(--t-theme);
+  gap: 8px;
+  min-width: 0;
 }
 .store__account[data-signed-in] {
-  border-color: var(--live-border);
+  padding: 4px 11px 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--live-border);
   background-color: var(--live-bg);
+  transition: var(--t-theme);
 }
 .store__account-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   flex: none;
   border-radius: 50%;
   background-color: var(--live-fg);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--live-fg) 22%, transparent);
 }
 .store__account-text {
-  flex: 1 1 240px;
   min-width: 0;
-  font: 400 13.5px/1.5 var(--font-body);
+  font: 400 12px/1.45 var(--font-body);
   color: var(--muted);
 }
 .store__account[data-signed-in] .store__account-text {
@@ -174,23 +182,41 @@
   font-weight: 600;
   color: var(--text);
 }
+/* Inside a header row rather than a 12px-padded band, so it gives back the
+   height the band used to give it. */
+.store__account .store__ghost {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 12px;
+}
 
 /* The three things a reader has to know BEFORE the Buy button, above the shelf
-   rather than folded under it. Deliberately quiet — `--surface` and `--border`,
-   the same box the account strip is — because it is information and not an
+   rather than folded under it, and ABREAST rather than stacked. Deliberately
+   quiet — `--surface` and `--border` — because it is information and not an
    alarm, and a warm panel here would read as a warning about the shop rather
-   than the terms of it. The lead-in of each line carries `--text` so the three
-   claims are readable at a glance without reading the whole paragraph. */
+   than the terms of it. The lead-in of each claim breaks to its own line in
+   `--text`, which is what makes three columns scan as three headlines rather
+   than as three paragraphs that happen to be side by side. */
 .store__terms {
-  margin-top: 14px;
-  padding: 16px 18px;
+  margin-bottom: clamp(44px, 6vw, 72px);
+  padding: 13px 18px 15px;
   border-radius: 3px;
   border: 1px solid var(--border);
   background-color: var(--surface);
   transition: var(--t-theme);
 }
+.store__terms-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-bottom: 11px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
 .store__terms-title {
-  margin: 0 0 10px;
+  margin: 0;
   font: 600 10px var(--font-mono);
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -200,15 +226,17 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr));
+  gap: 13px 28px;
 }
 .store__terms-list li {
-  font: 400 12.5px/1.6 var(--font-body);
+  font: 400 12px/1.55 var(--font-body);
   color: var(--muted);
 }
 .store__terms-list strong {
+  display: block;
+  margin-bottom: 2px;
   font-weight: 600;
   color: var(--text);
 }
@@ -259,9 +287,6 @@
 .store__app {
   display: flex;
   flex-direction: column;
-  transition:
-    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-    var(--t-theme);
 }
 
 /* `auto` rather than the default 1, so the app-page link inside can be given a
@@ -581,9 +606,6 @@
   display: flex;
   flex-direction: column;
   padding: 24px;
-  transition:
-    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
-    var(--t-theme);
 }
 .store__pack[data-owned] {
   border-color: var(--live-border);

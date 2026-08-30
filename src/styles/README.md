@@ -203,6 +203,11 @@ forces them to land.
 3. **`transform-style: preserve-3d`** plus the tilt hook, so
    `getBoundingClientRect()` returns *projected* sizes inside a card. Measure
    layout with `offsetWidth` / `offsetHeight`.
+4. **The `transform` transition on `.card` is `useTilt`'s settle**, and a card
+   without it does not look different — it snaps flat in one frame when the
+   pointer leaves. It is on `.card` so a new card cannot be written without it,
+   which is what happened to `.cloud__panel` while the line was copied into five
+   separate card rules. Overriding `transition` on a card means restating it.
 
 ### `--nav-h`
 

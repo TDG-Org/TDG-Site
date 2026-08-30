@@ -1048,6 +1048,11 @@ function AppCard({
  * On BOTH views, because a shop that takes money without naming the account it
  * credits is asking for a support email, and the reader who needs it most is
  * the one about to press Buy — which is the app view.
+ *
+ * It reads as a status pill in the terms panel's own header rather than as a
+ * band of its own. Two stacked full-width boxes above the shelf cost about 250
+ * pixels of the first screen between them and said, structurally, that these
+ * were two subjects; they are one — who is paying, and what paying here means.
  */
 function AccountStrip({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { status, user, profile } = useAuth()
@@ -1089,35 +1094,52 @@ function AccountStrip({ onOpenAuth }: { onOpenAuth: () => void }) {
  * NOT press Buy have to be readable before they press it. A refund policy
  * discovered afterwards is a refund policy nobody agreed to.
  *
- * Three lines, and each is a promise in a different direction: what the card
- * lists is all of it, what is bought once stays bought, and money that has gone
- * does not come back. The last one ends in the thing a reader can actually do,
- * because a rule with no way out of it reads as a wall.
+ * Three promises in three different directions: what the card lists is all of
+ * it, what is bought once stays bought, and money that has gone does not come
+ * back. The last one ends in the thing a reader can actually do, because a rule
+ * with no way out of it reads as a wall.
+ *
+ * THREE ABREAST, NOT THREE STACKED, and the account it will land on sits in the
+ * same header. Nothing has been dropped — every claim below is the claim that
+ * was there — but the block went from two boxes and nine lines of full-width
+ * prose to one box and three short columns, which is about 140 pixels of the
+ * first screen handed back to the shelf. Rule 16 holds: the grid is
+ * `auto-fit, minmax(min(100%, …))`, so the three fall to one column when the
+ * column would be narrower than its own words rather than at a width typed
+ * here.
  */
-function BeforeYouPay() {
+function BeforeYouPay({ onOpenAuth }: { onOpenAuth: () => void }) {
+  // Outside `.store__head` on both views, because that box is capped at 720px
+  // — the measure a heading and a lede want to be read at — and three columns
+  // of terms want the shelf's width. So it reveals on its own rather than with
+  // the head it used to sit inside.
+  const reveal = useReveal<HTMLElement>('wipe', 1)
+
   return (
-    <div className="store__terms">
-      <p className="store__terms-title">Before You Pay</p>
+    <section ref={reveal} className="store__terms" aria-label="Before you pay">
+      <div className="store__terms-head">
+        <p className="store__terms-title">Before You Pay</p>
+        <AccountStrip onOpenAuth={onOpenAuth} />
+      </div>
       <ul className="store__terms-list">
         <li>
           <strong>What is on the card is what you get.</strong> Everything a pack unlocks is
-          listed on that pack's own card, and that list is the whole of it. Nothing is held
-          back, and nothing turns up later that you have to buy a second time.
+          listed on its own card, and that list is the whole of it — nothing held back, and
+          nothing turning up later that costs again.
         </li>
         <li>
-          <strong>A one-time pack is truly yours.</strong> Paid once, kept for good, on your
-          TDG Account rather than on a machine. There is nothing to renew, nothing to
-          activate, and we do not take it back.
+          <strong>A one-time pack is truly yours.</strong> Paid once and kept for good, on
+          your TDG Account rather than on a machine. Nothing to renew, nothing to activate,
+          and we do not take it back.
         </li>
         <li>
           <strong>Payments are not refundable.</strong> Every sale costs us fees we do not
-          get back, and we are two people rather than a company that can absorb that — so
-          please read the card and be sure before you pay. Anything that renews can be
-          cancelled from its own card whenever you like, and you keep it to the end of the
-          period you have already paid for.
+          get back, and we are two people rather than a company — so please be sure before
+          you pay. Anything that renews you can cancel from its own card whenever you like,
+          and you keep it to the end of the period you have paid for.
         </li>
       </ul>
-    </div>
+    </section>
   )
 }
 
@@ -1186,9 +1208,9 @@ function StoreIndex({
           app below for its packs, its prices and everything that comes with them.
         </p>
 
-        <AccountStrip onOpenAuth={onOpenAuth} />
-        <BeforeYouPay />
       </div>
+
+      <BeforeYouPay onOpenAuth={onOpenAuth} />
 
       {/*
         TDG Cloud, above the app cards — its own area, not one of them.
@@ -1295,7 +1317,9 @@ function StoreApp({
           </span>
         </a>
 
-        <AccountStrip onOpenAuth={onOpenAuth} />
+        {/* Above the terms, not below them: a block on this whole app is the
+            more urgent of the two, and it decides whether the terms are worth
+            reading at all. */}
         {revoked && (
           <p className="store__revoked store__revoked--wide">
             <span className="store__revoked-mark" aria-hidden="true">
@@ -1312,8 +1336,9 @@ function StoreApp({
             </span>
           </p>
         )}
-        <BeforeYouPay />
       </div>
+
+      <BeforeYouPay onOpenAuth={onOpenAuth} />
 
       {/* A shop holding ONE pack is told so, because the grid collapses its
           empty tracks and a lone card would otherwise stretch the page. */}
