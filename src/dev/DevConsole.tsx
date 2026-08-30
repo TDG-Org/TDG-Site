@@ -31,7 +31,8 @@ import { CloudTab } from './CloudTab'
 import { SectionsProvider, useSections } from '../lib/sections'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
-import { fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
+import { eventKind, fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
+import type { EventKind } from './format'
 import { captureAnchor, holdAnchor, readView, useRememberView, useRestoreView } from './viewState'
 import './DevConsole.css'
 
@@ -67,6 +68,27 @@ const TABS: { id: Tab; label: string; what: string }[] = [
   { id: 'feedback', label: 'Feedback', what: 'What users sent us from inside the apps, and our replies.' },
   { id: 'purchases', label: 'Purchases', what: 'Every payment and free grant TDG has recorded.' },
   { id: 'audit', label: 'Audit Log', what: 'Every action a developer has taken, in every app.' },
+]
+
+/**
+ * The Purchases ledger's other filter: not WHICH app, but what KIND of entry.
+ *
+ * Real money, Stripe's test mode and console grants live in the same three
+ * tables, which is right — they are all things that turned an entitlement on —
+ * but they are not the same question. "Did anybody buy this" and "did my test
+ * card go through" want opposite halves of the same list, and reading a total
+ * that quietly includes a test sale is how a project believes it has revenue it
+ * has not got.
+ *
+ * The four options PARTITION the ledger: every entry is exactly one of real,
+ * test or grant, so nothing can be unreachable from here. See `eventKind` in
+ * `format.ts` for how a row is told apart.
+ */
+const KINDS: { id: 'all' | EventKind; label: string; what: string }[] = [
+  { id: 'all', label: 'Everything', what: 'Every entry: real payments, Stripe tests and console grants.' },
+  { id: 'real', label: 'Real', what: 'Live payments only. Real money, from a real card.' },
+  { id: 'test', label: 'Test', what: "Stripe test mode only — tagged #test in the ledger. Nobody was charged." },
+  { id: 'grant', label: 'Grants', what: 'Nobody paid: a pack switched on from this console or an app’s own tools.' },
 ]
 
 /**
@@ -147,7 +169,14 @@ function DevConsoleBody({
   const [allEvents, setAllEvents] = useState<DevEvent[]>([])
   const [allAudit, setAllAudit] = useState<DevAuditRow[]>([])
   const [ledgerState, setLedgerState] = useState<'loading' | 'ready' | 'error'>('loading')
+  /* The two Purchases filters: WHICH APP the money came from, and WHAT KIND of
+   * entry it is — a live payment, a Stripe test, or a grant nobody paid for.
+   * Two controls rather than one list, because they are independent questions
+   * and the answers multiply: "TDG Veditor, real payments only" is the one a
+   * revenue question actually asks. Neither is remembered across a reload; the
+   * whole ledger is the honest thing to come back to. */
   const [source, setSource] = useState<string>('all')
+  const [kind, setKind] = useState<'all' | EventKind>('all')
 
   const [allFeedback, setAllFeedback] = useState<DevFeedback[]>([])
   const [feedbackState, setFeedbackState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -567,21 +596,52 @@ function DevConsoleBody({
     [rows, terms],
   )
 
-  const shownEvents = useMemo(
+  /** The ledger with the app filter and the page search applied, but NOT the
+   *  kind filter — so the kind buttons can say how many of each are in front of
+   *  you before you press one, and pressing one can never hide a number it just
+   *  claimed. */
+  const eventsInScope = useMemo(
     () =>
       allEvents
         .filter((e) => source === 'all' || e.source === source)
-        .filter((e) =>
-          matchesTerms(
+        .filter((e) => {
+          const k = eventKind(e)
+          return matchesTerms(
             hay(
               e.who, e.source, e.event_type, e.item, e.currency, e.event_id, e.user_id,
               e.amount_cents == null ? '' : fmtUsd(e.amount_cents),
-              e.event_id.startsWith('admin:') ? 'granted free grant' : 'paid stripe payment',
+              // The words somebody would type for the kind, so the filter and
+              // the search agree about what a row is.
+              k === 'grant'
+                ? 'granted free grant'
+                : k === 'test'
+                  ? 'test sandbox stripe payment'
+                  : 'paid real live stripe payment',
             ),
             terms,
-          ),
-        ),
+          )
+        }),
     [allEvents, source, terms],
+  )
+
+  /** How many real payments, test payments and grants are in scope, and what
+   *  the real ones came to. The money total is the reason the split exists:
+   *  test rows carry amounts, so a ledger that mixes them reports takings that
+   *  were never taken. */
+  const kindTally = useMemo(() => {
+    const n = { all: eventsInScope.length, real: 0, test: 0, grant: 0 }
+    let realCents = 0
+    for (const e of eventsInScope) {
+      const k = eventKind(e)
+      n[k] += 1
+      if (k === 'real') realCents += e.amount_cents ?? 0
+    }
+    return { ...n, realCents }
+  }, [eventsInScope])
+
+  const shownEvents = useMemo(
+    () => (kind === 'all' ? eventsInScope : eventsInScope.filter((e) => eventKind(e) === kind)),
+    [eventsInScope, kind],
   )
 
   const shownAudit = useMemo(
@@ -635,33 +695,28 @@ function DevConsoleBody({
   useRememberView({ tab, selectedId, query, open: openIds }, restored)
 
   /**
-   * Where the matches are, as buttons rather than as a sentence.
+   * Where the matches are, on the tabs themselves.
    *
-   * The counts were already computed for the four lists above; what changed is
-   * that they are now the section filter's numbers and each one goes to the
-   * section it counted, with the query intact. Content is `null` on purpose —
-   * that tab filters its own panels as you type and there is no honest number
-   * to put on it ahead of time, and a zero would be a claim rather than an
-   * absence. Derived from TABS so a tab added later cannot be left out of the
-   * one control that says which sections exist.
+   * The toolbar used to carry a second row of section buttons — one per tab,
+   * each with its count, each going to that tab. The tab strip below it already
+   * did the going, so the buttons went and the COUNTS stayed: while a search is
+   * running every tab wears its own number, which is the fact the sentence
+   * "12 matches across the sections below" could never tell you.
+   *
+   * Content and Cloud are `null` on purpose. Content filters its own panels as
+   * you type and Cloud is settings and figures rather than a filterable list,
+   * so neither has an honest number to show ahead of time; a zero would be a
+   * claim rather than an absence, and they draw a dot instead. Keyed by Tab so
+   * a tab added later cannot be left without an answer here.
    */
   const sectionCounts: Record<Tab, number | null> = {
     accounts: shownRows.length,
     content: null,
-    // Cloud is settings and figures rather than a filterable list, so — like
-    // Content — a count would be a claim rather than an absence.
     cloud: null,
     feedback: shownFeedback.length,
     purchases: shownEvents.length,
     audit: shownAudit.length,
   }
-  const sections = TABS.map((t) => ({
-    id: t.id,
-    label: t.label,
-    count: sectionCounts[t.id],
-    active: tab === t.id,
-    onPick: () => setTab(t.id),
-  }))
 
   /** What the toolbar says while a search is running, across every tab. */
   const searchHint = (() => {
@@ -720,7 +775,7 @@ function DevConsoleBody({
           </p>
         )}
 
-        <SectionControls hint={searchHint} sections={sections} />
+        <SectionControls hint={searchHint} />
 
         <Overview overview={overview} stores={stores} />
 
@@ -736,6 +791,23 @@ function DevConsoleBody({
             >
               <span className="dev__tab-top">
                 <span className="dev__tab-label">{t.label}</span>
+                {/* While a search is running, how many of ITS rows match. This
+                    is what the toolbar's old "Search in" row was for; the tab
+                    was always the thing you pressed afterwards, so the number
+                    lives on the tab now. A dot means "this section filters
+                    itself as you type and cannot say ahead of time". */}
+                {searching && (
+                  <Tag
+                    tone={sectionCounts[t.id] ? 'ok' : 'plain'}
+                    title={
+                      sectionCounts[t.id] === null
+                        ? `${t.label} filters its own panels as you type, so it has no count to show ahead of time`
+                        : `${sectionCounts[t.id]} match${sectionCounts[t.id] === 1 ? '' : 'es'} in ${t.label}`
+                    }
+                  >
+                    {sectionCounts[t.id] === null ? '·' : sectionCounts[t.id]}
+                  </Tag>
+                )}
                 {/* A report waiting behind an unopened tab is a report nobody
                     knows about, so the tab itself says when there is one. */}
                 {t.id === 'feedback' && feedbackNew > 0 && (
@@ -854,7 +926,7 @@ function DevConsoleBody({
 
         {tab === 'purchases' && (
           <div className="dev__wide">
-            <div className="dev__search">
+            <div className="dev__ledger-filters">
               {/* One option per app the console found, plus Makullveny, whose
                   ledger is tier-shaped rather than pack-shaped and so is not a
                   discovered Store. A filter that omits an app is a filter that
@@ -862,6 +934,7 @@ function DevConsoleBody({
               <Select
                 value={source}
                 onChange={setSource}
+                ariaLabel="Which app's ledger to show"
                 options={[
                   { value: 'all', label: 'Every app' },
                   ...stores
@@ -870,29 +943,61 @@ function DevConsoleBody({
                   { value: 'makullveny', label: 'Makullveny' },
                 ]}
               />
+              {/* Real money, Stripe's test mode, and grants nobody paid for,
+                  as four buttons that partition the whole ledger: every entry
+                  is in exactly one of the three, so this can hide a row from
+                  you but never from itself. The counts are of what is in scope
+                  RIGHT NOW — after the app filter and the page search — so a
+                  button never promises rows the next click cannot show. */}
+              <div className="dev__kinds" role="group" aria-label="Which kind of entry to show">
+                {KINDS.map((k) => (
+                  <button
+                    key={k.id}
+                    type="button"
+                    className="dev__kind"
+                    data-active={kind === k.id || undefined}
+                    data-empty={kindTally[k.id] === 0 || undefined}
+                    aria-pressed={kind === k.id}
+                    title={k.what}
+                    onClick={() => setKind(k.id)}
+                  >
+                    {k.label}
+                    <span className="dev__kind-n">{kindTally[k.id]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <p className="dev__roster-count">
               {ledgerState === 'loading' && allEvents.length === 0
                 ? 'Reading the ledger…'
                 : ledgerState === 'error'
                   ? "Couldn't read the ledger."
-                  : `${shownEvents.length}${searching ? ` of ${allEvents.length}` : ''} entr${(searching ? allEvents.length : shownEvents.length) === 1 ? 'y' : 'ies'} · PAID came from Stripe, GRANTED came from this console${allEvents.length >= LEDGER_CAP ? ` · newest ${LEDGER_CAP} loaded` : ''}`}
+                  : `${shownEvents.length}${shownEvents.length === allEvents.length ? '' : ` of ${allEvents.length}`} entr${shownEvents.length === 1 ? 'y' : 'ies'} · ${fmtUsd(kindTally.realCents)} real${kindTally.test ? ` · ${kindTally.test} test entr${kindTally.test === 1 ? 'y' : 'ies'} counted in no total` : ''}${allEvents.length >= LEDGER_CAP ? ` · newest ${LEDGER_CAP} loaded` : ''}`}
             </p>
             <Panel
               title="Every Payment And Grant"
-              what="All three Stripe ledgers merged, newest first. PAID is a real payment; GRANTED is somebody switching a pack on from this console. The page search filters this list as you type: try a pack id, an amount, or who bought it."
+              what="All three Stripe ledgers merged, newest first. PAID is real money, TEST is Stripe test mode and nobody was charged, GRANTED is somebody switching a pack on from this console. The two filters above narrow by app and by kind; the page search filters this list as you type — try a pack id, an amount, or who bought it."
               writes="veditor_purchase_events + devfleet_purchase_events + mak_subscription_events"
               matchCount={shownEvents.length}
               right={<LedgerTag state={ledgerState} n={shownEvents.length} noun="ENTRIES" />}
             >
             <ul className="dev__log dev__log--wide">
-              {shownEvents.map((e) => (
+              {shownEvents.map((e) => {
+                /* The row says which of the three it is in words, so a test
+                   sale is never a PAID row you have to read an event id to
+                   doubt. Filtering to one kind does not make the tag redundant:
+                   the default view is all three at once. */
+                const k = eventKind(e)
+                return (
                 <li key={e.event_id} className="dev__log-row">
                   <span className="dev__log-when" title={fmtDate(e.at)}>
                     {fmtRelative(e.at)}
                   </span>
-                  <Tag tone={e.event_id.startsWith('admin:') ? 'warn' : 'ok'}>
-                    {e.event_id.startsWith('admin:') ? 'GRANTED' : 'PAID'}
+                  <Tag
+                    tone={k === 'grant' ? 'warn' : k === 'test' ? 'plain' : 'ok'}
+                    title={KINDS.find((o) => o.id === k)?.what}
+                  >
+                    {k === 'grant' ? 'GRANTED' : k === 'test' ? 'TEST' : 'PAID'}
                   </Tag>
                   <Tag>{e.source}</Tag>
                   <span className="dev__log-who">
@@ -926,14 +1031,19 @@ function DevConsoleBody({
                       </>
                     ) : null}
                   </span>
-                  <span className="dev__log-amount">
+                  <span
+                    className="dev__log-amount"
+                    data-quiet={k === 'test' || undefined}
+                    title={k === 'test' ? 'Stripe test mode: this money was never taken.' : undefined}
+                  >
                     <Highlight text={fmtUsd(e.amount_cents)} />
                   </span>
                 </li>
-              ))}
+                )
+              })}
               {ledgerState !== 'error' && shownEvents.length === 0 && (
                 <li className="dev__empty">
-                  {searching || source !== 'all'
+                  {searching || source !== 'all' || kind !== 'all'
                     ? 'No entry matches that.'
                     : 'Nothing recorded yet.'}
                 </li>

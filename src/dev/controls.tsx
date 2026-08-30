@@ -159,72 +159,16 @@ export function Panel({
 }
 
 /**
- * Where the matches ARE, and the way to go and read them.
- *
- * The search filters the section you are standing in, and the console has five.
- * Before this, the toolbar answered "12 reports match" in a sentence you could
- * not click, so finding them meant reading the sentence, remembering the word,
- * and going to look for the right tab. Every count here is a button that takes
- * you to the section it counted, with the query intact.
- *
- * A section with no hits stays live rather than being disabled: going somewhere
- * to see for yourself that nothing matches is a legitimate thing to do, and a
- * dead button is a worse answer than a zero.
- *
- * `count: null` means "this section does not count ahead of time" — the Content
- * tab filters its own panels as you type, and there is no honest number to put
- * here for it. It draws a dash. A zero would be a claim, and it would be wrong.
- */
-export type SearchSection = {
-  id: string
-  label: string
-  /** Hits for the current query, or null for a section that cannot say. */
-  count: number | null
-  active: boolean
-  onPick: () => void
-}
-
-function SectionFilter({ sections, searching }: { sections: SearchSection[]; searching: boolean }) {
-  return (
-    <div className="dev__scope">
-      <span className="dev__scope-label" id="dev-scope-label">
-        Search in
-      </span>
-      <div className="dev__scope-list" role="group" aria-labelledby="dev-scope-label">
-        {sections.map((sec) => (
-          <button
-            key={sec.id}
-            type="button"
-            className="dev__scope-btn"
-            data-active={sec.active || undefined}
-            data-empty={(searching && sec.count === 0) || undefined}
-            aria-current={sec.active ? 'page' : undefined}
-            onClick={sec.onPick}
-            title={
-              sec.count === null
-                ? `${sec.label} filters its own panels as you type, so it has no count to show ahead of time`
-                : searching
-                  ? `${sec.count} match${sec.count === 1 ? '' : 'es'} in ${sec.label}`
-                  : `Go to ${sec.label}`
-            }
-          >
-            {sec.label}
-            {searching && (
-              <span className="dev__scope-n">{sec.count === null ? '·' : sec.count}</span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/**
- * The page toolbar: one search box, a section filter, and Expand All /
- * Collapse All.
+ * The page toolbar: one search box, and Expand All / Collapse All.
  *
  * The search filters every section on the page at once, and the rows inside
  * them, with no debounce anywhere. See `search.tsx`.
+ *
+ * There is deliberately no "Search in" row of section buttons here any more.
+ * It offered the same six destinations as the tab strip directly below it, so
+ * the page asked twice for one decision. The per-section hit COUNTS were the
+ * part worth keeping, and they moved onto the tabs themselves — see the hit
+ * badge in `DevConsole` — which is the control that was already there.
  *
  * The two section buttons go quiet while a search is running, because a search
  * is already deciding what is open: pressing Expand All would change the shared
@@ -232,14 +176,7 @@ function SectionFilter({ sections, searching }: { sections: SearchSection[]; sea
  * says it is not for now. Clearing the box hands the page back exactly as you
  * had arranged it.
  */
-export function SectionControls({
-  hint,
-  sections,
-}: {
-  hint?: ReactNode
-  /** The five tabs, each with its hit count. Omit for a page with one. */
-  sections?: SearchSection[]
-}) {
+export function SectionControls({ hint }: { hint?: ReactNode }) {
   const { expandAll, collapseAll, openCount, total } = useSections()
   const { query, setQuery, active } = useSearch()
   const id = useId()
@@ -294,10 +231,6 @@ export function SectionControls({
           </button>
         )}
       </div>
-
-      {sections && sections.length > 0 && (
-        <SectionFilter sections={sections} searching={active} />
-      )}
 
       <div className="dev__toolbar-right">
         <span className="dev__sections-count">

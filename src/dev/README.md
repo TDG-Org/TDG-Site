@@ -104,23 +104,27 @@ a Stripe customer, a log line, a message to whoever is looking at the same
 account — and having to open a panel to get it made the one thing you always
 need the one thing you had to go and find.
 
-## The search says which section the matches are in
+## The search says which section the matches are in — on the tabs
 
-One box filters the section you are standing in, and there are five of them. So
-under the box is a **Search in** row: every section, and while the box has
-something in it, how many things in that section match. Each count is a button
-that goes there with the query intact — before this, the toolbar answered
-`12 reports match` in a sentence you could not click, so finding them meant
-reading the sentence, remembering the word and going to look for the right tab.
+One box filters the section you are standing in, and there are six of them. So
+while the box has something in it, **every tab wears its own hit count**: a
+small badge beside the tab's name saying how many of that section's rows match
+what you typed. Pressing it goes there with the query intact, because pressing a
+tab is what going there has always been.
 
-A section with no hits is faded but stays live: going somewhere to see for
-yourself that nothing matches is a legitimate thing to do, and a dead button
-answers worse than a zero does. **Content shows a dash rather than a number** —
-that tab filters its own panels as you type and there is no honest count to give
-ahead of time, and a zero would be a claim rather than an absence.
+There used to be a second control for this — a **Search in** row under the
+search box, one button per section, each with its count. It offered the same six
+destinations as the tab strip immediately below it, so the page asked twice for
+one decision. The counts were the part worth keeping, so they moved onto the
+tabs and the duplicate row went. The toolbar still answers in a sentence
+(`12 matches across the sections below`); the badges say where.
 
-The row is derived from the same `TABS` list the tab bar is, so a section added
-later cannot be missing from the one control that says which sections exist.
+**Content and Cloud show a dot rather than a number.** Content filters its own
+panels as you type and Cloud is settings and figures rather than a filterable
+list, so neither has an honest count to give ahead of time, and a zero would be
+a claim rather than an absence. Every tab is still derived from the same `TABS`
+list, and `sectionCounts` is keyed by `Tab`, so a section added later cannot be
+left without an answer.
 
 ## Which build you are looking at
 
@@ -280,8 +284,42 @@ Search by name, `@username`, email or user id, then for the account you pick:
 - **History:** every payment, free grant and moderation action on that account.
 
 Four more tabs cover the whole project: **Cloud** (below), **Feedback**
-(below), **Purchases** (all the ledgers merged, with `PAID` and `GRANTED` told
-apart) and **Audit Log** (every developer action in every app).
+(below), **Purchases** (below) and **Audit Log** (every developer action in
+every app).
+
+## Purchases: real money, test money and grants are three different questions
+
+The Purchases tab merges every app's money ledger into one list, and it carries
+**two filters, not one**. The first picks the app. The second picks the KIND of
+entry, as four buttons that partition the whole ledger:
+
+| Button | What it is | How a row is told apart |
+|---|---|---|
+| **Everything** | The default. All three below, in one list. | — |
+| **Real** | A live payment. Real money, from a real card. | Neither of the two below. |
+| **Test** | Stripe test mode. Nobody was charged. | The recorded `event_type` ends `#test`. |
+| **Grants** | Nobody paid — a pack switched on from this console or an app's own tools. | The `event_id` is `admin:…` rather than a Stripe event id. |
+
+Every entry is exactly one of the three, so this can hide a row from you but
+never from itself, and each button carries the count of what it would show —
+after the app filter and the page search, so a button never promises rows the
+next click cannot produce. A kind with nothing in it fades but stays live:
+pressing a zero to confirm for yourself that there really are no test payments
+is a legitimate thing to do.
+
+The reason the split exists is that **a test sale carries an amount**. Mixed in
+with the real ones it reads as revenue that was never taken, so the count line
+above the list reports the **real** total on its own, says how many test entries
+are in scope and counted in no total, and every test row's amount is struck
+through with the tag `TEST` where a real one says `PAID`.
+
+The `#test` suffix is a convention every TDG webhook writes — see
+`supabase/functions/cloud-stripe-webhook/index.ts`, where the ledger's type is
+deliberately a **second** name so a test event still matches the branches that
+process it. `eventKind` in `format.ts` falls back to `real` rather than testing
+for it positively: an app whose webhook forgets the suffix then shows its test
+sale in with the real ones, which is visible and wrong, rather than quietly
+hiding a real sale from the filter somebody is using to count the money.
 
 ## One thing, one control
 
@@ -840,7 +878,7 @@ reference implementation of the startup reply panel the other apps copy.
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the tick-and-act bulk bar, the report dialog, the reply composer with its delivery state, and copying at every grain — including the identity-free **review** format built for a model to read. |
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, plus every revocation on the account, and what to say when the sources disagree.** The reason no file here names a product — except `MAK_APP_ID`, whose comment says why that one exception exists. |
-| `controls.tsx` | Panel, SectionControls with its **section filter**, Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, **SaveBar** with `useSaveNotice`, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
+| `controls.tsx` | Panel, SectionControls (the search box and Expand / Collapse All), Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, **SaveBar** with `useSaveNotice`, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |

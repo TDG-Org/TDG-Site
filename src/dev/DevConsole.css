@@ -264,15 +264,77 @@
   min-height: 0;
 }
 
-.dev__search {
+/* ── the Purchases filters: which app, and what kind ──────────────────────
+   Two controls, side by side, above the ledger they narrow. They ask
+   independent questions — an app, and whether an entry is real money, a Stripe
+   test or a console grant — so they are two controls rather than one list of
+   every combination. They wrap onto their own lines before either shrinks
+   below what its longest label needs.                                       */
+
+.dev__ledger-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
-.dev__search .dev__input,
-.dev__search .dev__select-wrap {
-  flex: 1 1 auto;
+/* Capped rather than greedy, and pushed apart: an app picker six words wide
+   does not get to be five hundred pixels of empty select, and the two controls
+   read as two controls rather than one run-on row. `auto` collapses to nothing
+   the moment they wrap, so the narrow layout stacks flush left. */
+.dev__ledger-filters .dev__select-wrap {
+  flex: 0 1 260px;
   min-width: 0;
+  margin-right: auto;
+}
+
+/* One button per kind. Same shape as a tab's own controls: a label, its count,
+   and an inset accent rule down the left when it is the one in force. */
+.dev__kinds {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dev__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--muted);
+  font: 600 11.5px var(--font-body);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.dev__kind:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+.dev__kind[data-active] {
+  border-color: var(--border-hover);
+  color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Faded, never disabled. Pressing a zero to see for yourself that there really
+   are no test payments is a legitimate thing to do, and a dead button answers
+   that worse than an empty list does. */
+.dev__kind[data-empty] {
+  opacity: 0.5;
+}
+.dev__kind-n {
+  font: 600 10.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+.dev__kind[data-empty] .dev__kind-n {
+  color: var(--faint);
 }
 
 .dev__roster-count {
@@ -685,73 +747,6 @@
 .dev__search-clear:hover {
   background-color: var(--accent-soft);
   color: var(--text);
-}
-
-/* ── the section filter ───────────────────────────────────────────────────
-   Where the matches are, as buttons rather than as a sentence. It takes the
-   toolbar's whole second row: at four sections plus a label it does not fit
-   beside a 340px search box at any width worth designing for, and wrapping it
-   mid-list would put two of the five on their own line looking like a
-   different control.                                                        */
-
-.dev__scope {
-  flex: 1 0 100%;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-}
-.dev__scope-label {
-  font: 700 9.5px var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.dev__scope-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.dev__scope-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 2px;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--muted);
-  font: 600 11.5px var(--font-body);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    opacity 0.2s ease,
-    var(--t-theme);
-}
-.dev__scope-btn:hover {
-  border-color: var(--border-hover);
-  background-color: var(--surface-hover);
-  color: var(--text);
-}
-.dev__scope-btn[data-active] {
-  border-color: var(--border-hover);
-  color: var(--text);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-/* Faded, never disabled. Going somewhere to see for yourself that nothing
-   matches is a legitimate thing to do, and a dead button answers worse than a
-   zero does. */
-.dev__scope-btn[data-empty] {
-  opacity: 0.5;
-}
-.dev__scope-n {
-  font: 600 10.5px var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--accent-2);
-}
-.dev__scope-btn[data-empty] .dev__scope-n {
-  color: var(--faint);
 }
 
 /* ── a checkbox that is ours ──────────────────────────────────────────────
@@ -1833,6 +1828,14 @@
   color: var(--faint);
   white-space: nowrap;
   text-align: right;
+}
+/* A test-mode amount is a number that was never taken, so it does not get to
+   look like one that was. Struck through, not hidden: the figure still matters
+   when you are checking that a test charge came through for the right price. */
+.dev__log-amount[data-quiet] {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 /* ── the feedback table ────────────────────────────────────────────────────

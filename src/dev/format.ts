@@ -1,4 +1,4 @@
-import type { DevAccount } from './api'
+import type { DevAccount, DevEvent } from './api'
 
 /**
  * Display helpers for the Developer console.
@@ -193,4 +193,32 @@ export function feedbackStatusTone(status: string): 'plain' | 'ok' | 'warn' | 'b
 /** The name to call somebody, in the order a human would reach for. */
 export function nameOf(a: DevAccount): string {
   return a.display_name || a.username || a.email || a.user_id
+}
+
+/**
+ * What a row of the merged money ledger IS, beyond which app it came from.
+ *
+ * Three kinds, and every entry is exactly one of them, so the Purchases filter
+ * can partition the whole ledger without a row falling through a gap:
+ *
+ *  · `grant` — nobody paid. Somebody switched a pack on from this console (or
+ *    from an app's own tools), and the ledger's `event_id` is `admin:…` rather
+ *    than a Stripe event id. This is the row the console tags GRANTED.
+ *  · `test`  — Stripe reported it in TEST mode. Every webhook that writes to
+ *    these ledgers suffixes the recorded `event_type` with `#test` for exactly
+ *    this reason: a card that was never charged must not read like revenue.
+ *    See `supabase/functions/cloud-stripe-webhook/index.ts`.
+ *  · `real`  — a live payment. Real money, from a real card.
+ *
+ * `real` is the fallback rather than a positive test, because that is the only
+ * way round that fails safe in the direction that matters least: an app whose
+ * webhook forgets the `#test` suffix shows its test sale in with the real ones,
+ * which is visible and wrong, rather than quietly hiding a real sale from the
+ * one filter somebody is using to count the money.
+ */
+export type EventKind = 'grant' | 'test' | 'real'
+
+export function eventKind(e: Pick<DevEvent, 'event_id' | 'event_type'>): EventKind {
+  if (e.event_id.startsWith('admin:')) return 'grant'
+  return e.event_type.includes('#test') ? 'test' : 'real'
 }
