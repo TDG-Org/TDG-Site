@@ -2,9 +2,17 @@ import { useMemo, useState } from 'react'
 import { useSections } from '../lib/sections'
 import { AccountSub } from './AccountFold'
 import { fmtCount } from './format'
+import {
+  FRIENDS_WHAT,
+  FriendsBar,
+  FriendsCount,
+  FriendsPanel,
+  orderFriends,
+  useGridColumns,
+  type FriendSort,
+} from './Friends'
 import { PeopleList, SearchPill } from './People'
 import { usePeopleSearch, type SocialPanel } from './useAccount'
-import type { Person } from './api'
 
 /**
  * Friends & Social — Bible Educator's Friends & Sharing, in this site's own
@@ -33,49 +41,14 @@ import type { Person } from './api'
  * The count pill on Friend Requests is the accent one and the count on Blocked
  * is quiet. Accent means *this needs you*; a block needs nothing, and painting
  * its count the same colour would say the opposite of what a block is.
+ *
+ * ## The friends list is a row, not a wall
+ *
+ * Only the first row of friends is drawn here, with `See All Friends` under it
+ * for the rest. Everything about how that is measured and what the panel is
+ * lives in `Friends.tsx`, which the panel and this section share rather than
+ * each writing their own.
  */
-
-/** How the friends grid is ordered.
- *
- *  **Favourites float to the top of every one of them**, which is Bible
- *  Educator's rule rather than a mode of its own: a star you press should show
- *  in whatever order you are reading, not only in the one sort that honours
- *  it. `Array.prototype.sort` is stable, so the name sort survives inside the
- *  starred and unstarred groups.
- *
- *  There is deliberately no **Recently Added**. Bible Educator has one because
- *  its friend list arrives in the order friendships were made; `tdg_my_friends`
- *  answers alphabetically and keeps no join date, so the same option here could
- *  only be a guess wearing a real label. */
-const FRIEND_SORTS = [
-  { id: 'az', label: 'Name (A–Z)' },
-  { id: 'za', label: 'Name (Z–A)' },
-] as const
-
-type FriendSort = (typeof FRIEND_SORTS)[number]['id']
-
-const personName = (p: Person) => (p.displayName || p.username || '￿').toLowerCase()
-
-function orderFriends(people: Person[], sort: FriendSort, query: string): Person[] {
-  const q = fold(query.trim())
-  const list = q
-    ? people.filter((p) =>
-        [p.displayName, p.username, p.bio].some((field) => field && fold(field).includes(q)),
-      )
-    : [...people]
-  const byName = (a: Person, b: Person) => personName(a).localeCompare(personName(b))
-  list.sort(sort === 'za' ? (a, b) => byName(b, a) : byName)
-  return list.sort((a, b) => Number(b.favorite) - Number(a.favorite))
-}
-
-/** Case-folded and accent-blind, so `rose` finds `Rosé`. The same courtesy the
- *  server's own search extends, kept here so the two boxes on this panel do not
- *  behave differently from each other. */
-const fold = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
 
 function CountPill({ n, tone }: { n: number; tone: 'hot' | 'quiet' }) {
   if (n === 0) return null
@@ -96,6 +69,14 @@ export function SocialFold({ social }: { social: SocialPanel }) {
   const [view, setView] = useState<'friends' | 'requests' | 'blocked'>('friends')
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<FriendSort>('az')
+  const [showAll, setShowAll] = useState(false)
+  /*
+   * The grid element, in state rather than in a ref, because `useGridColumns`
+   * has to re-observe the one that is actually mounted — see its own note. A
+   * callback ref is what puts it here.
+   */
+  const [grid, setGrid] = useState<HTMLDivElement | null>(null)
+  const columns = useGridColumns(grid)
 
   const graph = social.state.kind === 'ok' ? social.state.graph : null
   const friends = useMemo(
@@ -107,6 +88,30 @@ export function SocialFold({ social }: { social: SocialPanel }) {
   const blocked = graph?.blocked.length ?? 0
   const onFriends = view === 'friends'
   const typed = finder.query.trim()
+  const filtering = query.trim().length > 0
+
+  /*
+   * The first row, or the whole list until the row has been measured. Zero
+   * columns is "not measured yet" and never "no room for anybody": drawing
+   * nothing for it would turn a failed measurement into an account that looks
+   * like it has no friends. `useLayoutEffect` inside the hook means the
+   * fallback is not a frame anybody sees.
+   */
+  const firstRow = columns > 0 ? friends.slice(0, columns) : friends
+  /*
+   * Is the section holding anybody back? Counted against the WHOLE list and
+   * not the filtered one, so a search typed INSIDE the panel cannot pull the
+   * button out from under the panel it opened. `useModal` hands focus back to
+   * whatever opened a dialog and skips the restore when that element has since
+   * left the page — driven on 2026-08-30: filtering to one match inside the
+   * panel and pressing Escape left focus on `<body>`, because one match fits
+   * one row, which unmounted the button mid-flight.
+   *
+   * A search that matches NOBODY does still take the button away, and that is
+   * the honest answer rather than the same bug wearing a guard: there is no
+   * "all" to see. The section says so in words where the grid was.
+   */
+  const rest = graph ? graph.friends.length - firstRow.length : 0
 
   return (
     <>
@@ -186,7 +191,7 @@ export function SocialFold({ social }: { social: SocialPanel }) {
           title={onFriends ? 'Friends' : view === 'requests' ? 'Friend Requests' : 'Blocked'}
           what={
             onFriends
-              ? 'Star the ones you want at the top. Unfriending ends it for both of you, and they are not told.'
+              ? FRIENDS_WHAT
               : view === 'requests'
                 ? 'Answers you owe, and answers you are waiting on. Declining is quiet: they are not told.'
                 : 'A block ends any friendship and clears anything pending in both directions. Unblocking asks nothing, because it takes nothing away.'
@@ -198,49 +203,14 @@ export function SocialFold({ social }: { social: SocialPanel }) {
           <div className="acct__bar">
             {onFriends ? (
               <>
-                <SearchPill
-                  id="acct-friend-filter"
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Search your friends"
-                  label="Search your friends"
+                <FriendsBar
+                  idPrefix="acct-friend"
+                  query={query}
+                  setQuery={setQuery}
+                  sort={sort}
+                  setSort={setSort}
                   disabled={graph.friends.length === 0}
                 />
-                <div className="acct__bar-sort" data-disabled={graph.friends.length === 0 || undefined}>
-                  <label className="sr-only" htmlFor="acct-friend-sort">
-                    Sort your friends
-                  </label>
-                  <select
-                    id="acct-friend-sort"
-                    className="acct__select"
-                    value={sort}
-                    disabled={graph.friends.length === 0}
-                    onChange={(e) => setSort(e.currentTarget.value as FriendSort)}
-                  >
-                    {FRIEND_SORTS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {/* The native arrow is gone with `appearance: none`, so the
-                      control draws its own — rule 5. */}
-                  <span className="acct__select-chevron" aria-hidden="true">
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      focusable="false"
-                    >
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </span>
-                </div>
                 <button
                   type="button"
                   className="appview__ghost acct__view-btn"
@@ -271,24 +241,55 @@ export function SocialFold({ social }: { social: SocialPanel }) {
 
           {onFriends && (
             <>
-              {/* The count is the FILTERED one against the total, so a search
-                  that hides half the list says so rather than looking like half
-                  the friends went missing. */}
-              {graph.friends.length > 0 && (
-                <p className="acct__hint acct__bar-count">
-                  {query.trim()
-                    ? `${fmtCount(friends.length)} of ${fmtCount(graph.friends.length)} friends match.`
-                    : `${fmtCount(graph.friends.length)} friend${graph.friends.length === 1 ? '' : 's'}.`}
-                </p>
-              )}
+              <FriendsCount
+                shown={friends.length}
+                total={graph.friends.length}
+                query={query}
+              />
               <PeopleList
-                people={friends}
+                people={firstRow}
                 empty={
                   graph.friends.length === 0
                     ? 'No friends yet. Find somebody above and ask.'
                     : `None of your friends match “${query.trim()}”.`
                 }
                 standing="friend"
+                busy={social.busy}
+                onAct={social.act}
+                onFavorite={social.favorite}
+                gridRef={setGrid}
+              />
+
+              {/* Only when there is something behind it. A See All under a list
+                  that is already all of it is a button that does nothing, and
+                  the reader has to press it to find that out. */}
+              {friends.length > 0 && rest > 0 && (
+                <button
+                  type="button"
+                  className="appview__ghost acct__seeall"
+                  aria-haspopup="dialog"
+                  aria-expanded={showAll}
+                  onClick={() => setShowAll(true)}
+                >
+                  {/* The number is the point of the press: it is what tells
+                      somebody whether the rest is two people or forty. It is
+                      dropped while a search is on, because the panel opens on
+                      the MATCHES and "See All 1 Matches" would need a plural
+                      rule to say something the count line directly above it
+                      has already said exactly. */}
+                  {filtering ? 'See All Matches' : `See All ${fmtCount(friends.length)} Friends`}
+                </button>
+              )}
+
+              <FriendsPanel
+                open={showAll}
+                onClose={() => setShowAll(false)}
+                friends={friends}
+                total={graph.friends.length}
+                query={query}
+                setQuery={setQuery}
+                sort={sort}
+                setSort={setSort}
                 busy={social.busy}
                 onAct={social.act}
                 onFavorite={social.favorite}

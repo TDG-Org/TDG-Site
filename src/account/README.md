@@ -18,6 +18,7 @@ are the authority for every sentence below.
 | `api.ts` | Every call: the privacy catalogue and its two writes, the counters, the profile save, and the social graph — its seven verbs, the people search and the favourite toggle. |
 | `People.tsx` | A person as a CARD, the grid they sit in, and the search pill. Bible Educator's Friends & Sharing, in this site's materials. |
 | `SocialFold.tsx` | The Friends & Social panel: Find People, and the three views behind it. |
+| `Friends.tsx` | Everything about drawing the friends list, shared by the section and the See All panel: the sort, the search-and-sort bar, the count line, the column measurement, and the panel itself. |
 | `graphRevision.ts` | One number that goes up when this account's social graph changes, and the hook that re-renders on it. What stops three surfaces drawing three different answers at once — see below. |
 | `standing.ts` | Where you stand with somebody, and what you may do about it. Shared with [`../people/`](../people/README.md) so the two surfaces cannot draw different buttons for one standing. |
 | `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
@@ -181,6 +182,51 @@ Accent means *this needs you*; a block needs nothing, and painting its count the
 same colour would say the opposite of what a block is. Bible Educator's own note
 says exactly that, and it is repeated here because the temptation to make both
 counts look important is real.
+
+### The friends list is one row, and See All is the rest of it
+
+The section drew **every** friend, which is fine at three and is a wall at
+forty: Privacy and Session moved a screen further down for every ten people
+somebody knows, and the page stopped being scannable at exactly the point the
+account got interesting. So the section draws the **first row** and nothing
+else, with `See All Friends` under it.
+
+**The first row is measured, not assumed.** `.acct__grid` is `repeat(auto-fill,
+minmax(min(100%, 230px), 1fr))`, so how many fit is a question about the width
+it is read at — four in the shell at 1002px, one on a phone. `useGridColumns`
+asks the GRID, by counting the tracks in the used value of
+`grid-template-columns`, rather than recomputing `floor((w + gap) / (min +
+gap))` in JavaScript: a second copy of the grid, in a language that cannot see
+it, is a copy that goes wrong the day `--acct-card-min` moves. `auto-fill` is
+what makes the question askable at all — it keeps the empty tracks, so a grid
+holding one card still reports the four that fit. Nothing measured yet means
+*draw the whole list*, never *draw none*: a failed measurement must not look
+like an account with no friends.
+
+**The panel is the same list, not a second one.** Same `PeopleList`, same bar,
+same count line, over the same `query` and `sort` state — type in the section,
+press See All, and the panel opens on what you were already looking at. It does
+NOT carry the Friend Requests and Blocked buttons: those swap the section for a
+different view of the graph, and a button inside a panel that rearranged the
+page behind it would be a trapdoor.
+
+**It is portalled to `document.body`, and that had to be driven.** The other
+four dialogs on this site are mounted in `App.tsx`, so their `z-index` is
+measured in the page's root stacking context. This one opens from inside a
+section, and `.shell` is `position: relative; z-index: 1` — a stacking context.
+Built in place, the scrim covered the viewport exactly (measured: 0, 0, 1920,
+945) and the fixed nav at `z-index: 60` still painted over the top of it, lit
+and clickable, because 190 inside a context of 1 loses to 60 outside it. A
+modal you can click the nav through is a modal that lets you leave a page whose
+scroll it has locked.
+
+**The See All button counts against the whole list, not the filtered one.**
+`useModal` gives focus back to whatever opened a dialog and skips the restore
+when that element has left the page. Counted against the matches, a search
+typed INSIDE the panel could cut the list to one row, unmount the button, and
+leave Escape putting focus on `<body>` — driven, and that is exactly what it
+did. The one case that still takes the button away is a search matching nobody,
+which is honest: there is no "all" to see, and the section says so in words.
 
 ### A person is a card
 

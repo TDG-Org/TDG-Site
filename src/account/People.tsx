@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ReactNode, type Ref } from 'react'
 import { userHash } from '../lib/route'
 import { actionsFor, standingChip, type StandingAction } from './standing'
 import type { Person, SocialAction, Standing } from './api'
@@ -113,8 +113,25 @@ const CONFIRM: Partial<Record<SocialAction, (name: string) => string>> = {
     `Block ${name}? It ends any friendship, on both sides, and clears anything pending either way. They are not told.`,
 }
 
-export function PeopleGrid({ children }: { children: ReactNode }) {
-  return <div className="acct__grid">{children}</div>
+export function PeopleGrid({
+  children,
+  gridRef,
+}: {
+  children: ReactNode
+  /**
+   * The grid element itself, for a caller that has to ask the LAYOUT a
+   * question rather than the stylesheet — how many cards fit on one row, which
+   * is `useGridColumns` in `Friends.tsx` and nothing else. Named rather than
+   * taken as `ref` so it is obvious at the call site that what comes back is
+   * the grid and not the card.
+   */
+  gridRef?: Ref<HTMLDivElement>
+}) {
+  return (
+    <div className="acct__grid" ref={gridRef}>
+      {children}
+    </div>
+  )
 }
 
 export function PersonCard({
@@ -297,6 +314,7 @@ export function PeopleList({
   busy,
   onAct,
   onFavorite,
+  gridRef,
 }: {
   people: Person[]
   empty: ReactNode
@@ -306,10 +324,12 @@ export function PeopleList({
   busy: ReadonlySet<string>
   onAct: (action: SocialAction, userId: string) => void
   onFavorite?: (userId: string, on: boolean) => void
+  /** Passed straight to `PeopleGrid`. See its own note for the one caller. */
+  gridRef?: Ref<HTMLDivElement>
 }) {
   if (people.length === 0) return <p className="acct__note">{empty}</p>
   return (
-    <PeopleGrid>
+    <PeopleGrid gridRef={gridRef}>
       {people.map((person) => (
         <PersonCard
           key={person.userId}

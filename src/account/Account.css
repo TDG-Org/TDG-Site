@@ -745,8 +745,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 200px;
-  min-width: min(100%, 200px);
+  min-width: 0;
   padding-left: 11px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -756,6 +755,16 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     var(--t-theme);
+}
+/* Only IN THE BAR does it share a row and give way to the sort beside it.
+   `flex: 1 1 200px` on the pill itself was read on the MAIN axis of the column
+   it stands alone in — `.acct__sub` is `flex-direction: column` — so Find
+   People's box was drawn 200px TALL. Measured 2026-08-30, signed in: 200px
+   against the 36px of the identical pill one section below it. A flex value is
+   about a parent, so it is written on the parent. */
+.acct__bar .acct__seek {
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
 }
 .acct__seek:hover {
   border-color: var(--border-hover);
@@ -851,6 +860,143 @@
   display: inline-flex;
   pointer-events: none;
   color: var(--muted);
+}
+
+/* ── the first row, and the way to the rest ───────────────────────────────
+   The section draws one row of friends and this opens the whole list. Full
+   width rather than a button sitting at one end of a row: it is the last thing
+   under a grid, and a bar the width of the grid reads as "the list continues"
+   where a small button at the left reads as one more control on the toolbar
+   above it. Its own height, not `.acct__bar`'s, because it shares a row with
+   nothing — there is no pair here to keep level with.                        */
+
+.acct__seeall {
+  width: 100%;
+  padding-block: 10px;
+  text-align: center;
+}
+.acct__seeall:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── every friend, over the page ──────────────────────────────────────────
+   The scrim and the card are `Feedback.css`'s `.fb__backdrop` / `.fb__card` in
+   this folder's own names, and deliberately the same treatment: a reader who
+   has met one dialog on this site should not have to learn a second one. What
+   differs is the width and the scroll. It is wider because it holds a GRID —
+   at 560px the cards would stack into a column, which is the shape this panel
+   exists to avoid — and the grid scrolls inside the card rather than the card
+   scrolling whole, so the search box and the count stay put over a long list
+   instead of being something you scroll back up for.
+
+   `z-index` mirrors `MODAL_LAYER.friends` in src/lib/modal.ts. Change one,
+   change both — a number here that disagrees with that one is a panel that
+   takes Escape while something else is covering it.                          */
+
+.acct__peopleback {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background-color: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.acct__people {
+  --acct-people-pad: clamp(16px, 2.6vw, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(1000px, 100%);
+  max-height: min(88vh, calc(100svh - 36px));
+  /* `min-height: 0` on the body below is what lets the grid take the
+     overflow; without it a flex item refuses to shrink under its content and
+     the card grows past the viewport instead. */
+  min-height: 0;
+  padding: var(--acct-people-pad);
+  border-radius: 3px;
+  border: 1px solid var(--border-hover);
+  background-color: var(--bg2);
+  box-shadow: var(--card-shadow);
+  animation: acctPeopleIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: var(--t-theme);
+}
+@keyframes acctPeopleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.acct__people-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.acct__people-eyebrow {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.acct__people-x {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: none;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--muted);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    var(--t-theme);
+}
+.acct__people-x:hover {
+  background-color: var(--accent-soft);
+  color: var(--text);
+}
+.acct__people-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.acct__people-title {
+  margin: 0;
+  font: 700 clamp(19px, 2.4vw, 23px) / 1.15 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.acct__people-sub {
+  margin: -4px 0 2px;
+  max-width: 72ch;
+  font: 400 13px/1.6 var(--font-body);
+  color: var(--muted);
+}
+
+/* The scrolling half. `overscroll-behavior` is what stops a flick at the end
+   of the list carrying on into the page underneath — which is still there,
+   held still by the scroll lock, and would otherwise move behind the scrim. */
+.acct__people-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room for the focus ring on the last row of cards, which an `overflow`
+     box clips against its own edge. */
+  padding: 3px;
+  margin: -3px;
 }
 
 /* Requests are two lists under one view, each with its own heading. */
@@ -1169,6 +1315,9 @@
    there. What is left here is colour and opacity easing.                     */
 
 @media (prefers-reduced-motion: reduce) {
+  .acct__people {
+    animation: none;
+  }
   .acct__row,
   .acct__row-text,
   .acct__seg,
@@ -1177,6 +1326,7 @@
   .acct__star,
   .acct__seek,
   .acct__select,
+  .acct__people-x,
   .acct__self-btn,
   .acct__app,
   .acct__input-wrap,

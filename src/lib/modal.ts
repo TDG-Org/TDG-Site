@@ -102,6 +102,16 @@ export const MODAL_LAYER = {
    * that dialog's Escape.
    */
   storePlan: 2,
+  /**
+   * `.acct__peopleback` — src/account/Account.css.
+   *
+   * Under the console's report dialog and every dialog after it, and above the
+   * nav at 60, which it has to cover: it is a full-page panel opened from a
+   * section of the account page. It can never be on screen with `devReport` —
+   * `#/account` and `#/dev` are two routes — so the order between those two is
+   * a tidiness, not a rule being kept.
+   */
+  friends: 190,
   /** `.dev__fbd-backdrop` — src/dev/DevConsole.css */
   devReport: 195,
   /** `.fb__backdrop` — src/feedback/Feedback.css */
