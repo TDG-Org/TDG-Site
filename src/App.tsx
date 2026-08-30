@@ -70,7 +70,7 @@ const ProfilePage = lazy(() => import('./people/ProfilePage'))
 
 export default function App() {
   useOffscreenPause()
-  const { oauthError, recovery, isAdmin } = useAuth()
+  const { oauthError, recovery, setup, isAdmin } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const route = useRoute()
@@ -83,12 +83,26 @@ export default function App() {
    */
   const showDev = route.kind === 'dev' && isAdmin
 
-  // A provider redirect (e.g. GitHub/Google) or a clicked password-reset
-  // link can land back here with the modal unmounted, so reopen it and give
-  // AuthModal a chance to show the error or the reset-password form.
+  /*
+   * A provider redirect (e.g. GitHub/Google) or a clicked password-reset
+   * link can land back here with the modal unmounted, so reopen it and give
+   * AuthModal a chance to show the error or the reset-password form.
+   *
+   * `setup` joins them because it is the same kind of event: a redirect that
+   * came back and left something unfinished. It is the ONLY thing that tells
+   * somebody a Google sign-up did not collect a username or a password — the
+   * redirect itself looks exactly like a completed sign-up — so it opens the
+   * form rather than waiting to be found.
+   *
+   * It fires when `setup` goes null → non-null, which is the moment the answer
+   * arrives, so it opens once per load and a dismissal sticks for that visit.
+   * The account menu keeps a Finish Setting Up door for afterwards, and the
+   * Account page shows the same gap in its own words; a form that reopened on
+   * every render would be a wall, not a prompt.
+   */
   useEffect(() => {
-    if (oauthError || recovery) setAuthOpen(true)
-  }, [oauthError, recovery])
+    if (oauthError || recovery || setup) setAuthOpen(true)
+  }, [oauthError, recovery, setup])
 
   // Leaving or entering a page swaps the whole document, and the browser has
   // already done whatever it was going to do with the hash by the time React

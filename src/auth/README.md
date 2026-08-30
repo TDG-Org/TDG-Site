@@ -63,6 +63,54 @@ email and a lost connection need opposite things done about them. Calling
 that is now taken; `AuthModal` instead moves them to **Log in** with the
 address already filled and prints the sentence there.
 
+## Signing in with Google is only two-thirds of a sign-up
+
+A TDG account needs an **email, a password and a username**. The Sign up form
+collects all three at once, and tdg-core's `handle_new_user` reads the last two
+out of `raw_user_meta_data` as the `auth.users` row is written. **A provider
+sends neither of them.**
+
+Measured on the live project rather than assumed. The one Google-only account
+on it carries `iss sub name email picture full_name avatar_url provider_id
+email_verified phone_verified` — no `username`, no `display_name` — so its
+profile row was written with a null username and GoTrue never set a password.
+
+That account prints as `@(no username yet)` wherever a profile is read, has no
+profile page at all (a TDG page is addressed by its handle), and **cannot log
+in anywhere but the two apps that draw a Google button**: Bible Educator ships
+`PUBLIC_SUPABASE_OAUTH` empty, and Music Everything, DevFleet and Makullveny
+have no OAuth path at all, so all four offer username-or-email plus a password
+to an account holding neither.
+
+**So `signInWithOAuth` is not the end of a sign-up, and `setup` is what says
+so.** `AuthProvider` asks `tdg_account_setup()` at every sign-in — not only
+after a redirect, because somebody who dismisses the form once and comes back
+next week on another machine still has the same half-built account — and
+`AuthModal` grows a third mode beside `recovery` to collect what is missing.
+`App.tsx` opens it when the answer arrives, and the account menu keeps a
+**Finish Setting Up** door so a dismissal is never final.
+
+Three rules hold this together:
+
+- **The answer comes from Postgres, never from the client.**
+  `auth.users.encrypted_password` is readable by nothing here, and
+  `user.identities` answers a different question — which providers are linked,
+  never whether a password grant would work.
+- **The missing fields are asked for, never invented.** A username derived from
+  an email address publishes half of somebody's address as a public handle, and
+  the provider's `name` is their real name. It is offered as a prefilled,
+  editable box; there is no suggested username at all.
+- **The username goes through `tdg_claim_username`, not an update.** The
+  check-then-write the Sign up tab does has a race in it, and this is the form
+  where losing it would be worst — somebody arriving from Google with nothing,
+  told the name was theirs, still with no handle. The unique index decides and
+  the refusal arrives as a code; `claimRefusal` in `wording.ts` says what each
+  one means.
+
+`refreshProfile()` re-reads `setup` alongside the profile row, because the
+Account page can satisfy it too: a username typed into Your Details is the same
+act as one typed into this form.
+
 ## `wording.ts` · match on codes, never on message text
 
 This is not a style preference. It is the difference between a right answer and a
@@ -86,6 +134,14 @@ here, so the site says one thing about one situation however it found out.
 **A fetch that never landed is not bad credentials.** Saying so would send
 somebody to reset a password that was right all along, which is why
 `OFFLINE_MESSAGE` exists.
+
+**A THIRD vocabulary arrives with `claimRefusal`, and it is Postgres's.**
+`tdg_claim_username` is an RPC, so its refusals come through PostgREST as
+`error.code`: `PT422`, `PT409`, `PT429`, `28000`. None of those are codes an
+auth server can send, so they get their own function rather than four more arms
+of `authMessage` — the discipline in that switch is that every arm answers a
+code something real can actually produce. `PT429`'s own message is passed
+through, because the server writes the date the cooldown ends into it.
 
 **A refusal the browser makes has no code to match**, because no request was
 sent. Those are `FORM_REFUSAL` in the same file — a plain object, deliberately

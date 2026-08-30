@@ -360,6 +360,50 @@ signatures byte-for-byte unchanged so the `bea_*` forwarders keep compiling:
 All three ask `tdg_can_view` now, which is the one question they were always
 meant to ask.
 
+## Signing up with Google leaves two of the three fields blank
+
+A TDG account needs an **email, a password and a username**. The Sign up form
+collects all three and `handle_new_user` reads the last two out of
+`raw_user_meta_data` as the `auth.users` row is written. **Google sends
+neither.** Measured on this project, not argued: the one Google-only account
+here carries `iss sub name email picture full_name avatar_url provider_id
+email_verified phone_verified` and no `username`, so its profile row was written
+with a null username and `encrypted_password` was never set.
+
+What that costs is not cosmetic. The account prints as `@(no username yet)`
+wherever a profile is read, has **no profile page at all** — a TDG page is
+addressed by its handle — and **cannot log in anywhere but the two apps that
+draw a Google button.** Bible Educator ships `PUBLIC_SUPABASE_OAUTH` empty and
+draws no social row; Music Everything, DevFleet and Makullveny have no OAuth
+path at all. Every one of them offers username-or-email plus a password to an
+account that has neither.
+
+| Verb | What it answers |
+| --- | --- |
+| `tdg_account_setup()` | What the CALLER still needs: `needs_username`, `needs_password`, and the provider's own name as a suggestion. One row, or none when signed out. |
+| `tdg_claim_username(text)` | Puts a username on the caller's account. `PT422` shape, `PT409` taken, `PT429` cooldown — the trigger's own sentence, with its date. |
+
+**Why the answer is here and not in each app.** `auth.users.encrypted_password`
+is readable by no client, and `user.identities` answers a different question —
+which providers are linked, never whether a password grant would work. Five apps
+share this project and any of them can be the window an OAuth account comes back
+through, so the database answers once, for all of them.
+
+**The missing fields are asked for, never invented.** A username derived from an
+email address publishes half of somebody's address as a public handle, and
+Google's `name` is their real name. So the name is offered to a form as a
+prefilled, editable box and written by nothing else, and there is no suggested
+username at all.
+
+`tdg_claim_username` exists because the check-then-write every app was doing has
+a race in it that is invisible when it is lost: at sign-up `handle_new_user`
+does not fail on a taken name, it drops it and creates the account anyway, on
+purpose, so a lost race cannot fail an account creation. The unique index
+decides here instead. Both verbs are `authenticated` only; `anon` gets 42501.
+
+The site's end is `AccountSetup` in `src/auth/AuthProvider.tsx` and the third
+mode of `src/components/AuthModal.tsx`.
+
 ## Deploying
 
 ```bash

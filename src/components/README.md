@@ -34,10 +34,10 @@ shared primitives every one of these builds on live in
 
 | | |
 | --- | --- |
-| `Nav.tsx` | The bar, the theme toggle, the account menu (identity, Send Feedback, the Developer Tab switch, sign out), and the Developer tab that appends itself for a signed-in developer with Developer Mode on. That tab is **not** in `NAV_LINKS`, because that array is the public navigation and is read by everything. Pressing the mark still goes home, and also rolls *Jesus Loves You* out along the crossbar for four seconds; how much bar it has is measured, so on a full bar it either shrinks to fit or the link row dims for it. |
+| `Nav.tsx` | The bar, the theme toggle, the account menu (identity, **Finish Setting Up** while a provider account is still missing a username or a password, Send Feedback, the Developer Tab switch, sign out), and the Developer tab that appends itself for a signed-in developer with Developer Mode on. That tab is **not** in `NAV_LINKS`, because that array is the public navigation and is read by everything. Pressing the mark still goes home, and also rolls *Jesus Loves You* out along the crossbar for four seconds; how much bar it has is measured, so on a full bar it either shrinks to fit or the link row dims for it. |
 | `Footer.tsx` | |
 | `Cursor.tsx` | A dot that tracks the pointer and a ring that trails it, reacting to what it is over. Fine pointers only; on a coarse pointer it renders nothing. |
-| `AuthModal.tsx` | Sign in and sign up. **Deliberately theme-independent** — the site's one always-dark glass scene, the same way the hero owns its own tokens. There was no light variant in the design, so rather than invent one it stays the one true look whatever the page theme is. |
+| `AuthModal.tsx` | Sign in, sign up, choose a new password after a reset link, and **finish an account a provider left half-built** — Google sends neither a username nor a password, so that third mode collects them (`src/auth/README.md` has the measurements). **Deliberately theme-independent** — the site's one always-dark glass scene, the same way the hero owns its own tokens. There was no light variant in the design, so rather than invent one it stays the one true look whatever the page theme is. |
 
 ### Shared pieces
 

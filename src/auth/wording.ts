@@ -74,6 +74,39 @@ export const OFFLINE_MESSAGE =
   "Couldn't reach the account server. Check your connection and try again."
 
 /**
+ * A THIRD vocabulary, and it is Postgres's.
+ *
+ * `tdg_claim_username` is an RPC, so its refusals arrive through PostgREST as
+ * `error.code` — `PT422` for a shape we do not accept, `PT409` for a name
+ * somebody already has, `PT429` for the fortnight between renames, `28000` for
+ * a call with no session behind it. None of those are GoTrue codes and none of
+ * them can reach `authMessage`, which is why this is its own function rather
+ * than four more arms of that switch: the discipline there is that every arm
+ * answers a code some auth server can actually send.
+ *
+ * **`PT429`'s own message is passed through**, exactly as `profileRefusal` in
+ * `src/account/api.ts` passes it: the server writes the date the cooldown ends
+ * into that sentence, the fourteen days belong to a trigger on a column no
+ * client may write, and a rewrite here could only lose the one fact that makes
+ * the refusal actionable.
+ *
+ * `PT422` is passed through for the same reason in miniature — the server's
+ * sentence already spells out the rule — but falls back to `USERNAME_RULE`, so
+ * the shape is stated even if the message ever arrives empty.
+ */
+export function claimRefusal(error: { code?: string; message?: string } | null): string {
+  const code = error?.code
+  if (code === 'PT409' || code === '23505') return FORM_REFUSAL.usernameTakenJustNow
+  if (code === 'PT429') return error?.message || 'Usernames can change once every 2 weeks.'
+  if (code === 'PT422') return error?.message || USERNAME_RULE
+  if (code === '28000') return authMessage('session_not_found')
+  // No code at all is a fetch that never landed — the same thing
+  // `OFFLINE_MESSAGE` exists for on the password paths.
+  if (!code) return OFFLINE_MESSAGE
+  return authMessage(code, error?.message)
+}
+
+/**
  * What the form refuses BEFORE anything is sent.
  *
  * These are the site's own sentences and they are deliberately kept OUT of

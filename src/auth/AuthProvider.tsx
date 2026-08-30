@@ -9,7 +9,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { watchRevokedSession } from './sessionGuard'
-import { OFFLINE_MESSAGE, authMessage } from './wording'
+import { OFFLINE_MESSAGE, authMessage, claimRefusal } from './wording'
 
 /**
  * The site's own sign-in endpoint. GoTrue only knows email and password, so
@@ -137,6 +137,72 @@ type SignUpInput = { email: string; password: string; username: string; displayN
 type SignInInput = { identifier: string; password: string }
 type OAuthProvider = 'github' | 'google'
 
+/**
+ * What an account still needs before it is a whole TDG account.
+ *
+ * Only a provider sign-in can produce one of these. The Sign up form collects
+ * an email, a password and a username in one go; **Google and GitHub send
+ * neither of the last two**, so `handle_new_user` writes the profile row with
+ * a null username and GoTrue never sets a password — measured on the live
+ * project, and written up in
+ * `supabase/migrations/20260830130000_an_account_made_with_google_still_needs_its_fields.sql`.
+ *
+ * The consequence is not cosmetic. A handle is what a TDG profile page is
+ * addressed by, so there is no page without one; and Bible Educator, Music
+ * Everything, DevFleet and Makullveny all sign in with username-or-email plus
+ * a password and draw no Google button at all, so an account with neither
+ * cannot get into any of them.
+ *
+ * **The answer comes from the database, not from here.** `encrypted_password`
+ * is not readable by any client, and `user.identities` is the wrong question —
+ * it says which providers are linked, never whether a password grant would
+ * work. `tdg_account_setup()` reads the real column, for `auth.uid()` and for
+ * nobody else.
+ */
+export type AccountSetup = {
+  needsUsername: boolean
+  needsPassword: boolean
+  /**
+   * Google's or GitHub's own name for this person, offered to the form as a
+   * prefilled, editable box.
+   *
+   * A SUGGESTION, and deliberately never written by anything but the form.
+   * It is their real name, and putting it on a public profile is a decision
+   * they get to see before it is made. There is no suggested username for the
+   * same reason one step further: the only thing to derive one from is the
+   * email address, and a handle is public.
+   */
+  suggestedDisplayName: string | null
+}
+
+/** What the finish-setup form sends. `password` is ignored unless the account
+ *  genuinely has none — see `finishSetup`. */
+type FinishSetupInput = { username: string; displayName: string; password: string }
+
+/**
+ * Ask the server what this account is still missing.
+ *
+ * Answers null for "nothing, or we could not ask", and those collapse on
+ * purpose: every reader of this only wants to know whether to put a form in
+ * front of somebody, and a failed read must never do that. No row comes back
+ * when signed out, which is the same answer.
+ */
+async function readSetup(): Promise<AccountSetup | null> {
+  const { data, error } = await supabase.rpc('tdg_account_setup').maybeSingle()
+  if (error || !data) return null
+  const row = data as {
+    needs_username: boolean
+    needs_password: boolean
+    suggested_display_name: string | null
+  }
+  if (!row.needs_username && !row.needs_password) return null
+  return {
+    needsUsername: row.needs_username,
+    needsPassword: row.needs_password,
+    suggestedDisplayName: row.suggested_display_name,
+  }
+}
+
 type AuthContextValue = {
   status: 'loading' | 'signedOut' | 'signedIn'
   user: User | null
@@ -147,6 +213,15 @@ type AuthContextValue = {
   isAdmin: boolean
   /** True from the moment a password-reset email link lands back here until updatePassword succeeds. */
   recovery: boolean
+  /**
+   * What this account still needs before it is a whole TDG account, or null
+   * when it needs nothing — which is every account made through the Sign up
+   * form, and every provider account that has since finished.
+   *
+   * Non-null ONLY on a definite answer from the server, so the modal it opens
+   * can never flash up while the question is still in flight.
+   */
+  setup: AccountSetup | null
   /** Set when a provider redirect lands back with `?error=…` (e.g. OAuth not configured yet). */
   oauthError: string | null
   dismissOauthError: () => void
@@ -168,6 +243,11 @@ type AuthContextValue = {
    * Never throws: a failed refresh leaves the previous profile in place, which
    * is stale but true, rather than blanking an account's own name because one
    * request lost the network.
+   *
+   * It re-reads **`setup` as well**, because the Account page can satisfy that
+   * too: a username typed into Your Details is the same act as one typed into
+   * the finish-setup form, and a `setup` left behind would reopen that form
+   * asking for a field the page in front of them already shows filled in.
    */
   refreshProfile: () => Promise<void>
   /**
@@ -183,6 +263,20 @@ type AuthContextValue = {
   signUp: (input: SignUpInput) => Promise<{ error: string | null; pending: string | null }>
   signIn: (input: SignInInput) => Promise<{ error: string | null }>
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
+  /**
+   * Finish an account that came back from a provider without the fields the
+   * Sign up form would have collected.
+   *
+   * Does only what `setup` says is missing, in the order a half-finished run
+   * can be picked up from: the username first, because it is the field with a
+   * race in it and the one every other TDG app needs; then the display name;
+   * then the password. A step that fails stops the rest and reports itself,
+   * and the steps that already succeeded STAY DONE — `setup` is re-read
+   * either way, so pressing the button again asks only for what is still
+   * genuinely outstanding rather than making somebody retype a username the
+   * server already accepted.
+   */
+  finishSetup: (input: FinishSetupInput) => Promise<{ error: string | null }>
   /** Takes a username or an email, like signing in does. */
   resetPassword: (identifier: string) => Promise<{ error: string | null }>
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>
@@ -237,6 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<'loading' | 'signedOut' | 'signedIn'>('loading')
   const [recovery, setRecovery] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
+  const [setup, setSetup] = useState<AccountSetup | null>(null)
 
   // A provider that isn't enabled yet redirects back here with ?error=…
   // instead of raising synchronously, and this is the only place that lands.
@@ -269,11 +364,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!session?.user) {
         setProfile(null)
         setTier(null)
+        setSetup(null)
         return
       }
       const uid = session.user.id
       void readProfile(uid).then((row) => {
         if (!cancelled) setProfile(row)
+      })
+      /*
+       * Asked at every sign-in, not only after a provider redirect.
+       *
+       * The redirect is where an unfinished account is MADE, but it is not the
+       * only place somebody meets one: they close the form, come back a week
+       * later on another machine, and the account is still missing the fields
+       * every other TDG app needs. Tying the question to the redirect would
+       * have made the ask a one-time event that a single dismissal ends
+       * forever, which is the shape of a state you can reach and cannot see.
+       *
+       * It costs one RPC per sign-in and answers null for every account made
+       * through the Sign up form.
+       */
+      void readSetup().then((needs) => {
+        if (!cancelled) setSetup(needs)
       })
       supabase
         .from('subscriptions')
@@ -300,27 +412,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => watchRevokedSession(supabase), [])
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
+  const value = useMemo<AuthContextValue>(() => {
+    /**
+     * Ask the server for both of the things a save can have changed.
+     *
+     * A named function inside the factory rather than a method on the object,
+     * because TWO surfaces need it — the Account page through `refreshProfile`,
+     * and `finishSetup` after each of its steps — and a method cannot be
+     * called from a sibling method without `this`, which is exactly the kind of
+     * binding a context object should not have.
+     */
+    const reread = async () => {
+      const uid = user?.id
+      if (!uid) return
+      const [row, needs] = await Promise.all([readProfile(uid), readSetup()])
+      // A failed read leaves the previous profile standing. Stale and true
+      // beats blank: this runs right after a save, and blanking somebody's
+      // own name because the follow-up request lost the network would look
+      // exactly like the save having destroyed it.
+      if (row) setProfile(row)
+      /*
+       * `setup` follows the profile through the same door, because the Account
+       * page can SATISFY it: typing a username into Your Details is the same
+       * act as typing one into the finish-setup form. Left behind, `setup`
+       * would still say "needs a username" for an account that had just chosen
+       * one, and the modal would open again on the next reload asking for a
+       * field the page in front of them already shows filled in.
+       *
+       * Unconditional, unlike the profile above, because `readSetup` already
+       * answers null for "we could not ask" — the same value as "needs
+       * nothing", chosen so that a failed read can never put a form in front
+       * of somebody who has finished.
+       */
+      setSetup(needs)
+    }
+
+    return {
       status,
       user,
       profile,
       tier,
       isAdmin: profile?.is_admin === true,
       recovery,
+      setup,
       oauthError,
       dismissOauthError: () => setOauthError(null),
 
-      async refreshProfile() {
-        const uid = user?.id
-        if (!uid) return
-        const row = await readProfile(uid)
-        // A failed read leaves the previous profile standing. Stale and true
-        // beats blank: this runs right after a save, and blanking somebody's
-        // own name because the follow-up request lost the network would look
-        // exactly like the save having destroyed it.
-        if (row) setProfile(row)
-      },
+      refreshProfile: reread,
 
       async signUp({ email, password, username, displayName }) {
         const { data, error } = await supabase.auth.signUp({
@@ -418,6 +556,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error?.message ?? null }
       },
 
+      async finishSetup({ username, displayName, password }) {
+        const uid = user?.id
+        if (!uid) return { error: authMessage('session_not_found') }
+
+        /*
+         * The username through `tdg_claim_username`, never through an update
+         * on `profiles`.
+         *
+         * The check-then-write the Sign up form does has a race in it that is
+         * invisible when it is lost, and this is the one form where losing it
+         * would be worst: somebody arriving from Google with nothing, told the
+         * name was theirs, still with no handle. The RPC lets the unique index
+         * decide and hands back a code — see `claimRefusal` in wording.ts.
+         */
+        if (setup?.needsUsername) {
+          const { error } = await supabase.rpc('tdg_claim_username', { uname: username })
+          if (error) {
+            await reread()
+            return { error: claimRefusal(error) }
+          }
+        }
+
+        /*
+         * The display name is OPTIONAL and is written only when there is one
+         * to write. A blank box is somebody declining the provider's
+         * suggestion, not an instruction to clear a name they may already
+         * have — the Account page is where a name gets removed on purpose.
+         */
+        const wantedName = displayName.trim()
+        if (wantedName && !profile?.display_name) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ display_name: wantedName })
+            .eq('user_id', uid)
+          if (error) {
+            await reread()
+            return { error: authMessage(error.code, error.message) }
+          }
+        }
+
+        /*
+         * Last, because it is the step that can be refused for a reason
+         * nothing here can predict: the minimum length is a Supabase dashboard
+         * setting no build in this repo can see, so `weak_password` carries
+         * the server's own sentence and this file states no number. Putting it
+         * last also means a refused password never costs somebody the username
+         * they just claimed.
+         */
+        if (setup?.needsPassword) {
+          const { error } = await supabase.auth.updateUser({ password })
+          if (error) {
+            await reread()
+            return { error: authMessage(error.code, error.message) }
+          }
+        }
+
+        await reread()
+        return { error: null }
+      },
+
       async resetPassword(identifier) {
         // Through the endpoint too, so "I forgot my password" works for
         // somebody who only ever knew their username.
@@ -450,9 +648,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Signing out everywhere is a separate feature and would need its own button.
         await supabase.auth.signOut({ scope: 'local' })
       },
-    }),
-    [status, user, profile, tier, recovery, oauthError],
-  )
+    }
+  }, [status, user, profile, tier, recovery, setup, oauthError])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

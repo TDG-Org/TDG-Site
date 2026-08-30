@@ -355,7 +355,9 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     signInWithOAuth,
     resetPassword,
     updatePassword,
+    finishSetup,
     recovery,
+    setup,
     oauthError,
     dismissOauthError,
   } = useAuth()
@@ -386,6 +388,40 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+
+  /*
+   * A THIRD mode, beside the two tabs and beside `recovery`, and it exists for
+   * exactly one situation: an account that came back from Google or GitHub
+   * without the fields the Sign up form collects. See `AccountSetup` in
+   * src/auth/AuthProvider.tsx for what is missing and why it matters.
+   *
+   * `recovery` wins when both are somehow true. A reset link is a session held
+   * open for one purpose and nothing else may be asked in the middle of it —
+   * and a recovery session by definition HAS a password, so the only half that
+   * could overlap is the username, which the Account page also offers.
+   */
+  const inSetup = !recovery && setup !== null
+
+  /*
+   * Why this form is in front of somebody who did not open it.
+   *
+   * A form that appears on its own and does not say why reads as the app being
+   * broken, and this one appears after a redirect somebody thought had already
+   * finished signing them up. So it names the missing field and what that
+   * field is FOR — the two of them are one sentence, not a label and a
+   * grievance — and there is an arm per case, because "you need a username and
+   * a password" is simply untrue for an account that has one of them.
+   *
+   * Here rather than in `wording.ts` for the reason AGENTS.md rule 1 gives: a
+   * refusal is a fact about a mechanism and belongs with it, but a headline a
+   * surface draws once is part of reading that surface.
+   */
+  const setupLede =
+    setup?.needsUsername && setup.needsPassword
+      ? 'That sign-in gave us your email address and nothing else. A username and a password finish the account, and every other TDG app asks for them.'
+      : setup?.needsUsername
+        ? 'Your account has no username yet. It is the handle your profile page is addressed by, and one of the two ways to log in.'
+        : 'Your account has no password yet, so it can only be opened with the button you just used. A password lets you into every other TDG app.'
 
   // Fresh slate every time the modal opens. Half-typed data from a dismissed
   // attempt should not resurface later.
@@ -422,6 +458,24 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     }
   }, [open, oauthError, dismissOauthError])
 
+  /*
+   * The provider's own name for this person, offered as a prefilled box.
+   *
+   * Fills an EMPTY box only, so it can never overwrite something typed while
+   * the answer was still in flight — the setup state arrives from an RPC, and
+   * the reset effect above cannot depend on it without clearing every other
+   * field each time it lands.
+   *
+   * A prefilled, editable box rather than a silent write is the whole point:
+   * it is somebody's real name and it is about to be public, so they see it
+   * before it becomes so.
+   */
+  const suggestedName = inSetup ? setup?.suggestedDisplayName ?? '' : ''
+  useEffect(() => {
+    if (!open || !suggestedName) return
+    setDisplayName((current) => (current === '' ? suggestedName : current))
+  }, [open, suggestedName])
+
   // The scroll lock, Escape, Tab and the focus return, counted across every
   // dialog on the page rather than owned by this one. See src/lib/modal.ts.
   // No `focusFirst`: this modal's first field is the one somebody came here to
@@ -429,8 +483,11 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   useModal({ open, onClose, layer: MODAL_LAYER.auth, dialog: cardRef })
 
   // Live availability check against the shared profiles table, debounced.
+  // The same box in two places: the Sign up tab, and the setup form finishing
+  // an account a provider left without one. One effect, so the two cannot come
+  // to disagree about what "available" looks like.
   useEffect(() => {
-    if (!open || tab !== 'signup') return
+    if (!open || !(inSetup || tab === 'signup')) return
     const normalized = normalizeUsername(username)
     if (!normalized) {
       setUsernameStatus('idle')
@@ -456,7 +513,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
         })
     }, 450)
     return () => window.clearTimeout(timer)
-  }, [open, tab, username])
+  }, [open, tab, inSetup, username])
 
   if (!open) return null
 
@@ -542,6 +599,55 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setTab('login')
       setLoginId(email)
       setNotice(pending)
+      return
+    }
+    onClose()
+  }
+
+  /**
+   * Finish an account a provider left half-built.
+   *
+   * The refusals are the Sign up tab's, in the same order and from the same
+   * file, because it is the same three fields being asked for — a second set
+   * of sentences for one situation is what `wording.ts` exists to prevent.
+   *
+   * What it does NOT repeat is sign-up's second availability check. That one
+   * is there because `handle_new_user` silently drops a taken username and
+   * creates the account anyway; here the write goes through
+   * `tdg_claim_username`, where the unique index decides and a lost race comes
+   * back as `PT409` with its own sentence. One ask, one answer.
+   */
+  async function handleSetupSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setNotice(null)
+    const normalized = normalizeUsername(username)
+    if (setup?.needsUsername) {
+      if (usernameStatus === 'taken') {
+        setFormError(FORM_REFUSAL.usernameTaken)
+        return
+      }
+      const shapeProblem = usernameShapeProblem(normalized)
+      if (shapeProblem) {
+        setFormError(shapeProblem)
+        return
+      }
+    }
+    // No password-length check, for the reason stated on the Sign up tab: the
+    // minimum is a dashboard setting this repo cannot see.
+    if (setup?.needsPassword && password !== confirm) {
+      setFormError(FORM_REFUSAL.passwordMismatch)
+      return
+    }
+    setFormError(null)
+    setSubmitting(true)
+    const { error } = await finishSetup({
+      username: normalized,
+      displayName: displayName.trim(),
+      password,
+    })
+    setSubmitting(false)
+    if (error) {
+      setFormError(error)
       return
     }
     onClose()
@@ -692,16 +798,26 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
         </div>
 
         <div className="authmodal__intro">
-          <div className="authmodal__eyebrow">{recovery ? 'Password reset' : 'Welcome'}</div>
+          <div className="authmodal__eyebrow">
+            {recovery ? 'Password reset' : inSetup ? 'Almost there' : 'Welcome'}
+          </div>
           <h1 className="authmodal__title" id="authmodal-title">
-            {recovery ? 'Choose a new password' : tab === 'signup' ? 'Create your account' : 'Welcome back'}
+            {recovery
+              ? 'Choose a new password'
+              : inSetup
+                ? 'Finish your account'
+                : tab === 'signup'
+                  ? 'Create your account'
+                  : 'Welcome back'}
           </h1>
           <p className="authmodal__subtitle">
             {recovery
               ? "You're signed in from the reset link. Set a new password to finish."
-              : tab === 'signup'
-                ? 'One account for everything TDG builds.'
-                : 'Good to see you again.'}
+              : inSetup
+                ? setupLede
+                : tab === 'signup'
+                  ? 'One account for everything TDG builds.'
+                  : 'Good to see you again.'}
           </p>
         </div>
 
@@ -755,6 +871,98 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
 
             <div className="authmodal__cta-row">
               <RingButton busy={submitting}>Update password</RingButton>
+            </div>
+            <div className="authmodal__foot">TDG Brothers</div>
+          </form>
+        ) : inSetup ? (
+          /*
+           * The Sign up tab's own fields, minus the ones a provider already
+           * gave us and minus the ones this account has since gained. Same
+           * components, same ids' shape, same hints — this is the same three
+           * questions asked a second time, and a form that looked different
+           * would read as a different ask.
+           *
+           * No tabs and no "Continue as guest": both offer a way out of a
+           * state that is not a choice. Somebody here is signed in, and the
+           * close button is the way out — dismissing it leaves the account
+           * exactly as it is, and the account menu keeps a Finish Setting Up
+           * door so the form is never lost.
+           */
+          <form className="authmodal__form" onSubmit={handleSetupSubmit}>
+            {setup?.needsUsername && (
+              <div className="authmodal__grid2">
+                <GlowField
+                  id="fs-username"
+                  label="Username"
+                  icon={<IconUser />}
+                  type="text"
+                  value={username}
+                  onChange={setUsername}
+                  placeholder="clydemc"
+                  autoComplete="username"
+                  required
+                  hint={usernameHint}
+                />
+                <GlowField
+                  id="fs-display"
+                  label="Display name"
+                  optionalTag
+                  icon={<IconCard />}
+                  type="text"
+                  value={displayName}
+                  onChange={setDisplayName}
+                  placeholder="Clyde M."
+                  autoComplete="name"
+                />
+              </div>
+            )}
+
+            {setup?.needsPassword && (
+              <div className="authmodal__grid2 authmodal__grid2--pre-cta">
+                <GlowField
+                  id="fs-password"
+                  label="Password"
+                  icon={<IconLock />}
+                  type={showPassword ? 'text' : 'password'}
+                  masked={!showPassword}
+                  value={password}
+                  onChange={setPassword}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                  rightSlot={<EyeToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />}
+                  hint={passwordHint}
+                />
+                <GlowField
+                  id="fs-confirm"
+                  label="Confirm"
+                  icon={<IconLock />}
+                  type={showConfirm ? 'text' : 'password'}
+                  masked={!showConfirm}
+                  value={confirm}
+                  onChange={setConfirm}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                  rightSlot={<EyeToggle shown={showConfirm} onToggle={() => setShowConfirm((v) => !v)} />}
+                  hint={confirmHint}
+                />
+              </div>
+            )}
+
+            {formError && (
+              <div className="authmodal__error" role="alert">
+                {formError}
+              </div>
+            )}
+            {notice && (
+              <div className="authmodal__notice" role="status">
+                {notice}
+              </div>
+            )}
+
+            <div className="authmodal__cta-row">
+              <RingButton busy={submitting}>Finish setting up</RingButton>
             </div>
             <div className="authmodal__foot">TDG Brothers</div>
           </form>

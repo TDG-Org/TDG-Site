@@ -108,3 +108,6 @@ npm-debug.log*
 
 # DevFleet Logbook version history
 .devfleet/logbook/.history/
+
+# DevFleet Logbook trash
+.devfleet/logbook/.trash/
