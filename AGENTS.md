@@ -35,6 +35,7 @@ npm install && npm run dev
 | `npm run typecheck` | `tsc -b --noEmit`. Must be silent. |
 | `npm run build` | `tsc -b && vite build`. Must be green. The 500 kB chunk warning is pre-existing and expected. |
 | `npm run preview` | Serves the production build, so it sees the real `/TDG-Site/` base path. |
+| `npm run verify:store` | Holds every advertised price and link in `store.ts` against what Stripe actually sells, plus the Cloud config and the webhook endpoints, via the `tdg-store-verify` Edge Function. Run it whenever a price moves, and before a release. |
 
 Copy `.env.example` to `.env.local` and fill in the two Supabase values, or the
 app throws on boot by design. The publishable key is not a secret; the

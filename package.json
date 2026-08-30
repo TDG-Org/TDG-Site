@@ -1,13 +1,14 @@
 {
   "name": "tdg-brothers-site",
   "private": true,
-  "version": "2.27.0",
+  "version": "2.28.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "verify:store": "node scripts/verify-store.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
