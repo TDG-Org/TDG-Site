@@ -6,7 +6,7 @@ its card, its chips, its page, its packs — plus the About page, the Store
 catalogue and all its prose, the nav links and the Origin chapters. Adding an
 app is an entry here. Fixing a line of a guide is one string here. A component
 that renders content knows nothing about which app it is drawing, which is the
-only reason ten pages have stayed consistent with each other.
+only reason eleven pages have stayed consistent with each other.
 
 **A section's own headline is not in this folder, and never has been.** The
 `.kicker`, the `.h2` and the `.lede` that `Hero.tsx`, `Origin.tsx`, `Apps.tsx`,
@@ -18,10 +18,11 @@ rule, not a backlog.
 
 One test: **does the component that draws it know what it is drawing?**
 
-`AppPage.tsx` does not. It draws whatever page it is handed, ten times over,
-and that is exactly why the ten stay consistent with each other and why an
-eleventh is a content edit rather than a component. Anything a component draws
-*N* of belongs here, and the moment it does not, the ten start to drift.
+`AppPage.tsx` does not. It draws whatever page it is handed, eleven times
+over, and that is exactly why the eleven stay consistent with each other and
+why a twelfth is a content edit rather than a component. Anything a component
+draws *N* of belongs here, and the moment it does not, the eleven start to
+drift.
 
 `Apps.tsx` draws its own heading once and will never draw a second one. Moving
 `Apps we're building.` into a data file buys nothing — there is no second

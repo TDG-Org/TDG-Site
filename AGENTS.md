@@ -81,7 +81,7 @@ catalogue and all its prose, the nav links and the Origin chapters.
 its card in `content.ts`. Fixing a line of a guide is one string.
 
 **The test is whether the component drawing the words knows what it is
-drawing.** `AppPage.tsx` does not, and it draws ten — so the ten live in data,
+drawing.** `AppPage.tsx` does not, and it draws eleven — so the eleven live in data,
 which is the only reason they have stayed consistent with each other.
 `Apps.tsx` draws its own kicker, heading and lede once and will never draw a
 second set, so those live in `Apps.tsx`. Every home-page section is written that

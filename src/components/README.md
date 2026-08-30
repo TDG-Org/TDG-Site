@@ -27,7 +27,7 @@ shared primitives every one of these builds on live in
 | | |
 | --- | --- |
 | `AppPage.tsx` | One app's own page. **Knows nothing about any particular app** — everything comes from `data/appPages.ts`. |
-| `About.tsx` | About TDG. Deliberately the same page as an app page, and carries **no stylesheet of its own**: a second one would be the two starting to drift, and this page's whole job is to look like it belongs beside the ten it links to. |
+| `About.tsx` | About TDG. Deliberately the same page as an app page, and carries **no stylesheet of its own**: a second one would be the two starting to drift, and this page's whole job is to look like it belongs beside the eleven it links to. |
 | `Store.tsx` | The shop, in **two views over one set of state**: `#/store` is an index of one card per app, `#/store/<app>` is that app's own page of packs with the buy and manage panels on them. Both open and close with the app pages' own `BackButton`. Read it with `data/store.ts` and `store/useOwnedPacks.ts` — see below. |
 
 ### Always on screen
