@@ -1,3 +1,5 @@
+import { visibleApps, visibleGame, visibleTools } from '../content/resolve'
+import type { SiteContentDoc } from '../content/types'
 import { APPS, MARANATHA, TOOLS } from '../data/content'
 import { STORE_APPS } from '../data/store'
 import { supabase } from '../lib/supabase'
@@ -347,4 +349,77 @@ export function appName(id: string): string {
     .filter(Boolean)
     .map((w) => (w.toLowerCase() === 'tdg' ? 'TDG' : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(' ')
+}
+
+/**
+ * Everything a report can be filed against, as the picker lists it.
+ *
+ * ## Why the form has a picker at all
+ *
+ * `#/feedback/<app>` was built for the apps with no sign-in of their own, and
+ * it answered half the question: a report from MARANATHA arrives labelled
+ * `maranatha` because the link said so. The other half is somebody standing on
+ * THIS site who wants to tell us about TDG Veditor. Before this they could
+ * only write the app's name into the message, and the report still arrived
+ * labelled `tdg-site` — so the console's per-app view, the thing that decides
+ * which of us reads it, was wrong about every report that mattered most.
+ *
+ * ## Derived, never typed — rule 17
+ *
+ * The list is the site's own product lists read through `src/content/`, so
+ * adding an app to `content.ts` puts it in this picker with nothing here to
+ * edit, and a card hidden from the Developer console's Content tab drops out
+ * of it. A picker that named its apps would be a product nobody could report
+ * about the day it shipped, and forgetting would not fail loudly.
+ *
+ * **The names come from `appName` rather than from the resolved cards**, on
+ * purpose. That is the same function the eyebrow and the reply inbox use, so
+ * the option somebody picks, the header over the form and the label on the
+ * answer that comes back are one string in three places. A card renamed at
+ * runtime is the case that would otherwise split them — see `appName`.
+ *
+ * ## What is NOT in it, and why
+ *
+ * The org repos `src/live/` discovers get a card on the Apps grid and are
+ * still absent here, because this site has no id for them. A discovered card
+ * is a repository NAME, and the feedback id is a page slug: `TDG-Veditor` is
+ * `veditor`, not `tdg-veditor`. Guessing would file real reports under an app
+ * that does not exist — a permanent wrong key in `tdg_feedback.app` — which is
+ * worse than the option being absent, because the reader can still say which
+ * app in the message and we can move it. When a discovered app earns a card in
+ * `content.ts` it earns its id in the same edit, and appears here for free.
+ *
+ * `keep` is the other half of rule 17: an id that is in no list — an app of
+ * ours that reports before it has a card, or one hidden from the grids since
+ * the link was written — is added rather than dropped, wearing the face
+ * `appName` makes out of its own id. A picker that silently swapped somebody's
+ * app for this site would file their report against the wrong thing without
+ * saying so.
+ *
+ * The caller passes BOTH the id the dialog arrived with and the one showing in
+ * the field, and that is not belt and braces. Passing only the current value
+ * would rebuild the list around it on every change, so an arrival from an app
+ * with no card would vanish from the picker the moment somebody looked at
+ * another option — a one-way door out of the app they were actually reporting
+ * about. Passing only the arrival leaves the field able to hold a value the
+ * list has since stopped offering, which a `<select>` renders as blank.
+ */
+export type FeedbackTarget = { id: string; name: string }
+
+export function feedbackTargets(
+  doc: SiteContentDoc,
+  keep: readonly (string | undefined)[] = [],
+): FeedbackTarget[] {
+  const ids = [
+    // First, because it is what the form opens on and what a report files
+    // under when nobody touches this field.
+    FEEDBACK_APP_ID,
+    ...visibleApps(doc).map((app) => app.page),
+    ...visibleTools(doc).map((tool) => tool.page),
+    ...(visibleGame(doc) ? [MARANATHA.page] : []),
+  ]
+  for (const id of keep) {
+    if (id && !ids.includes(id)) ids.splice(1, 0, id)
+  }
+  return ids.map((id) => ({ id, name: appName(id) }))
 }

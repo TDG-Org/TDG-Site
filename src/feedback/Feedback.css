@@ -204,6 +204,42 @@
   min-height: 108px;
 }
 
+/* ── the About picker ─────────────────────────────────────────────────────
+   A real `<select>` with the native chrome taken off and this form's own put
+   back, so it sits on the same border, radius, surface and focus ring as the
+   two text fields under it — `.fb__input` does all of that, and this adds only
+   what a select needs. The popup list is drawn by the operating system and
+   cannot be styled; a div listbox in its place would cost the keyboard and
+   screen-reader behaviour the browser gives away, which rule 14 is a floor
+   about. The two `option` rules DO land in Chrome and Firefox on Windows, and
+   they are what stops the list rendering white-on-white in dark. */
+
+.fb__select-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.fb__select {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Room for the chevron the control now draws itself. */
+  padding-right: 34px;
+  cursor: pointer;
+}
+.fb__select option {
+  background-color: var(--bg2);
+  color: var(--text);
+}
+.fb__select-chevron {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  pointer-events: none;
+  color: var(--muted);
+}
+
 .fb__hint {
   margin: 6px 0 0;
   font: 400 11.5px/1.5 var(--font-body);

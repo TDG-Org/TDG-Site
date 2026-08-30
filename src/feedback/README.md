@@ -11,8 +11,8 @@ tab (`src/dev/`), and the server contract both halves speak is
 
 | File | What it is |
 | --- | --- |
-| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also every sentence the form shows that is not a label: the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the contact box's placeholder (`CONTACT_PLACEHOLDER`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). |
-| `FeedbackDialog.tsx` | The send form: pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`) — and from `#/feedback`, see below. |
+| `api.ts` | The `tdg_feedback_*` calls: submit, inbox, ack, quota. Also every sentence the form shows that is not a label: the kind list's copy, the limit copy (`quotaLine`, `waitWords`), the contact box's placeholder (`CONTACT_PLACEHOLDER`), the OS description (`describePlatform`), and the app id this site submits under (`tdg-site`). `feedbackTargets()` derives the About picker's list; `appName()` names one app for every surface that shows one. |
+| `FeedbackDialog.tsx` | The send form: pick which app it is about, pick a kind (nothing pre-selected), write it, optionally leave a contact line. Says where the account stands against the limits, counting a wait down live. Opened from **Send Feedback** in the account menu (`Nav.tsx`) — and from `#/feedback`, see below. |
 | `ReplyInbox.tsx` | The startup panel that delivers **everything waiting for this account** — a developer's reply, quoted next to what the person originally wrote, and any [notice](../notices/README.md) about a change we made to what they own. Checks once per sign-in; renders nothing when nothing waits. One panel and not two, because two dialogs opening over each other at boot is worse than either, and because there is no difference the reader cares about: both are a message from us. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
 
@@ -24,7 +24,7 @@ because a report has to be attached to an account for the reply to have anywhere
 to be delivered — so their Send Feedback opens **this** dialog in a browser,
 through `#/feedback/<app>`.
 
-**The segment is the whole point.** It sets `submitFeedback`'s `app`, so the
+**The segment is the whole point.** It picks the About field's app, so the
 report is filed against the app the reader was actually using. Without it every
 report from every one of those apps would arrive in the console labelled
 `tdg-site`, which is exactly what the console's per-app view exists to prevent.
@@ -32,10 +32,50 @@ The dialog says which app it is about, in the eyebrow and in its opening line,
 because somebody who pressed a button inside a game and landed on a browser tab
 is entitled to see that their words are still going where they meant them.
 
+It **pre-selects** rather than pins — see the next section. Somebody who pressed
+Send Feedback in Volume Controller and then decided the thing they wanted to say
+was about the site can say it in the form they are already standing in, and the
+eyebrow and the opening line follow the field rather than the link, so neither
+can go on naming an app the report is no longer about.
+
 `appName()` in `api.ts` is what turns an id into a name, and it is shared with
-the inbox so the two can never disagree. It reads the catalogue rather than a
-typed list, and an id the catalogue has never heard of still gets a face made
-out of itself — rule 17, both halves.
+the picker and the inbox so the three can never disagree. It reads the catalogue
+rather than a typed list, and an id the catalogue has never heard of still gets
+a face made out of itself — rule 17, both halves.
+
+## The About picker — a report knows which of ours it is about
+
+`#/feedback/<app>` answered half the question. The other half is somebody
+standing on **this** site with a bug in TDG Veditor: before this they could only
+write the name into the message, and the report still arrived labelled
+`tdg-site`, so the console's per-app view — the thing that decides which of us
+reads it — was wrong about exactly the reports that needed routing.
+
+So the form opens with **What Is This About?**, a `<select>` listing this site
+first (the default, and what every report sent before this said) and then every
+app, tool and the game.
+
+- **The list is derived, never typed** (rule 17). `feedbackTargets()` reads the
+  product lists through `src/content/`, so an app added to `content.ts` is in
+  the picker with nothing here to edit, and a card hidden from the Developer
+  console's Content tab drops out of it.
+- **The names come from `appName()`**, not from the resolved cards, so the
+  option somebody picks, the eyebrow over the form and the label on the reply
+  that comes back are one string in three places.
+- **An id in no list still gets an option.** An arrival from an app that reports
+  before it has a card — the Socials tracker — is spliced in second, wearing the
+  face `appName()` makes out of its own id, and stays in the list for the life
+  of the form so switching away from it is not a one-way door.
+- **The org repos `src/live/` discovers are deliberately absent.** A discovered
+  card is a repository NAME and a feedback id is a page slug: `TDG-Veditor` is
+  `veditor`, not `tdg-veditor`. Guessing would file real reports under an app
+  that does not exist, which is a permanent wrong key in `tdg_feedback.app` and
+  worse than the option being missing. Such an app gets its id the day it gets
+  a card in `content.ts`, and appears here in the same edit.
+- The `<select>` wears this form's own skin — `.fb__input` plus a chevron it
+  draws itself, measured equal to the contact field beside it. The popup list is
+  drawn by the OS and cannot be styled; a div listbox in its place would cost
+  the keyboard and screen-reader behaviour the browser gives away.
 
 The routing half of this (why it renders home with the dialog over it, why the
 hash is replaced immediately, and why the id is validated against the server's
@@ -103,8 +143,8 @@ server's own refusal lands in the error alert, worded to be read.
 - **The kind ids are the server's** (`tdg_feedback_kinds()` in the migration);
   `FEEDBACK_KINDS` here holds only the words the picker shows. Add a kind in
   a migration first, then give it copy here.
-- **A report carries more than the person typed** — the site version, the OS
-  and browser string, and the optional contact line — and the About page's
+- **A report carries more than the person typed** — the app it is about, the
+  site version, the OS and browser string, and the optional contact line — and the About page's
   "what do you store about me?" answer ends with *"that is the whole list"*.
   Add a field to a report and that answer is part of the same change
   (`src/data/about.ts`). It went a release without naming any of these three.

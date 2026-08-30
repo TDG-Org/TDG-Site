@@ -90,6 +90,11 @@ export type Route =
    * arrive in the console labelled `tdg-site`, which is the one thing the
    * console's per-app view exists to prevent.
    *
+   * The segment PICKS the form's About field rather than pinning it: the form
+   * has a picker of its own now, so a reader who arrived from one app and meant
+   * to talk about another is not sent looking for a second door. See
+   * `src/feedback/README.md`.
+   *
    * It renders HOME with the dialog over it, because feedback is a dialog and
    * not a page. Closing it puts the hash back to home, so a refresh does not
    * reopen a form somebody already dealt with.

@@ -1,16 +1,110 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import { useSiteContent } from '../content/store'
 import { MODAL_LAYER, useBackdropClose, useModal } from '../lib/modal'
 import {
   appName,
   CONTACT_PLACEHOLDER,
+  FEEDBACK_APP_ID,
   FEEDBACK_KINDS,
+  feedbackTargets,
   fetchQuota,
   quotaLine,
   submitFeedback,
   type FeedbackQuota,
 } from './api'
 import './Feedback.css'
+
+/**
+ * Which app this report is about.
+ *
+ * **A picker, not a fact of the link that opened the form.** `#/feedback/<app>`
+ * answered half the question — a report sent from inside MARANATHA arrives
+ * labelled `maranatha` because the link said so — and left the other half
+ * unanswerable: somebody standing on THIS site with a bug in TDG Veditor could
+ * only write the name into the message, and the report still arrived labelled
+ * `tdg-site`. So the console's per-app view, which is what decides who reads a
+ * report, was wrong about exactly the reports that needed routing.
+ *
+ * So an arrival from another app now PRE-SELECTS its app rather than fixing it.
+ * Somebody who pressed Send Feedback in Volume Controller and then decided the
+ * thing they wanted to say was about the site can say it, in the form they are
+ * already standing in, instead of closing it and finding the other door.
+ *
+ * ## Its own component, and that is not tidiness
+ *
+ * `FeedbackDialog` is mounted for the whole visit with `open={false}`, and hooks
+ * run before its early return. `useSiteContent()` up there would subscribe the
+ * content store — and so fire its fetch — on every page of the site, including
+ * the ones that draw no product cards and ask for nothing today. Down here it
+ * is subscribed only while the form is actually on screen.
+ *
+ * The list itself is derived and the reasoning is on `feedbackTargets`.
+ */
+function AboutField({
+  arrivedAs,
+  value,
+  onChange,
+}: {
+  /**
+   * The id the dialog was OPENED with, kept in the list for as long as the
+   * form lives — see `feedbackTargets`. Without it, an app that reports before
+   * it has a card would drop out of the picker the moment somebody looked at
+   * another option, which is a one-way door out of the app they came from.
+   */
+  arrivedAs: string | undefined
+  value: string
+  onChange: (id: string) => void
+}) {
+  const doc = useSiteContent()
+  const targets = useMemo(() => feedbackTargets(doc, [arrivedAs, value]), [doc, arrivedAs, value])
+
+  return (
+    <div className="fb__field">
+      <label className="fb__label" htmlFor="fb-about">
+        What Is This About?
+      </label>
+      <div className="fb__select-wrap">
+        <select
+          id="fb-about"
+          className="fb__input fb__select"
+          value={value}
+          onChange={(e) => onChange(e.currentTarget.value)}
+        >
+          {targets.map((target) => (
+            <option key={target.id} value={target.id}>
+              {target.name}
+            </option>
+          ))}
+        </select>
+        {/* `appearance: none` takes the native arrow with it, so the control
+            draws its own — rule 5. Decorative: the select already announces
+            itself as a combo box. */}
+        <span className="fb__select-chevron" aria-hidden="true">
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            focusable="false"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </div>
+      {/* The site's own name is asked for rather than typed, so this sentence
+          and the option it is about cannot come to disagree. */}
+      <p className="fb__hint">
+        {appName(FEEDBACK_APP_ID)} is this site itself — pick an app or a tool if that is what your
+        feedback is about.
+      </p>
+    </div>
+  )
+}
 
 /**
  * Send Feedback, from the account menu.
@@ -38,17 +132,28 @@ export function FeedbackDialog({
   open: boolean
   onClose: () => void
   /**
-   * Which app this report is ABOUT, when the reader did not arrive from this
+   * Which app the reader ARRIVED about, when they did not arrive from this
    * site. Set by `#/feedback/<app>`, and the reason that route exists: several
    * of our apps have no sign-in of their own, so their Send Feedback opens
    * this form, and without this every one of those reports would land in the
    * console labelled `tdg-site`.
+   *
+   * It is where the About picker STARTS, not where it is pinned — see
+   * `AboutField`. The report files under whatever the picker is showing when
+   * Send is pressed, which is this unless the reader changed it.
    */
   app?: string
 }) {
   const { status, profile, user } = useAuth()
 
   const [kind, setKind] = useState<string | null>(null)
+  /**
+   * Which app the report files under. Seeded from the arrival and changeable
+   * by the reader; `FEEDBACK_APP_ID` — this site — is the answer for anybody
+   * who opened the form from the account menu and left the field alone, which
+   * is what every report filed before this picker existed said.
+   */
+  const [about, setAbout] = useState<string>(app ?? FEEDBACK_APP_ID)
   const [message, setMessage] = useState('')
   const [contact, setContact] = useState('')
   const [sending, setSending] = useState(false)
@@ -68,15 +173,22 @@ export function FeedbackDialog({
 
   // A fresh opening is a fresh report. Reset on open, not on close, so the
   // closing animation never flashes an emptied form.
+  //
+  // `app` is in the deps beside `open` because a NEW `#/feedback/<app>` arrival
+  // is also a fresh report, and one can land while the dialog is already up:
+  // App.tsx opens it on the route and the route can change again underneath.
+  // Keyed on `open` alone, the picker would go on showing the app the reader
+  // came from ten minutes ago while the header named the one they just clicked.
   useEffect(() => {
     if (!open) return
     setKind(null)
+    setAbout(app ?? FEEDBACK_APP_ID)
     setMessage('')
     setContact('')
     setSending(false)
     setError(null)
     setSentId(null)
-  }, [open])
+  }, [open, app])
 
   // Where this account stands against the limits, asked once per opening and
   // again after each send. Signed-out openings never ask: the answer would be
@@ -135,6 +247,20 @@ export function FeedbackDialog({
 
   const whoami = profile?.display_name || (profile?.username ? `@${profile.username}` : user?.email)
 
+  /**
+   * Is this report about something OTHER than the site the reader is looking
+   * at? The header and the opening line both answer to the picker rather than
+   * to the arrival, so switching the field to this site stops the eyebrow
+   * claiming an app the report is no longer about — and switching it to an app
+   * says so, even for somebody who opened the form from the account menu.
+   *
+   * `Feedback · TDG Site` is deliberately never drawn. On this site that names
+   * the page it is written on, which is the one thing an eyebrow cannot tell
+   * anybody, and it would put a line into every report sent from the account
+   * menu that says nothing.
+   */
+  const elsewhere = about !== FEEDBACK_APP_ID
+
   // One line, two contexts. The cooldown wording differs by a clause because
   // "you can send another in a minute" answers a report that just landed,
   // while "one report at a time" answers a form somebody is still filling in.
@@ -185,7 +311,7 @@ export function FeedbackDialog({
     }
     setError(null)
     setSending(true)
-    const answer = await submitFeedback({ kind, message: message.trim(), contact, app })
+    const answer = await submitFeedback({ kind, message: message.trim(), contact, app: about })
     setSending(false)
     if (answer.error) {
       setError(answer.error)
@@ -215,11 +341,15 @@ export function FeedbackDialog({
         aria-labelledby="fb-title"
       >
         <header className="fb__head">
-          {/* The eyebrow names the APP when the report is not about this site.
-              A reader who pressed Send Feedback inside MARANATHA and landed on
-              a browser tab is entitled to see, before they type, that the words
-              are still going where they meant them to. */}
-          <div className="fb__eyebrow">{app ? `Feedback · ${appName(app)}` : 'Feedback'}</div>
+          {/* The eyebrow names the APP whenever the report is not about this
+              site — reading the picker, so it is as true after somebody changes
+              that field as it is on arrival. A reader who pressed Send Feedback
+              inside MARANATHA and landed on a browser tab is entitled to see,
+              before they type, that the words are still going where they meant
+              them to. */}
+          <div className="fb__eyebrow">
+            {elsewhere ? `Feedback · ${appName(about)}` : 'Feedback'}
+          </div>
           <button
             ref={closeRef}
             type="button"
@@ -267,12 +397,16 @@ export function FeedbackDialog({
               Tell Us What You Think
             </h2>
             <p className="fb__sub">
-              {app
-                ? `This goes to the two of us as a report about ${appName(app)}, with your account attached — so if it needs an answer, we can put one back in front of you.`
+              {elsewhere
+                ? `This goes to the two of us as a report about ${appName(about)}, with your account attached — so if it needs an answer, we can put one back in front of you.`
                 : 'It goes straight to the two of us, with your account attached — so if it needs an answer, we can put one back in front of you, right here.'}
             </p>
 
             <form className="fb__form" onSubmit={handleSubmit}>
+              {/* First, because it is the question the rest of the form is an
+                  answer to: which of ours this is about decides who reads it. */}
+              <AboutField arrivedAs={app} value={about} onChange={setAbout} />
+
               {/* A real radiogroup, keyboard contract included: arrows move
                   and select, and only one option is in the tab order at a time
                   (the checked one, or the first while nothing is chosen) so Tab
