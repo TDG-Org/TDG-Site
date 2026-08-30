@@ -26,6 +26,17 @@ import type { PageLink, PageSection } from './pageBlocks'
  *
  * **Closed rows are informative.** Every section carries a `what`, one line
  * saying what is inside it, because a shut page is meant to read as an index.
+ *
+ * **`facts` is a spec sheet, not a highlight reel.** The strip under the
+ * heading answers the four questions somebody asks before they try a thing:
+ * what it runs on, what else they have to have, what it costs them or does
+ * with their data, and whether it is finished. A row that sells a feature is
+ * a row not answering one of those, and the feature is already in the lede,
+ * the chips and the guide. Where an app genuinely has nothing to say under a
+ * heading — a browser app needs nothing installed — that row is left out
+ * rather than filled with "nothing"; `AppPage.tsx` drops empty ones and the
+ * strip's last line grows to fill itself, so any count from one up reads
+ * right.
  */
 
 export type AppPage = {
@@ -58,9 +69,16 @@ const BIBLE_EDUCATOR: AppPage = {
   intro:
     'Sixteen public-domain translations are readable straight away and each one can be downloaded whole for offline use. Everything you write, highlight and save stays on your own device.',
   facts: [
-    { label: 'Where it runs', value: 'Any modern browser, installable on phone, tablet or desktop' },
+    {
+      label: 'Where it runs',
+      value:
+        'Any modern browser, on a phone, tablet or computer. Nothing to install, and it can be added to your home screen or desktop so it opens in its own window',
+    },
+    {
+      label: 'Offline',
+      value: 'Full, once a translation is downloaded. A download is stored by the browser you did it in',
+    },
     { label: 'Price', value: 'Free, and no account is needed to use it' },
-    { label: 'Offline', value: 'Full, once a translation is downloaded' },
     { label: 'Status', value: 'In development — the current build is live to try' },
   ],
   sections: [
@@ -345,8 +363,20 @@ const SAY2QUILL: AppPage = {
     'Speech is turned into text by a model file on your own disk, so there is no account, no per-word cost and no limit, and it keeps working with the network unplugged. Notepad, VS Code, Chrome, Discord: it needs nothing from the app you are typing into.',
   facts: [
     { label: 'Where it runs', value: 'Windows 10 and 11, 64-bit' },
-    { label: 'Speech', value: 'On your own machine, through whisper.cpp' },
-    { label: 'Price', value: 'Free, no account' },
+    {
+      label: 'You will need',
+      value:
+        'Node.js 18 or newer on your PATH, and a microphone. No Visual Studio, no Python: the speech engine is a prebuilt binary',
+    },
+    {
+      label: 'Disk space',
+      value:
+        'About 150 MB for the standard speech model, or 490 MB for the accurate one. It downloads on first launch',
+    },
+    {
+      label: 'Speech',
+      value: 'On your own machine, through whisper.cpp. No account, no per-word cost, and it works offline',
+    },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
   sections: [
@@ -626,9 +656,17 @@ const MAKULLVENY: AppPage = {
   intro:
     'It is a desktop app and everything you write stays on your machine. Nine full themes change the whole room, not just an accent colour: background art, paper, type and chrome all move together.',
   facts: [
-    { label: 'Where it runs', value: 'Desktop. The download page lists the builds that are published' },
+    {
+      label: 'Where it runs',
+      value:
+        'Windows, macOS on Apple silicon, and Linux. The download page offers the build for the system you are on',
+    },
+    {
+      label: 'You will need',
+      value:
+        'Nothing else — the installer carries everything. The Windows builds are not signed, so Windows may warn about an unknown publisher',
+    },
     { label: 'Your work', value: 'Kept on your own machine by default' },
-    { label: 'Themes', value: 'Nine, plus ambience and a lofi radio' },
     { label: 'Status', value: 'Released, and still being added to' },
   ],
   links: [
@@ -819,9 +857,13 @@ const DEVFLEET: AppPage = {
   intro:
     'Opening a project does not take you anywhere. It opens a pane beside the list with its own terminal, its own Claude Code session, its own diff review and its own notebook, and you can have sixteen open at once.',
   facts: [
-    { label: 'Where it runs', value: 'Windows, and it needs Node.js on the PATH' },
+    { label: 'Where it runs', value: 'Windows, 64-bit' },
+    {
+      label: 'You will need',
+      value:
+        'Node.js 20.19 or newer on your PATH, and nothing else. The launcher installs and builds on first run',
+    },
     { label: 'Panes at once', value: 'Up to sixteen, stacked or tiled' },
-    { label: 'Your repositories', value: 'Everything it writes goes through one verified path' },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
   links: [{ label: 'The DevFleet Theme Pack is in the Store', href: '#/store/devfleet' }],
@@ -1082,9 +1124,20 @@ const MUSIC_EVERYTHING: AppPage = {
   intro:
     'Every part of it works on its own, so it is as useful for ten minutes of ear training as for building a melody you want in your DAW. A microphone and a MIDI keyboard both help, and neither is required.',
   facts: [
-    { label: 'Where it runs', value: 'Desktop, with a per-user Windows installer produced by the build' },
-    { label: 'You will want', value: 'A microphone for pitch tracking, MIDI keyboard optional' },
-    { label: 'Exports', value: 'Standard MIDI files that open in FL Studio and other DAWs' },
+    {
+      label: 'Where it runs',
+      value:
+        'Windows, from a launcher you double-click. The build also produces a per-user installer',
+    },
+    {
+      label: 'You will need',
+      value:
+        'Node.js to run it from source, and a microphone for pitch tracking. A MIDI keyboard is optional',
+    },
+    {
+      label: 'Exports',
+      value: 'Standard MIDI files, format 0 at 480 PPQ, that open in FL Studio and other DAWs',
+    },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
   sections: [
@@ -1330,9 +1383,12 @@ const VEDITOR: AppPage = {
   intro:
     'The window is built out of dockable panels, so the editor is arranged the way you work rather than the way it shipped. Nine themes come with it, and a project is a file on your disk.',
   facts: [
-    { label: 'Where it runs', value: 'Desktop. It needs Node.js 20.19 or newer today' },
-    { label: 'Media', value: 'A licence-clean FFmpeg build, fetched and checksum-verified by the launcher' },
-    { label: 'Themes', value: 'Nine, and you can write your own as a JSON file' },
+    { label: 'Where it runs', value: 'Windows desktop, from a launcher you double-click' },
+    { label: 'You will need', value: 'Node.js 20.19 or newer on your PATH' },
+    {
+      label: 'Media',
+      value: 'A licence-clean FFmpeg build, fetched and checksum-verified by the launcher',
+    },
     { label: 'Status', value: 'In development, no installer published yet' },
   ],
   links: [{ label: 'Veditor packs are in the Store', href: '#/store/veditor' }],
@@ -1579,9 +1635,214 @@ const VEDITOR: AppPage = {
   ],
 }
 
+const MVTRADE: AppPage = {
+  slug: 'mvtrade',
+  index: '07',
+  group: 'Apps',
+  backHash: '#apps',
+  backLabel: 'Apps',
+  title: 'MVTrade',
+  lede: 'MVTrade is a day-trading robot that runs on your own computer: it watches the market, picks the stocks it wants, decides when to buy and sell, and learns from every trade it makes. It only ever spends paper money — pretend dollars in a practice account at a broker — and real-money trading is locked in the code on purpose.',
+  intro:
+    'The brain inside is called Jet, and its trading decisions are ordinary deterministic code rather than an AI guessing at your orders. There is an optional AI advisor beside it that reads the news and suggests stocks worth a look, and it can never place, block or change a trade.',
+  facts: [
+    { label: 'Where it runs', value: 'Windows, with Node.js and Python 3.12 on the machine' },
+    { label: 'The money', value: 'Paper only — real-money trading is locked in the code' },
+    { label: 'The broker', value: 'A free Alpaca paper account, connected with your own keys' },
+    { label: 'Status', value: 'In development, run from the repository — no installer yet' },
+  ],
+  sections: [
+    {
+      id: 'guide',
+      title: 'Guide',
+      what: 'From nothing installed to a robot paper-trading the open by itself.',
+      tag: 'START HERE',
+      blocks: [
+        {
+          kind: 'text',
+          text: 'Four free things are needed: Node.js, Python, an Alpaca paper account and, if you want the advisor, Ollama. The order below is the one the app itself expects, and it takes about fifteen minutes.',
+        },
+        {
+          kind: 'steps',
+          steps: [
+            {
+              title: 'Install the two runtimes',
+              text: 'Node.js from nodejs.org, the LTS installer. Python 3.12 or newer from python.org, and tick “Add python.exe to PATH” on the first screen of that installer — it is easy to miss, and everything later depends on it.',
+            },
+            {
+              title: 'Get the project and start it',
+              text: 'Clone the repository, run npm install, then npm start. The app opens on a splash screen, writes its own config file and installs the Python packages it needs by itself. You never open a file by hand.',
+            },
+            {
+              title: 'Open a free Alpaca paper account',
+              text: 'Alpaca is the broker: it runs the practice account and streams the market data. Sign up, put the dashboard in Paper mode, and generate an API key. You get a Key ID beginning PK and a secret that is shown once.',
+            },
+            {
+              title: 'Paste the keys in',
+              text: 'The Keys tab and the Setup page both take them, in the same fields, and it verifies instantly with no restart. Live-money keys are refused on purpose — only paper keys are accepted.',
+            },
+            {
+              title: 'Turn the two order switches on',
+              text: 'Out of the box the app can watch but not order: both switches ship off. Allow paper orders, allow automated strategy orders, save, then restart, because they are read at startup. Skip this and you will see candidates flowing and no orders at all.',
+            },
+            {
+              title: 'Wake the advisor, if you want one',
+              text: 'Install Ollama and pull a model, then set the AI provider to ollama and restart. Installing it is not enough by itself — it is a settings switch, not an install check. The badge in the header says which of ready, checking, down and disabled it is. Trading works fine without it.',
+            },
+            {
+              title: 'Go hands-off',
+              text: 'Three settings between them open the app before the market, start trading at the bell, and close it again after the close, waking the machine from sleep if it has to. The kill switch, the holidays and the market clock win over every one of them.',
+            },
+          ],
+        },
+        {
+          kind: 'note',
+          text: 'Tape is old Wall Street slang for the live feed of prices and trades, from the ticker-tape machines of the 1900s, and the app uses the word throughout. Live tape is fresh data. Stale tape is old data, and Jet refuses to trade on it.',
+        },
+      ],
+    },
+    {
+      id: 'brain',
+      title: 'The brain',
+      what: 'Jet, the three traders inside it, and the four stations a trade passes through.',
+      tag: 'JET',
+      blocks: [
+        {
+          kind: 'text',
+          text: 'Jet is the whole brain, and three traders share one engine inside it. The Day Trader takes fast trades on small hot stocks and is in and out the same day; the Swinger holds for days; the Long-term trader buys quality and sits on it. Only the Day Trader is active. The other two watch and learn.',
+        },
+        {
+          kind: 'features',
+          items: [
+            {
+              name: 'Four stations and a referee',
+              text: 'Eyes watch the live market data, Scout picks the candidates, Nerve decides size and timing, and Hands place the order. A risk referee watches all four and can veto anything, always.',
+            },
+            {
+              name: 'The decisions are code',
+              text: 'Nothing an AI generated ever becomes an order. The trading path is deterministic and testable, which is what makes a bad day reproducible rather than mysterious.',
+            },
+            {
+              name: 'Gideon, the advisor',
+              text: 'An optional AI that runs alongside Jet rather than inside it. It reads news and suggests stocks worth a look, and it can never place, block or change a trade.',
+            },
+            {
+              name: 'Learning is always on',
+              text: 'It cannot be switched off. Results from practice simulations are treated as homework and never as profit, so a good day in a simulation is never counted as money.',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'safety',
+      title: 'The safety net',
+      what: 'Why a day with no trades on it is usually a guard doing its job.',
+      tag: 'GUARDS',
+      blocks: [
+        {
+          kind: 'text',
+          text: 'The guards are the point of the app rather than an obstacle in front of it. A robot that trades badly is worse than one that does not trade at all, so each of these is a rule in the code rather than an intention.',
+        },
+        {
+          kind: 'features',
+          items: [
+            {
+              name: 'Real money is locked',
+              text: 'A triple lock in the code only ever allows the paper account, and live-money keys are refused at the point they are pasted in.',
+            },
+            {
+              name: 'The exit sits at the broker',
+              text: 'Every position gets a safety stop placed at Alpaca. If the app crashes or the machine dies, that exit order is still waiting on the broker’s servers.',
+            },
+            {
+              name: 'A daily loss circuit',
+              text: 'If a day goes badly wrong past a set amount, Jet stops entering and flattens what is open. The day is over, and tomorrow it resets.',
+            },
+            {
+              name: 'Gears, not knobs',
+              text: 'Aggressive at the open, careful at midday, exits only near the close. The gear changes by itself, so there is no manual risk dial to fat-finger.',
+            },
+          ],
+        },
+        {
+          kind: 'note',
+          text: 'A quiet day is usually a choppy midday market, spreads too wide to be worth crossing, or a blind data feed. The dashboard names the exact reason rather than leaving you to guess at it.',
+        },
+      ],
+    },
+    {
+      id: 'dashboard',
+      title: 'The dashboard',
+      what: 'What is on screen while it runs, and where the reasons are written down.',
+      tag: 'ON SCREEN',
+      blocks: [
+        {
+          kind: 'features',
+          items: [
+            {
+              name: 'The money cards',
+              text: 'The paper account’s real equity, the budget, the state of the market and the state of the risk, at the top where they can be read at a glance.',
+            },
+            {
+              name: 'Live performance',
+              text: 'Your equity as a candlestick chart at any timeframe, with zoom, so a session reads as a shape rather than as a number that moved.',
+            },
+            {
+              name: 'Stocks in play',
+              text: 'What the Eyes are watching right now, each one with the reason it is being watched.',
+            },
+            {
+              name: 'The Logger',
+              text: 'The play-by-play of every decision: what Jet saw, what it wanted, and what it did or refused, with the reason. Filters for orders, watches, blocks and issues, copy buttons, and a pop-out window that can stay on top. Errors are kept as issue rows, so one cannot be dismissed and lost.',
+            },
+            {
+              name: 'Guide and Setup',
+              text: 'The whole manual is inside the app, written from zero, and the Setup page checks readiness with live ticks rather than telling you it should be fine.',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'not-trading',
+      title: 'When it will not trade',
+      what: 'The four things that account for almost every quiet day.',
+      tag: 'ANSWERS',
+      blocks: [
+        {
+          kind: 'qa',
+          items: [
+            {
+              q: 'Candidates are flowing but nothing is ordered',
+              a: 'The two order switches are still off. Turn both on in the Keys tab, save, and restart — they are read at startup, so saving alone does not arm them.',
+            },
+            {
+              q: 'The data feed has gone blind',
+              a: 'The stream needs two Python packages, msgpack and websockets. The app installs them itself, and where something has blocked that, installing them by hand fixes it.',
+            },
+            {
+              q: 'It cannot save anything',
+              a: 'On Windows, Controlled Folder Access protects the Documents folder by default and silently blocks the app from writing its data. Allow both electron.exe and python.exe through it, or keep the project outside Documents.',
+            },
+            {
+              q: 'Two machines, one account',
+              a: 'Alpaca allows one live data connection. Two computers signed in with the same keys fight over it and both go blind, so run one at a time.',
+            },
+          ],
+        },
+        {
+          kind: 'note',
+          text: 'The dashboard diagnoses all four by itself and names the blocker in a message and an issue row, so none of this is something you have to remember.',
+        },
+      ],
+    },
+  ],
+}
+
 const VOLUME_CONTROLLER_PAGE: AppPage = {
   slug: 'volume-controller',
-  index: '07',
+  index: '08',
   group: 'Tools',
   backHash: '#tools',
   backLabel: 'Tools',
@@ -1590,9 +1851,17 @@ const VOLUME_CONTROLLER_PAGE: AppPage = {
   intro:
     'Beyond volume it carries the sound tools a quiet video usually sends you looking for: loudness levelling, an equalizer, delay and reverb, mono and balance. Every one of them can be set globally or for one site.',
   facts: [
-    { label: 'Where it runs', value: 'Chrome, Edge, Brave, Opera and Firefox where Manifest V3 is supported' },
-    { label: 'Price', value: 'Free' },
+    {
+      label: 'Where it runs',
+      value:
+        'Desktop Chrome, Edge, Brave and Opera, and Firefox where Manifest V3 is supported. There is nothing to install beyond the extension',
+    },
     { label: 'Range', value: '0% to 600%, with a soft limiter above 100%' },
+    {
+      label: 'What it asks for',
+      value: 'Storage and scripting, on every site, because the controls sit on top of the page',
+    },
+    { label: 'Price', value: 'Free' },
     { label: 'Data', value: 'No accounts, no analytics, no servers. Settings stay in your browser' },
   ],
   links: [
@@ -1797,7 +2066,7 @@ const VOLUME_CONTROLLER_PAGE: AppPage = {
 
 const VIDHELPER: AppPage = {
   slug: 'vidhelper',
-  index: '08',
+  index: '09',
   group: 'Tools',
   backHash: '#tools',
   backLabel: 'Tools',
@@ -1806,9 +2075,21 @@ const VIDHELPER: AppPage = {
   intro:
     'Nothing leaves your machine except the download itself. The server only listens on 127.0.0.1, which is another way of saying it is not reachable from anywhere but the computer it is running on.',
   facts: [
-    { label: 'Where it runs', value: 'Your own machine. The instructions are written for Windows 11' },
-    { label: 'You will need', value: 'Node.js 18+, yt-dlp and FFmpeg. aria2 is optional and only makes it faster' },
+    {
+      label: 'Where it runs',
+      value:
+        'Your own machine: a small server plus an Edge or Chrome extension. The instructions are written for Windows 11',
+    },
+    {
+      label: 'You will need',
+      value:
+        'Node.js 18 or newer, yt-dlp and FFmpeg on your PATH. aria2 is optional and only makes downloads faster',
+    },
     { label: 'Quality', value: 'Up to 1080p, video and audio merged into one mp4' },
+    {
+      label: 'Where it listens',
+      value: '127.0.0.1 on port 47821, which is reachable only from the computer it is running on',
+    },
     { label: 'Status', value: 'Work in progress' },
   ],
   sections: [
@@ -1929,7 +2210,7 @@ const VIDHELPER: AppPage = {
 
 const N8_TOOLS: AppPage = {
   slug: 'n8-tools',
-  index: '09',
+  index: '10',
   group: 'Tools',
   backHash: '#tools',
   backLabel: 'Tools',
@@ -1938,9 +2219,13 @@ const N8_TOOLS: AppPage = {
   intro:
     'It is one page with a tab per tool, and the tools share what they can: one microphone choice, one set of saved data. Everything happens locally, and the pieces that need extra software say so and stay out of the way when it is missing.',
   facts: [
-    { label: 'Where it runs', value: 'Your browser, served from your own machine' },
+    { label: 'Where it runs', value: 'Your browser, served from your own machine on 127.0.0.1' },
     { label: 'You will need', value: 'Node.js, and a microphone for anything that listens' },
-    { label: 'Optional extras', value: 'Ollama for the AI parts, Python for Whisper transcription' },
+    {
+      label: 'Optional extras',
+      value:
+        'Ollama for the AI parts, and Python for Whisper transcription when a video has no captions',
+    },
     { label: 'Status', value: 'Work in progress' },
   ],
   sections: [
@@ -2129,7 +2414,7 @@ const N8_TOOLS: AppPage = {
 
 const MARANATHA_PAGE: AppPage = {
   slug: 'maranatha',
-  index: '10',
+  index: '11',
   group: 'Game',
   backHash: '#building',
   backLabel: 'Building',
@@ -2138,9 +2423,17 @@ const MARANATHA_PAGE: AppPage = {
   intro:
     'It opens in a browser with nothing to install, no account and no cost, and your progress is saved in your own browser. The first story is Joseph, and its opening scene is playable end to end.',
   facts: [
-    { label: 'Where it runs', value: 'In a browser, on a phone or a computer' },
+    {
+      label: 'Where it runs',
+      value:
+        'In a browser, on a phone or a computer. It draws in 3D, so it needs WebGL, and it lowers its own resolution to stay smooth on the device you are on',
+    },
+    { label: 'Controls', value: 'Keyboard on a computer, an on-screen joystick on a phone' },
     { label: 'Price', value: 'Free. No install, no login, no ads, no tracking' },
-    { label: 'Scripture', value: 'The World English Bible, public domain, checked verse by verse' },
+    {
+      label: 'Scripture',
+      value: 'The World English Bible, public domain, checked verse by verse',
+    },
     { label: 'Status', value: 'In playtest. One scene playable, more being written' },
   ],
   sections: [
@@ -2298,6 +2591,7 @@ export const APP_PAGES: AppPage[] = [
   DEVFLEET,
   MUSIC_EVERYTHING,
   VEDITOR,
+  MVTRADE,
   VOLUME_CONTROLLER_PAGE,
   VIDHELPER,
   N8_TOOLS,

@@ -49,6 +49,12 @@ function AppPageBody({ page }: { page: AppPageData }) {
      card already carries a hand-written way in — and the dedupe below keeps
      the derived link out when the page's own `links` already name the same
      destination. See src/live/README.md. */
+  /* A fact is only worth a cell if it SAYS something. The Content tab can
+     rewrite this strip, and a row with an empty side is a labelled blank on
+     the page, so the empty ones are dropped here and a page left with none
+     prints no strip at all rather than an empty bordered box. */
+  const facts = page.facts.filter((f) => f.label.trim() !== '' && f.value.trim() !== '')
+
   const ask = liveRepoForPage(doc, page.slug)
   const live = useLiveAccess(ask.repo, page.title, ask.verb)
   const liveLink =
@@ -86,14 +92,16 @@ function AppPageBody({ page }: { page: AppPageData }) {
             </div>
           )}
 
-          <dl className="appview__glance">
-            {page.facts.map((fact) => (
-              <div key={fact.label} className="appview__glance-row">
-                <dt className="appview__glance-label">{fact.label}</dt>
-                <dd className="appview__glance-value">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
+          {facts.length > 0 && (
+            <dl className="appview__glance">
+              {facts.map((fact) => (
+                <div key={fact.label} className="appview__glance-row">
+                  <dt className="appview__glance-label">{fact.label}</dt>
+                  <dd className="appview__glance-value">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
           {((page.links && page.links.length > 0) || liveLink || liveDown) && (
             <div className="appview__links">

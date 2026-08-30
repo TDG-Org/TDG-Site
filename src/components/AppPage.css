@@ -144,9 +144,15 @@
 }
 
 /* at a glance */
+/* Rows wrap and the last line's cells GROW to fill it. As a grid the strip
+   left the unused tracks of a part-full last row uncovered, and since the 1px
+   rules between cells are this element's own background showing through, that
+   gap rendered as a block of border colour — a cell-shaped hole at the end of
+   any page whose fact count is not a multiple of the column count, which is
+   most of them. Flex has no empty tracks to leak. */
 .appview__glance {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1px;
   margin: 26px 0 0;
   border: 1px solid var(--border);
@@ -156,6 +162,8 @@
   transition: var(--t-theme);
 }
 .appview__glance-row {
+  flex: 1 1 240px;
+  min-width: min(100%, 240px);
   padding: 13px 15px;
   background-color: var(--surface);
   transition: var(--t-theme);
