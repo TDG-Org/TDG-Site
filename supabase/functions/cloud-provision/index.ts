@@ -143,6 +143,21 @@ async function findLink(pack: string, plan: string): Promise<Record<string, unkn
   return null;
 }
 
+/** The price a link actually sells. The list endpoint does not expand line
+ *  items, and a link's price is fixed at creation — so on a REPRICE the link
+ *  found by metadata still sells the old amount, and reusing it would be the
+ *  one mistake a shop may not make. Null when unreadable. */
+async function linkPriceId(linkId: string): Promise<string | null> {
+  try {
+    const items = await stripe('GET', `/v1/payment_links/${linkId}/line_items`, { limit: '1' });
+    const price = ((items.data as Record<string, unknown>[]) ?? [])[0]?.price;
+    const id = typeof price === 'object' && price !== null ? (price as Record<string, unknown>).id : null;
+    return typeof id === 'string' && id !== '' ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 function linkBase(spec: PlanSpec, priceId: string, plan: 'monthly' | 'annual'): Record<string, string> {
   return {
     'line_items[0][price]': priceId,
@@ -218,8 +233,10 @@ async function provision(): Promise<Record<string, unknown>> {
         'The big TDG Cloud allowance, for storage-heavy work: TDG Veditor projects and media, ' +
         'Developer builds and large assets, alongside everything the Standard plan covers. One ' +
         'pooled allowance across your TDG apps. Cancel any time; your data stays readable. - TDG Brothers',
-      monthlyCents: 999,
-      annualCents: 9999,
+      // 2026-08-30: raised from 999/9999 (1 TB) to match the market's big-tier
+      // standard at 2 TB; keep in step with tdg_cloud_config.plans.studio.
+      monthlyCents: 1299,
+      annualCents: 12999,
     },
   ];
 
@@ -265,6 +282,18 @@ async function provision(): Promise<Record<string, unknown>> {
       prices[plan] = priceId;
 
       let link = await findLink(spec.pack, plan);
+      if (link !== null) {
+        // A reprice retires the old link rather than reusing it: the amount
+        // is baked in at creation, and config must never point at a link that
+        // charges a number the plan no longer says.
+        const selling = await linkPriceId(String(link.id));
+        if (selling !== null && selling !== priceId) {
+          if (link.active === true) {
+            await stripe('POST', `/v1/payment_links/${String(link.id)}`, { active: 'false' });
+          }
+          link = null;
+        }
+      }
       let managedPayments =
         ((link?.managed_payments ?? {}) as Record<string, unknown>).enabled === true;
       if (link === null) {

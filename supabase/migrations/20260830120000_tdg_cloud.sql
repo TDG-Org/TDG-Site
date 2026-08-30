@@ -12,6 +12,10 @@
 --  from this file's config rather than from anything hardcoded in a client.
 --
 --  THE TWO PLANS, AND WHERE THEIR NUMBERS LIVE
+--  (Comment-only edit, 2026-08-30, per migrations/README's rule: the seed
+--  below is the HISTORY — Studio was raised the same day, in config and
+--  Stripe, to 2 TB · $12.99/mo · $129.99/yr. Read tdg_cloud_config, never
+--  this file, for the current numbers.)
 --  `standard` (200 GB · $2.99/mo · $29.99/yr) for ordinary app data, and
 --  `studio` (1 TB · $9.99/mo · $99.99/yr) for storage-heavy work — Veditor
 --  projects and media, Developer-app assets. The numbers in this paragraph are
