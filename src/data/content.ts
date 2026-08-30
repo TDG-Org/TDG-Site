@@ -469,6 +469,38 @@ export const APPS: AppCard[] = [
       scene: 'dusk',
     },
   },
+  {
+    id: 'app-mvtrade',
+    index: '07',
+    page: 'mvtrade',
+    // Confirmed against the clone line in the app's own README, not guessed:
+    // `git clone https://github.com/TDG-Org/MVTrade.git`.
+    repo: 'MVTrade',
+    title: 'MVTrade',
+    copy: 'A day-trading robot that runs on your own machine and learns from every trade it makes. It only ever spends paper money — real-money trading is locked in the code on purpose, and stays locked until the strategy proves itself.',
+    icon: 'icon-mvtrade.svg',
+    iconShape: 'tile',
+    chips: [
+      { label: 'WINDOWS' },
+      { label: 'IN DEV', hot: true },
+      { label: 'PAPER ONLY' },
+      { label: 'LOCAL' },
+    ],
+    status: 'Coming soon',
+    slotPlaceholder: 'Drop an MVTrade screenshot',
+    art: {
+      icon: 'icon-mvtrade.svg',
+      iconShape: 'tile',
+      title: 'MVTrade',
+      line: 'A trading robot that only ever spends pretend money.',
+      facts: ['Windows', 'Paper money only', 'Learns every night'],
+      // The second cover drawn on `ridge`, and the only repeat in the set.
+      // `KeyArtSpec` above says a new app picks one of the five rather than
+      // describing a picture of its own; this card sits three along from
+      // DevFleet's, so the pair is never side by side in the grid.
+      scene: 'ridge',
+    },
+  },
 ]
 
 export type ToolCard = {
@@ -496,7 +528,7 @@ export type ToolCard = {
 
 export const TOOLS: ToolCard[] = [
   {
-    index: '07',
+    index: '08',
     page: 'volume-controller',
     // Named for the claim alone: the hand-written `href` below outranks
     // discovery, so the runtime never asks anything about this repo.
@@ -510,7 +542,7 @@ export const TOOLS: ToolCard[] = [
     href: VOLUME_CONTROLLER,
   },
   {
-    index: '08',
+    index: '09',
     page: 'vidhelper',
     repo: 'VidHelper', // expected name — check against the repo when it first deploys
     title: 'VidHelper',
@@ -521,7 +553,7 @@ export const TOOLS: ToolCard[] = [
     cta: 'Coming soon',
   },
   {
-    index: '09',
+    index: '10',
     page: 'n8-tools',
     repo: 'N8-Tools', // expected name — check against the repo when it first deploys
     title: 'N8-Tools',

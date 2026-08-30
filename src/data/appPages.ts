@@ -1646,10 +1646,18 @@ const MVTRADE: AppPage = {
   intro:
     'The brain inside is called Jet, and its trading decisions are ordinary deterministic code rather than an AI guessing at your orders. There is an optional AI advisor beside it that reads the news and suggests stocks worth a look, and it can never place, block or change a trade.',
   facts: [
-    { label: 'Where it runs', value: 'Windows, with Node.js and Python 3.12 on the machine' },
-    { label: 'The money', value: 'Paper only — real-money trading is locked in the code' },
-    { label: 'The broker', value: 'A free Alpaca paper account, connected with your own keys' },
-    { label: 'Status', value: 'In development, run from the repository — no installer yet' },
+    { label: 'Where it runs', value: 'Windows, 64-bit' },
+    {
+      label: 'You will need',
+      value:
+        'Node.js and Python 3.12 or newer on your PATH, and a free Alpaca paper account for the practice money and the market data. Ollama only if you want the AI advisor',
+    },
+    {
+      label: 'The money',
+      value:
+        'Paper only. Real-money trading is locked in the code, live-money keys are refused, and your keys stay in a file on your own machine',
+    },
+    { label: 'Status', value: 'In development, no installer published yet' },
   ],
   sections: [
     {
