@@ -660,6 +660,23 @@
      Origin's lit snow is still a card. */
   --card-bg: rgba(9, 10, 16, 0.74);
 
+  /* ── the chart palette ──────────────────────────────────────────────────
+     Eight hues for data that needs to be told APART — the Cloud storage
+     visualizer's per-app segments are the first consumer, and any future
+     chart takes these same eight rather than minting its own. Per theme,
+     for the --live-fg reason: one set of hues cannot sit legibly on both a
+     near-black surface and a near-white one. Ordered so neighbours contrast
+     (blue next to amber, not blue next to teal); consumers assign by rank,
+     not by hashing names, so two big segments never land on sibling hues. */
+  --chart-1: #6ea8ff;
+  --chart-2: #f0b860;
+  --chart-3: #5fcf90;
+  --chart-4: #c792ea;
+  --chart-5: #5ed3c6;
+  --chart-6: #ef8fae;
+  --chart-7: #a9c064;
+  --chart-8: #93a0bb;
+
   /* type */
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -705,6 +722,16 @@
   /* --danger-soft / --danger-border are deliberately absent, not missing:
      the red they are mixed from is the same in both themes. See :root. */
   --danger: #b03636;
+
+  /* the same eight chart hues, restated at the depth a white ground needs */
+  --chart-1: #2e66d8;
+  --chart-2: #a3690f;
+  --chart-3: #1f8a52;
+  --chart-4: #7a3fd1;
+  --chart-5: #0e7f74;
+  --chart-6: #bf3a68;
+  --chart-7: #5c7420;
+  --chart-8: #566076;
 
   --invert-bg: #141419;
   --invert-fg: #f6f6f8;

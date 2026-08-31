@@ -9,6 +9,7 @@ import { formatBytes, formatQuota } from '../data/cloud'
 import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
 import { cloudDeleteAll, cloudDownloadUrl } from './transfer'
+import { CloudViz } from './CloudViz'
 import { CloudManage } from './CloudManage'
 import './Cloud.css'
 
@@ -97,11 +98,25 @@ function DownloadRow({ file, appTitle }: { file: FileRow; appTitle: string }) {
   )
 }
 
-/** One app's hosted files, loaded when opened — an account can hold a lot. */
-function AppFiles({ app, appTitle }: { app: string; appTitle: string }) {
+/** One app's hosted files, loaded when opened — an account can hold a lot.
+ *  `autoOpen` is the visualizer's hand reaching in: pinning that app's
+ *  segment opens this browser without a second press. */
+function AppFiles({
+  app,
+  appTitle,
+  autoOpen = false,
+}: {
+  app: string
+  appTitle: string
+  autoOpen?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<FileRow[] | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
+
+  useEffect(() => {
+    if (autoOpen) setOpen(true)
+  }, [autoOpen])
 
   const load = useCallback(async () => {
     setState('loading')
@@ -124,7 +139,7 @@ function AppFiles({ app, appTitle }: { app: string; appTitle: string }) {
   }, [open, rows, state, load])
 
   return (
-    <div className="cloud__appfiles">
+    <div className="cloud__appfiles" id={`cloud-files-${app}`}>
       <button
         type="button"
         className="store__ghost"
@@ -248,6 +263,19 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
   const config = useCloudConfig()
   const nameOf = useAppNames()
   const [sync, setSync] = useState<{ app: string; updated_at: string }[] | null>(null)
+  /** The visualizer's pinned app, if any — it opens that app's file browser
+   *  and walks the page there, so the bar IS the index of "Your Data". */
+  const [pickedApp, setPickedApp] = useState<string | null>(null)
+  const pick = (app: string | null) => {
+    setPickedApp(app)
+    if (app !== null) {
+      window.setTimeout(() => {
+        document
+          .getElementById(`cloud-files-${app}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 60)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -264,9 +292,6 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
   }, [status.usedBytes])
 
   const standing = standingOfGrant(status.plan?.grant ?? null)
-  const usedShare = status.quotaBytes > 0 ? Math.min(status.usedBytes / status.quotaBytes, 1) : 0
-  const barTone = usedShare >= 0.8 || status.retention.state !== 'none' ? 'warn' : undefined
-  const syncOf = new Map((sync ?? []).map((s) => [s.app, s.updated_at]))
 
   return (
     <div className="cloud__acct">
@@ -318,52 +343,21 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
 
       <AccountSub
         title="Storage"
-        what="One pooled allowance, shared by every compatible TDG app."
+        what="One pooled allowance, shared by every compatible TDG app — every app its own colour."
       >
-        <div
-          className="cloud__bar"
-          data-tone={barTone}
-          role="img"
-          aria-label={`${formatBytes(status.usedBytes)} of ${formatBytes(status.quotaBytes)} used`}
-        >
-          <span className="cloud__bar-fill" style={{ width: `${usedShare * 100}%` }} />
-        </div>
-        <div className="cloud__acct-figures">
-          <span>
-            <strong>{formatBytes(status.usedBytes)}</strong> used
-            {status.reservedBytes > 0 ? ` · ${formatBytes(status.reservedBytes)} uploading` : ''}
-          </span>
-          <span>
-            <strong>{formatBytes(status.freeBytes)}</strong> free of{' '}
-            {status.quotaBytes > 0
-              ? formatQuota(Math.round(status.quotaBytes / 1073741824))
-              : formatBytes(0)}
-          </span>
-        </div>
+        {/* The visualizer replaces the old flat bar and list: hover or focus a
+            segment to inspect it, press one to pin it AND open that app's
+            files below. Sync recency rides in the legend's own inspector via
+            the aria labels; the per-app sentence stays exact. */}
+        <CloudViz status={status} nameOf={nameOf} onPick={pick} />
 
-        {status.perApp.length === 0 ? (
+        {status.perApp.length > 0 && sync !== null && sync.length > 0 && (
           <p className="acct__note">
-            Nothing hosted yet. The first app that syncs to your Cloud appears here, with what it
-            is using.
+            Last synced:{' '}
+            {sync
+              .map((s) => `${nameOf(s.app)} ${formatDay(s.updated_at) ?? 'recently'}`)
+              .join(' · ')}
           </p>
-        ) : (
-          <ul className="cloud__apps">
-            {status.perApp.map((row) => (
-              <li key={row.app}>
-                <span>
-                  {nameOf(row.app)}
-                  <span className="cloud__app-meta">
-                    {' · '}
-                    {row.files} file{row.files === 1 ? '' : 's'}
-                    {syncOf.has(row.app)
-                      ? ` · synced ${formatDay(syncOf.get(row.app)!) ?? 'recently'}`
-                      : ''}
-                  </span>
-                </span>
-                <span className="cloud__app-bytes">{formatBytes(row.bytes)}</span>
-              </li>
-            ))}
-          </ul>
         )}
 
         {status.egress.allowanceBytes > 0 && (
@@ -380,7 +374,12 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
           what="Browse and download anything you host, or take it all out. Your data is yours."
         >
           {status.perApp.map((row) => (
-            <AppFiles key={row.app} app={row.app} appTitle={nameOf(row.app)} />
+            <AppFiles
+              key={row.app}
+              app={row.app}
+              appTitle={nameOf(row.app)}
+              autoOpen={pickedApp === row.app}
+            />
           ))}
           <DeleteAll onDone={refresh} />
         </AccountSub>
@@ -436,6 +435,9 @@ export function CloudFold() {
               .map((p) => `${p.name} — ${formatQuota(p.quotaGb)} for ${formatUsd(p.monthlyCents)}/mo`)
               .join(' · ')}
           </p>
+          {/* The anchored address, not the bare Store: a link that has already
+              said "the plans" must not make the reader find them. Same
+              constant the other TDG apps use — see lib/route.ts. */}
           <a className="cloud__mine-link" href={STORE_HASH}>
             See The Plans In The Store
             <span aria-hidden="true"> →</span>

@@ -290,6 +290,184 @@
   color: var(--muted);
 }
 
+/* ── the storage visualizer ─────────────────────────────────────────────────
+   One bar, every app a coloured segment (the eight --chart-* tokens, assigned
+   by rank), an inspector strip that prints EXACT numbers, and a legend of
+   pressable chips. CloudViz.tsx owns the behaviour; nothing here knows an app
+   name. Segments animate in once (scaleX — transform, so no reflow) and the
+   reserved "uploading" segment marches its stripes; both sit still under
+   prefers-reduced-motion. */
+
+.cloudviz {
+  display: grid;
+  gap: 10px;
+}
+
+.cloudviz__bar {
+  display: flex;
+  gap: 2px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--surface) 60%, transparent);
+  transition: border-color 0.25s ease, var(--t-theme);
+}
+.cloudviz[data-warn] .cloudviz__bar {
+  border-color: color-mix(in srgb, var(--warm) 55%, var(--border));
+}
+
+.cloudviz__seg {
+  position: relative;
+  min-width: 10px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 2px;
+  background-color: var(--seg);
+  transform-origin: center bottom;
+  transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+  animation: cloudviz-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i) * 45ms);
+}
+/* The entrance's FIRST frame is already a legible bar (squat and faded, never
+   invisible) on purpose: a starved animation clock — throttled tab, energy
+   saver, an embedded pane — freezes an animation at its from-frame, and a
+   from-frame of scale 0 would freeze the meter into showing nothing. */
+@keyframes cloudviz-rise {
+  from {
+    transform: scaleY(0.35);
+    opacity: 0.45;
+  }
+}
+.cloudviz__seg:hover,
+.cloudviz__seg:focus-visible {
+  filter: brightness(1.15);
+  transform: scaleY(1.09);
+}
+.cloudviz__seg:focus-visible {
+  outline: 2px solid var(--border-hover);
+  outline-offset: 2px;
+}
+.cloudviz__seg[aria-pressed='true'] {
+  outline: 2px solid var(--seg);
+  outline-offset: 2px;
+}
+/* Inspecting one segment quiets the others, so the eye lands where the
+   pointer is without anything moving. */
+.cloudviz__seg[data-dim] {
+  opacity: 0.38;
+}
+/* Reserved bytes: an upload in flight is real space, drawn as motion. */
+.cloudviz__seg[data-striped] {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--text) 18%, transparent) 6px 12px
+  );
+  animation:
+    cloudviz-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards,
+    cloudviz-march 1.1s linear infinite;
+}
+@keyframes cloudviz-march {
+  to {
+    background-position: 17px 0;
+  }
+}
+
+.cloudviz__strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  min-height: 20px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.cloudviz__strip strong {
+  color: var(--text);
+  font-weight: 650;
+}
+.cloudviz__figures {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.cloudviz__exact {
+  font: 500 11.5px/1.4 var(--font-mono);
+  color: var(--faint);
+}
+
+.cloudviz__dot {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: var(--seg);
+}
+
+.cloudviz__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cloudviz__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--surface) 70%, transparent);
+  font: 500 12px/1.2 var(--font-body);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, var(--t-theme);
+}
+.cloudviz__chip:hover {
+  border-color: var(--border-hover);
+}
+.cloudviz__chip[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--seg) 70%, var(--border));
+  background-color: color-mix(in srgb, var(--seg) 12%, transparent);
+}
+.cloudviz__chip[data-striped] .cloudviz__dot {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--text) 24%, transparent) 3px 6px
+  );
+}
+.cloudviz__chip-bytes {
+  font: 500 11px/1.2 var(--font-mono);
+  color: var(--muted);
+}
+/* Free space is information, not a control: same clothes, no cursor, and a
+   dashed outline where the colour dot would be. */
+.cloudviz__chip--free {
+  cursor: default;
+  color: var(--muted);
+}
+.cloudviz__chip--free .cloudviz__dot {
+  background-color: transparent;
+  border: 1px dashed var(--border-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloudviz__seg,
+  .cloudviz__seg[data-striped] {
+    animation: none;
+  }
+}
+
 /* ── the Account fold's own pieces ── */
 
 .cloud__acct {
