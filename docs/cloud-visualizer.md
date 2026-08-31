@@ -3,7 +3,7 @@
 The Apple/Google storage bar's job — *how full am I, and what is taking the
 room?* — answered in one glance, and then bettered on three counts: every
 segment is a real control, the numbers are exact, and work in flight is
-visible. The TDG site's `src/cloud/CloudViz.tsx` is the canonical
+visible. TDG Cebu's `src/cloud/CloudViz.tsx` is the canonical
 implementation; every app with a signed-in Cloud surface implements the SAME
 design natively in its own stack and theme system. Same anatomy, same
 behaviour, same words — its own clothes.

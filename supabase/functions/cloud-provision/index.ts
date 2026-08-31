@@ -97,7 +97,7 @@ function confirmation(name: string, cadence: 'monthly' | 'annual'): string {
   const opener = cadence === 'annual' ? 'Subscription active for the year!' : 'Subscription active!';
   return (
     `${opener} ${name} is on your TDG Account within a minute. Your TDG apps ` +
-    `share the storage it unlocks, and your Account page on the TDG site shows ` +
+    `share the storage it unlocks, and your Account page on TDG Cebu shows ` +
     `what is using it. - TDG Brothers`
   );
 }

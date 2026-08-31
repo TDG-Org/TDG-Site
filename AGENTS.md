@@ -526,7 +526,31 @@ ours shows the *same* one.
 | --- | --- |
 | **Master** | `Makullveny/assets/TDG-logo-Cross.png` — 1080×1080 RGBA, the serif `✝DG` on a silver ramp, transparent margin. `sha256 393bdcff90c1aa73cabb950f86a6b7fb97c216150bb783f0de9be8a3e9687b37`. Committed by the owner 2026-08-26. Never edited by hand. |
 | **What apps draw** | `TDG-logo-mark.png` — the same artwork cropped to its own alpha bounding box and box-filtered to 384×212, 16 KB. `sha256 ed04169d33b008a6321e1624422a6b2f8caa89fe9a77eaa247e75a724286df79`. Copy these bytes; do not re-export from the master per app, or the fleet grows a mark per app. |
-| **Retired** | the white sans `✝DG Brothers` wordmark, `sha256 d66add8d…`. It shipped in Bible Educator and DevFleet until 2026-08-31. If that hash turns up again, it is stale by definition. |
+| **Retired** | the white sans `✝DG Brothers` wordmark. It shipped in **two different crops**, so a hash check needs both: `sha256 d66add8d…` (960×960, in Bible Educator and DevFleet) and `sha256 bdf5e5c0…` (tight-cropped, in Volume Controller). Both were replaced on 2026-08-31. If either hash turns up again, it is stale by definition — and the second one is the reason to check bytes rather than filenames, since it was already called `tdg-logo.png` like the current file is. |
+
+**Where each app draws it, as of 2026-08-31.** This list is here so "every app
+shows it" is a claim somebody can check rather than take on faith:
+
+| App | Where |
+| --- | --- |
+| Bible Educator | About ▸ *Developed by The TDG Brothers*, `public/icons/tdg-logo-mark.png` |
+| DevFleet | About ▸ Developer plate, hash-pinned by `verify:brand` |
+| Makullveny | the auth modal lockup and the app footer — **and it holds the master** |
+| Music Everything | About ▸ Developers |
+| TDG Veditor | About ▸ Developer card, the `iconSource` slot that had been null since the page was written |
+| Say2Quill | the window footer, in a slot wired since B4 that had never had a file in it |
+| VidHelper | the Library footer, served by `GET /brand/tdg-mark.png` |
+| N8-Tools | its own row under the footer's two entries |
+| MARANATHA | the home screen title block, under the tagline: *A GAME BY ✝DG* |
+| Socials Tracker | the import screen, under the two actions |
+| Volume Controller | the popup's footer credit |
+| makullveny-site | the page footer, where the letters `TDG` used to be |
+
+**This site is the exception, and deliberately.** It does not draw the wordmark
+anywhere: it *is* TDG's own site, so its mark is `CrossGlyph` — the cross drawn
+live from a path, in the hero, above the verse and on the Faith ridge — and its
+install icons are generated from that same path by `scripts/icons.mjs`. An
+attribution logo on the page that IS the attribution would be saying it twice.
 
 Two failure modes are worth naming, because both already happened. **A square
 canvas in a wide box** renders the wordmark at about 55% of the space it was

@@ -1,6 +1,6 @@
 # `src/content/` · the site-content overlay
 
-What the TDG site says about our own products, when somebody has changed it
+What TDG Cebu says about our own products, when somebody has changed it
 from the Developer console without a deploy.
 
 `src/data/content.ts` and `src/data/appPages.ts` are still where every product's

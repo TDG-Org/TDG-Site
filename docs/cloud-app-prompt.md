@@ -58,7 +58,7 @@ across every compatible TDG app, sold as two subscription plans (`standard`,
     state.
 - `tdg_cloud_annotate_file(p_app, p_path, p_meta)` — merge your sync metadata (content hash, client mtime, kind) onto the hosted file's catalogue row, so delta sync can compare without downloading. `p_meta` also rides on `begin_upload`.
 - `tdg_cloud_set_sync_state(p_app, p_state)` — your app's cursors and per-device high-water marks, ≤64 kB, never content. Read your own back from `tdg_cloud_sync_state` over RLS; hosted file rows are `tdg_cloud_files`, usage `tdg_cloud_usage`, egress `tdg_cloud_egress`, all owner-readable.
-- Plans are bought on the TDG site's Store and managed there or on its Account page; do not build checkout into the app. Deep-link to the site.
+- Plans are bought on TDG Cebu's Store and managed there or on its Account page; do not build checkout into the app. Deep-link to the site.
 
 **Your `p_app` id** is this app's backend id (`veditor`, `devfleet`, `bea`,
 `makullveny`, `music-everything`, …) — lowercase, the shape
@@ -98,7 +98,7 @@ changed.
   unreachable. Cloud is a mirror of local truth, not a gate on it.
 
 **Where it goes in the app:** the existing Account/Settings surface (plan,
-pooled usage, this app's share, sync state, a link to the TDG site to manage
+pooled usage, this app's share, sync state, a link to TDG Cebu to manage
 or buy), any backup/sync areas, and Help/About mentions. No new duplicate
 pages. Match this app's existing design system and conventions; every state
 styled, both themes if the app has them.
