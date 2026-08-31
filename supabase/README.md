@@ -11,7 +11,9 @@ deletes it in a dashboard.
 | `functions/tdg-site-billing/index.ts` | Changes or stops a subscription bought from the Store. |
 | `functions/tdg-site-deploys/index.ts` | Answers which TDG-Org GitHub Pages sites exist — `live`, `down` or `absent`, in one batched response — for `src/live/`'s deploy discovery. Probed here rather than in the browser because every browser-side miss is a 404 printed in the console, and answered three ways rather than two because of `tdg_site_deploys_seen`: the function remembers every site it has seen answering, which is how a site that was taken DOWN gets `Temporarily unavailable` instead of being un-announced as `Coming soon`. Deployed with `--no-verify-jwt`: the caller is an anonymous visitor and the answer is whether a public website exists. A caller sends repo names only — never a URL — and the function probes only `https://tdg-org.github.io/`. |
 | `functions/cloud-stripe-webhook/index.ts` | Stripe → TDG Cloud plan ownership: writes `cloud_entitlements.grants` from checkout and subscription events, stamps the billing cadence into the grant, and maps live price ids to packs so a portal plan change between Standard and Studio moves the grant. Deployed with `--no-verify-jwt`; the refetch is the authentication, exactly like the veditor and devfleet webhooks it is a sibling of. |
-| `functions/cloud-maintenance/index.ts` | The deliberate arm of Cloud retention: the lapsed-accounts report, expired-reservation reaping, and — double-gated on the caller being a developer AND `availability.auto_purge` in config — the purge, through the Storage API because a `storage.objects` row deleted by SQL strands its blob (the platform refuses it now). Dry-run by default. |
+| `functions/cloud-storage/index.ts` | The ONE door between TDG Cloud clients and the Backblaze B2 bucket. Forwards the caller's own JWT into the Postgres gates (`begin_upload`/`begin_download`), then answers S3-presigned URLs — single PUT or multipart — so bytes move client↔B2 directly; verifies each landed object with its own HEAD before booking it; refuses to book more than the reservation promised; deletes every version (gone, not hidden). Credential from Vault via `tdg_cloud_b2_credentials()`. Deployed `--no-verify-jwt` (it does its own auth and answers CORS). |
+| `functions/cloud-b2-install/index.ts` | One-shot installer that moved the B2 application key from the machine that held it into Vault over one TLS hop (nonce-armed, retired immediately, exactly the `cloud-provision` pattern). Redeploy with a fresh nonce to rotate the credential. |
+| `functions/cloud-maintenance/index.ts` | The deliberate arm of Cloud retention: the lapsed-accounts report, expired-reservation reaping, and — double-gated on the caller being a developer AND `availability.auto_purge` in config — the purge, which destroys every B2 object version under the account's prefix and settles the books in one verb. Dry-run by default. |
 | `functions/cloud-provision/index.ts` | The one-run tool that created TDG Cloud's Stripe objects — two products, four prices, four **deactivated** Managed Payments payment links, the webhook endpoint — and wrote every id and URL into `tdg_cloud_config`. The deployed copy is a retired stub; redeploy this source with a fresh nonce in `PROVISION_KEY` to reprice, then retire it again. |
 | `functions/tdg-store-verify/index.ts` | Answers whether Stripe still agrees with what the Store advertises: every app-tagged payment link's real amount, cadence and active state; the Cloud config held against Stripe in both directions (a configured link must exist, sell exactly the configured cents, and be active if and only if Cloud is on sale); and the three app webhook endpoints' health. `npm run verify:store` reads the catalogue out of `store.ts` and POSTs it for per-link verdicts. Deployed `--no-verify-jwt` for the `tdg-site-deploys` reason: no identity in, nothing non-public out — the Stripe key stays in the environment and only its conclusions leave. |
 | `migrations/` | SQL already applied to the shared project. The trigger that keeps every TDG account signed in without an email round trip. The `tdg_admin_*` family behind the site's Developer console (`src/dev/`), the feedback tables, the account badges, product revocations, the product reset and account notices, `tdg_billing_subscription`, and the site-content overlay below. |
@@ -451,16 +453,31 @@ mode of `src/components/AuthModal.tsx`.
 ## TDG Cloud, built and dormant
 
 `20260830120000_tdg_cloud.sql` (and the hardening file beside it) is the whole
-Cloud backend: registry-shaped `cloud_entitlements` (which is what grew the
+Cloud brain: registry-shaped `cloud_entitlements` (which is what grew the
 Developer console's cloud panel with no code), the `cloud_purchase_events`
-ledger, the one-row `tdg_cloud_config` every surface reads, the private
-`tdg-cloud` bucket with owner-only policies, the reservation-gated upload path
-(`tdg_cloud_begin_upload` is the only door, and a guard trigger under the RLS
-refuses reservation-less objects whatever role writes them), trigger-maintained
+ledger, the one-row `tdg_cloud_config` every surface reads, the
+reservation-gated upload path (`tdg_cloud_begin_upload` is the only door),
 usage accounting and file catalogue, metered downloads, per-app sync state,
-derived read-only retention, and the admin config/metrics/retention verbs. The
-site's half is [`src/cloud/`](../src/cloud/README.md); the brief for each
-app's own session is [`docs/cloud-app-prompt.md`](../docs/cloud-app-prompt.md).
+derived read-only retention, and the admin config/metrics/retention verbs.
+
+**The bytes live in Backblaze B2** (`20260831090000_tdg_cloud_b2.sql` is the
+move): the private bucket `TDG-Cloud-Backblaze` (us-west-004, keep-only-last-
+version lifecycle, CORS for presigned browser transfers), spoken to ONLY by
+the `cloud-storage` Edge Function, whose credential sits in Supabase Vault
+behind the service-only `tdg_cloud_b2_store`/`tdg_cloud_b2_credentials` pair
+(installed by the one-shot `cloud-b2-install`, retired after its run; rotate
+by re-running it). Postgres still decides every yes and no — the function
+forwards the caller's own JWT into the gates, hands out per-object presigned
+URLs, HEADs each landed object before booking it, and destroys every version
+on delete (a plain S3 delete on B2 only hides). Client↔B2 is direct both
+ways, so hosted bytes never count as Supabase egress. At $0.006/GB-month
+with a free egress band, every plan now profits even at 100% quota
+utilization — the rule the 2026-08-31 reprice (Standard 250 GB · $2.99/$29.99,
+Studio 2 TB · $14.99/$159.99) was chosen by. The old `tdg-cloud` Storage
+bucket's policies and triggers are dropped (the platform kept the empty
+bucket row; it is inert). The site's half is
+[`src/cloud/`](../src/cloud/README.md); the brief for each app's own session
+is [`docs/cloud-app-prompt.md`](../docs/cloud-app-prompt.md).
 
 **Why it is dormant, and what dormant means.** `availability.available` in
 `tdg_cloud_config` is false: the Store shows the plans as Coming Soon with no

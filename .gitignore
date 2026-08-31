@@ -111,3 +111,6 @@ npm-debug.log*
 
 # DevFleet Logbook trash
 .devfleet/logbook/.trash/
+
+# Supabase CLI scratch (regenerates on every CLI run)
+supabase/.temp/

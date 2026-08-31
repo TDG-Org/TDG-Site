@@ -234,9 +234,12 @@ async function provision(): Promise<Record<string, unknown>> {
         'Developer builds and large assets, alongside everything the Standard plan covers. One ' +
         'pooled allowance across your TDG apps. Cancel any time; your data stays readable. - TDG Brothers',
       // 2026-08-30: raised from 999/9999 (1 TB) to match the market's big-tier
-      // standard at 2 TB; keep in step with tdg_cloud_config.plans.studio.
-      monthlyCents: 1299,
-      annualCents: 12999,
+      // standard at 2 TB. 2026-08-31: repriced 1299/12999 → 1499/15999 for the
+      // B2 move's rule — profit even at 100% quota utilization, BOTH cadences
+      // (12999/yr netted less than 2 TB costs to host at the cap). Keep in
+      // step with tdg_cloud_config.plans.studio.
+      monthlyCents: 1499,
+      annualCents: 15999,
     },
   ];
 

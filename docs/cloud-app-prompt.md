@@ -20,8 +20,42 @@ across every compatible TDG app, sold as two subscription plans (`standard`,
 
 - `tdg_cloud_public_config()` — anon-callable: `{available, plans[], retention_read_only_days}`. Payment links are null while Cloud is unavailable, deliberately.
 - `tdg_cloud_status()` — authenticated, self: availability for THIS account (`enabled_for_you` opens early for developer/tester accounts while `available` is still false), the plan and its grant, `quota_bytes` / `used_bytes` / `reserved_bytes` / `free_bytes`, `per_app[]`, `egress`, `retention {state, deadline}`, `revoked`, and `warnings[]` the server computed. Poll it the way you poll entitlements: foreground, and after any upload batch.
-- `tdg_cloud_begin_upload(p_app, p_path, p_bytes, p_meta)` — the ONLY way to open the bucket for a write. Refusals carry SQLSTATEs to match on (never message text): `TDGC1` not available, `TDGC2` no plan in force / read-only retention, `TDGC3` quota full, `TDGC4` limits (too many in flight, file-count cap), `42501` revoked, `22023` bad input. Returns `{reservation_id, object_path, expires_at}`. Then upload to bucket `tdg-cloud` at exactly `object_path` with the standard Storage API; the reservation is consumed server-side when the object lands. `tdg_cloud_cancel_upload(id)` gives the space back early.
-- `tdg_cloud_begin_download(p_app, p_path)` — call before downloading so egress is metered, then fetch `object_path` over Storage. Reads are never gated on the plan: retention promises a lapsed account can still read, download and delete.
+- **All bytes move through the `cloud-storage` Edge Function** (`POST
+  {SUPABASE_URL}/functions/v1/cloud-storage`, JSON `{action, ...}`, header
+  `Authorization: Bearer <the user's access token>`). The bytes themselves
+  live in Backblaze B2; the function checks every gate in Postgres and hands
+  back **presigned URLs** your app then PUTs/GETs directly — never a raw
+  storage credential, and never a Supabase Storage call (`supabase.storage`
+  has no part in TDG Cloud). Refusals are JSON `{error: {code, message}}`
+  with the same SQLSTATEs to match on (never message text): `TDGC1` not
+  available, `TDGC2` no plan in force / read-only retention, `TDGC3` quota
+  full, `TDGC4` limits, `42501` revoked, `22023` bad input, `28000` signed
+  out, plus `size_mismatch` (you uploaded more bytes than you reserved — the
+  object is discarded, re-begin with the true size) and `storage_error`.
+  - `{action: 'upload-begin', app, path, bytes, meta?}` — `bytes` is the file's
+    exact size **in bytes** (never a string length). Small files (≤4 GiB)
+    answer `{mode:'single', url, reservation_id, expires_at}`: PUT the bytes
+    to `url`, then call `upload-finish`. Bigger files answer
+    `{mode:'multipart', upload_id, part_size, part_urls:[{part,url}]}`: PUT
+    each `part_size` slice to its URL (keep each response's `ETag` header),
+    then finish with the parts. `{action:'upload-part-urls', app, path,
+    upload_id, from, count}` re-issues URLs if one expires mid-upload.
+  - `{action: 'upload-finish', app, path, upload_id?, parts?:[{part,etag}]}` —
+    the function verifies the object landed (its own HEAD), books the REAL
+    size into the catalogue, and consumes the reservation. An upload is not
+    hosted until this answers `{ok:true}`.
+  - `{action: 'upload-cancel', reservation_id, app?, path?, upload_id?}` —
+    gives the space back early (and aborts a multipart in progress).
+  - `{action: 'download', app, path, filename?}` — meters egress
+    (`tdg_cloud_begin_download` behind it) and answers `{url, bytes,
+    expires_in}`: a minutes-long presigned GET straight to B2. `filename`
+    signs a content-disposition into the URL for save-as flows. Reads are
+    never gated on the plan: retention promises a lapsed account can still
+    read, download and delete.
+  - `{action: 'delete', app, path}` and `{action: 'delete-all'}` — destroy
+    every stored version of the object(s) (delete means gone, not hidden)
+    and settle the usage books server-side. `delete-all` also clears sync
+    state.
 - `tdg_cloud_annotate_file(p_app, p_path, p_meta)` — merge your sync metadata (content hash, client mtime, kind) onto the hosted file's catalogue row, so delta sync can compare without downloading. `p_meta` also rides on `begin_upload`.
 - `tdg_cloud_set_sync_state(p_app, p_state)` — your app's cursors and per-device high-water marks, ≤64 kB, never content. Read your own back from `tdg_cloud_sync_state` over RLS; hosted file rows are `tdg_cloud_files`, usage `tdg_cloud_usage`, egress `tdg_cloud_egress`, all owner-readable.
 - Plans are bought on the TDG site's Store and managed there or on its Account page; do not build checkout into the app. Deep-link to the site.
@@ -31,6 +65,13 @@ across every compatible TDG app, sold as two subscription plans (`standard`,
 `^[a-z0-9][a-z0-9-]{1,31}$`. Paths are relative, forward-slash, no `..`; the
 object key is `<user_id>/<app>/<path>` and identity is the path — there is no
 rename, so a moved file is delete + re-upload.
+
+**Migrating an app that already integrated the old transport:** everything
+about the RPCs, the codes, the flags and the UI contract is unchanged — only
+the byte transport moved. Replace any `supabase.storage.from('tdg-cloud')`
+upload/download/remove with the `cloud-storage` verbs above (begin → PUT the
+presigned URL → finish; download → GET the answered URL; delete verb instead
+of remove). That bucket no longer exists.
 
 **What to sync, and what never to.** Inspect this app and sync only
 meaningful user data: projects, documents, saves, settings-like state that is

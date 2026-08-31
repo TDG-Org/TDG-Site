@@ -8,6 +8,7 @@ import { formatUsd } from '../data/store'
 import { formatBytes, formatQuota } from '../data/cloud'
 import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
+import { cloudDeleteAll, cloudDownloadUrl } from './transfer'
 import { CloudManage } from './CloudManage'
 import './Cloud.css'
 
@@ -69,27 +70,18 @@ function DownloadRow({ file, appTitle }: { file: FileRow; appTitle: string }) {
 
   const download = async () => {
     setState('busy')
-    try {
-      // The metered door first — it logs the bytes and answers the object
-      // path — then the bytes themselves over the owner-only policy.
-      const { data: auth, error } = await supabase.rpc('tdg_cloud_begin_download', {
-        p_app: file.app,
-        p_path: file.path,
-      })
-      if (error) throw error
-      const objectPath = String((auth as Record<string, unknown>)?.object_path ?? '')
-      const { data, error: dlError } = await supabase.storage.from('tdg-cloud').download(objectPath)
-      if (dlError || !data) throw dlError ?? new Error('empty')
-      const url = URL.createObjectURL(data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = file.path.split('/').pop() ?? 'file'
-      a.click()
-      URL.revokeObjectURL(url)
-      setState('idle')
-    } catch {
+    // One call meters the read and answers a short-lived presigned URL; the
+    // browser then streams the bytes straight from B2 — no blob in memory,
+    // and the filename rides inside the URL's signed content-disposition.
+    const answer = await cloudDownloadUrl(file.app, file.path, file.path.split('/').pop() ?? 'file')
+    if (!answer.ok) {
       setState('error')
+      return
     }
+    const a = document.createElement('a')
+    a.href = answer.value
+    a.click()
+    setState('idle')
   }
 
   return (
@@ -182,36 +174,19 @@ function DeleteAll({ onDone }: { onDone: () => void }) {
 
   const run = async () => {
     setState('busy')
-    try {
-      // Page through the catalogue, then delete through the Storage API so
-      // the blobs go with the rows and the accounting triggers stay true. The
-      // round cap is a stall guard: a catalogue row whose object is already
-      // gone would come back every page, and forty rounds of 500 is far past
-      // any real account.
-      for (let round = 0; round < 40; round++) {
-        const { data, error } = await supabase
-          .from('tdg_cloud_files')
-          .select('user_id, app, path')
-          .limit(500)
-        if (error) throw error
-        const rows = (data ?? []) as { user_id: string; app: string; path: string }[]
-        if (rows.length === 0) break
-        const paths = rows.map((r) => `${r.user_id}/${r.app}/${r.path}`)
-        for (let i = 0; i < paths.length; i += 100) {
-          const { error: rmError } = await supabase.storage
-            .from('tdg-cloud')
-            .remove(paths.slice(i, i + 100))
-          if (rmError) throw rmError
-        }
-        if (rows.length < 500) break
-      }
-      setOpen(false)
-      setTyped('')
-      setState('idle')
-      onDone()
-    } catch {
+    // One server-side call: `cloud-storage` walks the catalogue itself,
+    // destroys every object VERSION in B2 (delete means gone, not hidden),
+    // and settles the books in a single verb. Resumable — a retry after a
+    // network drop finishes whatever is left.
+    const wiped = await cloudDeleteAll()
+    if (!wiped.ok) {
       setState('error')
+      return
     }
+    setOpen(false)
+    setTyped('')
+    setState('idle')
+    onDone()
   }
 
   return (

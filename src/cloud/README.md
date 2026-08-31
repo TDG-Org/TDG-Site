@@ -14,6 +14,7 @@ against live tables; what makes it Coming Soon is one flag in
 | `CloudFold.tsx` | The Account page's fold: Coming Soon until Core opens the door for the account, then the management surface — plan and standing, the pooled meter, per-app usage and sync, warnings, browse/download every hosted file, and delete-all behind a typed confirmation. |
 | `CloudManage.tsx` | Manage or Cancel Plan, mounted by BOTH surfaces above so rule 11 is kept mechanically. `tdg-site-billing` already handles `app: 'cloud'` because it resolves apps through the registry — cancelling is `cancel_at_period_end`, and the panel says what retention means before the press. |
 | `api.ts` | The `tdg_admin_cloud_*` verbs behind the Developer console (config read/write, metrics, retention report, and `getCloudAccount` — one account's whole standing for the **TDG Core & Cloud** panel, which `tdg_cloud_status()` cannot answer because it takes the uuid from the caller's own token and never from a parameter). Here rather than in `src/dev/api.ts` for the badge-client reason: the folder that owns the surface owns its client. |
+| `transfer.ts` | The site's client for the `cloud-storage` Edge Function — the one door to the Backblaze B2 bucket the bytes live in. Two verbs used here: `download` (metered, answers a minutes-long presigned URL the browser follows straight to B2) and `delete-all` (server-side wipe of every object version + the books, one call). Refusals matched on codes, billing-style. |
 | `Cloud.css` | Both surfaces' clothes, tokens only, both themes. The plan cards are a mirrored pair and take their measurements from variables on their common parent (rule 6). |
 
 ## Where the truth lives
@@ -35,10 +36,16 @@ to the account rather than to one app — but it is the same generic Store panel
 with the same pack pickers, the same revocation switch and the same reset. The
 lift is one filter in `AccountDetail`; nothing about the discovery changed.
 
-**Enforcement is in Postgres** (rule 12). `tdg_cloud_begin_upload` is the only
-door to an upload reservation, the storage policies and a guard trigger demand
-one, and the quota, the launch flag, the retention read-only state and any
-revocation are all checked there. This folder only ever *shows* those answers.
+**Enforcement is in Postgres** (rule 12), **bytes are in Backblaze B2**.
+`tdg_cloud_begin_upload` is still the only door — availability, plan, quota,
+retention and revocation are all decided there — but the bytes it authorises
+live in the private B2 bucket, reachable only through the `cloud-storage`
+Edge Function, which forwards the caller's own JWT into those gates and then
+hands out S3-presigned URLs scoped to one object and a short expiry. Client
+and B2 talk directly in both directions (no Supabase egress), the catalogue
+is written only after the function has HEADed the landed object itself, and
+delete means gone: every version destroyed, not hidden. This folder only
+ever *shows* those answers.
 
 ## The states, because every one has a face
 

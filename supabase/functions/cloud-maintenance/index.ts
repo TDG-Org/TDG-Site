@@ -1,12 +1,14 @@
 /** `cloud-maintenance` — the deliberate arm of TDG Cloud retention.
  *
  *  ── Why deletion lives here and nowhere else ──
- *  Nothing in Postgres deletes hosted bytes. A `storage.objects` row deleted
- *  by SQL strands the blob it points at — the platform enforces this now
- *  (`storage.protect_delete` refuses direct deletes) — so the ONLY correct
- *  route is the Storage API, which removes the blob and the row together and
- *  fires the accounting triggers on the way. This function is that route,
- *  and it is an Edge Function because the Storage API needs the service key.
+ *  Nothing in Postgres deletes hosted bytes: they live in the Backblaze B2
+ *  bucket, and SQL can only ever touch the catalogue that DESCRIBES them. A
+ *  purge therefore goes through B2 itself — every version under the
+ *  account's prefix destroyed by versionId (a plain S3 delete only hides,
+ *  and hidden is not purged) — and then settles the catalogue in one call.
+ *  This is an Edge Function because the B2 credential lives server-side
+ *  (Vault, via the service-only `tdg_cloud_b2_credentials()`), exactly like
+ *  the Stripe key.
  *
  *  ── What it will and will not do ──
  *  `report` is always available: who is past the retention deadline, holding
@@ -38,7 +40,7 @@
  *  the purge simply removes the account from the report.
  */
 
-const SOURCE_STAMP = 'cloud-maintenance@1';
+const SOURCE_STAMP = 'cloud-maintenance@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -157,53 +159,122 @@ async function retentionCandidates(): Promise<Candidate[]> {
   return out;
 }
 
-async function listObjects(prefix: string): Promise<string[]> {
-  const names: string[] = [];
-  for (let offset = 0; ; offset += 1000) {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/tdg-cloud`, {
-      method: 'POST',
-      headers: {
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      // Storage's list is per-folder; asking for everything under the account
-      // means walking, so the search shortcut is used instead: an empty
-      // prefix with search on the account id would over-match. The account id
-      // IS the top folder, so one level of recursion per app folder suffices.
-      body: JSON.stringify({ prefix, limit: 1000, offset }),
-    });
-    if (!res.ok) throw new Error(`storage list failed: ${res.status}`);
-    const rows = (await res.json()) as { name: string; id: string | null }[];
-    if (!Array.isArray(rows) || rows.length === 0) break;
-    for (const row of rows) {
-      if (row.id === null) {
-        // A folder. Walk into it.
-        names.push(...(await listObjects(`${prefix}${prefix.endsWith('/') ? '' : '/'}${row.name}`)));
-      } else {
-        names.push(`${prefix}${prefix.endsWith('/') ? '' : '/'}${row.name}`);
-      }
-    }
-    if (rows.length < 1000) break;
+// ── B2, via its S3 face (the same signing core as `cloud-storage`) ──────────
+
+type B2 = { keyId: string; appKey: string; bucket: string; region: string; host: string };
+let b2Cache: B2 | null = null;
+
+async function b2(): Promise<B2> {
+  if (b2Cache !== null) return b2Cache;
+  const credsRes = await rest('/rest/v1/rpc/tdg_cloud_b2_credentials', { method: 'POST', body: '{}' });
+  if (!credsRes.ok) throw new Error(`credentials read failed: ${credsRes.status}`);
+  const creds = (await credsRes.json()) as Record<string, unknown>;
+  const cfgRes = await rest('/rest/v1/tdg_cloud_config?select=doc');
+  const doc = ((await cfgRes.json())?.[0]?.doc ?? {}) as Record<string, unknown>;
+  const storage = (doc.storage ?? {}) as Record<string, unknown>;
+  const value: B2 = {
+    keyId: String(creds.key_id ?? ''),
+    appKey: String(creds.app_key ?? ''),
+    bucket: String(storage.bucket ?? ''),
+    region: String(storage.region ?? ''),
+    host: String(storage.s3_endpoint ?? '').replace(/^https?:\/\//, ''),
+  };
+  if (!value.keyId || !value.appKey || !value.bucket || !value.region || !value.host) {
+    throw new Error('B2 is not configured');
   }
-  return names;
+  b2Cache = value;
+  return value;
 }
 
-async function deleteObjects(paths: string[]): Promise<number> {
+const enc = new TextEncoder();
+async function sha256hex(data: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(data));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function hmac(key: ArrayBuffer, data: string): Promise<ArrayBuffer> {
+  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return await crypto.subtle.sign('HMAC', k, enc.encode(data));
+}
+function encodeQueryPair(k: string, v: string): string {
+  const strict = (s: string) =>
+    encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  return `${strict(k)}=${strict(v)}`;
+}
+
+async function s3(
+  cfg: B2,
+  method: string,
+  objectKey: string,
+  rawQuery: Record<string, string> = {},
+): Promise<Response> {
+  const amzDate = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const date = amzDate.slice(0, 8);
+  const scope = `${date}/${cfg.region}/s3/aws4_request`;
+  const path = `/${cfg.bucket}${objectKey === '' ? '' : '/' + objectKey.split('/').map(encodeURIComponent).join('/')}`;
+  const canonicalQuery = Object.keys(rawQuery)
+    .sort()
+    .map((k) => encodeQueryPair(k, rawQuery[k]))
+    .join('&');
+  const headers: Record<string, string> = {
+    host: cfg.host,
+    'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+    'x-amz-date': amzDate,
+  };
+  const signedHeaders = Object.keys(headers).sort().join(';');
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map((k) => `${k}:${headers[k]}\n`)
+    .join('');
+  const canonical = [method, path, canonicalQuery, canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
+  const toSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256hex(canonical)].join('\n');
+  let key: ArrayBuffer = (enc.encode('AWS4' + cfg.appKey) as Uint8Array).buffer as ArrayBuffer;
+  for (const part of [date, cfg.region, 's3', 'aws4_request']) key = await hmac(key, part);
+  const sig = [...new Uint8Array(await hmac(key, toSign))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const url = `https://${cfg.host}${path}${canonicalQuery === '' ? '' : '?' + canonicalQuery}`;
+  return await fetch(url, {
+    method,
+    headers: {
+      'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+      'x-amz-date': amzDate,
+      Authorization: `AWS4-HMAC-SHA256 Credential=${cfg.keyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${sig}`,
+    },
+  });
+}
+
+const xmlUnescape = (s: string) =>
+  s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#3[49];/g, (m) => (m === '&#34;' ? '"' : "'"))
+    .replace(/&amp;/g, '&');
+
+/** Every version under the account's prefix, destroyed by versionId — a
+ *  purge leaves nothing, not even hide markers for the lifecycle to sweep.
+ *  Returns how many versions went. */
+async function purgePrefix(cfg: B2, prefix: string): Promise<number> {
   let removed = 0;
-  for (let i = 0; i < paths.length; i += 100) {
-    const batch = paths.slice(i, i + 100);
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/tdg-cloud`, {
-      method: 'DELETE',
-      headers: {
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prefixes: batch }),
-    });
-    if (!res.ok) throw new Error(`storage delete failed: ${res.status} ${await res.text()}`);
-    removed += batch.length;
+  for (let round = 0; round < 400; round++) {
+    const list = await s3(cfg, 'GET', '', { versions: '', prefix, 'max-keys': '500' });
+    const text = await list.text();
+    if (!list.ok) throw new Error(`version list failed: ${list.status}`);
+    const versions = [...text.matchAll(/<(?:Version|DeleteMarker)>[\s\S]*?<\/(?:Version|DeleteMarker)>/g)]
+      .map((m) => ({
+        key: xmlUnescape(m[0].match(/<Key>([^<]*)<\/Key>/)?.[1] ?? ''),
+        id: m[0].match(/<VersionId>([^<]*)<\/VersionId>/)?.[1] ?? '',
+      }))
+      .filter((v) => v.key.startsWith(prefix) && v.id !== '');
+    if (versions.length === 0) break;
+    for (let i = 0; i < versions.length; i += 8) {
+      const answers = await Promise.all(
+        versions.slice(i, i + 8).map((v) => s3(cfg, 'DELETE', v.key, { versionId: v.id })),
+      );
+      for (const gone of answers) {
+        if (!gone.ok && gone.status !== 404) throw new Error(`version delete failed: ${gone.status}`);
+        removed++;
+      }
+    }
+    if (!text.includes('<IsTruncated>true</IsTruncated>')) break;
   }
   return removed;
 }
@@ -264,15 +335,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const ready = (await retentionCandidates()).filter((c) => c.purge_ready);
       if (dryRun) return json({ dry_run: true, would_purge: ready });
 
+      const cfg2 = await b2();
       const purged: { user_id: string; objects: number }[] = [];
       for (const candidate of ready) {
-        const paths = await listObjects(candidate.user_id);
-        const removed = paths.length === 0 ? 0 : await deleteObjects(paths);
+        const removed = await purgePrefix(cfg2, `${candidate.user_id}/`);
+        await rest(`/rest/v1/rpc/tdg_cloud_account_remove_all`, {
+          method: 'POST',
+          body: JSON.stringify({ p_uid: candidate.user_id }),
+        });
         await rest(`/rest/v1/tdg_cloud_sync_state?user_id=eq.${candidate.user_id}`, { method: 'DELETE' });
         await audit(
           candidate.user_id,
           'cloud-purge',
-          `retention expired ${candidate.deadline}; removed ${removed} hosted objects (${candidate.bytes} bytes)`,
+          `retention expired ${candidate.deadline}; removed ${removed} hosted object versions (${candidate.bytes} bytes)`,
         );
         purged.push({ user_id: candidate.user_id, objects: removed });
       }

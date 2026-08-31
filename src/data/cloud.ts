@@ -26,7 +26,9 @@
  * change it here in the same sitting — the mistake this copy can make is
  * showing an old number for one round trip, never charging one, but a
  * fallback that drifts for months is a page that lies whenever the network
- * hiccups.
+ * hiccups. (2026-08-31: Standard 200→250 GB and Studio 1299/12999 →
+ * 1499/15999, the B2-move pricing — chosen so every plan profits even at
+ * 100% quota utilization, both cadences.)
  *
  * ## `unlocks` is site copy, not config
  *
@@ -62,13 +64,13 @@ export const CLOUD_PLANS: CloudPlan[] = [
     id: 'standard',
     name: 'Cloud Standard',
     tagline: 'Your TDG world, on every machine. Settings, saves, documents and projects, synced.',
-    quotaGb: 200,
+    quotaGb: 250,
     monthlyCents: 299,
     annualCents: 2999,
     linkMonthly: null,
     linkAnnual: null,
     unlocks: [
-      '200 GB of pooled storage, shared across your TDG apps',
+      '250 GB of pooled storage, shared across your TDG apps',
       'Your app data synced to every machine you sign in on',
       'Kept safe on your TDG Account, not on a device',
       'Cancel any time — your data stays readable',
@@ -79,14 +81,14 @@ export const CLOUD_PLANS: CloudPlan[] = [
     name: 'Cloud Studio',
     tagline: 'Room for the heavy work: TDG Veditor projects and media, Developer builds, large assets.',
     quotaGb: 2048,
-    monthlyCents: 1299,
-    annualCents: 12999,
+    monthlyCents: 1499,
+    annualCents: 15999,
     linkMonthly: null,
     linkAnnual: null,
     unlocks: [
       '2 TB of pooled storage, shared across your TDG apps',
       'Built for TDG Veditor projects, media and large assets',
-      'Everything Cloud Standard covers, ten times the room',
+      'Everything Cloud Standard covers, eight times the room',
       'Cancel any time — your data stays readable',
     ],
   },
