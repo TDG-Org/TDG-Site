@@ -160,3 +160,96 @@ export async function getRetentionReport(): Promise<RetentionRow[]> {
   if (error) throw toError(error)
   return Array.isArray(data) ? (data as RetentionRow[]) : []
 }
+
+/**
+ * What Backblaze itself says the bucket holds, against what the catalogue
+ * claims — the only place the two sides of TDG Cloud are ever compared.
+ *
+ * This one does not go through Postgres: the B2 credential lives in Vault and
+ * only an Edge Function may read it, so the call is a POST to
+ * `cloud-maintenance` carrying the developer's own session token (the
+ * function resolves it and re-checks `profiles.is_admin` — rule 12 again,
+ * nothing here is the permission layer).
+ *
+ * It is a slow read by nature: a full ListObjectVersions sweep of the bucket.
+ * The Cloud tab therefore asks for it on a press rather than folding it into
+ * the console's Refresh, so looking at the tab never costs a bucket walk.
+ */
+export type BucketAudit = {
+  bucket: string
+  stored: { objects: number; bytes: number }
+  oldVersions: { count: number; bytes: number }
+  hideMarkers: number
+  catalogue: { rows: number; bytes: number }
+  /** At most 200 of each, to look at. `counts` carries the REAL totals — a
+   *  list that silently stops at 200 reads as "only 200 are wrong". */
+  orphans: { key: string; bytes: number }[]
+  ghosts: { key: string; bytes: number }[]
+  mismatched: { key: string; bucketBytes: number; catalogueBytes: number }[]
+  counts: { orphans: number; ghosts: number; mismatched: number; orphanBytes: number }
+  /** True when the bucket was too large to walk in one call — the ghost list
+   *  is then suppressed entirely, because an unlisted file is not a missing
+   *  one and reporting it as such would be the worst kind of false alarm. */
+  truncated: boolean
+}
+
+export async function getBucketAudit(): Promise<BucketAudit> {
+  const { data: session } = await supabase.auth.getSession()
+  const token = session.session?.access_token
+  if (!token) throw new CloudAdminError('Sign in first.', '28000')
+
+  let res: Response
+  try {
+    res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cloud-maintenance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ action: 'bucket' }),
+    })
+  } catch {
+    throw new CloudAdminError("Couldn't reach the server. Check the connection and try again.", null)
+  }
+
+  const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (!res.ok) {
+    const code = String(payload.error ?? 'server_error')
+    throw new CloudAdminError(
+      code === 'unauthorized'
+        ? 'That account is not a TDG developer.'
+        : "The bucket read failed. It may have timed out — Backblaze is slow to list a large bucket.",
+      code,
+    )
+  }
+
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const stored = (payload.stored ?? {}) as Record<string, unknown>
+  const old = (payload.old_versions ?? {}) as Record<string, unknown>
+  const cat = (payload.catalogue ?? {}) as Record<string, unknown>
+  const counts = (payload.counts ?? {}) as Record<string, unknown>
+  const list = (raw: unknown) => (Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [])
+
+  return {
+    bucket: typeof payload.bucket === 'string' ? payload.bucket : '',
+    stored: { objects: n(stored.objects), bytes: n(stored.bytes) },
+    oldVersions: { count: n(old.count), bytes: n(old.bytes) },
+    hideMarkers: n(payload.hide_markers),
+    catalogue: { rows: n(cat.rows), bytes: n(cat.bytes) },
+    orphans: list(payload.orphans).map((r) => ({ key: String(r.key ?? ''), bytes: n(r.bytes) })),
+    ghosts: list(payload.ghosts).map((r) => ({ key: String(r.key ?? ''), bytes: n(r.bytes) })),
+    mismatched: list(payload.mismatched).map((r) => ({
+      key: String(r.key ?? ''),
+      bucketBytes: n(r.bucket_bytes),
+      catalogueBytes: n(r.catalogue_bytes),
+    })),
+    counts: {
+      orphans: n(counts.orphans),
+      ghosts: n(counts.ghosts),
+      mismatched: n(counts.mismatched),
+      orphanBytes: n(counts.orphan_bytes),
+    },
+    truncated: payload.truncated === true,
+  }
+}

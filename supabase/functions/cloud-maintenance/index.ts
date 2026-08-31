@@ -21,6 +21,14 @@
  *  touches the grants: what somebody paid for stays recorded even after the
  *  bytes it bought are gone.
  *
+ *  `bucket` is the one read that holds Backblaze's own answer against the
+ *  catalogue — what is stored, what old versions and hide markers are
+ *  costing, and the three ways the two sides can disagree: orphans B2 bills
+ *  us for that no account claims, ghosts the catalogue promises that are not
+ *  there, and size mismatches. Nothing else in the system would ever notice
+ *  that drift, because the catalogue is what we bill from and the bucket is
+ *  what we pay for. It reports; it never sweeps.
+ *
  *  `reap` clears expired upload reservations project-wide. Reservations also
  *  reap themselves opportunistically inside `tdg_cloud_begin_upload`; this
  *  is the belt for accounts that stopped uploading entirely.
@@ -28,9 +36,12 @@
  *  ── Who may call it ──
  *  verify_jwt is ON at the gateway, but a publishable key passes that, so the
  *  real check is here: the caller's token is resolved through /auth/v1/user
- *  and the account must have `profiles.is_admin`. At launch, a pg_cron +
+ *  and the uuid is put to `tdg_cloud_is_developer()`. That RPC exists because
+ *  the obvious thing — reading `profiles.is_admin` as the service — does not
+ *  work and never did: `service_role` has no SELECT on `profiles`, so this
+ *  gate refused every human until 20260831234500. At launch, a pg_cron +
  *  pg_net schedule can call it with the service key instead; a caller
- *  presenting the service key IS the project and skips the profile check.
+ *  presenting the service key IS the project and skips the check.
  *
  *  ── The retention rule it applies ──
  *  The same one `tdg_cloud_status()` derives for the person themselves: no
@@ -40,7 +51,7 @@
  *  the purge simply removes the account from the report.
  */
 
-const SOURCE_STAMP = 'cloud-maintenance@2';
+const SOURCE_STAMP = 'cloud-maintenance@4';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -76,10 +87,21 @@ async function callerAllowed(req: Request): Promise<boolean> {
   const id = String(user?.id ?? '');
   if (id === '') return false;
 
-  const prof = await rest(`/rest/v1/profiles?user_id=eq.${id}&select=is_admin`);
-  if (!prof.ok) return false;
-  const rows = await prof.json();
-  return rows?.[0]?.is_admin === true;
+  //  NOT a read of `profiles`: service_role has no SELECT on that table and
+  //  is not meant to (a table of names, emails and recovery addresses is not
+  //  something the project's key reads wholesale). This asked for it anyway
+  //  and so refused every human alive — see
+  //  20260831234500_the_maintenance_arm_can_recognise_a_developer. The RPC
+  //  answers the one question this gate has: is THIS uuid a developer?
+  const prof = await rest('/rest/v1/rpc/tdg_cloud_is_developer', {
+    method: 'POST',
+    body: JSON.stringify({ p_user: id }),
+  });
+  if (!prof.ok) {
+    console.error('cloud-maintenance: developer check failed', prof.status, await prof.text());
+    return false;
+  }
+  return (await prof.json()) === true;
 }
 
 type Grant = {
@@ -279,6 +301,159 @@ async function purgePrefix(cfg: B2, prefix: string): Promise<number> {
   return removed;
 }
 
+/** Backblaze's own answer about the bucket, held against the catalogue.
+ *
+ *  This is the only place the two sides of TDG Cloud are ever compared. The
+ *  catalogue is what we BILL against; the bucket is what we PAY for, and
+ *  nothing else in the system would ever notice them drifting apart:
+ *
+ *    · an ORPHAN is an object B2 is charging us for that no account claims —
+ *      an upload whose `upload-finish` never ran, or a delete that removed
+ *      the row and then failed on the bytes. It costs money forever and is
+ *      invisible from every other screen.
+ *    · a GHOST is the opposite: a catalogue row promising bytes that are not
+ *      there. The person is billed quota for a file that would 404.
+ *    · OLD VERSIONS and HIDE MARKERS are the B2-specific tax. `hardDelete`
+ *      destroys versions by id precisely so these stay at zero; a number
+ *      above zero here means something took the plain-S3-DELETE path.
+ *
+ *  Read-only, and deliberately so — it reports, it never reconciles. What to
+ *  do about a discrepancy is a decision, not a sweep.
+ */
+const AUDIT_CAP = 200_000;
+
+type BucketAudit = {
+  bucket: string;
+  stored: { objects: number; bytes: number };
+  old_versions: { count: number; bytes: number };
+  hide_markers: number;
+  catalogue: { rows: number; bytes: number };
+  /** The first 200 of each, to look at. `counts` carries the real totals —
+   *  a listing that silently stops at 200 reads as "only 200 wrong". */
+  orphans: { key: string; bytes: number }[];
+  ghosts: { key: string; bytes: number }[];
+  mismatched: { key: string; bucket_bytes: number; catalogue_bytes: number }[];
+  counts: { orphans: number; ghosts: number; mismatched: number; orphan_bytes: number };
+  truncated: boolean;
+};
+
+const LIST_CAP = 200;
+
+async function bucketAudit(): Promise<BucketAudit> {
+  const cfg = await b2();
+
+  //  Every version, not just the current one: an old version is a line on
+  //  the bill exactly like a live object is.
+  const live = new Map<string, number>();
+  let oldCount = 0;
+  let oldBytes = 0;
+  let markers = 0;
+  let truncated = false;
+  let keyMarker = '';
+  let versionMarker = '';
+
+  for (let round = 0; ; round++) {
+    const query: Record<string, string> = { versions: '', 'max-keys': '1000' };
+    if (keyMarker !== '') query['key-marker'] = keyMarker;
+    if (versionMarker !== '') query['version-id-marker'] = versionMarker;
+    const list = await s3(cfg, 'GET', '', query);
+    const text = await list.text();
+    if (!list.ok) throw new Error(`version list failed: ${list.status}`);
+
+    for (const m of text.matchAll(/<Version>[\s\S]*?<\/Version>/g)) {
+      const key = xmlUnescape(m[0].match(/<Key>([^<]*)<\/Key>/)?.[1] ?? '');
+      const size = Number(m[0].match(/<Size>(\d+)<\/Size>/)?.[1] ?? 0);
+      if (m[0].includes('<IsLatest>true</IsLatest>')) live.set(key, size);
+      else {
+        oldCount++;
+        oldBytes += size;
+      }
+    }
+    markers += [...text.matchAll(/<DeleteMarker>/g)].length;
+
+    if (live.size + oldCount >= AUDIT_CAP) {
+      truncated = true;
+      break;
+    }
+    if (!text.includes('<IsTruncated>true</IsTruncated>')) break;
+    keyMarker = xmlUnescape(text.match(/<NextKeyMarker>([^<]*)<\/NextKeyMarker>/)?.[1] ?? '');
+    versionMarker = text.match(/<NextVersionIdMarker>([^<]*)<\/NextVersionIdMarker>/)?.[1] ?? '';
+    if (keyMarker === '') break;
+    if (round > 400) {
+      truncated = true;
+      break;
+    }
+  }
+
+  //  The catalogue, in the same key shape the bucket uses.
+  const claimed = new Map<string, number>();
+  let rows = 0;
+  let catalogueBytes = 0;
+  for (let page = 0; page < 400; page++) {
+    const res = await rest(
+      `/rest/v1/tdg_cloud_files?select=user_id,app,path,bytes&limit=1000&offset=${page * 1000}&order=user_id,app,path`,
+    );
+    if (!res.ok) throw new Error(`catalogue read failed: ${res.status}`);
+    const batch = (await res.json()) as { user_id: string; app: string; path: string; bytes: number }[];
+    if (batch.length === 0) break;
+    for (const row of batch) {
+      claimed.set(`${row.user_id}/${row.app}/${row.path}`, Number(row.bytes) || 0);
+      catalogueBytes += Number(row.bytes) || 0;
+      rows++;
+    }
+    if (batch.length < 1000) break;
+  }
+
+  const orphans: { key: string; bytes: number }[] = [];
+  const ghosts: { key: string; bytes: number }[] = [];
+  const mismatched: { key: string; bucket_bytes: number; catalogue_bytes: number }[] = [];
+  let storedBytes = 0;
+  let orphanCount = 0;
+  let orphanBytes = 0;
+  let ghostCount = 0;
+  let mismatchCount = 0;
+
+  for (const [key, bytes] of live) {
+    storedBytes += bytes;
+    const claim = claimed.get(key);
+    if (claim === undefined) {
+      orphanCount++;
+      orphanBytes += bytes;
+      if (orphans.length < LIST_CAP) orphans.push({ key, bytes });
+    } else if (claim !== bytes) {
+      mismatchCount++;
+      if (mismatched.length < LIST_CAP) mismatched.push({ key, bucket_bytes: bytes, catalogue_bytes: claim });
+    }
+  }
+  //  A ghost is only meaningful when the listing was complete; a truncated
+  //  sweep would report every unlisted file as missing, which is a lie.
+  if (!truncated) {
+    for (const [key, bytes] of claimed) {
+      if (live.has(key)) continue;
+      ghostCount++;
+      if (ghosts.length < LIST_CAP) ghosts.push({ key, bytes });
+    }
+  }
+
+  return {
+    bucket: cfg.bucket,
+    stored: { objects: live.size, bytes: storedBytes },
+    old_versions: { count: oldCount, bytes: oldBytes },
+    hide_markers: markers,
+    catalogue: { rows, bytes: catalogueBytes },
+    orphans,
+    ghosts,
+    mismatched,
+    counts: {
+      orphans: orphanCount,
+      ghosts: ghostCount,
+      mismatched: mismatchCount,
+      orphan_bytes: orphanBytes,
+    },
+    truncated,
+  };
+}
+
 async function audit(targetId: string, action: string, detail: string): Promise<void> {
   await rest('/rest/v1/tdg_moderation_audit', {
     method: 'POST',
@@ -310,6 +485,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     if (action === 'report') {
       return json({ candidates: await retentionCandidates() });
+    }
+
+    if (action === 'bucket') {
+      return json(await bucketAudit());
     }
 
     if (action === 'reap') {

@@ -954,6 +954,19 @@ map, the retention clock.
   read-only until its deadline, purge-ready after — and says out loud that
   purging is never a side effect here: it is the `cloud-maintenance` Edge
   Function, run on purpose, and refused while the purge flag is off.
+- **Backblaze Bucket** is the only place the two sides of TDG Cloud are ever
+  held against each other. Everything above it is TDG's own account of itself
+  — the config says the quota, the catalogue says the bytes, the metrics
+  multiply them by a price — and none of it has asked Backblaze. So an object
+  in the bucket that no catalogue row claims bills nobody and costs us every
+  month forever, and a catalogue row with no object behind it charges somebody
+  quota for a file that would 404. Neither is visible from any other screen.
+  The panel names them ORPHAN and GHOST, adds size mismatches and the
+  old-version/hide-marker tax, and reports the real counts rather than the
+  length of the 200-row lists it shows. It is a BUTTON, not part of Refresh:
+  the read is a full `ListObjectVersions` walk, and opening a tab should not
+  cost one. It reports and never sweeps — what to do about a discrepancy is a
+  decision, not a cleanup.
 
 The `cloud` app's PANEL — granting a plan to an account, revoking Cloud —
 needed no work at all: `cloud_entitlements` is registry-shaped, so the
@@ -1063,7 +1076,7 @@ reference implementation of the startup reply panel the other apps copy.
 | --- | --- |
 | `DevConsole.tsx` | The page: header, the overview numbers, the five tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The panels for one account, in six top-level sections. Three of them nest: Permissions sits inside Identity, Cloud's own Store panel sits inside TDG Core & Cloud, and Makullveny plus a Store panel per remaining app sit inside Apps. Each states what it is and names the table it writes. |
-| `CloudTab.tsx` | The Cloud tab: the staged config editor with its launch confirmation, the metrics and economics readout, and the retention report. Its verbs come from `src/cloud/api.ts`. |
+| `CloudTab.tsx` | The Cloud tab: the staged config editor with its launch confirmation, the metrics and economics readout, the retention report, and the Backblaze bucket audit (`BucketPanel`) that holds B2's own listing against the catalogue. Its verbs come from `src/cloud/api.ts`. |
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |
 | `contentEdit.tsx` | The editing primitives that tab is built from: the `BUILT-IN` / `EDITED` override frame, the shared add-reorder-remove list, and the asset preview that gives a missing file a face. |
 | `FeedbackTab.tsx` | The Feedback tab: the sortable, filterable report table, the tick-and-act bulk bar, the report dialog, the reply composer with its delivery state, and copying at every grain — including the identity-free **review** format built for a model to read. |

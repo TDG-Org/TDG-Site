@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatBytes } from '../data/cloud'
-import type { CloudConfigMeta, RetentionRow } from '../cloud/api'
-import { setCloudConfig } from '../cloud/api'
+import type { BucketAudit, CloudConfigMeta, RetentionRow } from '../cloud/api'
+import { getBucketAudit, setCloudConfig } from '../cloud/api'
 import { loadCloudConfig } from '../cloud/config'
 import { Button, Check, Fact, Field, Panel, Switch, Tag, TextInput } from './controls'
 import { fmtDate, fmtRelative, fmtUsd } from './format'
@@ -433,6 +433,200 @@ export function CloudTab({
           </ul>
         )}
       </Panel>
+
+      <BucketPanel />
+    </div>
+  )
+}
+
+/**
+ * Backblaze's own answer, held against the catalogue.
+ *
+ * Every other number on this tab is TDG's account of TDG Cloud: the config
+ * says the quota, the catalogue says the bytes, the metrics multiply them by
+ * a price. None of it has ever asked Backblaze. That gap is the one place
+ * money can go missing quietly — the catalogue is what we BILL from, the
+ * bucket is what we PAY for, and an object in the second that is missing from
+ * the first bills nobody and costs us every month forever.
+ *
+ * ## Why it is a button and not part of Refresh
+ *
+ * The read is a full ListObjectVersions walk of the bucket. That is seconds
+ * today and minutes at scale, so hanging it off the console's Refresh would
+ * make merely opening this tab slow for everyone. It is a deliberate press,
+ * and the panel says what it is about to do before it does it.
+ */
+function BucketPanel() {
+  const [audit, setAudit] = useState<BucketAudit | null>(null)
+  const [phase, setPhase] = useState<'idle' | 'reading' | 'ready' | 'error'>('idle')
+  const [problem, setProblem] = useState<string>('')
+
+  async function read() {
+    setPhase('reading')
+    setProblem('')
+    try {
+      setAudit(await getBucketAudit())
+      setPhase('ready')
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : 'Something went wrong.')
+      setPhase('error')
+    }
+  }
+
+  //  Counts come from `counts`, never from the list lengths — the lists stop
+  //  at 200 and a tile reading "200 orphans" when there are 4,000 would be
+  //  the exact false comfort this panel exists to remove.
+  const drift =
+    audit === null ? 0 : audit.counts.orphans + audit.counts.ghosts + audit.counts.mismatched
+  const wasted = audit === null ? 0 : audit.oldVersions.bytes + audit.counts.orphanBytes
+
+  return (
+    <Panel
+      title="Backblaze Bucket"
+      what="What Backblaze says it is holding, held against what the catalogue claims — the only check that the bytes we pay for and the bytes we bill for are the same bytes. Orphans cost us money nobody is charged for; ghosts charge somebody for a file that is not there."
+      writes="nothing — a read of B2 and the catalogue"
+      right={
+        phase === 'reading' ? (
+          <Tag>READING</Tag>
+        ) : phase === 'error' ? (
+          <Tag tone="bad">UNREADABLE</Tag>
+        ) : audit === null ? (
+          <Tag tone="plain">NOT READ</Tag>
+        ) : (
+          <Tag tone={drift > 0 ? 'warn' : 'ok'}>{drift > 0 ? `${drift} TO EXPLAIN` : 'IN AGREEMENT'}</Tag>
+        )
+      }
+    >
+      <div className="dev__row">
+        <Button onClick={() => void read()} disabled={phase === 'reading'}>
+          {phase === 'reading' ? 'Walking The Bucket…' : audit === null ? 'Read The Bucket' : 'Read It Again'}
+        </Button>
+        <span className="dev__panel-quiet">
+          {phase === 'reading'
+            ? 'Listing every object version — this is the slow one.'
+            : 'A full listing of every object version. Seconds now, longer as the bucket grows.'}
+        </span>
+      </div>
+
+      {phase === 'error' && <p className="dev__warn">{problem}</p>}
+
+      {audit !== null && phase !== 'error' && (
+        <>
+          <div className="dev__stats">
+            <MetricTile
+              label="Stored"
+              value={formatBytes(audit.stored.bytes)}
+              what={`${audit.stored.objects.toLocaleString()} object${audit.stored.objects === 1 ? '' : 's'} in ${audit.bucket}`}
+            />
+            <MetricTile
+              label="Catalogue"
+              value={formatBytes(audit.catalogue.bytes)}
+              what={`${audit.catalogue.rows.toLocaleString()} row${audit.catalogue.rows === 1 ? '' : 's'} we bill from`}
+            />
+            <MetricTile
+              label="Old Versions"
+              value={formatBytes(audit.oldVersions.bytes)}
+              what={`${audit.oldVersions.count.toLocaleString()} superseded — billed, unreachable`}
+              tone={audit.oldVersions.count > 0 ? 'warn' : undefined}
+            />
+            <MetricTile
+              label="Hide Markers"
+              value={audit.hideMarkers.toLocaleString()}
+              what="should be zero — deletes destroy by version"
+              tone={audit.hideMarkers > 0 ? 'warn' : undefined}
+            />
+            <MetricTile
+              label="Paid For, Unbilled"
+              value={formatBytes(wasted)}
+              what="old versions plus orphans"
+              tone={wasted > 0 ? 'warn' : undefined}
+            />
+            <MetricTile
+              label="Drift"
+              value={String(drift)}
+              what={`${audit.counts.orphans} orphan · ${audit.counts.ghosts} ghost · ${audit.counts.mismatched} wrong size`}
+              tone={drift > 0 ? 'bad' : undefined}
+            />
+          </div>
+
+          {audit.truncated && (
+            <p className="dev__warn">
+              The bucket was too large to list in one pass, so this is a partial read — and the
+              ghost check is switched off entirely, because an object that was never listed is not
+              a missing one. Orphans and sizes below are real; the counts are a floor, not a total.
+            </p>
+          )}
+
+          {drift === 0 && !audit.truncated && (
+            <p className="dev__panel-quiet">
+              Backblaze and the catalogue agree on every object. Every byte we pay for belongs to an
+              account, and every byte an account is billed for is really there.
+            </p>
+          )}
+
+          <BucketDrift
+            title="Orphans — in the bucket, claimed by nobody"
+            why="We pay Backblaze for these every month and no account is billed for them. Usually an upload whose finish never ran, or a delete that settled the books and then failed on the bytes."
+            total={audit.counts.orphans}
+            rows={audit.orphans.map((o) => ({ key: o.key, tag: 'ORPHAN' as const, amount: formatBytes(o.bytes) }))}
+          />
+          <BucketDrift
+            title="Ghosts — in the catalogue, not in the bucket"
+            why="Somebody is being charged quota for a file that would fail to download. The catalogue row is the thing to remove."
+            total={audit.counts.ghosts}
+            rows={audit.ghosts.map((g) => ({ key: g.key, tag: 'GHOST' as const, amount: formatBytes(g.bytes) }))}
+          />
+          <BucketDrift
+            title="Wrong size — both sides have it, they disagree"
+            why="The quota charged and the bytes stored are different numbers for the same file."
+            total={audit.counts.mismatched}
+            rows={audit.mismatched.map((m) => ({
+              key: m.key,
+              tag: 'SIZE' as const,
+              amount: `${formatBytes(m.bucketBytes)} stored vs ${formatBytes(m.catalogueBytes)} billed`,
+            }))}
+          />
+        </>
+      )}
+    </Panel>
+  )
+}
+
+/** One class of disagreement. Draws nothing at all when there is none —
+ *  three permanently-empty headings would bury the one that matters. */
+function BucketDrift({
+  title,
+  why,
+  total,
+  rows,
+}: {
+  title: string
+  why: string
+  /** How many there really are. `rows` is at most the first 200 of them. */
+  total: number
+  rows: { key: string; tag: 'ORPHAN' | 'GHOST' | 'SIZE'; amount: string }[]
+}) {
+  if (total === 0) return null
+  return (
+    <div className="dev__subsection">
+      <h4 className="dev__subhead">
+        {title} <Tag tone="warn">{total}</Tag>
+      </h4>
+      <p className="dev__panel-quiet">{why}</p>
+      <ul className="dev__log">
+        {rows.map((row) => (
+          <li key={row.key} className="dev__log-row">
+            <Tag tone={row.tag === 'GHOST' ? 'bad' : 'warn'}>{row.tag}</Tag>
+            <span className="dev__log-what dev__log-key">{row.key}</span>
+            <span className="dev__log-amount">{row.amount}</span>
+          </li>
+        ))}
+      </ul>
+      {total > rows.length && (
+        <p className="dev__panel-quiet">
+          Showing the first {rows.length} of {total}.
+        </p>
+      )}
     </div>
   )
 }
