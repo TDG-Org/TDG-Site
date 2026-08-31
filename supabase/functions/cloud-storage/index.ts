@@ -31,6 +31,8 @@
  *                   (or multipart: upload_id + part URLs, 256 MiB parts)
  *    upload-part-urls {app, path, upload_id, from, count} → more part URLs
  *    upload-finish  {app, path, upload_id?, parts?} → HEAD, book, consume
+ *                   (a size that overruns its reservation loses the object
+ *                    AND releases the reservation — see the branch itself)
  *    upload-cancel  {reservation_id, app?, path?, upload_id?} → give space back
  *    download       {app, path, filename?} → metered presigned GET
  *    delete         {app, path} → remove object + settle the books
@@ -38,7 +40,7 @@
  *  GET → health stamp (no identity, no secrets).
  */
 
-const SOURCE_STAMP = 'cloud-storage@2';
+const SOURCE_STAMP = 'cloud-storage@3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -428,12 +430,18 @@ async function uploadFinish(uid: string, body: Record<string, unknown>): Promise
 
   // The reservation promised a size and quota was granted for THAT size. More
   // bytes than promised do not get booked — the object goes, the space stays.
-  const resRes = await rest(
-    `/rest/v1/tdg_cloud_reservations?user_id=eq.${uid}&app=eq.${encodeURIComponent(app)}&path=eq.${encodeURIComponent(path)}&select=bytes`,
-  );
+  const where = `user_id=eq.${uid}&app=eq.${encodeURIComponent(app)}&path=eq.${encodeURIComponent(path)}`;
+  const resRes = await rest(`/rest/v1/tdg_cloud_reservations?${where}&select=bytes`);
   const reserved = resRes.ok ? Number(((await resRes.json())?.[0] as Record<string, unknown>)?.bytes ?? NaN) : NaN;
   if (Number.isFinite(reserved) && actual > reserved) {
     await hardDelete(cfg, objectKey);
+    // This reservation is spent: the object it was for is gone and no retry
+    // of THIS finish can ever book it. Leaving it to die of its own TTL would
+    // hold quota, and one of the 64 open-reservation slots, for an hour —
+    // so a client that lies 64 times locks itself out of uploading at all.
+    // The client is asked to `upload-cancel` too, but the server already
+    // knows, and Veditor's broker never calls cancel.
+    await rest(`/rest/v1/tdg_cloud_reservations?${where}`, { method: 'DELETE' }).catch(() => undefined);
     return refuse('size_mismatch', 'the upload was larger than its reservation, so it was not kept', 409);
   }
 
