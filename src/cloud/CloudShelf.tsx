@@ -13,7 +13,7 @@ import {
 import { formatDay, standingOfGrant } from '../store/grant'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
-import { ACCOUNT_HASH } from '../lib/route'
+import { ACCOUNT_HASH, CLOUD_ANCHOR } from '../lib/route'
 import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
 import { CloudManage } from './CloudManage'
@@ -408,7 +408,23 @@ export function CloudShelf({ onOpenAuth }: { onOpenAuth: () => void }) {
       : 0
 
   return (
-    <section ref={mergeRefs(reveal, tilt)} className="card cloud__panel" aria-label="TDG Cloud">
+    /*
+     * The id is `CLOUD_ANCHOR`'s, from lib/route.ts, and it is the ONLY reason
+     * this panel has one: `#/store?to=cloud-plans` is the address every other
+     * TDG app points its Cloud buttons at, so a reader who pressed Cloud in
+     * Bible Educator arrives looking at the plans instead of at the top of the
+     * shop with 900px between them and the thing they asked for. It is read
+     * from the constant rather than typed, so the id and the link can never
+     * drift apart. No `.kicker` in here, which is right: `landingFor` in
+     * lib/anchors.ts then lands the CARD's own top under the nav, and the card
+     * is what the link is about.
+     */
+    <section
+      ref={mergeRefs(reveal, tilt)}
+      id={CLOUD_ANCHOR}
+      className="card cloud__panel"
+      aria-label="TDG Cloud"
+    >
       <span className="card__spot" aria-hidden="true" />
       <span className="card__edge" aria-hidden="true" />
 

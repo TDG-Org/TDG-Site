@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { STORE_HASH } from '../lib/route'
+import { CLOUD_HASH } from '../lib/route'
 import { AccountFold, AccountSub } from '../account/AccountFold'
 import { useAppNames } from '../account/appNames'
 import { formatDay, standingOfGrant } from '../store/grant'
@@ -438,7 +438,7 @@ export function CloudFold() {
           {/* The anchored address, not the bare Store: a link that has already
               said "the plans" must not make the reader find them. Same
               constant the other TDG apps use — see lib/route.ts. */}
-          <a className="cloud__mine-link" href={STORE_HASH}>
+          <a className="cloud__mine-link" href={CLOUD_HASH}>
             See The Plans In The Store
             <span aria-hidden="true"> →</span>
           </a>

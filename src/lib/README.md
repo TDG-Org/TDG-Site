@@ -87,6 +87,26 @@ an app that starts reporting tomorrow needs no edit here. One that misses the
 shape is dropped and the report is filed under the site — the reader still gets
 the form. `feedbackHash(appId)` builds the address, so nothing concatenates it.
 
+**A route may also carry a PLACE on the page it opens: `#/store?to=cloud-plans`.**
+A query inside the fragment, and `routeFromHash` drops it before it reads a
+single segment — so it can never change WHICH page a hash means. It is a query
+rather than a second segment because `#/store/<app>` already spends that segment
+on a PAGE, and teaching the same segment to mean "a place on this page" again
+would put back the exact confusion that separation removed; and not
+`#/store#cloud-plans` because there is only one fragment, so that would have to
+be split here anyway and reads, in an address bar somebody is about to copy,
+like a link that broke. `anchoredHash(routeHash, id)` builds one, and
+`sectionIdFromHash` in `anchors.ts` reads it.
+
+**`CLOUD_HASH` is the address the OTHER TDG apps point their Cloud buttons at**
+(`#/store?to=cloud-plans`), and `CLOUD_ANCHOR` is the id `CloudShelf` puts on
+the Store's TDG Cloud panel — one constant, read at both ends, so the link and
+the id cannot drift. Before it existed every one of those apps dropped a reader
+at the top of the shop with ~900px between them and the plans they had just
+asked about. The id is deliberately outside the `store-sec-*` namespace: that
+prefix belongs to the Store's generated FAQ folds, one of which is already
+`store-sec-cloud`.
+
 Four things to keep true when you add one:
 
 1. **A route may put its variable part behind a segment and open a page per
@@ -168,6 +188,16 @@ top of the document at that moment — so the landing computed negative, clamped
 to zero, and the reader arrived at the hero. It lands again on `document.fonts.ready`
 and on `load`, and stops the moment it finds the page somewhere it did not leave
 it, because a reader who has scrolled owns the page.
+
+**`sectionIdFromHash` answers for two shapes, one level apart.** A bare `#apps`
+is a section of the page already on screen; `#/store?to=cloud-plans` is a ROUTE
+plus a place on the page it opens — the route decides which page, this decides
+where on it the reader lands, and `App.tsx` lands it on arrival with `instant`
+before it would otherwise have gone to the page's top. A `to` naming nothing on
+the page is the same as no `to` at all: the top of the page, hash untouched,
+which is rule 8's instinct one level down. Measured on the production build at
+1440×900 and at 375×812: the panel's own top lands at 88px, `--nav-h` (70) plus
+the file's 18px gap, on a cold load and on a same-page follow alike.
 
 ## `motion.ts`
 

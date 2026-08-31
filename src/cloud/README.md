@@ -10,7 +10,7 @@ against live tables; what makes it Coming Soon is one flag in
 | --- | --- |
 | `config.ts` | The public config store: plans, quotas, prices and availability from `tdg_cloud_public_config()`, over the built-in copy in [`src/data/cloud.ts`](../data/cloud.ts), cached the way `src/content/store.ts` caches. **Fails closed**: `available` and the payment links only ever come from a fresh server answer, so nothing stale can open a checkout. |
 | `useCloudStatus.ts` | The signed-in account's whole standing in one `tdg_cloud_status()` round trip: plan and grant, quota against used/reserved, per-app bytes, egress, retention, revocation, and the server's own warnings. Re-asks on foreground/focus/online/every 5 minutes, and a failed re-check never unsettles a settled answer — `useOwnedPacks`' rules, because it is the same money. |
-| `CloudShelf.tsx` | The Store index's Cloud area: the two plan cards, priced from config, with every state given a face — Coming Soon (a disabled button that says so), on sale, held (usage meter + manage), revoked, could-not-check. Buying reuses the one `PlanChooser` and the pack cards' five-minute payment watch. |
+| `CloudShelf.tsx` | The Store index's Cloud area: the two plan cards, priced from config, with every state given a face — Coming Soon (a disabled button that says so), on sale, held (usage meter + manage), revoked, could-not-check. Buying reuses the one `PlanChooser` and the pack cards' five-minute payment watch. Its panel carries `CLOUD_ANCHOR`'s id, which is what `#/store?to=cloud-plans` lands on. |
 | `CloudFold.tsx` | The Account page's fold: Coming Soon until Core opens the door for the account, then the management surface — plan and standing, the visualizer, sync recency, warnings, browse/download every hosted file, and delete-all behind a typed confirmation. Pinning a visualizer segment opens that app's file browser. |
 | `CloudViz.tsx` | The storage visualizer: one bar, every app a coloured segment from the eight `--chart-*` tokens (assigned by rank — tokens.css says why), a striped segment for uploads in flight, an aria-live inspector strip that prints the EXACT byte count, and a legend of pressable chips. Its entrance animation's first frame is a legible bar on purpose: a starved animation clock must never freeze the meter into showing nothing. This is the canonical implementation the apps mirror natively — `docs/cloud-visualizer.md` is the contract. |
 | `CloudManage.tsx` | Manage or Cancel Plan, mounted by BOTH surfaces above so rule 11 is kept mechanically. `tdg-site-billing` already handles `app: 'cloud'` because it resolves apps through the registry — cancelling is `cancel_at_period_end`, and the panel says what retention means before the press. |
@@ -64,3 +64,21 @@ Everything in this folder is already the launched behaviour behind the flag.
 The launch itself is the checklist in `supabase/README.md` (§ TDG Cloud):
 activate the four Stripe payment links, then flip `availability.available`
 in the console's Cloud tab. No file here changes on launch day.
+
+## The way in from another app
+
+**`#/store?to=cloud-plans` opens the Store standing at the Cloud panel**, and
+that address is `CLOUD_HASH` in [`../lib/route.ts`](../lib/route.ts) — the one
+place it is written, read both by `CloudShelf` (for the panel's `id`) and by
+every link that points at it. The Account fold's own
+"See The Plans In The Store" uses it too: a link that has already said "the
+plans" must not make the reader find them.
+
+**It exists for the OTHER TDG apps.** Their Cloud buttons used to open `#/store`
+and drop a reader at the top of the shop with roughly 900px between them and the
+thing they had just pressed. Bible Educator funnels every one of its Cloud links
+through a single constant (`TDG_CLOUD_URL` in its `src/core/links.ts`) so that
+adopting this is a one-line change; TDG Veditor, Makullveny and DevFleet each
+hold their own copy of the site address and will want the same. How the query
+survives the router, and why it is a query rather than a segment, is in
+[`../lib/README.md`](../lib/README.md).

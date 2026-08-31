@@ -157,22 +157,58 @@ export function landOnAnchor(id: string): (() => void) | null {
 }
 
 /**
- * The section id a hash is asking for, or null when it is asking for something
- * else — a route (`#/store`), or nothing at all.
+ * The one alias this site has.
  *
- * **`story` is the one alias this site has**, and it is resolved here so that
- * both ways of arriving at it agree. The Origin section was `#story` until the
- * rename in 1.5.0 (August 2026); bookmarks and shared links still carry it.
- * The hash itself is deliberately NOT rewritten — see `App.tsx`, which says
- * why at the effect that used to own this alias on its own.
+ * The Origin section was `#story` until the rename in 1.5.0 (August 2026);
+ * bookmarks and shared links still carry it, and it is resolved here so that
+ * every way of arriving at it agrees. The hash itself is deliberately NOT
+ * rewritten — see `App.tsx`, which says why at the effect that used to own
+ * this alias on its own.
  *
  * Not a table. One id has ever been renamed here, and a lookup map for one
  * entry invites the next person to add a second without asking whether the old
  * link was ever real. If a second is ever renamed, write it beside this one
  * and say when.
  */
+const resolveAlias = (id: string): string => (id === 'story' ? 'origin' : id)
+
+/**
+ * The query key a ROUTE uses to name a place on the page it opens.
+ *
+ * `#/store?to=cloud-plans` opens the Store standing at its TDG Cloud panel.
+ * Why a query rather than a second segment or a second `#` is written down
+ * once, at `anchoredHash` in lib/route.ts, which is the only thing that builds
+ * one of these.
+ */
+export const ANCHOR_PARAM = 'to'
+
+/**
+ * The section id a hash is asking for, or null when it is asking for something
+ * else — a bare route (`#/store`), or nothing at all.
+ *
+ * Two shapes answer here, and they are the same question one level apart:
+ *
+ * - `#apps` — a section of the page already on screen.
+ * - `#/store?to=cloud-plans` — a ROUTE, plus a place on the page it opens.
+ *   The route decides WHICH page; this decides where on it the reader lands.
+ *   That is what lets another TDG app link straight at the Cloud plans instead
+ *   of dropping a reader at the top of the shop with 900px to scroll.
+ *
+ * A `to` that names nothing on the page is the same as no `to` at all: both
+ * callers fall through to whatever they do for a fragment this page does not
+ * have, which is the top of it. Nothing here refuses, and nothing rewrites the
+ * address — rule 8's instinct one level down.
+ */
 export function sectionIdFromHash(hash: string): string | null {
-  const id = hash.replace(/^#/, '')
-  if (!id || id.startsWith('/')) return null
-  return id === 'story' ? 'origin' : id
+  const raw = hash.replace(/^#/, '')
+  const q = raw.indexOf('?')
+  if (q >= 0) {
+    // A route carrying a place on its own page. `URLSearchParams` decodes, so
+    // `anchoredHash`'s encoding round-trips; an empty or absent `to` is not a
+    // request for anywhere.
+    const asked = new URLSearchParams(raw.slice(q + 1)).get(ANCHOR_PARAM)?.trim()
+    return asked ? resolveAlias(asked) : null
+  }
+  if (!raw || raw.startsWith('/')) return null
+  return resolveAlias(raw)
 }

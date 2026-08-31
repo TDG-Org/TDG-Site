@@ -162,6 +162,56 @@ export const userHash = (username: string) => `#/user/${encodeURIComponent(usern
 export const storeAppHash = (appId: string) => `#/store/${appId}`
 
 /**
+ * A route, plus the place on it the reader asked for: `#/store?to=cloud-plans`.
+ *
+ * ## Why a query and not a segment
+ *
+ * Rule 8 puts a route's variable part behind a segment, and `#/store/<app>`
+ * already spends that segment — on a PAGE, which is the distinction the
+ * `store` arm above exists to record: that route used to name a place on one
+ * long Store and now names one app's own page of packs. Teaching the same
+ * segment to mean "a place on this page" again would put back the confusion
+ * that separation removed, and it would make every future app id race the
+ * anchor names.
+ *
+ * ## Why not `#/store#cloud-plans`
+ *
+ * There is only one fragment. The browser would hand the whole of
+ * `/store#cloud-plans` to this file, so it would have to be split here
+ * anyway — and it reads, in an address bar somebody is about to copy, like a
+ * link that broke.
+ *
+ * So: a query INSIDE the fragment. It cannot collide with a route or with a
+ * section id, `routeFromHash` drops it before parsing, and one hash carries
+ * both halves of "open this page, at this part of it". The scrolling is
+ * `sectionIdFromHash` / `landOnAnchor` in lib/anchors.ts, which is the same
+ * landing a bare `#apps` gets; a `to` naming nothing on the page costs the
+ * reader nothing but the top of it.
+ */
+export const anchoredHash = (routeHash: string, sectionId: string) =>
+  `${routeHash}?to=${encodeURIComponent(sectionId)}`
+
+/**
+ * The id on the Store's TDG Cloud panel, and the address that opens the Store
+ * standing at it.
+ *
+ * **This is the address the other TDG apps link their Cloud buttons to**, and
+ * it is exported so no repo has to concatenate it — the same reason
+ * `feedbackHash` exists. Bible Educator funnels every Cloud link through one
+ * constant (`TDG_CLOUD_URL` in its `src/core/links.ts`) so that adopting this
+ * is a one-line change; TDG Veditor, Makullveny and DevFleet each hold their
+ * own copy of the site address and will want the same.
+ *
+ * The id is deliberately NOT in the `store-sec-*` namespace: that prefix
+ * belongs to the Store's FAQ folds, one of which is already `store-sec-cloud`,
+ * and an anchor that shares a prefix with a generated set is an anchor waiting
+ * to be taken. It carries no leading slash, so rule 8 keeps it clear of every
+ * route.
+ */
+export const CLOUD_ANCHOR = 'cloud-plans'
+export const CLOUD_HASH = anchoredHash(STORE_HASH, CLOUD_ANCHOR)
+
+/**
  * The slugs the router will accept, taken from the CARDS rather than from the
  * pages themselves. The page content is a large file and only a visitor who
  * opens one should pay to download it, so this file must not import it: see
@@ -191,7 +241,20 @@ function safeDecode(part: string): string {
 }
 
 export function routeFromHash(hash: string): Route {
-  const key = hash.replace(/^#/, '').replace(/^\/+/, '').toLowerCase()
+  const key = hash
+    .replace(/^#/, '')
+    /*
+     * A route may carry `?to=<section id>` — see `anchoredHash` below and
+     * `sectionIdFromHash` in lib/anchors.ts. It names a place ON the page the
+     * route opens, so it can never change WHICH page that is, and it is
+     * dropped here before a single segment is read. Without this line
+     * `#/store?to=cloud-plans` matched no route and rendered home, which is
+     * what `#/banana` does and exactly the wrong answer for a link that
+     * plainly asked for the shop.
+     */
+    .replace(/\?.*$/, '')
+    .replace(/^\/+/, '')
+    .toLowerCase()
   if (key === 'about') return { kind: 'about' }
   if (key === 'store') return { kind: 'store' }
   if (key.startsWith('store/')) {

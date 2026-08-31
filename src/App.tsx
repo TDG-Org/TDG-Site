@@ -177,48 +177,55 @@ export default function App() {
      */
     const back = arriveAt(hash)
 
-    if (
+    // Returning to the exact place a card was clicked from beats everything
+    // else, on a page and on home alike: the reader asked for Back, not for a
+    // section.
+    if (back !== null) {
+      window.scrollTo({ top: back, behavior: 'instant' })
+      return
+    }
+
+    const routedPage =
       route.kind === 'store' ||
       route.kind === 'app' ||
       route.kind === 'about' ||
       route.kind === 'account' ||
       route.kind === 'profile' ||
       showDev
-    ) {
-      if (back !== null) {
-        window.scrollTo({ top: back, behavior: 'instant' })
-        return
-      }
-      // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
-      // change, and `auto` resolves to smooth here, so arriving at the Store
-      // from halfway down the home page slid the new page up under you instead
-      // of simply being at its top, which is what opening a page looks like.
-      window.scrollTo({ top: 0, behavior: 'instant' })
-      return
-    }
-    if (back !== null) {
-      window.scrollTo({ top: back, behavior: 'instant' })
-      return
-    }
+
     /*
      * A page opened AT a section is simply THERE, so `instant` — the document's
      * own `scroll-behavior: smooth` would otherwise slide the whole page up
      * under the reader, which is what opening a page must not look like.
      *
-     * `sectionIdFromHash` resolves the one legacy alias this site has, `#story`
-     * → `#origin`, and `scrollToAnchor` decides the landing. **The hash itself
-     * is deliberately NOT rewritten**: rule 8 of AGENTS.md is that an
-     * unrecognised route renders home with the hash untouched, and the same
-     * instinct holds one level down — silently editing the address bar of
-     * somebody who followed their own bookmark is its own kind of surprise, and
-     * it would quietly rewrite the link they are about to copy back out.
+     * `sectionIdFromHash` answers for both shapes: a bare `#origin` on the home
+     * page (resolving the one legacy alias, `#story`), and a ROUTE naming a
+     * place on the page it opens — `#/store?to=cloud-plans`, which is what the
+     * other TDG apps link their Cloud buttons at. `scrollToAnchor` decides the
+     * landing. **The hash itself is deliberately NOT rewritten**: rule 8 of
+     * AGENTS.md is that an unrecognised route renders home with the hash
+     * untouched, and the same instinct holds one level down — silently editing
+     * the address bar of somebody who followed their own bookmark is its own
+     * kind of surprise, and it would quietly rewrite the link they are about to
+     * copy back out.
+     *
+     * Not one scroll but a landing that survives the page finishing loading —
+     * see `landOnAnchor`. It hands back a cleanup because a reader who routes
+     * away mid-load must not be pulled back to a section they have left, and
+     * NULL when the page has no such section: a `to` naming nothing costs a
+     * routed page nothing but its own top, which is where it was going anyway.
      */
     const id = sectionIdFromHash(hash)
-    if (!id) return
-    // Not one scroll but a landing that survives the page finishing loading —
-    // see `landOnAnchor`. It hands back a cleanup because a reader who routes
-    // away mid-load must not be pulled back to a section they have left.
-    return landOnAnchor(id) ?? undefined
+    const landed = id ? landOnAnchor(id) : null
+    if (landed) return landed
+
+    if (routedPage) {
+      // INSTANT, not the document's own `scroll-behavior: smooth`: this is a page
+      // change, and `auto` resolves to smooth here, so arriving at the Store
+      // from halfway down the home page slid the new page up under you instead
+      // of simply being at its top, which is what opening a page looks like.
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
   }, [route, showDev])
 
   /*
