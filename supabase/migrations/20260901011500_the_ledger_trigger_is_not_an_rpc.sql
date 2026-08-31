@@ -1,0 +1,27 @@
+--  ═══════════════════════════════════════════════════════════════════════
+--  The ledger trigger is not an RPC.
+--  ═══════════════════════════════════════════════════════════════════════
+--
+--  Applied 2026-09-01, minutes after `20260901010000_four_purchase_ledgers_become_one`.
+--
+--  That migration created `tdg_purchase_events_write()` and, like every
+--  `create function` without a following `revoke`, left EXECUTE with `public`.
+--  Supabase's own security advisor found it immediately:
+--
+--      WARN · Public Can Execute SECURITY DEFINER Function
+--      public.tdg_purchase_events_write() can be executed by the `anon` role
+--      via /rest/v1/rpc/tdg_purchase_events_write
+--
+--  Nothing was reachable through it — a function returning `trigger` refuses
+--  to run outside a trigger, so the call could only ever have answered
+--  "trigger functions can only be called as triggers". But a SECURITY DEFINER
+--  function that anon can name on the public API is not a thing to leave
+--  standing on the strength of an error message, and this repo's rule is that
+--  every function is revoked and then granted narrowly (see the exceptions
+--  section of `migrations/README.md`, which is deliberately a short list).
+--
+--  A trigger fires in the table owner's context and needs no EXECUTE grant to
+--  whoever ran the INSERT, so this costs the four views nothing. Verified
+--  after applying: an insert through `veditor_purchase_events` and one
+--  through `mak_subscription_events` both still land, under their own apps.
+revoke all on function public.tdg_purchase_events_write() from public, anon, authenticated;

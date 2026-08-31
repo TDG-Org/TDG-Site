@@ -370,10 +370,16 @@ migration.** Two refinements are picked up the same way if the app offers them �
 against, `<app>_purchase_events` joins the merged Purchases ledger — and neither
 is required to start.
 
-Views are skipped, so `veditor_entitlements_live` does not become a second TDG
-Veditor. And the shape test wants all three columns: a table that merely ends in
-`_entitlements` cannot half-register and render a panel whose switches fail on
-contact.
+Views are skipped **for the entitlements table**, so `veditor_entitlements_live`
+does not become a second TDG Veditor. And the shape test wants all three columns:
+a table that merely ends in `_entitlements` cannot half-register and render a
+panel whose switches fail on contact.
+
+The LEDGER lookup deliberately accepts a view as well, since 2026-09-01: the four
+per-app ledgers merged into `tdg_purchase_events` and `<app>_purchase_events` is
+now a compatibility view over it. Had that lookup stayed tables-only, every app's
+`events_table` would have gone null in silence — the panels would have kept
+working and the Purchases ledger would simply have emptied.
 
 ### Two sources, and the console shows you where they disagree
 
@@ -1219,7 +1225,7 @@ What is still worth doing, and both are optional:
 | | Why |
 | --- | --- |
 | `public.<app>_known_packs()` returning `text[]` | Gives the tiles a catalogue instead of only what an account happens to hold, and holds grants to that list. Without it any well-formed pack id is accepted. |
-| `public.<app>_purchase_events` | Joins the merged Purchases ledger — and it is what makes **Reset** possible, because it is the only record of which grants came from Stripe rather than from this page. Without it the reset option is absent, with a sentence saying why. |
+| `public.<app>_purchase_events` | Joins the merged Purchases ledger — and it is what makes **Reset** possible, because it is the only record of which grants came from Stripe rather than from this page. Without it the reset option is absent, with a sentence saying why. Since 2026-09-01 this is a view over `public.tdg_purchase_events`; either a table or a view registers. |
 | An entry in `STORE_APPS` (`src/data/store.ts`) | Gives the panel the app's real name, its prose and its prices. Without it the console titles the app from its id. |
 
 Neither blocks the other and neither blocks the console. See `apps.ts`.
