@@ -10,8 +10,8 @@
    one card that the other does not read. */
 
 .cloud__panel {
-  padding: 26px 24px;
-  margin-bottom: 26px;
+  padding: 20px;
+  margin-bottom: 22px;
   /* A quiet wash of the accent over the card surface, so the shelf reads as
      its own area without inventing a second card language. */
   background-image: linear-gradient(
@@ -23,21 +23,26 @@
 
 .cloud__body {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
+/* One header row — the name left, the single state chip right — with the one
+   line of what-it-is spanning underneath. The shelf earns its area with the
+   plan cards, not the introduction. */
 .cloud__head {
-  display: grid;
-  gap: 12px;
-  max-width: 720px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
 }
 
 .cloud__title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   margin: 0;
-  font: 700 clamp(22px, 3.4vw, 28px) / 1.15 var(--font-display, var(--font-body));
+  font: 700 clamp(18px, 2.6vw, 21px) / 1.15 var(--font-display, var(--font-body));
   letter-spacing: -0.02em;
   color: var(--text);
 }
@@ -46,8 +51,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--border-hover);
   border-radius: 3px;
   background-color: color-mix(in srgb, var(--accent) 14%, transparent);
@@ -55,21 +60,22 @@
 }
 
 .cloud__lede {
+  width: 100%;
   margin: 0;
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--muted);
 }
 
 /* ── the pair ── */
 
 .cloud__plans {
-  --cloud-plan-pad: 20px;
-  --cloud-plan-gap: 12px;
+  --cloud-plan-pad: 16px;
+  --cloud-plan-gap: 9px;
   --cloud-plan-radius: 3px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
 }
 
 .cloud__plan {
@@ -121,39 +127,17 @@
   color: var(--muted);
 }
 
-.cloud__unlocks {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text);
-}
-.cloud__unlocks li {
-  display: flex;
-  gap: 9px;
-  align-items: flex-start;
-}
-.cloud__unlock-tick {
-  display: inline-flex;
-  flex: none;
-  margin-top: 2px;
-  color: var(--live-fg);
-}
-
 .cloud__plan-price {
   display: flex;
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--border);
 }
 
 .cloud__plan-amount {
-  font: 700 21px/1 var(--font-body);
+  font: 700 20px/1 var(--font-body);
   letter-spacing: -0.01em;
   color: var(--text);
 }
@@ -191,9 +175,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   margin-top: auto;
-  min-height: 96px;
+  /* One floor for every state, so the pair cannot fall out of step — sized
+     for the CTA alone now that the dormant explainer lives in the shared
+     footnote instead of under each card. */
+  min-height: 44px;
 }
 .cloud__action .store__buy,
 .cloud__action .store__ghost {
@@ -295,8 +282,12 @@
 .cloud__foot {
   margin: 0;
   font-size: 12px;
-  line-height: 1.65;
+  line-height: 1.55;
   color: var(--faint);
+}
+.cloud__foot strong {
+  font-weight: 650;
+  color: var(--muted);
 }
 
 /* ── the Account fold's own pieces ── */

@@ -189,17 +189,6 @@ function CloudPlanCard({
       </div>
       <p className="cloud__plan-tagline">{plan.tagline}</p>
 
-      <ul className="cloud__unlocks">
-        {plan.unlocks.map((line) => (
-          <li key={line}>
-            <span className="cloud__unlock-tick" aria-hidden="true">
-              <Tick />
-            </span>
-            {line}
-          </li>
-        ))}
-      </ul>
-
       <div className="cloud__plan-price">
         <span className="cloud__plan-amount">
           {formatUsd(plan.monthlyCents)}
@@ -264,18 +253,13 @@ function CloudPlanCard({
             </p>
           </>
         ) : !buyable ? (
-          <>
-            {/* The one CTA a dormant shop is allowed: a button that says why it
-                does nothing. Disabled for real, so it is skipped by keyboard
-                and reader alike; the note underneath carries the sentence. */}
-            <button type="button" className="store__buy cloud__soon" disabled>
-              Coming Soon
-            </button>
-            <p className="store__note">
-              Not on sale yet. The plans and prices are set, and buying opens right here when TDG
-              Cloud launches.
-            </p>
-          </>
+          /* The one CTA a dormant shop is allowed: a button that says why it
+             does nothing. Disabled for real, so it is skipped by keyboard and
+             reader alike. The explanation is said ONCE, in the shelf's shared
+             footnote, rather than under each card. */
+          <button type="button" className="store__buy cloud__soon" disabled>
+            Coming Soon
+          </button>
         ) : statusKind === 'signedOut' ? (
           <>
             <button type="button" className="store__buy" onClick={onOpenAuth}>
@@ -429,28 +413,28 @@ export function CloudShelf({ onOpenAuth }: { onOpenAuth: () => void }) {
       <span className="card__edge" aria-hidden="true" />
 
       <div className="cloud__body">
+        {/* One row: the name on the left, the state chips on the right, one
+            line of what it is underneath — everything else the old intro and
+            bullet lists said is said once, in the footnote. */}
         <div className="cloud__head">
-          <div className="chips">
-            <span className="chip chip--hot">TDG CLOUD</span>
-            {testing ? (
-              <span className="chip">DEV TESTING</span>
-            ) : live ? (
-              <span className="chip">LIVE</span>
-            ) : (
-              <span className="chip">COMING SOON</span>
-            )}
-            <span className="chip">POOLED STORAGE</span>
-          </div>
           <h3 className="cloud__title">
             <span className="cloud__title-glyph" aria-hidden="true">
               <CloudGlyph />
             </span>
             TDG Cloud
           </h3>
+          <div className="chips">
+            {testing ? (
+              <span className="chip chip--hot">DEV TESTING</span>
+            ) : live ? (
+              <span className="chip chip--hot">LIVE</span>
+            ) : (
+              <span className="chip chip--hot">COMING SOON</span>
+            )}
+          </div>
           <p className="cloud__lede">
-            One storage allowance for your whole TDG Account — your projects, saves, settings and
-            media, synced across every TDG app and every machine you sign in on. Two plans, one
-            pool: every compatible app draws from the same space.
+            One pooled storage allowance for your whole TDG Account — projects, saves, settings and
+            media, synced across every TDG app and machine you sign in on.
           </p>
         </div>
 
@@ -505,11 +489,14 @@ export function CloudShelf({ onOpenAuth }: { onOpenAuth: () => void }) {
         )}
 
         <p className="cloud__foot">
-          Storage is pooled across your compatible TDG apps, and only your real work counts — never
-          caches or temporary files. Cancel whenever you like: your plan runs to the end of what you
-          paid for, and after that your data stays readable and downloadable for{' '}
-          {config.retentionDays} days before it is removed, so nothing disappears the day a plan
-          ends.
+          {!live && !testing && (
+            <>
+              <strong>Not on sale yet</strong> — prices are set, and buying opens right here when
+              TDG Cloud launches.{' '}
+            </>
+          )}
+          Only your real work counts, never caches or temporary files. Cancel any time: your plan
+          runs to what you paid for, then your data stays readable for {config.retentionDays} days.
         </p>
       </div>
     </section>

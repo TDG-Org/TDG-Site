@@ -30,10 +30,9 @@ import {
  *     reason: the one mistake a shop may not make is charging a number it did
  *     not advertise, and a stale link is that mistake wearing a URL.
  *
- * `unlocks` — the prose list on each plan card — is site copy (rule 1), so it
- * is carried over from the built-in plan by id. A plan id the site has never
- * heard of still renders, with an empty list: a plan the server sells and the
- * site refuses to draw would be a product nobody can find (rule 17).
+ * A plan id the site has never heard of still renders with the server's own
+ * name and numbers: a plan the server sells and the site refuses to draw
+ * would be a product nobody can find (rule 17).
  */
 
 const CACHE_KEY = 'tdg.cloud.config.v1'
@@ -85,7 +84,6 @@ function planOf(raw: unknown, live: boolean): CloudPlan | null {
       live && typeof entry.payment_link_annual === 'string' && entry.payment_link_annual !== ''
         ? entry.payment_link_annual
         : null,
-    unlocks: builtIn?.unlocks ?? [],
   }
 }
 

@@ -224,7 +224,10 @@ async function provision(): Promise<Record<string, unknown>> {
         'projects, synced across every TDG app and machine you sign into. Storage is shared ' +
         'across your apps from one allowance. Cancel any time; your data stays readable. - TDG Brothers',
       monthlyCents: 299,
-      annualCents: 2999,
+      // 2026-08-31 (pm): annual 2999 → 3199 — the margin floor rose to >$1 at
+      // 100% utilization on EVERY cadence, and $29.99/yr netted only +$0.87.
+      // At $31.99 the two Standard cadences carry a matched ~$1.05 worst case.
+      annualCents: 3199,
     },
     {
       pack: 'studio',
@@ -234,12 +237,14 @@ async function provision(): Promise<Record<string, unknown>> {
         'Developer builds and large assets, alongside everything the Standard plan covers. One ' +
         'pooled allowance across your TDG apps. Cancel any time; your data stays readable. - TDG Brothers',
       // 2026-08-30: raised from 999/9999 (1 TB) to match the market's big-tier
-      // standard at 2 TB. 2026-08-31: repriced 1299/12999 → 1499/15999 for the
-      // B2 move's rule — profit even at 100% quota utilization, BOTH cadences
-      // (12999/yr netted less than 2 TB costs to host at the cap). Keep in
-      // step with tdg_cloud_config.plans.studio.
-      monthlyCents: 1499,
-      annualCents: 15999,
+      // standard at 2 TB. 2026-08-31 (am): 1299/12999 → 1499/15999 for the B2
+      // move's profit-at-100%-utilization rule. 2026-08-31 (pm): 1499/15999 →
+      // 1999/21999 — the owner raised the floor to >$1 per cadence and asked
+      // that Studio stop being a much better per-GB deal than Standard (it
+      // was 39% cheaper per GB; now ~18%). Keep in step with
+      // tdg_cloud_config.plans.studio.
+      monthlyCents: 1999,
+      annualCents: 21999,
     },
   ];
 

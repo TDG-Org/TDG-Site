@@ -26,16 +26,11 @@
  * change it here in the same sitting — the mistake this copy can make is
  * showing an old number for one round trip, never charging one, but a
  * fallback that drifts for months is a page that lies whenever the network
- * hiccups. (2026-08-31: Standard 200→250 GB and Studio 1299/12999 →
- * 1499/15999, the B2-move pricing — chosen so every plan profits even at
- * 100% quota utilization, both cadences.)
- *
- * ## `unlocks` is site copy, not config
- *
- * What each plan is FOR is prose, written here the way every product's words
- * are written in `src/data/` (rule 1). The server merge in
- * `src/cloud/config.ts` keeps these lists beside whatever names and numbers
- * the server answers with.
+ * hiccups. (2026-08-31: Standard 200→250 GB and Studio repriced twice — the
+ * B2 move in the morning, then the margin floor in the afternoon: every plan
+ * and cadence must clear MORE than a dollar of profit per month even at 100%
+ * quota utilization, and Studio must not be a much better per-GB deal than
+ * Standard. Hence $2.99/$31.99 and $19.99/$219.99.)
  */
 
 export type CloudPlanId = 'standard' | 'studio'
@@ -55,8 +50,6 @@ export type CloudPlan = {
    *  Cloud is on sale. Null here by construction; see the header. */
   linkMonthly: string | null
   linkAnnual: string | null
-  /** What the plan covers, in the words the Store card lists. */
-  unlocks: string[]
 }
 
 export const CLOUD_PLANS: CloudPlan[] = [
@@ -66,31 +59,19 @@ export const CLOUD_PLANS: CloudPlan[] = [
     tagline: 'Your TDG world, on every machine. Settings, saves, documents and projects, synced.',
     quotaGb: 250,
     monthlyCents: 299,
-    annualCents: 2999,
+    annualCents: 3199,
     linkMonthly: null,
     linkAnnual: null,
-    unlocks: [
-      '250 GB of pooled storage, shared across your TDG apps',
-      'Your app data synced to every machine you sign in on',
-      'Kept safe on your TDG Account, not on a device',
-      'Cancel any time — your data stays readable',
-    ],
   },
   {
     id: 'studio',
     name: 'Cloud Studio',
     tagline: 'Room for the heavy work: TDG Veditor projects and media, Developer builds, large assets.',
     quotaGb: 2048,
-    monthlyCents: 1499,
-    annualCents: 15999,
+    monthlyCents: 1999,
+    annualCents: 21999,
     linkMonthly: null,
     linkAnnual: null,
-    unlocks: [
-      '2 TB of pooled storage, shared across your TDG apps',
-      'Built for TDG Veditor projects, media and large assets',
-      'Everything Cloud Standard covers, eight times the room',
-      'Cancel any time — your data stays readable',
-    ],
   },
 ]
 

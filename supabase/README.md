@@ -471,9 +471,11 @@ forwards the caller's own JWT into the gates, hands out per-object presigned
 URLs, HEADs each landed object before booking it, and destroys every version
 on delete (a plain S3 delete on B2 only hides). Client↔B2 is direct both
 ways, so hosted bytes never count as Supabase egress. At $0.006/GB-month
-with a free egress band, every plan now profits even at 100% quota
-utilization — the rule the 2026-08-31 reprice (Standard 250 GB · $2.99/$29.99,
-Studio 2 TB · $14.99/$159.99) was chosen by. The old `tdg-cloud` Storage
+with a free egress band, every plan now clears MORE than a dollar of profit
+per month even at 100% quota utilization — the floor the second 2026-08-31
+reprice (Standard 250 GB · $2.99/$31.99, Studio 2 TB · $19.99/$219.99) was
+chosen by, with Studio's per-GB edge over Standard held to ~18% instead of
+the 39% steal it briefly was. The old `tdg-cloud` Storage
 bucket's policies and triggers are dropped (the platform kept the empty
 bucket row; it is inert). The site's half is
 [`src/cloud/`](../src/cloud/README.md); the brief for each app's own session
