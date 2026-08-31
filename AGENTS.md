@@ -1,4 +1,4 @@
-# AGENTS.md · building on the TDG site
+# AGENTS.md · building on TDG Cebu
 
 **Read this before you change a file.** It is written for an AI assistant
 arriving cold — Claude, Codex, Cursor, Copilot, Gemini, anything — with no
