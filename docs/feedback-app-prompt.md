@@ -1,7 +1,7 @@
 # Giving a TDG app the feedback loop
 
 The server side and the developer side of TDG feedback already exist: reports
-land in tdg-core and we read, answer and manage them in the TDG Site Developer
+land in tdg-core and we read, answer and manage them in the TDG Cebu Developer
 console (`#/dev` → Feedback). What each app still needs is its own two
 user-facing halves — a way to send, and the panel that shows our reply.
 
@@ -98,7 +98,7 @@ Semantics that matter and are invisible from the signatures:
 - A reply stays in the inbox until acked, so ack ONLY after it actually
   rendered and the user confirmed reading it — a deliberate press, not a
   dismissal. Escape or clicking away should cost nothing: the reply comes
-  back next launch. On TDG Site the panel's two buttons are "Got It" (acks)
+  back next launch. On TDG Cebu the panel's two buttons are "Got It" (acks)
   and "Show Me Next Time" (does not).
 - The developer console shows each reply as SEEN / NOT SEEN YET from exactly
   this ack, so an eager ack lies to us about whether the person ever saw the
@@ -150,7 +150,7 @@ From a signed-in run of the real app: I send feedback with a chosen kind and
 no contact line, and it answers with a reference number. Sending a second one
 straight away is refused in a sentence I can read, with a countdown beside
 the button that runs down and lets me send again — and pressing Send twice
-on the SAME text gives me the same reference number, not two reports. In the TDG Site
+on the SAME text gives me the same reference number, not two reports. In the TDG Cebu
 Developer console (`#/dev` → Feedback) that report shows this app's id, the
 right version and OS, and my account. After a reply is written there, the
 next launch of this app opens the panel with the reply quoted against what I

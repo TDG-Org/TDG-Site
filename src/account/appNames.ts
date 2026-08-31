@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { resolvedApps } from '../content/resolve'
 import { useSiteContent } from '../content/store'
+import { SITE_APP_ID, SITE_NAME } from '../data/content'
 import { STORE_APPS } from '../data/store'
 import { appHash, storeAppHash } from '../lib/route'
 import { prettyId } from './format'
@@ -27,20 +28,33 @@ import { prettyId } from './format'
  * ## An id with no card still gets a face
  *
  * `prettyId` is the fallback, and it is not a nicety: an app that has never
- * been given a `backend`, one added by a migration after this build shipped,
- * or this site itself — which files feedback as `tdg-site` — all have real
- * rows and a reader is entitled to see them. `tdg-site` comes out as
- * `TDG Site` and `music-everything` as `Music Everything`, so the fallback is
+ * been given a `backend`, or one added by a migration after this build
+ * shipped, has real rows and a reader is entitled to see them.
+ * `music-everything` comes out as `Music Everything`, so the fallback is
  * usually right anyway.
  *
  * A list that dropped what it could not name would under-report what somebody
  * uses, and under-reporting is the failure nobody notices (AGENTS.md rule 17).
+ *
+ * ## This site is the one id the fallback gets WRONG
+ *
+ * It has no card — a catalogue does not list the shop it is printed in — so it
+ * used to arrive here as `tdg-site` and leave as `TDG Site`, which was right
+ * by accident for as long as the id and the name were the same word. They
+ * stopped being the same word on 2026-08-31: the site is called **TDG Cebu**
+ * and the id it writes rows under is still `tdg-site`, because those rows
+ * already exist. Spelled out of the slug, the account page would tell somebody
+ * they use an app that no longer exists under that name.
+ *
+ * So it is mapped explicitly, from `SITE_NAME` in `src/data/content.ts` — the
+ * one place the site's own name is written down (rule 1: a product's name is
+ * copy, and copy lives in the data file).
  */
 export function useAppNames(): (appId: string) => string {
   const doc = useSiteContent()
 
   return useMemo(() => {
-    const byBackend = new Map<string, string>()
+    const byBackend = new Map<string, string>([[SITE_APP_ID, SITE_NAME]])
     for (const app of resolvedApps(doc)) {
       if (app.backend) byBackend.set(app.backend, app.title)
     }
@@ -71,8 +85,9 @@ const NOWHERE: AppWhere = { page: null, store: null }
  * Both answers are DERIVED, and both may be null. `backend` on the card
  * catalogue is the id-to-page mapping, read through the overlay so a page
  * renamed from `#/dev` is renamed here too; `STORE_APPS` matched on that page
- * is whether there is a shop. An id with no card — `tdg-site`, an app added by
- * a migration after this build shipped — still gets its ROW and its name from
+ * is whether there is a shop. An id with no card — `tdg-site` (this site), an
+ * app added by a migration after this build shipped — still gets its ROW and
+ * its name from
  * `useAppNames`; it simply gets no links, which is the honest answer rather
  * than a link to `#/app/undefined` (rule 17: an unknown entry gets a face, not
  * a guess).

@@ -6,8 +6,12 @@
 
 **Brothers building software, games, and tools for the glory of Jesus.**
 
-Two brothers, Nate & Luke. This is our landing page, our shop, and the front door
-to every account we run.
+Two brothers, Nate & Luke. **The site is called TDG Cebu** — that is the name on
+a tab, a bookmark and a Home Screen tile, and the name every other app of ours
+uses when it sends you here. The repo stays `TDG-Site`, and so does the address
+below; a URL is not a name.
+
+This is our landing page, our shop, and the front door to every account we run.
 
 ## 🌐 [**tdg-org.github.io/TDG-Site**](https://tdg-org.github.io/TDG-Site/)
 

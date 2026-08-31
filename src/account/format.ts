@@ -10,9 +10,14 @@
  * repeated is cheaper than a shared module that then belongs to neither.
  *
  * **The one thing the twins must agree on is `TDG`.** `prettyId` exists
- * because app, pack and badge ids are kebab-case everywhere, and `tdg-site`
- * rendered as "Tdg Site" would misspell the project's own name on its own
- * account page. If that rule changes, it changes in both files.
+ * because app, pack and badge ids are kebab-case everywhere, and a `tdg-`
+ * prefixed one rendered as "Tdg …" would misspell the project's own name on
+ * its own account page. If that rule changes, it changes in both files.
+ *
+ * What `prettyId` must NOT be asked for is this site's own name: the id is
+ * `tdg-site` and the name is `TDG Cebu`, so spelling one out of the other
+ * gives the wrong answer. `src/account/appNames.ts` maps that id explicitly,
+ * from `SITE_NAME`, before the fallback can see it.
  */
 
 const longDate = new Intl.DateTimeFormat(undefined, {
@@ -55,7 +60,7 @@ export function fmtRelative(iso: string | null | undefined, never = 'never'): st
 }
 
 /**
- * `pro-export` → `Pro Export`, `tdg-site` → `TDG Site`.
+ * `pro-export` → `Pro Export`, `music-everything` → `Music Everything`.
  *
  * What gives a face to an id this site has never been taught to read — an app,
  * a pack, an audience or a privacy group added by a migration after this build

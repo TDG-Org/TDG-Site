@@ -470,7 +470,7 @@ It is written for the person it is about — they read it on their own Store car
 and in the app — and it is the Standing & Access box's opposite in that respect.
 
 What the block reaches, today: the entitlement is gone, so every TDG app's
-existing gate is already right, and TDG Site's Store draws a `Revoked` card with
+existing gate is already right, and TDG Cebu's Store draws a `Revoked` card with
 the reason and the date instead of a Buy button. What it does not reach on its
 own is the *explaining* inside each app — that is
 [`docs/revocation-app-prompt.md`](../../docs/revocation-app-prompt.md), one

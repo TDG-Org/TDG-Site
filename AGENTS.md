@@ -482,10 +482,28 @@ still a wrong tile:
 
 | | |
 | --- | --- |
-| **The name is the NAME** | `TDG Site`, in `<title>`, `apple-mobile-web-app-title`, `application-name`, and the manifest's `name` and `short_name`. A bookmark takes `<title>`; iOS takes the apple meta first and `short_name` after it. The lockup is a headline and it belongs on the share card, where `og:title` still carries it. |
+| **The name is the NAME** | `TDG Cebu`, in `<title>`, `apple-mobile-web-app-title`, `application-name`, and the manifest's `name` and `short_name`. A bookmark takes `<title>`; iOS takes the apple meta first and `short_name` after it. The lockup is a headline and it belongs on the share card, where `og:title` still carries it. |
 | **The icon is a raster, and it is opaque** | 180 px for `apple-touch-icon`, 192 and 512 in the manifest. iOS masks the tile itself, so the file carries **no rounded corners and no alpha**: a baked radius gets masked twice into dark wedges, and an alpha channel is composited on black first. Both read as "the icon does not fit", which is the report this rule came from. |
 | **The mark sits inside the safe circle** | Every platform mask is different and Android's is the tightest: the centred circle of 80% diameter. `scripts/icons.mjs` sizes the cross to 62% of the tile for that reason, and says so at the constant. |
 | **`display` is a decision, not a default** | It is `browser` here on purpose. A standalone iOS web app keeps its **own** storage and sends every out-of-scope navigation to Safari — which is what `signInWithOAuth` does — so installed standalone, the round trip would leave the session in Safari and the tile still signed out. Say why in `index.html` if you ever change it. |
+
+**The name, the address and the id are three strings, and only one of them
+changed.** The site was renamed from `TDG Site` to **`TDG Cebu`** on 2026-08-31.
+The repo is still `TDG-Site`, it is still published at `/TDG-Site/`, and it
+still writes database rows under the app id `tdg-site` — every cross-app link,
+every OAuth redirect, every Stripe return URL and every existing feedback and
+ownership row depends on those two staying put. So:
+
+| Where you see it | What to do |
+| --- | --- |
+| `TDG Site` as a NAME, in copy, a button, a comment, another app's UI | rename it to `TDG Cebu` |
+| `TDG-Site` in a URL, a repo reference, `vite.config.ts`'s `base`, a workflow | **leave it** |
+| `tdg-site` as an id — `SITE_APP_ID`, `FEEDBACK_APP_ID`, `tdg-site-account`, `tdg-site-deploys` | **leave it** |
+
+`SITE_NAME` in `src/data/content.ts` is the one place the running app reads the
+name from, and `src/account/appNames.ts` maps the id to it explicitly — because
+`prettyId('tdg-site')` still spells `TDG Site` and always will. A slug is not a
+name, and this is the rule that proves it.
 
 The icons are **generated and committed**, by `scripts/icons.mjs`, from
 `CrossGlyph.tsx`'s own path and `tokens.css`'s `--cross-stop-*`. It needs
@@ -496,6 +514,29 @@ for why the colours are not typed a second time.
 **This rule is about every TDG app, not only this one.** Each of ours that opens
 in a browser owns the same four lines in its own `<head>`, with its own name and
 its own art.
+
+### 18b. There is one TDG mark, and every app draws the same bytes.
+
+An app's icon is its own. The **TDG mark** is a different thing: it is the
+attribution — the logo on an About page, a credits block, a sign-in card, a
+footer — that says who made this. Every app of ours shows it, and every app of
+ours shows the *same* one.
+
+| | |
+| --- | --- |
+| **Master** | `Makullveny/assets/TDG-logo-Cross.png` — 1080×1080 RGBA, the serif `✝DG` on a silver ramp, transparent margin. `sha256 393bdcff90c1aa73cabb950f86a6b7fb97c216150bb783f0de9be8a3e9687b37`. Committed by the owner 2026-08-26. Never edited by hand. |
+| **What apps draw** | `TDG-logo-mark.png` — the same artwork cropped to its own alpha bounding box and box-filtered to 384×212, 16 KB. `sha256 ed04169d33b008a6321e1624422a6b2f8caa89fe9a77eaa247e75a724286df79`. Copy these bytes; do not re-export from the master per app, or the fleet grows a mark per app. |
+| **Retired** | the white sans `✝DG Brothers` wordmark, `sha256 d66add8d…`. It shipped in Bible Educator and DevFleet until 2026-08-31. If that hash turns up again, it is stale by definition. |
+
+Two failure modes are worth naming, because both already happened. **A square
+canvas in a wide box** renders the wordmark at about 55% of the space it was
+given, floating in padding — `mask-size: contain` and an intrinsic-aspect
+`<img>` both size from the canvas, not the ink, which is why the 1.812∶1 crop
+exists. And **a near-white gradient on a light ground disappears**: on any
+surface that follows a light theme, draw the PNG as a `mask-image` filled with
+`currentColor` rather than as an `<img>`, so the mark inherits the ink the text
+beside it already has. `Makullveny/src/styles/modules/tdg-mark.css` is the
+worked example of both.
 
 ---
 

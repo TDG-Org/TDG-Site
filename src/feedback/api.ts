@@ -1,6 +1,6 @@
 import { visibleApps, visibleGame, visibleTools } from '../content/resolve'
 import type { SiteContentDoc } from '../content/types'
-import { APPS, MARANATHA, TOOLS } from '../data/content'
+import { APPS, MARANATHA, SITE_APP_ID, TOOLS } from '../data/content'
 import { STORE_APPS } from '../data/store'
 import { supabase } from '../lib/supabase'
 
@@ -15,8 +15,14 @@ import { supabase } from '../lib/supabase'
  * there — src/dev/ is a lazy chunk that only a developer's browser fetches.
  */
 
-/** What this site submits under. Every TDG app sends its own id. */
-export const FEEDBACK_APP_ID = 'tdg-site'
+/**
+ * What this site submits under. Every TDG app sends its own id.
+ *
+ * The literal lives in `src/data/content.ts` next to `SITE_NAME`, because the
+ * id and the name are two different strings for one product and keeping them
+ * apart is how `tdg-site` came to be printed as a NAME on the account page.
+ */
+export const FEEDBACK_APP_ID = SITE_APP_ID
 
 /**
  * One kind a report can be, with the words the picker shows. The IDS mirror

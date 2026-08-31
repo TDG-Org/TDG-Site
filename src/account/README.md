@@ -322,7 +322,7 @@ wearing a product's clothes and is not the name of anything anybody has opened.
 `src/data/content.ts` — the data file where a product's copy lives (rule 1) —
 read via [`../content/`](../content/README.md), so a product renamed from
 `#/dev` is renamed here in the same breath. An id with no card falls back to
-`prettyId`, which turns `tdg-site` into `TDG Site`; a list that dropped what it
+`prettyId`, which turns `tdg-site` into `TDG Cebu`; a list that dropped what it
 could not name would under-report what somebody uses, and under-reporting is
 the failure nobody notices (rule 17).
 

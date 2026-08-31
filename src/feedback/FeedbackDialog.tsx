@@ -254,7 +254,7 @@ export function FeedbackDialog({
    * claiming an app the report is no longer about — and switching it to an app
    * says so, even for somebody who opened the form from the account menu.
    *
-   * `Feedback · TDG Site` is deliberately never drawn. On this site that names
+   * `Feedback · TDG Cebu` is deliberately never drawn. On this site that names
    * the page it is written on, which is the one thing an eyebrow cannot tell
    * anybody, and it would put a line into every report sent from the account
    * menu that says nothing.

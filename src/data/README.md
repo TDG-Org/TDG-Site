@@ -213,7 +213,7 @@ table inside a component, which is the thing rule 1 exists to prevent.
 **Optional, and a missing one is not a bug.** An app that has never written a
 row has nothing to map, and an id nothing here has heard of still gets a face:
 `prettyId` in `src/account/format.ts` turns `music-everything` into
-`Music Everything` and `tdg-site` into `TDG Site`.
+`Music Everything` and `tdg-site` into `TDG Cebu`.
 
 **What it must never be is wrong.** Only ids actually observed in the database
 are written here. A guessed one produces a mapping that silently never matches,

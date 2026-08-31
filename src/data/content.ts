@@ -201,6 +201,35 @@ export type KeyArtSpec = {
  */
 export const KEY_ART_BYLINE = 'Developed by TDG, The Disciples of God'
 
+/**
+ * What this site is CALLED — the one place the app reads its own name from.
+ *
+ * It is `TDG Cebu` as of 2026-08-31, and it was `TDG Site` before that. Three
+ * different things used to be spelled the same way and only one of them
+ * changed, so they are worth separating here once:
+ *
+ * | | |
+ * | --- | --- |
+ * | **The name** | `TDG Cebu`. This constant, plus `<title>`, `apple-mobile-web-app-title`, `application-name` and the manifest's `name`/`short_name` in `index.html` and `public/manifest.webmanifest` — AGENTS.md rule 18 checks those five together. |
+ * | **The repo and the address** | still `TDG-Site`, still served from `/TDG-Site/`. Renaming those moves the published URL and breaks every cross-app link, every OAuth redirect and every Payment Link return. |
+ * | **The database id** | still `tdg-site`. It keys feedback rows, ownership rows and the `tdg-site-*` Edge Functions that already exist; renaming it orphans them. |
+ *
+ * So a slug is never the place to read the name from. `prettyId('tdg-site')`
+ * would happily answer `TDG Site` forever — which is why `src/account/appNames`
+ * maps the id to THIS constant before it reaches that fallback.
+ */
+export const SITE_NAME = 'TDG Cebu'
+
+/**
+ * What the DATABASE calls this site, and it is not what the site is called.
+ *
+ * Every TDG app files feedback and owns products under an app id; this one's
+ * is `tdg-site`, written here beside `SITE_NAME` precisely so the pair is read
+ * as a pair. It is frozen: rows in tdg-core already carry it, and so do the
+ * `tdg-site-account` and `tdg-site-deploys` Edge Functions.
+ */
+export const SITE_APP_ID = 'tdg-site'
+
 export type AppCard = {
   id: string
   index: string
@@ -245,8 +274,10 @@ export type AppCard = {
    *
    * **Optional, and a missing one is not a bug.** An app that has never written
    * a row has nothing to map, and an id this file has never heard of still gets
-   * a face: `prettyId` turns `music-everything` into `Music Everything` and
-   * `tdg-site` into `TDG Site`. So the list is allowed to be incomplete. What
+   * a face: `prettyId` turns `music-everything` into `Music Everything`. So the
+   * list is allowed to be incomplete. (`tdg-site` is the one id that fallback
+   * gets wrong now that the site is called TDG Cebu; `SITE_NAME` above is what
+   * `src/account/appNames` maps it to instead.) What
    * it must never be is WRONG — only ids actually observed in the database are
    * written here, because a guessed one produces a mapping that silently never
    * matches, which reads exactly like not having it at all.

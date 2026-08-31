@@ -1,9 +1,9 @@
 # Teaching a TDG app to honour a revocation
 
-A developer can now take a product out of an account's reach from the TDG Site
+A developer can now take a product out of an account's reach from the TDG Cebu
 Developer console (`#/dev` → Accounts → Apps): the pack — or the whole app —
 stops being owned, cannot be bought again, and carries a reason and a date. The
-server side is live and the shop side is done; TDG Site's Store already draws
+server side is live and the shop side is done; TDG Cebu's Store already draws
 the state.
 
 What each app still needs is the half only it can do: **saying so.** Removing
@@ -14,7 +14,7 @@ the one sentence a revoked account must never be shown.
 
 **To wire an app up, paste everything below the rule into a Claude session in
 that app's repo.** One session per app; the prompt is the same for all of them.
-TDG Site's `src/store/useOwnedPacks.ts` and `src/components/Store.tsx` are the
+TDG Cebu's `src/store/useOwnedPacks.ts` and `src/components/Store.tsx` are the
 reference implementation.
 
 ---
@@ -93,7 +93,7 @@ The same console can send the account a message about the change —
 `tdg_feedback_inbox()` / `tdg_feedback_ack()` already has. If this app has
 already implemented the feedback reply panel from
 [`feedback-app-prompt.md`](feedback-app-prompt.md), showing notices in the same
-panel is a small addition and worth doing in the same pass: TDG Site delivers
+panel is a small addition and worth doing in the same pass: TDG Cebu delivers
 both through one dialog (`src/feedback/ReplyInbox.tsx`) for exactly that reason.
 
 - `tdg_my_notices()` returns `(id bigint, app text, subject text, body text,
