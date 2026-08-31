@@ -215,6 +215,9 @@ export type DevView = {
   tab: string
   selectedId: string | null
   query: string
+  /** How the Accounts rail was ordered. Kept loose for the same reason `tab`
+   *  is: this file does not own that list, `roster.ts` does. */
+  sort: string
   /** Section ids that were open, from `useSections().openIds`. */
   open: string[]
   anchor: Anchor | null
@@ -249,6 +252,7 @@ export function readView(): DevView | null {
       tab: typeof v.tab === 'string' ? v.tab : 'accounts',
       selectedId: typeof v.selectedId === 'string' ? v.selectedId : null,
       query: typeof v.query === 'string' ? v.query : '',
+      sort: typeof v.sort === 'string' ? v.sort : '',
       open: Array.isArray(v.open) ? v.open.filter((x): x is string => typeof x === 'string') : [],
       anchor:
         v.anchor && typeof v.anchor.top === 'number'
@@ -331,7 +335,13 @@ export function useRestoreView(anchor: Anchor | null): boolean {
  * reload itself, which is the whole reason any of it is written down.
  */
 export function useRememberView(
-  view: { tab: string; selectedId: string | null; query: string; open: readonly string[] },
+  view: {
+    tab: string
+    selectedId: string | null
+    query: string
+    sort: string
+    open: readonly string[]
+  },
   ready: boolean,
 ) {
   const latest = useRef(view)
@@ -339,13 +349,19 @@ export function useRememberView(
 
   const save = useCallback(() => {
     const v = latest.current
-    writeView({ tab: v.tab, selectedId: v.selectedId, query: v.query, open: [...v.open] })
+    writeView({
+      tab: v.tab,
+      selectedId: v.selectedId,
+      query: v.query,
+      sort: v.sort,
+      open: [...v.open],
+    })
   }, [])
 
   useEffect(() => {
     if (!ready) return
     save()
-  }, [ready, save, view.tab, view.selectedId, view.query, view.open])
+  }, [ready, save, view.tab, view.selectedId, view.query, view.sort, view.open])
 
   useEffect(() => {
     if (!ready) return

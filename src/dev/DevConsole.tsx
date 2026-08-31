@@ -11,6 +11,7 @@ import { adminBadges } from '../badges/api'
 import type { AdminBadge } from '../badges/types'
 import { appTitles, ownedCount, ownedTerms, storeApps, type DevStoreApp } from './apps'
 import {
+  Button,
   LedgerTag,
   Panel,
   RefreshRail,
@@ -29,9 +30,17 @@ import { getCloudConfig, getCloudMetrics, getRetentionReport } from '../cloud/ap
 import type { CloudConfigMeta, RetentionRow } from '../cloud/api'
 import { CloudTab } from './CloudTab'
 import { SectionsProvider, useSections } from '../lib/sections'
+import {
+  DEFAULT_SORT,
+  ROSTER_SORTS,
+  groupRows,
+  isRosterSort,
+  usePins,
+  type RosterSort,
+} from './roster'
 import { Highlight, SearchProvider, hay, searchTerms, matchesTerms } from './search'
 import { setDevMode, useDevMode } from './devMode'
-import { eventKind, fmtDate, fmtRelative, fmtUsd, nameOf, standingOf } from './format'
+import { eventKind, fmtDate, fmtRelative, fmtUsd, nameOf, ordinal, standingOf } from './format'
 import type { EventKind } from './format'
 import { captureAnchor, holdAnchor, readView, useRememberView, useRestoreView } from './viewState'
 import './DevConsole.css'
@@ -148,6 +157,26 @@ function DevConsoleBody({
   const [rows, setRows] = useState<DevAccount[]>([])
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedId, setSelectedId] = useState<string | null>(saved?.selectedId ?? null)
+
+  /*
+   * How the Accounts rail is ordered, and which accounts sit above the order.
+   *
+   * The SORT is a view preference and is remembered with the tab, the search
+   * and the open sections — see viewState.ts. The PINS are not: they are the
+   * developer's own shortlist and they live in Postgres, because a shortlist is
+   * work you build while dealing with somebody and it should not be lost by
+   * opening the console on the other machine. `roster.ts` holds both.
+   */
+  const [sort, setSort] = useState<RosterSort>(() =>
+    isRosterSort(saved?.sort) ? saved.sort : DEFAULT_SORT,
+  )
+  const pins = usePins(useCallback((text: string) => push('bad', text), [push]))
+  /* Which pin is being dragged, and which one the cursor is currently over.
+     Held here rather than in `roster.ts` because it is about this render of
+     this list and nothing else: it must not survive a re-read, and it is
+     meaningless the moment the pointer comes up. */
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
 
   const [events, setEvents] = useState<DevEvent[]>([])
   const [audit, setAudit] = useState<DevAuditRow[]>([])
@@ -420,7 +449,10 @@ function DevConsoleBody({
         content.reload(),
       ]
       if (scope === 'again') {
-        reads.push(loadRoster(query), loadHistory(selectedId), loadBadges(selectedId))
+        // The shortlist too: the other developer's tab cannot move it, but this
+        // one's other window can, and a Refresh that re-read everything except
+        // the list down the left would be a refresh you could not trust.
+        reads.push(loadRoster(query), loadHistory(selectedId), loadBadges(selectedId), pins.reload())
       }
       const landed = await Promise.all(reads)
       // Only when something actually came back. A rail that says "read 1m ago"
@@ -444,6 +476,7 @@ function DevConsoleBody({
       loadRoster,
       loadHistory,
       loadBadges,
+      pins.reload,
       query,
       selectedId,
     ],
@@ -596,6 +629,17 @@ function DevConsoleBody({
     [rows, terms],
   )
 
+  /**
+   * The rail, in the two groups it is drawn in: the shortlist in the
+   * developer's own order, then everybody else in whatever the sort says.
+   *
+   * Both come from `shownRows`, so the search narrows the shortlist exactly as
+   * it narrows everything else. A pinned account that does not match what you
+   * typed is not drawn — the alternative is a rail whose count and whose rows
+   * disagree, and the count is the half nobody can check.
+   */
+  const groups = useMemo(() => groupRows(shownRows, pins.order, sort), [shownRows, pins.order, sort])
+
   /** The ledger with the app filter and the page search applied, but NOT the
    *  kind filter — so the kind buttons can say how many of each are in front of
    *  you before you press one, and pressing one can never hide a number it just
@@ -692,7 +736,7 @@ function DevConsoleBody({
    */
   const { openIds } = useSections()
   const restored = useRestoreView(saved?.anchor ?? null)
-  useRememberView({ tab, selectedId, query, open: openIds }, restored)
+  useRememberView({ tab, selectedId, query, sort, open: openIds }, restored)
 
   /**
    * Where the matches are, on the tabs themselves.
@@ -841,25 +885,128 @@ function DevConsoleBody({
                     ? "Couldn't read the accounts."
                     : searching
                       ? `${shownRows.length} of ${rows.length} account${rows.length === 1 ? '' : 's'} match${shownRows.length === 1 ? 'es' : ''}`
-                      : `${rows.length} account${rows.length === 1 ? '' : 's'} · search at the top of the page`}
+                      : `${rows.length} account${rows.length === 1 ? '' : 's'}${pins.order.length ? ` · ${pins.order.length} pinned` : ''} · search at the top of the page`}
               </p>
 
-              <ul className="dev__list">
-                {shownRows.map((r) => (
-                  <RosterRow
-                    key={r.user_id}
-                    account={r}
-                    active={r.user_id === selectedId}
-                    isSelf={r.user_id === meId}
-                    onSelect={() => select(r.user_id)}
-                  />
-                ))}
-                {listState !== 'error' && shownRows.length === 0 && (
-                  <li className="dev__empty">
-                    {searching ? 'No account matches that.' : 'No accounts yet.'}
-                  </li>
+              {/* How the list below is ordered — and only the list below. The
+                  pinned group keeps the order you gave it whatever this says,
+                  which is the whole point of pinning: a sort you change to
+                  answer one question must not carry off the four people you
+                  were working with. Clear Sort is named for what it clears,
+                  because the search box has its own × two inches above it. */}
+              <div className="dev__sort">
+                <Select
+                  value={sort}
+                  onChange={(v) => setSort(isRosterSort(v) ? v : DEFAULT_SORT)}
+                  ariaLabel="How to order the accounts"
+                  title={ROSTER_SORTS.find((o) => o.value === sort)?.what}
+                  options={ROSTER_SORTS.map((o) => ({ value: o.value, label: o.label }))}
+                />
+                <Button
+                  onClick={() => setSort(DEFAULT_SORT)}
+                  disabled={sort === DEFAULT_SORT}
+                  title={
+                    sort === DEFAULT_SORT
+                      ? 'Already in the order the server sends: newest first.'
+                      : 'Back to Newest First. Your pinned accounts are not affected.'
+                  }
+                >
+                  Clear Sort
+                </Button>
+              </div>
+
+              {/* A shortlist that failed to load is not an empty shortlist, and
+                  the rail must never quietly draw it as one — the pins are
+                  still there, this browser just has not got them. */}
+              {pins.state === 'error' && (
+                <p className="dev__warn dev__roster-warn">
+                  Couldn’t read your pinned accounts, so none are shown at the top.{' '}
+                  {pins.error}
+                  <Button onClick={() => void pins.reload()}>Try Again</Button>
+                </p>
+              )}
+
+              <div className="dev__rail">
+                {groups.pinned.length > 0 && (
+                  <>
+                    <div className="dev__group">
+                      <h3 className="dev__group-title">Pinned</h3>
+                      <Tag tone="warn">{groups.pinned.length}</Tag>
+                      <span className="dev__group-hint">
+                        drag a row, or use its arrows, to reorder
+                      </span>
+                    </div>
+                    <ul className="dev__list" aria-label="Pinned accounts, in your own order">
+                      {groups.pinned.map((r, i) => (
+                        <RosterRow
+                          key={r.user_id}
+                          account={r}
+                          active={r.user_id === selectedId}
+                          isSelf={r.user_id === meId}
+                          pinned
+                          place={i + 1}
+                          of={groups.pinned.length}
+                          onSelect={() => select(r.user_id)}
+                          onPin={() => pins.toggle(r.user_id)}
+                          onMove={(d) => pins.move(r.user_id, d)}
+                          dnd={{
+                            dragging: dragId === r.user_id,
+                            over: overId === r.user_id && dragId !== null && dragId !== r.user_id,
+                            onStart: () => setDragId(r.user_id),
+                            onOver: () => setOverId(r.user_id),
+                            onLeave: (left) =>
+                              left && setOverId((o) => (o === r.user_id ? null : o)),
+                            onDrop: () => {
+                              if (dragId && dragId !== r.user_id) pins.reorder(dragId, r.user_id)
+                              setDragId(null)
+                              setOverId(null)
+                            },
+                            onEnd: () => {
+                              setDragId(null)
+                              setOverId(null)
+                            },
+                          }}
+                        />
+                      ))}
+                    </ul>
+                    <div className="dev__group">
+                      <h3 className="dev__group-title">Everyone Else</h3>
+                      <Tag>{groups.rest.length}</Tag>
+                    </div>
+                  </>
                 )}
-              </ul>
+
+                <ul className="dev__list">
+                  {groups.rest.map((r) => (
+                    <RosterRow
+                      key={r.user_id}
+                      account={r}
+                      active={r.user_id === selectedId}
+                      isSelf={r.user_id === meId}
+                      pinned={false}
+                      place={0}
+                      of={0}
+                      onSelect={() => select(r.user_id)}
+                      onPin={() => pins.toggle(r.user_id)}
+                      onMove={() => {}}
+                      dnd={null}
+                    />
+                  ))}
+                  {listState !== 'error' && shownRows.length === 0 && (
+                    <li className="dev__empty">
+                      {searching ? 'No account matches that.' : 'No accounts yet.'}
+                    </li>
+                  )}
+                  {/* Nothing pinned yet, so nothing on screen says pinning
+                      exists except a star somebody has to notice. One quiet
+                      line, and it is gone the moment it has been used once. */}
+                  {pins.state === 'ready' && pins.order.length === 0 && shownRows.length > 0 && (
+                    <li className="dev__rail-hint">
+                      Press the star on an account to keep it at the top of this list.
+                    </li>
+                  )}
+                </ul>
+              </div>
             </div>
 
             <div className="dev__pane" ref={detailRef} data-dev-anchor="pane">
@@ -1251,36 +1398,156 @@ function Overview({ overview: o, stores }: { overview: DevOverview | null; store
 
 /* ── one roster row ────────────────────────────────────────────────────── */
 
+/** The star, filled when the account is on this developer's shortlist. */
+function PinMark({ on }: { on: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={on ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m12 3.5 2.6 5.3 5.9.85-4.25 4.15 1 5.8L12 16.85 6.75 19.6l1-5.8L3.5 9.65l5.9-.85z" />
+    </svg>
+  )
+}
+
+function MoveMark({ up }: { up: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={up ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+    </svg>
+  )
+}
+
 function RosterRow({
   account: a,
   active,
   isSelf,
+  pinned,
+  place,
+  of,
   onSelect,
+  onPin,
+  onMove,
+  dnd,
 }: {
   account: DevAccount
   active: boolean
   isSelf: boolean
+  pinned: boolean
+  /** 1-based place in the shortlist, and how long the shortlist is. Both 0 on
+   *  a row that is not pinned. */
+  place: number
+  of: number
   onSelect: () => void
+  onPin: () => void
+  /** `-1` is up. Only ever called from a pinned row. */
+  onMove: (delta: number) => void
+  /** Null on an unpinned row: only the shortlist has an order to drag. */
+  dnd: {
+    dragging: boolean
+    over: boolean
+    onStart: () => void
+    onOver: () => void
+    onLeave: (left: boolean) => void
+    onDrop: () => void
+    onEnd: () => void
+  } | null
 }) {
   const standing = standingOf(a)
   // Derived from the account's own store object rather than from a list of
   // apps, so this number cannot go stale when a product is added.
   const owns = ownedCount(a)
+  const name = nameOf(a)
 
   return (
     // Anchored on the account rather than on its place in the list: a refresh
     // that returns a shorter roster must not slide the row you were reading.
-    <li data-dev-anchor={`acct-${a.user_id}`}>
+    //
+    // The card is the `li` now rather than the button inside it, because the
+    // row carries controls that are not "open this account" — the star, and a
+    // pinned row's two arrows — and a button inside a button is not HTML. The
+    // hover, the active rule and the border all moved out here with it.
+    <li
+      className="dev__row-card"
+      data-active={active || undefined}
+      data-pinned={pinned || undefined}
+      data-dragging={dnd?.dragging || undefined}
+      data-over={dnd?.over || undefined}
+      data-dev-anchor={`acct-${a.user_id}`}
+      draggable={dnd ? true : undefined}
+      onDragStart={
+        dnd
+          ? (e) => {
+              // Some data, or Firefox refuses to start the drag at all.
+              e.dataTransfer.setData('text/plain', a.user_id)
+              e.dataTransfer.effectAllowed = 'move'
+              dnd.onStart()
+            }
+          : undefined
+      }
+      onDragOver={
+        dnd
+          ? (e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+              dnd.onOver()
+            }
+          : undefined
+      }
+      onDragLeave={
+        dnd
+          ? // Only when the pointer has left the ROW. Crossing from the row
+            // into one of its own children fires dragleave too, and clearing on
+            // that makes the drop line flicker the whole way down the list.
+            (e) => dnd.onLeave(!e.currentTarget.contains(e.relatedTarget as Node | null))
+          : undefined
+      }
+      onDrop={
+        dnd
+          ? (e) => {
+              e.preventDefault()
+              dnd.onDrop()
+            }
+          : undefined
+      }
+      onDragEnd={dnd ? () => dnd.onEnd() : undefined}
+    >
       <button
         type="button"
         className="dev__row-btn"
-        data-active={active || undefined}
         aria-current={active ? 'true' : undefined}
         onClick={onSelect}
       >
         <span className="dev__row-top">
+          {/* Which account this is, in something two people can say to each
+              other. Ranked in Postgres over the whole table, so it does not
+              move when the search box narrows the list. */}
+          <span
+            className="dev__row-no"
+            title={`The ${ordinal(a.signup_no)} account made on TDG Core, on ${fmtDate(a.created_at)}`}
+          >
+            #{a.signup_no}
+          </span>
           <span className="dev__row-name">
-            <Highlight text={nameOf(a)} />
+            <Highlight text={name} />
           </span>
           <span className="dev__row-tags">
             {a.is_admin && <Tag tone="hot">DEV</Tag>}
@@ -1299,6 +1566,47 @@ function RosterRow({
           <span className="dev__row-seen">seen {fmtRelative(a.last_sign_in_at)}</span>
         </span>
       </button>
+
+      {/* The star is on every row, pinned or not — it is the only thing on this
+          page that says pinning exists, so it may not be the thing that appears
+          once you have already found it. The arrows are on pinned rows only,
+          because an unpinned row has no place to move within. */}
+      <span className="dev__row-side">
+        <button
+          type="button"
+          className="dev__pin"
+          aria-pressed={pinned}
+          title={pinned ? `Unpin ${name}` : `Pin ${name} to the top of the list`}
+          aria-label={pinned ? `Unpin ${name}` : `Pin ${name} to the top of the list`}
+          onClick={onPin}
+        >
+          <PinMark on={pinned} />
+        </button>
+        {pinned && (
+          <>
+            <button
+              type="button"
+              className="dev__row-move"
+              disabled={place <= 1}
+              title={place <= 1 ? `${name} is already first` : `Move ${name} up to place ${place - 1}`}
+              aria-label={place <= 1 ? `${name} is already first` : `Move ${name} up to place ${place - 1}`}
+              onClick={() => onMove(-1)}
+            >
+              <MoveMark up />
+            </button>
+            <button
+              type="button"
+              className="dev__row-move"
+              disabled={place >= of}
+              title={place >= of ? `${name} is already last` : `Move ${name} down to place ${place + 1}`}
+              aria-label={place >= of ? `${name} is already last` : `Move ${name} down to place ${place + 1}`}
+              onClick={() => onMove(1)}
+            >
+              <MoveMark up={false} />
+            </button>
+          </>
+        )}
+      </span>
     </li>
   )
 }

@@ -111,6 +111,17 @@ export type DevAccount = {
    * panels it does draw while `AppsPanel` names any that landed nowhere.
    */
   revocations: DevRevocation[]
+  /**
+   * This account's place in the order everybody joined. 1 is the first account
+   * ever made on TDG Core.
+   *
+   * Ranked in Postgres over the WHOLE of `profiles`, never over the rows this
+   * read happened to return. `tdg_admin_accounts` both filters (the search box
+   * re-queries it) and caps (`p_max_rows`), so a number counted in the browser
+   * would change as you typed — which is worse than no number, because it
+   * looks like a fact. See the migration for the long version.
+   */
+  signup_no: number
 }
 
 /** One standing "may not have this, may not buy it" on one account. */
@@ -339,6 +350,40 @@ export const searchAccounts = (q: string, maxRows = 200): Promise<DevAccount[]> 
 export const getAccount = async (userId: string): Promise<DevAccount | null> =>
   (await rpc<DevAccount[]>('tdg_admin_accounts', { p_q: '', p_target: userId, p_max_rows: 1 }))[0] ??
   null
+
+/**
+ * One row of the signed-in developer's own pinned-accounts shortlist.
+ *
+ * Private to the developer who made it: the account it points at is never told
+ * it is on anybody's list, and neither is the other developer. See
+ * `tdg_dev_pins` in the migration.
+ */
+export type DevPin = {
+  user_id: string
+  /** Its place in the owner's own order, low first. Gaps are normal — only the
+   *  ORDER is ever read, never the number. */
+  sort: number
+  pinned_at: string
+}
+
+/** This developer's shortlist, in this developer's order. */
+export const getPins = (): Promise<DevPin[]> => rpc<DevPin[]>('tdg_admin_pins')
+
+/** Pin one account, or unpin it. A new pin lands at the END of the list, so
+ *  pinning somebody never rearranges a list arranged by hand. */
+export const setPin = (userId: string, on: boolean): Promise<unknown> =>
+  rpc('tdg_admin_set_pin', { p_target: userId, p_on: on })
+
+/**
+ * Put the whole shortlist in a new order, in one call.
+ *
+ * The server is forgiving in both directions, because this browser's copy can
+ * be a moment behind the table: an id it names that is not pinned is ignored,
+ * and a pin it fails to name keeps its relative place after the ones it did.
+ * So a stale list can reorder, but it can neither invent a pin nor drop one.
+ */
+export const reorderPins = (order: readonly string[]): Promise<unknown> =>
+  rpc('tdg_admin_reorder_pins', { p_order: order })
 
 export const getEvents = (userId: string | null = null, maxRows = 200): Promise<DevEvent[]> =>
   rpc<DevEvent[]>('tdg_admin_events', { p_target: userId, p_max_rows: maxRows })

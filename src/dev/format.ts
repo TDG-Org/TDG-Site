@@ -22,6 +22,28 @@ export function fmtDate(iso: string | null | undefined): string {
   return Number.isNaN(d.getTime()) ? 'not set' : dateTime.format(d)
 }
 
+/**
+ * "1st", "2nd", "3rd", "11th". For the account number, which is only ever read
+ * out loud as a place in a queue — "the third account we ever had".
+ *
+ * The teens are the whole reason this is a function rather than a lookup on the
+ * last digit: 11, 12 and 13 take `th` while 21, 22 and 23 do not.
+ */
+export function ordinal(n: number): string {
+  const tens = n % 100
+  if (tens >= 11 && tens <= 13) return `${n}th`
+  switch (n % 10) {
+    case 1:
+      return `${n}st`
+    case 2:
+      return `${n}nd`
+    case 3:
+      return `${n}rd`
+    default:
+      return `${n}th`
+  }
+}
+
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR

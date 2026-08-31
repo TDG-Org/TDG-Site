@@ -250,6 +250,17 @@
 }
 
 .dev__roster {
+  /* Rule 6. One set of numbers drives every paired edge of a roster row: the
+     padding at its left end and at its right end, and the square the star and
+     the two reorder arrows are each drawn in. The row's own padding is written
+     ONCE, as a pair, so the content block and the control column can never
+     drift apart — and the three controls are one square each rather than three
+     sizes that happen to look similar. */
+  --row-pad-y: 12px;
+  --row-pad-x: 13px;
+  --row-gap: 8px;
+  --row-side: 26px;
+
   position: sticky;
   top: 84px;
   display: flex;
@@ -344,47 +355,199 @@
   color: var(--faint);
 }
 
-.dev__list {
-  list-style: none;
-  margin: 0;
-  padding: 0 2px 2px 0;
+/* ── how the accounts rail is ordered, and what is held above the order ──
+   Two groups — the developer's own shortlist, then everybody else — in ONE
+   scroll container. Two scrollers stacked in the same column fight each other
+   for the same 500px and neither of them ends up reaching its own end.        */
+
+.dev__sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* The picker takes the room; Clear Sort takes what its own label needs. */
+.dev__sort .dev__select-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dev__roster-warn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.dev__rail {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 0 2px 2px 0;
   overflow-y: auto;
   min-height: 0;
 }
 
-.dev__row-btn {
-  width: 100%;
+.dev__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 7px;
+  padding-left: 2px;
+}
+.dev__group-title {
+  margin: 0;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* Its own line, always: the alternative is a hint that ellipses away on the
+   one rail width somebody actually uses. */
+.dev__group-hint {
+  flex: 1 0 100%;
+  font: 400 10.5px/1.45 var(--font-body);
+  color: var(--faint);
+}
+
+.dev__rail-hint {
+  padding: var(--row-pad-y) var(--row-pad-x);
+  border-radius: var(--dev-radius);
+  border: 1px dashed var(--border);
+  font: 400 11.5px/1.55 var(--font-body);
+  color: var(--faint);
+}
+
+.dev__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 13px;
-  text-align: left;
+  gap: 8px;
+}
+
+/* The CARD is the row, not the button inside it. A pinned row carries controls
+   that are not "open this account" — the star, and its two reorder arrows —
+   and a button inside a button is not HTML. So the border, the fill, the hover
+   and the active rule all live out here, and the button is the transparent
+   left-hand block that fills what is left. */
+/* `.dev__row-card`, NOT `.dev__row`. That name was already taken, by the
+   button-row utility a thousand lines down that every panel on this page uses
+   for its action rows — and a second rule under one name does not replace the
+   first, it merges with it. Taking the name gave forty action rows a border, a
+   fill and 12px of padding, and gave this one `flex-wrap: wrap`, which pushed
+   the star and its arrows onto a second line. Neither looked like a naming
+   mistake on screen, which is exactly why it is worth this paragraph. */
+.dev__row-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--row-gap);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border-radius: var(--dev-radius);
   border: 1px solid var(--border);
   background-color: var(--surface);
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
+    opacity 0.2s ease,
     var(--t-theme);
 }
-.dev__row-btn:hover {
+.dev__row-card:hover {
   border-color: var(--border-hover);
   background-color: var(--surface-hover);
 }
-.dev__row-btn[data-active] {
+.dev__row-card[data-active] {
   border-color: var(--border-hover);
   box-shadow: inset 2px 0 0 var(--accent);
 }
+/* Being dragged, and being the row it would land on. Both are about the
+   pointer and neither outlives it. */
+.dev__row-card[data-dragging] {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+.dev__row-card[data-over] {
+  border-color: var(--warm);
+  background-color: color-mix(in srgb, var(--warm) 12%, transparent);
+}
+
+.dev__row-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  border: none;
+  border-radius: 2px;
+  background-color: transparent;
+}
+
+/* The star, and a pinned row's two arrows: one square each, from the same
+   variable, so the column is a column rather than three near-misses. */
+.dev__row-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: var(--row-side);
+}
+.dev__pin,
+.dev__row-move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--row-side);
+  height: var(--row-side);
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--faint);
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    opacity 0.2s ease,
+    var(--t-theme);
+}
+.dev__pin:hover,
+.dev__row-move:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+  color: var(--text);
+}
+/* Pinned is a state, so it has a face: the star fills, in the site's one warm
+   accent, and stays that colour whether or not the row is the open one. */
+.dev__pin[aria-pressed='true'] {
+  color: var(--warm);
+}
+/* An arrow at the end of the list is faded, not hidden. A control that
+   disappears at the top of a list is a control you go looking for. */
+.dev__row-move:disabled {
+  opacity: 0.32;
+}
+
 .dev__row-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
+/* Which account this is, in the one ordering of the table that never changes.
+   Tabular figures so a column of them reads as a column. */
+.dev__row-no {
+  flex: none;
+  font: 600 10.5px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
 .dev__row-name {
+  flex: 1 1 auto;
+  min-width: 0;
   font: 600 14px var(--font-body);
   color: var(--text);
   overflow: hidden;
@@ -492,6 +655,14 @@
    — so it sits with the name, on its own row below the handle and the email
    because a 36-character uuid held on the same line as an email address wraps
    both of them at any width worth using. */
+/* The account number, beside the handle. Same mono, same weight and the same
+   tabular figures as the rail's own `#3`, because they are the same fact. */
+.dev__detail-no {
+  font: 600 13px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+
 .dev__detail-id {
   flex: 1 0 100%;
   display: flex;
@@ -2792,7 +2963,7 @@
     position: static;
     max-height: none;
   }
-  .dev__list {
+  .dev__rail {
     max-height: 420px;
   }
 }

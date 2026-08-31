@@ -27,6 +27,124 @@ Turning Developer Mode off is for shoulders and screen shares. The switch lives
 in the **account menu**, not on this page. A switch you can only reach through
 the thing it hides is a switch you cannot un-flip.
 
+## The list down the left
+
+Everybody, down the left, and the one you picked opening on the right. Three
+things decide what that list looks like, and they are deliberately independent
+of each other: every account's **number**, your own **shortlist**, and the
+**order** the rest are in.
+
+### Every account has a number
+
+Each row opens with `#3`, and it means the third account ever made on TDG Core.
+`#1` is the first. It is in the account's own header too, beside the handle, so
+the rail and the panel are talking about the same person out loud.
+
+A uuid is not something two people can say to each other and a display name is
+not unique, so this is the thing you use when you are asking somebody else to
+look at the same row. The header still carries the uuid with its Copy button —
+that is what a SQL query and a Stripe customer want, and it is not going
+anywhere.
+
+**It is ranked in Postgres, over the whole of `profiles`, and that is not an
+implementation detail.** `tdg_admin_accounts` both filters — the search box
+re-queries it — and caps, at `p_max_rows`. A number counted from the rows this
+browser happens to be holding would therefore change as you typed, and a number
+that moves is worse than no number, because it looks like a fact. So
+`signup_no` comes back as its own column, ordered by `created_at` with
+`user_id` breaking the tie, and it is the same value whatever you searched for.
+
+Joining is also the only ordering of this table that never changes afterwards:
+a rename moves a row in an alphabetical list, a sign-in moves it in a recency
+list, and nothing moves an account that has already joined. Which is why every
+sort below ends on it — see the next two sections.
+
+### Pinning: your own shortlist, at the top, in your own order
+
+The star on a row puts that account in a **Pinned** group above everything else,
+and the group is drawn in the order YOU gave it. Press the star again to take it
+off. It is on every row, pinned or not, because it is the only thing on this
+page that says pinning exists and it may not be the control that appears once
+you have already found it. There is one place to do this and it is that star —
+the account's own panel deliberately has no second copy.
+
+**Reorder a pinned row by dragging it, or with the two arrows beside its star.**
+Both, and not one: a drag is what the hand reaches for, and the arrows are what
+a keyboard has. The arrow at the end of the list fades rather than disappearing,
+because a control that vanishes at the top of a list is a control you go looking
+for. A drag lands the row after the one you dropped it on when you dragged down,
+and before it when you dragged up.
+
+**A new pin goes to the END of the list, never the top.** Dropping it on top
+would rearrange a list you arranged by hand every single time you pinned
+somebody, which is the one thing a hand-arranged list may not do to itself. The
+server appends for the same reason, so what you see and what the table holds
+cannot disagree about it.
+
+**The pins live in Postgres, not in this browser.** `tdg_dev_pins` is one row
+per (developer, account), private to the developer who made it: the person
+pinned is never told, and neither is the other developer. Table with RLS on and
+**no policy in either direction**; the whole surface is `tdg_admin_pins`,
+`tdg_admin_set_pin` and `tdg_admin_reorder_pins`, each opening with
+`tdg_admin_uid()`. That is the opposite call to `devMode.ts`, which is
+localStorage and per device — and the two really are opposites. "Hide the tab
+before I share a screen" is a fact about this screen. A shortlist is WORK: you
+build it while you are dealing with somebody, and losing it by opening the
+console on the other machine is the same loss as losing a bookmark folder.
+
+**It is not in the audit log**, and that is a decision rather than an omission.
+Every other write from this page is logged because every other write changes
+something about somebody else's account. A pin changes nothing about the account
+it names. Logging it would put lines in a log whose whole value is that every
+line in it matters.
+
+**Every press is optimistic and every press re-reads.** The star lights in the
+frame you clicked it — a star that waits for a round trip reads as a star that
+did not work — and the re-read afterwards is what makes the optimism honest: if
+the server refused, the row goes back where it was and the refusal is said out
+loud in a toast. Reorders are sequenced, so two quick drags cannot land in the
+wrong order.
+
+**A shortlist that failed to LOAD is not an empty shortlist.** The rail says so
+in a warning with a Try Again beside it, rather than quietly drawing no pins,
+because those two states look identical and mean opposite things.
+
+`tdg_admin_reorder_pins` takes the whole order in one call and is forgiving in
+both directions, because this browser's copy can be a moment behind the table:
+an id it names that is not pinned is ignored, and a pin it fails to name keeps
+its relative place after the ones it did. So a stale list can reorder, but it
+can neither invent a pin nor drop one.
+
+### Sorting: the rest of the list, and one press to put it back
+
+Under the count sits one picker and a **Clear Sort** button:
+
+| | |
+| --- | --- |
+| **Newest First** | The order the server sends. The default, and what Clear Sort returns to. |
+| **Oldest First** | `#1` at the top, then everybody in the order they joined. |
+| **Name A–Z** | By the name the account shows, case-insensitively. |
+| **Recently Seen** | By last sign-in to any TDG app. Never-signed-in last, not first. |
+| **Most Owned** | By how many packs and products the account holds. |
+
+**The sort never touches the pinned group.** That is the whole point of pinning:
+a sort you change to answer one question must not carry off the four people you
+were working with. It is also why Clear Sort says what it clears — the search
+box has its own `×` two inches above it, and one button called "Clear" between
+them would be a coin toss.
+
+**Every comparator ends on `signup_no`.** A sort with ties is a list that
+reshuffles under you every time a write re-reads a row, and the number an
+account joined with is the only thing about it that is both stable and unique.
+
+The sort is remembered with the tab, the search and the open sections, and dies
+with the browser tab like they do — see `viewState.ts`. The pins do not, because
+they are not a view.
+
+**The search still narrows both groups.** A pinned account that does not match
+what you typed is not drawn, because a rail whose rows and whose count disagree
+is a count nobody can check.
+
 ## Reading it
 
 **Every section starts collapsed**, and there is an Expand All / Collapse All
@@ -952,11 +1070,12 @@ reference implementation of the startup reply panel the other apps copy.
 | `apps.ts` | **Which apps exist, merged from the server's discovered list and the site's shop, plus every revocation on the account, and what to say when the sources disagree.** The reason no file here names a product — except `MAK_APP_ID` and `CLOUD_APP_ID`, whose comments say why those two exceptions exist. |
 | `controls.tsx` | Panel, SectionControls (the search box and Expand / Collapse All), Field, Fact, TextInput, Select, Combo, Switch, **Check**, Button, Tag, OwnTile, HoldingTile, **SaveBar** with `useSaveNotice`, TypeToConfirm, toasts, and the fixed **RefreshRail**. Shared so fifteen switches cannot drift into fifteen switches. |
 | `search.tsx` | The page search: the query context, the matching helpers, and `Highlight`. Client-side by design, which is what makes it instant. |
+| `roster.ts` | The list down the left: the five sorts and their comparators, the `usePins` shortlist with its optimistic writes, and `groupRows`, which is where the two groups are decided. |
 | `viewState.ts` | Keeping your place: the `data-dev-anchor` capture-and-restore, and the session record a real reload is put back from. |
 | `../lib/sections.tsx` | Which sections are open. Lives in `src/lib/` because the public app pages fold the same way and use the same state. Shared state rather than a flag per panel, because Expand All has to reach the ten inside an account's detail, panels the page itself never renders. This page is the only one that passes `initialOpen`, to put a reload back the way it was. |
 | `api.ts` | Every `tdg_admin_*` call, typed — including `setRevocation`, `resetProduct` and `notify`. No table access anywhere. Two exceptions, both for the same reason — a whole surface of this site owns its own client: the badge verbs are in [`../badges/api.ts`](../badges/README.md), and the site-content verbs are in [`../content/api.ts`](../content/README.md). The account's side of a notice is [`../notices/api.ts`](../notices/README.md). |
 | `format.ts` | Dates, money, the derived one-line **standing** for an account, and the ban/hide durations. |
-| `devMode.ts` | The show-the-tab switch. localStorage, per device. |
+| `devMode.ts` | The show-the-tab switch. localStorage, per device — deliberately the opposite call to the pins, which are per developer and in Postgres. |
 | `DevConsole.css` | All of the above, themed from the site's own tokens. |
 
 ## The two accounts nobody can demote

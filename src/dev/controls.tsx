@@ -420,6 +420,7 @@ export function Select({
   id,
   disabled,
   ariaLabel,
+  title,
 }: {
   value: string
   onChange: (v: string) => void
@@ -433,6 +434,9 @@ export function Select({
    * cannot tell from the five beside it.
    */
   ariaLabel?: string
+  /** What the CHOSEN option means, on hover. A label short enough to fit a
+   *  360px rail rarely says what it does. */
+  title?: string
 }) {
   return (
     <span className="dev__select-wrap" data-disabled={disabled || undefined}>
@@ -442,6 +446,7 @@ export function Select({
         value={value}
         disabled={disabled}
         aria-label={ariaLabel}
+        title={title}
         onChange={(e) => onChange(e.target.value)}
       >
         {options.map((o) => (

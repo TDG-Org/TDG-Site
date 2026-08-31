@@ -43,6 +43,7 @@ import {
   fmtRelative,
   fmtUsd,
   nameOf,
+  ordinal,
   prettyId,
   standingOf,
   stillInForce,
@@ -144,6 +145,16 @@ export function AccountDetail(props: Props) {
         <div className="dev__detail-who">
           <h2 className="dev__detail-name">{nameOf(account)}</h2>
           <div className="dev__detail-sub">
+            {/* The same number the rail prints beside this account, so the two
+                halves of the page are talking about the same person out loud.
+                It is a place in a queue and never an id: the uuid below is the
+                thing every other tool asks for. */}
+            <span
+              className="dev__detail-no"
+              title={`The ${ordinal(account.signup_no)} account made on TDG Core, on ${fmtDate(account.created_at)}`}
+            >
+              #{account.signup_no}
+            </span>
             {account.username ? (
               <span className="dev__handle">@{account.username}</span>
             ) : (
