@@ -13,6 +13,14 @@ html {
      every width it is drawn at. */
   --nav-h: 70px;
   scroll-behavior: smooth;
+}
+
+/* On every element, not on `html`: neither property inherits, so declared on
+   the root alone they dressed the page's own bar and left the eight inner
+   scrollers — the account panel, the people list, the console's rail and its
+   tables, the feedback card — with Firefox's default-width bar. WebKit reads
+   the `::-webkit-scrollbar` rules below, which already reach everything. */
+* {
   scrollbar-width: thin;
   scrollbar-color: var(--sb) transparent;
 }
@@ -568,7 +576,17 @@ stop {
   z-index: 3;
   border-radius: inherit;
 }
+/* The ring is drawn on the CARD, not on the cover. The cover is `inset: 0`
+   inside a card that is `overflow: hidden`, so a ring with an outset offset on
+   the cover itself lies entirely in the card's padding box's margin — outside
+   the clip — and Tab landed on every product card on this site with nothing
+   visible at all. `:has()` puts the same 2px accent ring around the card's own
+   box, where the clip cannot reach it. The cover keeps no ring of its own, or
+   Chrome draws a second, clipped one inside the first. */
 .card__cover:focus-visible {
+  outline: none;
+}
+.card:has(> .card__cover:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -822,5 +840,14 @@ stop {
   .hero__shaft,
   .faith__ray {
     opacity: 0.55 !important;
+  }
+
+  /* The index badge's spring on a lit card is a transform with a bounce, which
+     is motion; the colour ease stays, because it is the theme wave's. */
+  .badge {
+    transition: var(--t-theme);
+  }
+  .card[data-lit='true'] .badge {
+    transform: none;
   }
 }

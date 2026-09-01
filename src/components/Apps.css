@@ -353,6 +353,16 @@
   transform: translateX(4px);
   color: var(--text);
 }
+@media (prefers-reduced-motion: reduce) {
+  /* The arrow's nudge toward the title on a lit card is a transform; the
+     colour change still says the card is live. */
+  .apps__title-arrow {
+    transition: color 0.3s ease;
+  }
+  .apps__card[data-lit='true'] .apps__title-arrow {
+    transform: none;
+  }
+}
 .apps__copy {
   margin: 0 0 20px;
   font: 400 14.5px/1.65 var(--font-body);

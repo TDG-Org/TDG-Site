@@ -51,8 +51,16 @@
          land the session in Safari and leave the tile still signed out. The
          icon and the name are what this file is fixing; the browser stays. -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#07070a" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f6f6f8" media="(prefers-color-scheme: light)" />
+    <!-- ONE theme-color, driven by the site's own toggle rather than by a
+         `media` query on the OS scheme. Two metas keyed on
+         prefers-color-scheme followed the OS, so a visitor who chose light
+         here on a dark phone read a pale page under a black browser bar. The
+         boot script below sets it from the stored choice before first paint,
+         and ThemeProvider rewrites it from the live `--bg` on every toggle.
+         The two literals here mirror `--bg` in src/styles/tokens.css — the one
+         place a `<head>` cannot read a token from, because no stylesheet has
+         loaded when it is parsed. -->
+    <meta name="theme-color" content="#07070a" />
     <meta name="color-scheme" content="dark light" />
     <!-- This page ships its own light and dark scenes, so a "dark mode"
          extension has nothing to add and a great deal to take away. The lock
@@ -96,7 +104,10 @@
       // Set the theme before first paint so there is no flash of the wrong scene.
       try {
         var t = localStorage.getItem('tdg-theme')
-        document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark')
+        var light = t === 'light'
+        document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark')
+        var tc = document.querySelector('meta[name="theme-color"]')
+        if (tc) tc.setAttribute('content', light ? '#f6f6f8' : '#07070a')
       } catch (e) {}
     </script>
   </head>

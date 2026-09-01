@@ -513,6 +513,15 @@
   transform: translateX(4px);
   color: var(--text);
 }
+@media (prefers-reduced-motion: reduce) {
+  /* Same as Apps.css: the nudge is motion, the colour is not. */
+  .tools__title-arrow {
+    transition: color 0.3s ease;
+  }
+  .tools__card[data-lit='true'] .tools__title-arrow {
+    transform: none;
+  }
+}
 .tools__copy {
   margin: 0;
   font: 400 13.5px/1.6 var(--font-body);

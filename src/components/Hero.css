@@ -2376,6 +2376,14 @@
   .hero__tagline-caret {
     display: none;
   }
+  /* The filled button's 3px lift on hover is motion; the shadow change and
+     the theme ease stay. */
+  .hero__cta {
+    transition: var(--t-theme);
+  }
+  .hero__cta:hover {
+    transform: none;
+  }
 }
 /* the column is 309px or narrower here and the longest line takes three rows */
 @media (max-width: 359px) {
@@ -2385,6 +2393,14 @@
 }
 
 .hero__ctas {
+  /* The pair's box, stated once on the parent (AGENTS.md rule 6). The filled
+     button has no border and the ghost has a 1px one, so the ghost takes the
+     same outer dimension from the same numbers minus its border — where it
+     used to be 28px against 30px, two literals that gave a 29/30 pair nobody
+     could see was uneven until the two were measured. */
+  --cta-pad-y: 15px;
+  --cta-pad-x: 30px;
+  --cta-border: 1px;
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
@@ -2396,7 +2412,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 15px 30px;
+  padding: var(--cta-pad-y) var(--cta-pad-x);
   border-radius: 2px;
   background: var(--hero-cta-bg);
   color: var(--hero-cta-fg);
@@ -2415,9 +2431,9 @@
   font-size: 13px;
 }
 .hero__cta.hero__cta--ghost {
-  padding: 15px 28px;
+  padding: calc(var(--cta-pad-y) - var(--cta-border)) calc(var(--cta-pad-x) - var(--cta-border));
   background: transparent;
-  border: 1px solid var(--hero-cta2-border);
+  border: var(--cta-border) solid var(--hero-cta2-border);
   color: var(--hero-cta2-fg);
   box-shadow: none;
 }

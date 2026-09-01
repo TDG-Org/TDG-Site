@@ -213,7 +213,11 @@
      are equal, and they stay equal at any size — so centring the LINE BOX on
      the blade centres the letters on it. Measured at 1280px: blade centre 35.0,
      word box centre 35.0, cap band centre 35.0. */
-  font: 600 1em/1 var(--font-serif);
+  /* 500, which is the Cormorant weight index.html actually loads. 600 asked
+     for a face the page never fetches, so the browser synthesised a bold by
+     smearing the 500 — the exact thing KeyArt.css says a high-contrast serif
+     wears badly, on the one line of it that is meant to be read as a gift. */
+  font: 500 1em/1 var(--font-serif);
   letter-spacing: 0.055em;
   color: var(--text);
   text-shadow: 0 0 0.6em color-mix(in srgb, var(--warm) 34%, transparent);
@@ -516,18 +520,26 @@
     left: 100%;
     top: var(--mark-crossbar);
   }
+  /* No animation at all, and opacity 1 outright. This used to swap in
+     `nav-bless-fade`, whose 0% frame is `opacity: 0` — and base.css pauses
+     every animation at 0% under this query, so the phrase never appeared and
+     the promise above ("you still get the message") was false. The strip is
+     mounted for BLESS_MS and unmounted by Nav.tsx, which is what "arrives and
+     leaves" means here: it is simply there for four seconds and then not. */
   .nav__bless-clip {
     clip-path: none;
-    animation-name: nav-bless-fade;
+    animation: none;
+    opacity: 1;
   }
   .nav__bless-word {
     transform: none;
-    animation-name: nav-bless-fade;
-    animation-delay: 0s;
+    animation: none;
+    opacity: 1;
   }
   .nav__bless-aura {
     transform: translateY(-50%);
-    animation-name: nav-bless-fade;
+    animation: none;
+    opacity: 1;
   }
   /* Named a bar at a time on purpose: the two sword rules above are
      `:first-child` / `:last-child`, and a plain `.nav__mark-bar` here is one
@@ -1007,6 +1019,26 @@
 @media (prefers-reduced-motion: reduce) {
   .nav__devmode-knob {
     transition: none;
+  }
+  /* The three state-change transforms in this bar: the mark's grow on hover,
+     the burger's lines folding into a cross, the account panel's slide down.
+     Each state still arrives — the cross still forms, the panel still opens —
+     it arrives without travelling. Opacity and the theme ease are kept. */
+  .nav__mark {
+    transition: none;
+  }
+  .nav__mark:hover {
+    transform: none;
+  }
+  .nav__burger-line {
+    transition: opacity 0.2s ease;
+  }
+  .nav__account-panel,
+  .nav__account-panel[data-open='true'] {
+    transform: none;
+    transition:
+      opacity 0.2s ease,
+      var(--t-theme);
   }
 }
 

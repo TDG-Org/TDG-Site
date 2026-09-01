@@ -146,6 +146,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
+    /*
+     * The browser's own chrome follows the toggle too. `theme-color` used to
+     * be two metas keyed on `prefers-color-scheme`, which follow the OS and
+     * not this switch — so a visitor who chose light here on a dark phone read
+     * a pale page under a black address bar. One meta, rewritten from the
+     * page's live `--bg` the moment the attribute lands: the computed value is
+     * already the new theme's on this line (custom properties do not transition
+     * — `--t-theme` eases the properties that read them), and reading it here
+     * rather than typing a hex is rule 2. index.html seeds the same meta before
+     * first paint from the stored choice.
+     */
+    const meta = document.querySelector('meta[name="theme-color"]')
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+    if (meta && bg) meta.setAttribute('content', bg)
     try {
       localStorage.setItem(STORAGE_KEY, theme)
     } catch {

@@ -765,4 +765,14 @@
   .authmodal__caret {
     opacity: 1 !important;
   }
+  /* The entrance animations' 0% frame is `opacity: 0`, and base.css pauses
+     every animation at 0% for a visitor who asked for less motion — so the
+     modal opened INVISIBLE: a fixed, full-screen backdrop at z-index 300
+     blocking the page, with the sign-in card inside it at opacity 0 and no
+     way to see it or through it. `none` rather than a shorter duration: a
+     paused animation never reaches its end whatever its duration is. */
+  .authmodal__backdrop,
+  .authmodal__card {
+    animation: none;
+  }
 }

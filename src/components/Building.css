@@ -899,6 +899,21 @@
   .building__seam-drift {
     will-change: auto;
   }
+  /* The two state-change transforms in this section: the title arrow's nudge
+     on a lit card and the Play button's lift on hover. The colour and the
+     theme ease stay. */
+  .building__title-arrow {
+    transition: color 0.3s ease;
+  }
+  .building__feature[data-lit='true'] .building__title-arrow {
+    transform: none;
+  }
+  .building__play {
+    transition: var(--t-theme);
+  }
+  .building__play:hover {
+    transform: none;
+  }
 }
 
 /* ── the air catching the light ────────────────────────────────────────────

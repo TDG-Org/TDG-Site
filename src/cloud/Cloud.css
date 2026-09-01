@@ -347,7 +347,9 @@
   transform: scaleY(1.09);
 }
 .cloudviz__seg:focus-visible {
-  outline: 2px solid var(--border-hover);
+  /* The site's ring (AGENTS.md rule 14), not `--border-hover`: at 34% alpha
+     that one is the low-contrast ring on the light theme. */
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .cloudviz__seg[aria-pressed='true'] {
@@ -465,6 +467,17 @@
   .cloudviz__seg,
   .cloudviz__seg[data-striped] {
     animation: none;
+  }
+  /* The segment's grow on hover and focus is a transform; the brightness
+     change still says which one is inspected. */
+  .cloudviz__seg {
+    transition:
+      filter 0.18s ease,
+      opacity 0.18s ease;
+  }
+  .cloudviz__seg:hover,
+  .cloudviz__seg:focus-visible {
+    transform: none;
   }
 }
 
@@ -589,13 +602,24 @@
   outline-offset: 2px;
 }
 
+/* Keep My Data and Delete It All are a mirrored pair, and they are built the
+   way `.store__ask-row` in Store.css builds its confirm pair (AGENTS.md rule
+   6): one gap and one horizontal padding declared here on the row, applied to
+   both halves, and `flex: 1 1 0` so the two are exactly equal in width whatever
+   their labels say. They used to be `width: auto` with each button's own
+   padding, which sized each by its label — the exact lopsided pair the Store's
+   row was rewritten to remove. */
 .cloud__delete-row {
+  --ask-gap: 10px;
+  --ask-pad-x: 16px;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--ask-gap);
 }
-.cloud__delete-row .store__buy {
-  width: auto;
+.cloud__delete-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: var(--ask-pad-x);
 }
 .cloud__delete-row .store__buy:disabled {
   opacity: 0.55;

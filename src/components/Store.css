@@ -1446,9 +1446,14 @@
   .store__buy--leave:hover {
     transform: none;
   }
+  /* `none`, not a short duration. base.css pauses every animation at its 0%
+     frame under this query, and 0.01ms paused is still paused — at 0%, which
+     for both of these is `opacity: 0`. The chooser and the Manage panel
+     therefore opened invisible for exactly the visitors who asked for less
+     motion, with focus moved into rows nobody could see. */
   .store__plans,
   .store__plans-scrim {
-    animation-duration: 0.01ms;
+    animation: none;
   }
   .store__buy-caret {
     transition: none;
