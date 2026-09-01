@@ -105,7 +105,7 @@ export const CHAPTERS: Chapter[] = [
     phase: 'CRAFT',
     numeral: '06',
     title: 'Making what we needed',
-    copy: 'Everything since has come from the same question: what do we wish existed? Scripture you can read with the internet off. A game you walk the Bible through. A desk for a student drowning in browser tabs. The small utilities came after, because our own days kept needing them.',
+    copy: 'Everything since has come from the same question: what do we wish existed? Scripture you can read, hear and mark up in one place. A game you walk the Bible through. A desk for a student drowning in browser tabs. The small utilities came after, because our own days kept needing them.',
   },
   {
     chapter: 'CH. 07',
