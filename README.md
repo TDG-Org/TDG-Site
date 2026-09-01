@@ -131,7 +131,7 @@ a card's caption becomes a real button the moment a deploy answers, and says
 
 | # | Project | What it does | Status |
 |:--|:--|:--|:--|
-| 01 | **Bible Educator** | Read, listen, study and take real notes on Scripture. 16 translations, fully offline once downloaded. | 🟢 Live to try |
+| 01 | **Bible Educator** | Read, listen, study and take real notes on Scripture. 16 translations, notes you can draw in, no account. | 🟢 Live to try |
 | 02 | **Say2Quill** | Press one key, speak, and clean punctuated text lands wherever your cursor is. On-device. | 🟡 In dev |
 | 03 | **Makullveny** | A calm desk for studying: your own books, a syllabus turned into dates, flashcards, nine themes. | 🟢 **Released** · [download](https://tdg-org.github.io/makullveny-site/#download) |
 | 04 | **DevFleet** | Every git repo on your machine as a live card, up to sixteen panes at once. | 🟡 In dev |

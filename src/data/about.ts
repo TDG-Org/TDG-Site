@@ -108,7 +108,7 @@ export const ABOUT: AboutPage = {
             },
             {
               name: 'It keeps working when the connection does not',
-              text: 'Anything we build to run on your own machine runs offline. Bible Educator reads a translation you have downloaded with the network unplugged, and Say2Quill transcribes with it unplugged too.',
+              text: 'Anything we build to run on your own machine runs offline. Say2Quill turns your voice into text with the network unplugged, because the model sits on your machine and not on ours.',
             },
             {
               name: 'An account is not the price of entry',
@@ -141,7 +141,7 @@ export const ABOUT: AboutPage = {
           items: [
             {
               name: 'Bible Educator',
-              text: 'Reading, listening to and studying Scripture, with notes you can write and draw in. Sixteen translations, and it works offline once you download one.',
+              text: 'Reading, listening to and studying Scripture, with notes you can write and draw in. Sixteen translations, free, and no account needed.',
               href: '#/app/bible-educator',
             },
             {

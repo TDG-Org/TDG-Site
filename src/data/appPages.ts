@@ -65,9 +65,9 @@ const BIBLE_EDUCATOR: AppPage = {
   backHash: '#apps',
   backLabel: 'Apps',
   title: 'Bible Educator',
-  lede: 'Bible Educator is for reading, listening to, studying and taking real notes on Scripture, all in one place. It opens in a browser, installs like an app, and once you have downloaded a translation it works with no connection at all.',
+  lede: 'Bible Educator is for reading, listening to, studying and taking real notes on Scripture, all in one place. It opens in a browser, installs like an app, and a whole translation can be downloaded to your own device.',
   intro:
-    'Sixteen public-domain translations are readable straight away and each one can be downloaded whole for offline use. Everything you write, highlight and save stays on your own device.',
+    'Sixteen public-domain translations are readable straight away and each one can be downloaded whole to your device. Everything you write, highlight and save stays on your own device.',
   facts: [
     {
       label: 'Where it runs',
@@ -75,8 +75,8 @@ const BIBLE_EDUCATOR: AppPage = {
         'Any modern browser, on a phone, tablet or computer. Nothing to install, and it can be added to your home screen or desktop so it opens in its own window',
     },
     {
-      label: 'Offline',
-      value: 'Full, once a translation is downloaded. A download is stored by the browser you did it in',
+      label: 'Downloads',
+      value: 'A whole translation in one file, stored by the browser you downloaded it in',
     },
     { label: 'Price', value: 'Free, and no account is needed to use it' },
     { label: 'Status', value: 'In development — the current build is live to try' },
@@ -104,8 +104,8 @@ const BIBLE_EDUCATOR: AppPage = {
               text: 'Settings then Bible lists all sixteen. The NIV and NASB are listed too, and are honestly marked as needing a licence we do not have, so their text is never bundled or downloaded.',
             },
             {
-              title: 'Download one for offline',
-              text: 'Each translation is a one-file install with progress, retry and cancel. After it lands, that version reads with the network off, and its footnotes and cross-references come with it.',
+              title: 'Download one to your device',
+              text: 'Each translation is a one-file install with progress, retry and cancel. After it lands, that version reads from your own device, and its footnotes and cross-references come with it.',
             },
             {
               title: 'Install it as an app',
@@ -179,7 +179,7 @@ const BIBLE_EDUCATOR: AppPage = {
           items: [
             {
               name: 'Your device’s voices',
-              text: 'Always available, work offline, and cost nothing. This is what it uses out of the box.',
+              text: 'Always available, run on your own device, and cost nothing. This is what it uses out of the box.',
             },
             {
               name: 'Natural voices',

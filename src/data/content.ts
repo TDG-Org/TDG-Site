@@ -184,7 +184,7 @@ export type KeyArtSpec = {
    * Keep the joined strip under about 56 characters. It is drawn as one line of
    * SVG text, which cannot wrap, so a long one runs off the right edge instead
    * of reflowing. Bible Educator's own strip is the length to match: `Free · No
-   * account · Works fully offline · 16 translations`.
+   * account · No ads · 16 translations`.
    */
   facts: string[]
   /** Which backdrop `KeyArt` draws. */
@@ -338,14 +338,14 @@ export const APPS: AppCard[] = [
     repo: 'Bible-Educator',
     backend: 'bea',
     title: 'Bible Educator',
-    copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Download any of the 16 translations once and the whole thing keeps working with the internet off.',
+    copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Any of the 16 translations can be downloaded to your device in one file.',
     icon: 'icon-bible-educator.webp',
     iconShape: 'glyph',
     chips: [
       { label: 'PWA' },
       { label: 'IN DEV', hot: true },
       { label: 'FREE · NO ACCOUNT' },
-      { label: 'OFFLINE' },
+      { label: 'NO ADS' },
     ],
     status: 'Coming soon',
     slotPlaceholder: 'Drop a Bible Educator screenshot',
