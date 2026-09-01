@@ -18,6 +18,7 @@ import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
 import { CloudBlock } from './CloudBlock'
 import { CloudManage } from './CloudManage'
+import { CloudMark } from './CloudMark'
 import './Cloud.css'
 
 /**
@@ -88,26 +89,6 @@ function Caret() {
       focusable="false"
     >
       <path d="m6 15 6-6 6 6" />
-    </svg>
-  )
-}
-
-/** A little cloud, for the section mark. Drawn where it is used (AGENTS §5). */
-function CloudGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M17.5 19a4.5 4.5 0 0 0 .42-8.98 6 6 0 0 0-11.7 1.42A3.75 3.75 0 0 0 6.75 19Z" />
     </svg>
   )
 }
@@ -401,9 +382,7 @@ export function CloudShelf({ onOpenAuth }: { onOpenAuth: () => void }) {
             bullet lists said is said once, in the footnote. */}
         <div className="cloud__head">
           <h3 className="cloud__title">
-            <span className="cloud__title-glyph" aria-hidden="true">
-              <CloudGlyph />
-            </span>
+            <CloudMark className="cloud__title-glyph" sizes="34px" />
             TDG Cloud
           </h3>
           <div className="chips">
