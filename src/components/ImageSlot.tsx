@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { KeyArtSpec, Shot } from '../data/content'
+import { shotHeight, type KeyArtSpec, type Shot } from '../data/content'
 import { asset } from '../lib/asset'
 import { KeyArt } from './KeyArt'
 import './ImageSlot.css'
@@ -127,7 +127,18 @@ export function ImageSlot({
     [id],
   )
 
-  const filled = Boolean(art || dropped || shot)
+  /*
+   * A shot whose file did not arrive. `<picture>` never falls back across its
+   * `<source>`s and the browser's answer to a 404 is its own broken-image
+   * glyph and the alt text, in its own look, in the middle of a product card —
+   * which is where a slug mistyped in the Content tab used to land. A failed
+   * file is drawn as the empty frame instead: the same quiet wash a card with
+   * no picture gets, so the card keeps its shape and says nothing false.
+   * Reset per slug, so a corrected slug is tried again.
+   */
+  const [broken, setBroken] = useState<string | null>(null)
+  const shown = shot && broken !== shot.slug ? shot : undefined
+  const filled = Boolean(art || dropped || shown)
 
   return (
     <div className="slot" data-over={over} data-filled={filled} data-authoring={AUTHORING || undefined}>
@@ -135,19 +146,20 @@ export function ImageSlot({
         <KeyArt spec={art} />
       ) : dropped ? (
         <img className="slot__img" src={dropped} alt={shot?.alt ?? ''} />
-      ) : shot ? (
+      ) : shown ? (
         <picture>
-          <source type="image/avif" srcSet={srcSet(shot, 'avif')} sizes={sizes} />
-          <source type="image/webp" srcSet={srcSet(shot, 'webp')} sizes={sizes} />
+          <source type="image/avif" srcSet={srcSet(shown, 'avif')} sizes={sizes} />
+          <source type="image/webp" srcSet={srcSet(shown, 'webp')} sizes={sizes} />
           <img
             className="slot__img"
-            src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
-            alt={shot.alt}
-            width={shot.widths[0]}
-            height={Math.round((shot.widths[0] / 16) * 10)}
+            src={asset(`shots/${shown.slug}-${shown.widths[0]}.webp`)}
+            alt={shown.alt}
+            width={shown.widths[0]}
+            height={shotHeight(shown, shown.widths[0])}
             loading="lazy"
             decoding="async"
-            style={shot.position ? { objectPosition: shot.position } : undefined}
+            style={shown.position ? { objectPosition: shown.position } : undefined}
+            onError={() => setBroken(shown.slug)}
           />
         </picture>
       ) : null}

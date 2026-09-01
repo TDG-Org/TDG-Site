@@ -287,9 +287,20 @@ export function formatUsd(cents: number): string {
  * today and is still the honest answer if it ever does: there is no price to
  * state, so the card states none.
  */
-export function cheapestPlan(app: StoreApp): number | null {
-  const amounts = app.packs.map((pack) => pack.priceCents)
-  return amounts.length > 0 ? Math.min(...amounts) : null
+export function cheapestPlan(app: StoreApp): { cents: number; cadence: string } | null {
+  let best: { cents: number; cadence: string } | null = null
+  for (const pack of app.packs) {
+    if (best && pack.priceCents >= best.cents) continue
+    /*
+     * The amount and its cadence travel together, because `From $5.99` with
+     * the `/mo` dropped is a monthly rent printed as if it were a price — the
+     * one thing the header says a shop may not do. `plans[0]` is the pack's
+     * own price by rule, so its cadence is the amount's cadence; a pack with
+     * no plans is sold once and has none.
+     */
+    best = { cents: pack.priceCents, cadence: pack.plans?.[0]?.cadence ?? '' }
+  }
+  return best
 }
 
 /**

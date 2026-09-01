@@ -51,7 +51,26 @@ export type Shot = {
   alt: string
   /** object-position, for crops where the subject is not centred */
   position?: string
+  /**
+   * Width over height of the file, when it is not the site's 16:10.
+   *
+   * Every surface that draws a shot writes `width` and `height` on the `<img>`
+   * so the box is laid out before the file arrives, and the browser turns the
+   * pair into `aspect-ratio: auto w/h` — then swaps to the file's real ratio
+   * the moment it decodes. A ratio typed wrong is therefore a layout shift on
+   * every cold open, and it was: MARANATHA's shot is 16:9 (720x405) and every
+   * component assumed 16:10, so its page moved everything under the picture
+   * up by 54px when the image landed. Stated once here and read through
+   * `shotHeight()`, so no component carries the number.
+   */
+  ratio?: number
 }
+
+/** The site's own screenshot ratio; every `public/shots/` file but one is cut to it. */
+export const SHOT_RATIO = 16 / 10
+
+/** The `height` attribute for a shot drawn at `width`, from the file's own ratio. */
+export const shotHeight = (shot: Shot, width: number) => Math.round(width / (shot.ratio ?? SHOT_RATIO))
 
 export type Chapter = {
   chapter: string
@@ -651,6 +670,9 @@ export const MARANATHA = {
     slug: 'maranatha',
     widths: [720, 1440],
     alt: 'The MARANATHA home screen at night: the story path winding through Genesis, with Joseph selected and ready to play',
+    // A game's screen, cut at 16:9 (720x405 / 1440x810) where every other
+    // shot is 16:10. See `Shot.ratio`.
+    ratio: 16 / 9,
   } satisfies Shot,
 }
 

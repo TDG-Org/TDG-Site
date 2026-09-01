@@ -75,8 +75,8 @@ export function Footer() {
               <div className="footer__links">
                 <a href="#origin">Origin</a>
                 <a href="#apps">Apps</a>
-                <a href="#tools">Tools &amp; extensions</a>
-                <a href="#building">Building now</a>
+                <a href="#tools">Tools &amp; Extensions</a>
+                <a href="#building">Building Now</a>
                 <a href="#faith">Faith</a>
               </div>
             </div>
@@ -90,14 +90,20 @@ export function Footer() {
             <div>
               <div className="footer__col-title">Connect</div>
               <div className="footer__links">
+                {/* The arrow is decoration and the new tab is not: read out
+                    literally, "north east arrow" is noise and `target` is
+                    silent, so each link hides the one and says the other. */}
                 <a href={GITHUB_ORG} target="_blank" rel="noopener">
-                  GitHub org ↗
+                  GitHub Org<span className="sr-only"> (opens in a new tab)</span>
+                  <span aria-hidden="true"> ↗</span>
                 </a>
                 <a href={VOLUME_CONTROLLER} target="_blank" rel="noopener">
-                  Volume Controller ↗
+                  Volume Controller<span className="sr-only"> (opens in a new tab)</span>
+                  <span aria-hidden="true"> ↗</span>
                 </a>
                 <a href={CONTACT} target="_blank" rel="noopener">
-                  Contact ↗
+                  Contact<span className="sr-only"> (opens in a new tab)</span>
+                  <span aria-hidden="true"> ↗</span>
                 </a>
               </div>
             </div>

@@ -214,6 +214,7 @@ function PackCard({
   appTitle,
   index,
   state,
+  sale,
   grant,
   onBuy,
   onSignIn,
@@ -226,6 +227,14 @@ function PackCard({
   appTitle: string
   index: number
   state: CardState
+  /**
+   * Whether the shop is open for this app, handed down beside `state` rather
+   * than folded into it: `withSale` only replaces the two states that END in a
+   * Buy button, so an owner's card is `owned` whatever the shop is doing — and
+   * the Manage panel inside it still sells one thing, Buy It Outright, which
+   * has to know.
+   */
+  sale: SaleState
   /** How this account holds it, when the app records that. Null when it does not. */
   grant: PackGrant | null
   onBuy: (plan?: StorePlan) => void
@@ -235,6 +244,7 @@ function PackCard({
   const reveal = useReveal<HTMLElement>('card3d', index % 3)
   const tilt = useTilt<HTMLElement>()
   const owned = state.kind === 'owned'
+  const saleOpen = sale === 'open'
   /** What a shut shop says here, or null while it is open. One read of the
    *  wording, so the name and the line cannot come from two calls. */
   const shut = state.kind === 'closed' ? saleWording(state.why, appTitle) : null
@@ -378,7 +388,13 @@ function PackCard({
    * again. A shop may surprise nobody about money.
    */
   const buyOutright = async () => {
-    if (!lifetimePlan) return
+    // The row is not drawn while the shop is shut, and this refuses on its
+    // own account as well: the cancel below is a money action, and it must
+    // never be taken on the strength of a checkout that `onBuy` is then going
+    // to refuse to open. That happened — the renewals stopped, the panel
+    // closed on "Ends Soon", and no Stripe tab came — before the shop's
+    // state reached this card.
+    if (!lifetimePlan || !saleOpen) return
     setStep({ at: 'busy', doing: 'Stopping the renewals…' })
     const result = await setRenewal({ app: appId, pack: pack.id, renew: false })
     if (!result.ok) {
@@ -609,7 +625,16 @@ function PackCard({
                         renewals of something already stopping is a row that
                         does nothing, and a row that does nothing on a panel
                         about money reads as a page that has lost track. */}
-                    {lifetimePlan && !shown.ending && (
+                    {/* And only while the shop is OPEN: a shut shop sells no
+                        keys, outright ones included (rule 5's `closed`), and
+                        the row is replaced by the reason rather than left to
+                        press a cancel it cannot follow with a checkout. */}
+                    {lifetimePlan && !shown.ending && !saleOpen && (
+                      <li className="store__plan-notice">
+                        Buying it outright is off for now. {saleWording(sale, appTitle).short}
+                      </li>
+                    )}
+                    {lifetimePlan && !shown.ending && saleOpen && (
                       <PlanRow
                         label="Buy It Outright"
                         note={
@@ -692,8 +717,13 @@ function PackCard({
                   </div>
                 )}
 
+                {/* `role="status"`: the confirm button that was pressed has just
+                    unmounted under the reader's focus, so this line is the only
+                    thing that says the press was taken — and a screen reader
+                    only hears it if it is announced. Same on the refusal and
+                    the card's own wait below. */}
                 {step.at === 'busy' && (
-                  <p className="store__waiting store__waiting--panel">
+                  <p className="store__waiting store__waiting--panel" role="status">
                     <span className="store__waiting-dot" aria-hidden="true" />
                     {step.doing}
                   </p>
@@ -705,7 +735,9 @@ function PackCard({
                     text — see `src/auth/wording.ts` for why. */}
                 {step.at === 'error' && (
                   <div className="store__ask">
-                    <p className="store__note store__note--warn">{billingMessage(step.error)}</p>
+                    <p className="store__note store__note--warn" role="alert">
+                      {billingMessage(step.error)}
+                    </p>
                     <div className="store__ask-row">
                       <button
                         type="button"
@@ -731,7 +763,7 @@ function PackCard({
 
         {state.kind === 'waiting' && (
           <>
-            <p className="store__waiting">
+            <p className="store__waiting" role="status">
               <span className="store__waiting-dot" aria-hidden="true" />
               Waiting for your payment…
             </p>
@@ -898,7 +930,12 @@ function ownedLine(state: OwnedState, ownedHere: number, total: number): string 
   if (state === 'signedOut') return 'Sign in to see what you already own here.'
   if (state === 'error') return "We couldn't check your purchases just now."
   if (ownedHere === 0) return `Nothing from this app on your account yet.`
-  if (ownedHere === total) return total === 1 ? 'On your account already.' : 'Both packs are on your account.'
+  // Derived from the count, never assumed (rule 17): "Both" was typed here
+  // once, and an app with three packs would have said it about three.
+  if (ownedHere === total) {
+    if (total === 1) return 'On your account already.'
+    return total === 2 ? 'Both packs are on your account.' : `All ${total} packs are on your account.`
+  }
   return `${ownedHere} of ${total} on your account.`
 }
 
@@ -1087,7 +1124,11 @@ function AppCard({
               and it lights with the card. */}
           <span className="store__app-cta" aria-hidden="true">
             {one ? 'View The Pack' : 'View The Packs'}
-            {from !== null ? ` · ${several ? 'From ' : ''}${formatUsd(from)}` : null}
+            {from !== null ? ` · ${several ? 'From ' : ''}${formatUsd(from.cents)}` : null}
+            {/* The cadence rides with the amount it belongs to, the way the
+                pack rows above print it: `From $5.99` alone is a monthly
+                rent dressed as a price (rule 10). */}
+            {from?.cadence ? <span className="store__app-pack-cadence">{from.cadence}</span> : null}
             <span className="store__app-cta-arrow">→</span>
           </span>
 
@@ -1444,6 +1485,7 @@ function StoreApp({
             appTitle={app.title}
             index={i}
             state={withSale(cardState(app, pack), sale)}
+            sale={sale}
             grant={grantFor(app.id, pack.id)}
             /* Belt as well as braces: no card draws a Buy button while the
                shop is shut, and the one press that spends money still refuses
@@ -1477,17 +1519,34 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
   const { stateFor, owned, grantFor, revokedFor, refresh } = useOwnedPacks()
   const blob = useParallax<HTMLDivElement>(-0.12)
 
-  /** The pack whose Stripe tab is open, if any. A `packKey`, never a pack id. */
-  const [pending, setPending] = useState<string | null>(null)
+  /**
+   * The pack whose Stripe tab is open, if any, and what the tab is for.
+   *
+   * `upgrade` is a subscriber buying the same pack outright. The card already
+   * reads Owned for them, so "did it land?" cannot be `owned.has(key)` — that
+   * was true before the tab opened, and this effect used to answer it on the
+   * same tick: the card said "Payment received" the instant the confirm was
+   * pressed, with nothing paid, and the watch below was cancelled before it
+   * ran once. For an upgrade the thing to wait for is the GRANT changing
+   * shape, from a subscription to a perpetual one, which is what the webhook
+   * writes when the one-off payment clears.
+   */
+  type Pending = { key: string; app: string; pack: string; upgrade: boolean }
+  const [pending, setPending] = useState<Pending | null>(null)
   /** Packs that arrived while this page was open, which is worth saying. */
   const [justLanded, setJustLanded] = useState<readonly string[]>([])
 
   // It landed. Stop waiting, and remember to say so on the card.
   useEffect(() => {
-    if (!pending || !owned.has(pending)) return
-    setJustLanded((seen) => (seen.includes(pending) ? seen : [...seen, pending]))
+    if (!pending) return
+    const landed = pending.upgrade
+      ? grantFor(pending.app, pending.pack)?.kind === 'perpetual'
+      : owned.has(pending.key)
+    if (!landed) return
+    const { key } = pending
+    setJustLanded((seen) => (seen.includes(key) ? seen : [...seen, key]))
     setPending(null)
-  }, [pending, owned])
+  }, [pending, owned, grantFor])
 
   // Keep asking while a checkout is open. The webhook lands the pack within a
   // minute of payment and the payment happens in another tab, so watching for
@@ -1525,7 +1584,7 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
     const block = revokedFor(app.id, pack.id)
     if (block) return { kind: 'revoked', block }
     if (owned.has(key)) return { kind: 'owned', justLanded: justLanded.includes(key) }
-    if (pending === key) return { kind: 'waiting' }
+    if (pending?.key === key) return { kind: 'waiting' }
     const state = stateFor(app.id)
     if (state === 'loading') return { kind: 'checking' }
     if (state === 'signedOut') return { kind: 'signedOut' }
@@ -1552,7 +1611,8 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
     // coming back to a shop that has already flipped to Owned is the whole
     // point of watching for it.
     window.open(buyUrl(pack, user.id, user.email, plan), '_blank', 'noopener,noreferrer')
-    setPending(packKey(app.id, pack.id))
+    const key = packKey(app.id, pack.id)
+    setPending({ key, app: app.id, pack: pack.id, upgrade: owned.has(key) })
   }
 
   /*

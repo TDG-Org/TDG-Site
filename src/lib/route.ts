@@ -254,6 +254,15 @@ export function routeFromHash(hash: string): Route {
      */
     .replace(/\?.*$/, '')
     .replace(/^\/+/, '')
+    /*
+     * A trailing slash is a stray, not a different address. `#/about/` and
+     * `#/app/veditor/` used to fall through to home and `#/store/veditor/` to
+     * the Store's index with the app dropped — while `#/store/` and
+     * `#/feedback/` happened to work, because those two match on a prefix.
+     * Chat clients and paste add the character; the same link should open
+     * the same page with or without it.
+     */
+    .replace(/\/+$/, '')
     .toLowerCase()
   if (key === 'about') return { kind: 'about' }
   if (key === 'store') return { kind: 'store' }

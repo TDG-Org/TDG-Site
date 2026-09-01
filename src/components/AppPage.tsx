@@ -4,6 +4,7 @@ import { SectionsProvider } from '../lib/sections'
 import { asset } from '../lib/asset'
 import { rememberOrigin, storeAppHash } from '../lib/route'
 import { STORE_APPS } from '../data/store'
+import { shotHeight } from '../data/content'
 import { BackButton, Fold, FoldControls, OnwardButton, PageNav } from './Folded'
 import { AppIcon } from './AppIcon'
 import type { AppPage as AppPageData } from '../data/appPages'
@@ -143,6 +144,10 @@ function AppPageBody({ page }: { page: AppPageData }) {
                     rel="noopener"
                   >
                     {link.label}
+                    {/* Said to a screen reader, which cannot see `target`:
+                        a link that leaves the tab without warning is the one
+                        `pageBlocks.ts` promises "says so". */}
+                    <span className="sr-only"> (opens in a new tab)</span>
                     <span className="appview__link-arrow" aria-hidden="true">
                       →
                     </span>
@@ -207,7 +212,7 @@ function AppPageBody({ page }: { page: AppPageData }) {
                 src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
                 alt={shot.alt}
                 width={shot.widths[0]}
-                height={Math.round((shot.widths[0] / 16) * 10)}
+                height={shotHeight(shot, shot.widths[0])}
                 loading="lazy"
                 decoding="async"
                 style={shot.position ? { objectPosition: shot.position } : undefined}

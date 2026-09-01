@@ -270,7 +270,7 @@ const BIBLE_EDUCATOR: AppPage = {
     },
     {
       id: 'appearance',
-      title: 'Making it yours',
+      title: 'Making It Yours',
       what: 'Six themes, your own colours, your own background, and a battery mode.',
       tag: 'THEMES',
       blocks: [
@@ -303,7 +303,7 @@ const BIBLE_EDUCATOR: AppPage = {
     },
     {
       id: 'data',
-      title: 'Your data',
+      title: 'Your Data',
       what: 'Where everything you write is kept, and how to move it.',
       tag: 'PRIVACY',
       blocks: [
@@ -505,7 +505,7 @@ const SAY2QUILL: AppPage = {
     },
     {
       id: 'accuracy',
-      title: 'Getting your words right',
+      title: 'Getting Your Words Right',
       what: 'Names, jargon and phrases you say often, taught once.',
       tag: 'PERSONAL',
       blocks: [
@@ -534,7 +534,7 @@ const SAY2QUILL: AppPage = {
     },
     {
       id: 'pill',
-      title: 'The pill',
+      title: 'The Pill',
       what: 'The small window that listens, and the 168 ways it can look.',
       tag: 'ON SCREEN',
       blocks: [
@@ -567,7 +567,7 @@ const SAY2QUILL: AppPage = {
     },
     {
       id: 'dashboard',
-      title: 'The dashboard',
+      title: 'The Dashboard',
       what: 'History, stats, the teleprompter, the journal, and every setting.',
       tag: 'THE APP',
       blocks: [
@@ -749,7 +749,7 @@ const MAKULLVENY: AppPage = {
     },
     {
       id: 'tools',
-      title: 'The study tools',
+      title: 'The Study Tools',
       what: 'Five small tools and two helpers, each able to pop out into its own window.',
       tag: 'MODULES',
       blocks: [
@@ -778,7 +778,7 @@ const MAKULLVENY: AppPage = {
     },
     {
       id: 'atmosphere',
-      title: 'Themes and atmosphere',
+      title: 'Themes and Atmosphere',
       what: 'Nine rooms to work in, with sound if you want it.',
       tag: 'NINE',
       blocks: [
@@ -801,7 +801,7 @@ const MAKULLVENY: AppPage = {
     },
     {
       id: 'data',
-      title: 'Your data',
+      title: 'Your Data',
       what: 'Where your library is kept, and how it moves.',
       tag: 'LOCAL',
       blocks: [
@@ -817,7 +817,7 @@ const MAKULLVENY: AppPage = {
     },
     {
       id: 'coming',
-      title: 'Still being built',
+      title: 'Still Being Built',
       what: 'The parts that are early, named rather than dressed up.',
       tag: 'NOT YET',
       blocks: [
@@ -913,7 +913,7 @@ const DEVFLEET: AppPage = {
     },
     {
       id: 'fleet',
-      title: 'The fleet',
+      title: 'The Fleet',
       what: 'Every repository as a live card, and the state split that makes the grid readable.',
       tag: 'THE GRID',
       blocks: [
@@ -942,7 +942,7 @@ const DEVFLEET: AppPage = {
     },
     {
       id: 'workspace',
-      title: 'Panes and the workspace',
+      title: 'Panes and the Workspace',
       what: 'Sixteen projects open at once, as a stack or a mosaic.',
       tag: '16 PANES',
       blocks: [
@@ -958,7 +958,7 @@ const DEVFLEET: AppPage = {
     },
     {
       id: 'session',
-      title: 'Sessions and terminals',
+      title: 'Sessions and Terminals',
       what: 'A real terminal per pane, and one Claude Code session shown three ways.',
       tag: 'TERMINAL',
       blocks: [
@@ -1032,7 +1032,7 @@ const DEVFLEET: AppPage = {
     },
     {
       id: 'actions',
-      title: 'Tasks, manifests and fleet actions',
+      title: 'Tasks, Manifests and Fleet Actions',
       what: 'Running things, and the rule that nothing runs unless you accepted it.',
       tag: 'RUN',
       blocks: [
@@ -1073,7 +1073,7 @@ const DEVFLEET: AppPage = {
     },
     {
       id: 'safety',
-      title: 'How it treats your repositories',
+      title: 'How It Treats Your Repositories',
       what: 'Why a tool that writes into your code has exactly one way of doing it.',
       tag: 'SAFETY',
       blocks: [
@@ -1190,7 +1190,7 @@ const MUSIC_EVERYTHING: AppPage = {
     },
     {
       id: 'players',
-      title: 'Scales and chords',
+      title: 'Scales and Chords',
       what: 'The two players, and the playlists you can build out of them.',
       tag: 'PLAY',
       blocks: [
@@ -1219,7 +1219,7 @@ const MUSIC_EVERYTHING: AppPage = {
     },
     {
       id: 'piano',
-      title: 'The piano',
+      title: 'The Piano',
       what: 'A playable keyboard that follows the mouse, your keyboard or a MIDI controller.',
       tag: 'KEYS',
       blocks: [
@@ -1324,7 +1324,7 @@ const MUSIC_EVERYTHING: AppPage = {
     },
     {
       id: 'sound',
-      title: 'Instruments and settings',
+      title: 'Instruments and Settings',
       what: 'What it sounds like, and everything it remembers for you.',
       tag: 'SETUP',
       blocks: [
@@ -1440,7 +1440,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'workspace',
-      title: 'The workspace',
+      title: 'The Workspace',
       what: 'Panels that dock, tab, float and stay where you put them.',
       tag: 'LAYOUT',
       blocks: [
@@ -1469,7 +1469,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'media',
-      title: 'Bringing footage in',
+      title: 'Bringing Footage In',
       what: 'The Media Bin, and what it works out about a file before you cut it.',
       tag: 'IMPORT',
       blocks: [
@@ -1494,7 +1494,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'timeline',
-      title: 'Editing on the timeline',
+      title: 'Editing on the Timeline',
       what: 'Tracks, clips, markers, regions and the tools that move them.',
       tag: 'EDIT',
       blocks: [
@@ -1523,7 +1523,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'look',
-      title: 'Effects, colour and titles',
+      title: 'Effects, Colour and Titles',
       what: 'Changing how a shot looks, and putting words on it.',
       tag: 'LOOK',
       blocks: [
@@ -1576,7 +1576,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'export',
-      title: 'Export, convert and the queue',
+      title: 'Export, Convert and the Queue',
       what: 'Getting files out, one at a time or in batches.',
       tag: 'OUTPUT',
       blocks: [
@@ -1609,7 +1609,7 @@ const VEDITOR: AppPage = {
     },
     {
       id: 'themes',
-      title: 'Themes and extensions',
+      title: 'Themes and Extensions',
       what: 'Nine themes, your own themes, and effect packs.',
       tag: 'MAKE IT YOURS',
       blocks: [
@@ -1715,7 +1715,7 @@ const MVTRADE: AppPage = {
     },
     {
       id: 'brain',
-      title: 'The brain',
+      title: 'The Brain',
       what: 'Jet, the three traders inside it, and the four stations a trade passes through.',
       tag: 'JET',
       blocks: [
@@ -1748,7 +1748,7 @@ const MVTRADE: AppPage = {
     },
     {
       id: 'safety',
-      title: 'The safety net',
+      title: 'The Safety Net',
       what: 'Why a day with no trades on it is usually a guard doing its job.',
       tag: 'GUARDS',
       blocks: [
@@ -1785,7 +1785,7 @@ const MVTRADE: AppPage = {
     },
     {
       id: 'dashboard',
-      title: 'The dashboard',
+      title: 'The Dashboard',
       what: 'What is on screen while it runs, and where the reasons are written down.',
       tag: 'ON SCREEN',
       blocks: [
@@ -1818,7 +1818,7 @@ const MVTRADE: AppPage = {
     },
     {
       id: 'not-trading',
-      title: 'When it will not trade',
+      title: 'When It Will Not Trade',
       what: 'The four things that account for almost every quiet day.',
       tag: 'ANSWERS',
       blocks: [
@@ -2001,7 +2001,7 @@ const VOLUME_CONTROLLER_PAGE: AppPage = {
     },
     {
       id: 'settings',
-      title: 'Settings, shortcuts and backup',
+      title: 'Settings, Shortcuts and Backup',
       what: 'Keyboard control, the look of the popup, and getting your setup out.',
       tag: 'SETUP',
       blocks: [
@@ -2034,7 +2034,7 @@ const VOLUME_CONTROLLER_PAGE: AppPage = {
     },
     {
       id: 'limits',
-      title: 'What it cannot do',
+      title: 'What It Cannot Do',
       what: 'The four cases where no extension can help, said up front.',
       tag: 'HONEST',
       blocks: [
@@ -2160,7 +2160,7 @@ const VIDHELPER: AppPage = {
     },
     {
       id: 'sites',
-      title: 'Sites and sign-in',
+      title: 'Sites and Sign-in',
       what: 'What works out of the box, and what needs your browser session.',
       tag: 'ACCESS',
       blocks: [
@@ -2185,7 +2185,7 @@ const VIDHELPER: AppPage = {
     },
     {
       id: 'limits',
-      title: 'What it will not do',
+      title: 'What It Will Not Do',
       what: 'The line it does not cross, and why.',
       tag: 'HONEST',
       blocks: [
@@ -2280,7 +2280,7 @@ const N8_TOOLS: AppPage = {
     },
     {
       id: 'melody',
-      title: 'Melody reader',
+      title: 'Melody Reader',
       what: 'Humming, singing or whistling turned into notes with real timing.',
       tag: 'MUSIC',
       blocks: [
@@ -2340,7 +2340,7 @@ const N8_TOOLS: AppPage = {
     },
     {
       id: 'ear',
-      title: 'Tuner, metronome and analysis',
+      title: 'Tuner, Metronome and Analysis',
       what: 'The small tools you reach for while practising.',
       tag: 'PRACTICE',
       blocks: [
@@ -2373,7 +2373,7 @@ const N8_TOOLS: AppPage = {
     },
     {
       id: 'remix',
-      title: 'Lofi and remix',
+      title: 'Lofi and Remix',
       what: 'Turning a track you have into a different mood.',
       tag: 'AUDIO',
       blocks: [
@@ -2398,7 +2398,7 @@ const N8_TOOLS: AppPage = {
     },
     {
       id: 'extras',
-      title: 'The optional extras',
+      title: 'The Optional Extras',
       what: 'Two larger pieces that need software you may not have.',
       tag: 'OPTIONAL',
       blocks: [
@@ -2508,7 +2508,7 @@ const MARANATHA_PAGE: AppPage = {
     },
     {
       id: 'map',
-      title: 'The story map',
+      title: 'The Story Map',
       what: 'The home screen, and the sky that follows your clock.',
       tag: 'HOME',
       blocks: [
@@ -2524,7 +2524,7 @@ const MARANATHA_PAGE: AppPage = {
     },
     {
       id: 'playable',
-      title: 'What you can play',
+      title: 'What You Can Play',
       what: 'One scene, end to end, and one place you can walk.',
       tag: 'TODAY',
       blocks: [
@@ -2550,7 +2550,7 @@ const MARANATHA_PAGE: AppPage = {
     },
     {
       id: 'scripture',
-      title: 'How Scripture is used',
+      title: 'How Scripture Is Used',
       what: 'Which translation, how it is checked, and how you hear it.',
       tag: 'THE TEXT',
       blocks: [
@@ -2566,7 +2566,7 @@ const MARANATHA_PAGE: AppPage = {
     },
     {
       id: 'built',
-      title: 'How it is made',
+      title: 'How It Is Made',
       what: 'Why it runs on a phone, and what it does not collect.',
       tag: 'UNDER IT',
       blocks: [

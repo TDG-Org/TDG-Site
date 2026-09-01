@@ -19,6 +19,8 @@ import type { SiteContentDoc } from './types'
 /** The game panel's card, which is the one card with a shape of its own. */
 export type SiteGame = {
   page: string
+  /** The game's NAME, for a button or a probe — `heading` is its headline. */
+  title: string
   icon: string
   iconShape: IconShape
   heading: string
@@ -123,6 +125,7 @@ export function resolvedGame(doc: SiteContentDoc): SiteGame {
   const over = doc.items[MARANATHA.page]?.card
   const base: SiteGame = {
     page: MARANATHA.page,
+    title: MARANATHA.title,
     icon: MARANATHA.icon,
     iconShape: MARANATHA.iconShape,
     heading: MARANATHA.heading,

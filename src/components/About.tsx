@@ -59,6 +59,8 @@ function AboutBody() {
                   rel="noopener"
                 >
                   {link.label}
+                  {/* Same as AppPage.tsx: `target` is invisible to a screen reader. */}
+                  <span className="sr-only"> (opens in a new tab)</span>
                   <span className="appview__link-arrow" aria-hidden="true">
                     →
                   </span>

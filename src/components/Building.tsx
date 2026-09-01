@@ -2,7 +2,7 @@ import { mergeRefs } from '../lib/mergeRefs'
 import { useParallax } from '../hooks/useParallax'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
-import { MARANATHA, NEXT_UP } from '../data/content'
+import { MARANATHA, NEXT_UP, shotHeight } from '../data/content'
 import { visibleGame, type SiteGame } from '../content/resolve'
 import { useSiteContent } from '../content/store'
 import { DOWN_WORDING, useLiveAccess } from '../live/useLive'
@@ -38,7 +38,7 @@ function Feature({ game }: { game: SiteGame }) {
   /* Is the game actually deployed? Asked only while no human has given the
      button a link — a Content-tab `href` is a decision, and discovery never
      argues with one. `Play`, not `Open`: it is a game. See src/live/README.md. */
-  const live = useLiveAccess(game.href ? undefined : MARANATHA.repo, 'MARANATHA', 'Play')
+  const live = useLiveAccess(game.href ? undefined : MARANATHA.repo, game.title, 'Play')
 
   return (
     <div ref={mergeRefs(reveal, tilt)} className="card building__feature">
@@ -75,8 +75,8 @@ function Feature({ game }: { game: SiteGame }) {
               className="building__art-img"
               src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
               alt={shot.alt}
-              width={720}
-              height={405}
+              width={shot.widths[0]}
+              height={shotHeight(shot, shot.widths[0])}
               loading="lazy"
               decoding="async"
             />

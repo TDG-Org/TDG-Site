@@ -1,6 +1,6 @@
 import { useSiteContent } from '../content/store'
 import { resolvedApps } from '../content/resolve'
-import { DOWN_WORDING, useLiveAccess } from '../live/useLive'
+import { useLiveAccess } from '../live/useLive'
 import type { StoreApp } from '../data/store'
 
 /**
@@ -94,7 +94,10 @@ export function saleWording(
 ): { name: string; line: string; short: string } {
   return state === 'down'
     ? {
-        name: DOWN_WORDING,
+        // Title Case, as the name beside it is (`Not On Sale Yet`) — this is
+        // the slot's NAME. `DOWN_WORDING` is the card caption's sentence-case
+        // form of the same fact and stays as it is for the card.
+        name: 'Temporarily Unavailable',
         line: `${appTitle} has stopped answering, so its packs are off sale until it is back. Nothing is wrong with your account, and anything you already own is untouched.`,
         short: `Off sale until ${appTitle} is answering again. Anything you already own is untouched.`,
       }

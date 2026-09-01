@@ -55,7 +55,7 @@ protection is RLS on the server.
 | `src/auth/` | Sign-in, the profile, session revocation, and what a refusal says. | [`src/auth/README.md`](src/auth/README.md) |
 | `src/account/` | The account page at `#/account`: what the account is, what it counts, and who may see each part of it. | [`src/account/README.md`](src/account/README.md) |
 | `src/people/` | Somebody else's account, at `#/user/<handle>`: who they are, where you stand with them, and what a block looks like when it is said out loud. | [`src/people/README.md`](src/people/README.md) |
-| `src/badges/` | Global account badges, and the account count the footer prints. | [`src/badges/README.md`](src/badges/README.md) |
+| `src/badges/` | Global account badges. (The account count the footer used to print is gone from the page; its hook is kept on purpose, and the README says why.) | [`src/badges/README.md`](src/badges/README.md) |
 | `src/feedback/` | Send Feedback, and the panel that delivers our replies — and, with them, any notice about a change to what an account owns. | [`src/feedback/README.md`](src/feedback/README.md) |
 | `src/notices/` | Messages about what an account owns, written from `#/dev` and waiting for the person they are about. | [`src/notices/README.md`](src/notices/README.md) |
 | `src/store/` | Reading which packs an account owns, and which products it may not. | [`src/store/README.md`](src/store/README.md) |

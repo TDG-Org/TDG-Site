@@ -67,7 +67,7 @@ export const ABOUT: AboutPage = {
   sections: [
     {
       id: 'who',
-      title: 'Who is behind this',
+      title: 'Who Is Behind This',
       what: 'Two brothers, no company behind them, and what that changes for you.',
       tag: 'US',
       blocks: [
@@ -87,7 +87,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'why',
-      title: 'Why we build what we build',
+      title: 'Why We Build What We Build',
       what: 'Where the apps come from, and the rules we hold ourselves to.',
       tag: 'WHY',
       blocks: [
@@ -128,7 +128,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'apps',
-      title: 'Which one is for you',
+      title: 'Which One Is for You',
       what: 'Every app, tool and the game in a line each, with a link to its own page.',
       tag: 'SIGNPOST',
       blocks: [
@@ -170,6 +170,11 @@ export const ABOUT: AboutPage = {
               href: '#/app/veditor',
             },
             {
+              name: 'MVTrade',
+              text: 'A day-trading robot that runs on your own machine and learns from every trade it makes. It only ever spends paper money; real-money trading is locked in the code on purpose.',
+              href: '#/app/mvtrade',
+            },
+            {
               name: 'Volume Controller',
               text: 'Any website louder or quieter than it wants to be, up to six times, with an equalizer and loudness levelling. Live on the Chrome Web Store.',
               href: '#/app/volume-controller',
@@ -195,7 +200,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'money',
-      title: 'What it costs',
+      title: 'What It Costs',
       what: 'Which things are free, what the paid extras are, and who handles the money.',
       tag: 'MONEY',
       blocks: [
@@ -204,11 +209,11 @@ export const ABOUT: AboutPage = {
           items: [
             {
               q: 'Is any of this actually free?',
-              a: 'Most of it, and not as a trial that runs out. Bible Educator, MARANATHA, Say2Quill, Music Everything, N8-Tools, VidHelper and Volume Controller are free, and nothing inside them is held back for a payment. Some of them have a Support Us button, which is a donation and never a requirement. DevFleet and TDG Veditor are free as well: the app itself is not the thing being sold, and each has optional packs beside it. Makullveny is the one with paid tiers of its own.',
+              a: 'Most of it, and not as a trial that runs out. Bible Educator, MARANATHA, Say2Quill, Music Everything, MVTrade, N8-Tools, VidHelper and Volume Controller are free, and nothing inside them is held back for a payment. Some of them have a Support Us button, which is a donation and never a requirement. DevFleet and TDG Veditor are free as well: the app itself is not the thing being sold, and each has optional packs beside it. Makullveny is the one with paid tiers of its own.',
             },
             {
               q: 'What do the paid parts cost?',
-              a: 'The Store page lists everything we sell with its price beside it, so it is written down once rather than in two places that can disagree. Those packs are one-time payments and they attach to your account rather than to a machine. Makullveny is the exception worth naming: it has a subscription of its own, and its own site is where that is explained.',
+              a: 'The Store page lists everything we sell with its price beside it, so it is written down once rather than in two places that can disagree. Most packs are one-time payments; TDG Veditor’s Pro Export Pack is also sold monthly and yearly, and every plan is priced on its card before you buy, with the way to change or stop it on the same card. Either way a pack attaches to your account rather than to a machine. Makullveny is the exception worth naming: it has a subscription of its own, and its own site is where that is explained.',
             },
             {
               q: 'Do you see my card details?',
@@ -224,7 +229,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'data',
-      title: 'Accounts and your data',
+      title: 'Accounts and Your Data',
       what: 'Whether you need one, what we keep, and how to be rid of it.',
       tag: 'DATA',
       blocks: [
@@ -237,7 +242,7 @@ export const ABOUT: AboutPage = {
             },
             {
               q: 'What do you store about me?',
-              a: 'If you never sign in, nothing. This site has no analytics, and the only thing it keeps in your browser is whether you chose light or dark. If you do sign in: the email you signed up with, the username and display name you chose, a bio if you write one, which subscription tier you hold, which packs you have bought, the record of the payments behind them, and any badges we have put on the account. If you send us feedback, that report is kept too: what you wrote, which of our apps you said it was about, the contact line if you filled that optional box in, and — attached for us rather than typed by you — which operating system and browser you sent it from, and which version of this site you were looking at, because a bug report without those is usually a bug we cannot find. That is the whole list.',
+              a: 'If you never sign in, nothing about you. This site has no analytics. What it keeps in your browser is whether you chose light or dark, and a cached copy of its own public content — what the cards say, which of our apps are deployed, and the Cloud plans — so the page draws right on your next visit. None of that is about you. If you do sign in: the email you signed up with, the username and display name you chose, a bio if you write one, which subscription tier you hold, which packs you have bought, the record of the payments behind them, and any badges we have put on the account. If you send us feedback, that report is kept too: what you wrote, which of our apps you said it was about, the contact line if you filled that optional box in, and — attached for us rather than typed by you — which operating system and browser you sent it from, and which version of this site you were looking at, because a bug report without those is usually a bug we cannot find. That is the whole list.',
             },
             {
               q: 'Where does the stuff I make actually live?',
@@ -257,7 +262,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'trust',
-      title: 'Installing something from us',
+      title: 'Installing Something from Us',
       what: 'Unsigned installers, and what happens to your things if we stop.',
       tag: 'TRUST',
       blocks: [
@@ -282,7 +287,7 @@ export const ABOUT: AboutPage = {
     },
     {
       id: 'faith',
-      title: 'Faith, and reaching us',
+      title: 'Faith, and Reaching Us',
       what: 'What the name changes in the software, and where to write.',
       tag: 'CONTACT',
       blocks: [

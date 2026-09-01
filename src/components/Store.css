@@ -679,8 +679,17 @@
   border-top: 1px solid var(--border);
   /* One floor for every state, so a card does not change height when it flips
      from Buy to Waiting to Owned. A shelf that jumps as answers arrive reads
-     as a page still loading. */
-  min-height: 104px;
+     as a page still loading.
+
+     The floor is the TALLEST state, which is an owned subscription: the
+     padding above, the Owned pill with its standing, the note under it, the
+     Manage or Cancel Plan button, and the two gaps between the three. It
+     was 104px, which is the `buy` state's height — so a subscriber's card
+     grew by a third of a hundred pixels the moment the read landed, which is
+     exactly the jump this floor exists to prevent. Measured on the rendered
+     state rather than summed — 144px at 1280 with a two-word standing — and
+     it must be re-measured if any of those parts moves. */
+  min-height: 144px;
 }
 
 .store__buy {
@@ -954,6 +963,19 @@
   color: var(--text);
 }
 .store__plan-note {
+  font: 400 11.5px/1.45 var(--font-body);
+  color: var(--faint);
+}
+
+/* A row's WORTH of explanation where a row is not offered: the Manage menu
+   draws this in place of Buy It Outright while the app's shop is shut, so
+   the missing row is accounted for rather than silently absent (rule 5). A
+   dashed frame at a row's own padding, in the note's own face, and no hover
+   — it is a sentence, not a control. */
+.store__plan-notice {
+  padding: 11px 13px;
+  border: 1px dashed var(--border);
+  border-radius: 3px;
   font: 400 11.5px/1.45 var(--font-body);
   color: var(--faint);
 }

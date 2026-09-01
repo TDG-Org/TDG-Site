@@ -259,7 +259,8 @@ export function Outro() {
             </div>
           </div>
           <a className="outro__gh-cta" href={GITHUB_ORG} target="_blank" rel="noopener">
-            Visit our GitHub ↗
+            Visit Our GitHub<span className="sr-only"> (opens in a new tab)</span>
+            <span aria-hidden="true"> ↗</span>
           </a>
         </div>
       </section>

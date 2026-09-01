@@ -208,8 +208,13 @@ export function FoldControls() {
 
   return (
     <div className="appview__controls">
-      <p className="appview__controls-count">
-        {openCount === 0 ? `${total} sections, all closed` : `${openCount} of ${total} sections open`}
+      {/* A live region, so Expand All and Collapse All are heard as well as
+          seen: the count is the only thing on screen that says the press did
+          anything. `polite`, because it changes on the reader's own press. */}
+      <p className="appview__controls-count" aria-live="polite">
+        {openCount === 0
+          ? `${total} ${total === 1 ? 'section' : 'sections'}, all closed`
+          : `${openCount} of ${total} ${total === 1 ? 'section' : 'sections'} open`}
       </p>
       <div className="appview__controls-btns">
         <button type="button" className="appview__ghost" onClick={expandAll}>

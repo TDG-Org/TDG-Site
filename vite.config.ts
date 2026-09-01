@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => ({
      Developer page's own header (src/dev/).
 
      The build STAMP is here for a failure the version alone cannot catch.
-     Push to main deploys, GitHub Pages caches index.html, and a tab left open
+     A deploy (manual, from the Actions tab — AGENTS.md §6) replaces every
+     chunk, GitHub Pages caches index.html, and a tab left open
      never asks again — so a browser can be running a bundle that disagrees with
      the database it is talking to, and look completely normal doing it. That
      cost most of a day once, because there was no way to ask a page which build
