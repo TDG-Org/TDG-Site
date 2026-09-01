@@ -74,8 +74,22 @@ export function PointCloud() {
   const [label, setLabel] = useState({ index: 1, name: 'Jesus' })
   const [labelVisible, setLabelVisible] = useState(true)
   const themeRef = useRef(theme)
+  /**
+   * A theme change asks for the very next frame, cap or no cap.
+   *
+   * The sky behind this canvas is a `background-image` and snaps on the frame
+   * `data-theme` changes (Hero.css says why), while the points are painted at
+   * IDLE_HZ from an accumulator — so the next paint could be anywhere from 0
+   * to 33ms away, and for those frames the cross sat white on a pale sky, or
+   * ink on a dark one. One flag: set here, honoured once by the tick below,
+   * and it bypasses the cap AND the reduced-motion "painted once, stop" rest,
+   * because a visitor who asked for less motion still asked for the right
+   * colour.
+   */
+  const repaint = useRef(false)
   useEffect(() => {
     themeRef.current = theme
+    repaint.current = true
   }, [theme])
 
   useEffect(() => {
@@ -294,14 +308,15 @@ export function PointCloud() {
       // loop park. Without this the model kept drifting AND held the loop awake
       // forever for exactly the people who asked for less of both.
       const still = mi === 0 && !drag.on
-      if (still && settled) return applyFade
+      if (still && settled && !repaint.current) return applyFade
       if (!still) hold()
 
       pending += dt
-      if (!drag.on && !still && pending < 1 / IDLE_HZ) return applyFade
+      if (!drag.on && !still && pending < 1 / IDLE_HZ && !repaint.current) return applyFade
       const step = pending
       pending = 0
       settled = still
+      repaint.current = false
 
       // Proportional in mi, not affine: at mi = 1 these are identical to the
       // reference (0.35 + 0.65, 0.3 + 0.7, 0.4 + 0.6 all reach 1.0), and at

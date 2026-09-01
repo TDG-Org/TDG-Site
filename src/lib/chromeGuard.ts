@@ -57,8 +57,38 @@ function strip(el: Element) {
   el.removeAttribute('style')
 }
 
-function sweep(root: ParentNode) {
-  root.querySelectorAll?.(GUARDED).forEach(strip)
+/**
+ * Take one control under guard: clear what is already on it, then watch ITS
+ * `style` attribute — and only its.
+ *
+ * ── why the observer is registered per control and not once on the root ──
+ * This used to be a single `observe(document.documentElement, { attributes,
+ * attributeFilter: ['style'], subtree })`, which is the obvious shape and the
+ * expensive one. Every inline style write anywhere in the document produced a
+ * MutationRecord, and this page writes inline styles from its frame loop: the
+ * twelve hero layers, up to twenty parallax layers, every element mid-reveal,
+ * the nav's progress bar and the cursor — thirty to sixty records per frame,
+ * delivered as a microtask inside the animation frame, each allocating a
+ * record and running `matches(GUARDED)` to learn that a `div` is not an
+ * `input`. Measured with the CDP profiler during a scroll: a microtask under
+ * every frame doing nothing. Registering the observer on each control instead
+ * means the only `style` mutations it ever hears about are on elements it
+ * would strip, and the frame loop's writes cost it nothing at all. A control
+ * that arrives later is found through the `childList` watch below, which is
+ * the cheap kind: this page adds and removes elements on a route change, not
+ * on a frame.
+ *
+ * One `MutationObserver` accepts any number of targets, each with its own
+ * options, and holds them weakly — a control that leaves the document takes
+ * its registration with it, so nothing here leaks across a route change.
+ */
+function watch(observer: MutationObserver, el: Element) {
+  strip(el)
+  observer.observe(el, { attributes: true, attributeFilter: ['style'] })
+}
+
+function sweep(observer: MutationObserver, root: ParentNode) {
+  root.querySelectorAll?.(GUARDED).forEach((el) => watch(observer, el))
 }
 
 /**
@@ -66,31 +96,29 @@ function sweep(root: ParentNode) {
  * settings switch) can turn it off; nothing in the app calls that today.
  */
 export function guardChrome(): () => void {
-  // The extension usually gets there first, so clear whatever is already on.
-  sweep(document)
-
   const observer = new MutationObserver((records) => {
     for (const record of records) {
       if (record.type === 'attributes') {
-        const el = record.target as Element
-        if (el.matches?.(GUARDED)) strip(el)
+        // Only ever a guarded control: that is the only kind of element the
+        // attribute watch is registered on.
+        strip(record.target as Element)
         continue
       }
       record.addedNodes.forEach((node) => {
         if (node.nodeType !== 1) return
         const el = node as Element
-        if (el.matches?.(GUARDED)) strip(el)
-        sweep(el)
+        if (el.matches?.(GUARDED)) watch(observer, el)
+        sweep(observer, el)
       })
     }
   })
 
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: ['style'],
-  })
+  // The extension usually gets there first, so clear whatever is already on,
+  // and put every control that exists today under watch.
+  sweep(observer, document)
+
+  // Structure only. Attribute changes are heard per control, above.
+  observer.observe(document.documentElement, { subtree: true, childList: true })
 
   return () => observer.disconnect()
 }

@@ -38,8 +38,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         /* Lazy chunks are named by hash alone rather than by their source file.
 
-           There are four dynamic imports: the Developer console, AppPage,
-           About and the hero's PointCloud. The Developer console is the one
+           There are seven dynamic imports: the Developer console, AppPage,
+           About, the account page, a profile, the hero's PointCloud and the
+           walk's CabinScene. The Developer console is the one
            this rule was written for — Vite's default would publish it as
            `DevConsole-<hash>.js`, a file name in the deployed asset list that
            announces a page most visitors should never think about. (Tidiness,
@@ -50,7 +51,7 @@ export default defineConfig(({ mode }) => ({
            The rule is not narrowed to that one chunk, because it cannot be
            without naming it here — and a build config that has to be edited
            every time a page becomes lazy is a build config somebody forgets.
-           So all four go out anonymous. The hash is enough to cache-bust,
+           So all seven go out anonymous. The hash is enough to cache-bust,
            which is all a chunk name is for. */
         chunkFileNames: 'assets/[hash].js',
         /* Same reasoning for the stylesheet a chunk pulls in: Rollup names it

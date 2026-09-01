@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react'
 import { clamp01, onFrame, settle } from '../lib/motion'
 import { usePointer } from '../hooks/usePointer'
 import { CrossGlyph } from './CrossGlyph'
+import { ErrorBoundary } from './ErrorBoundary'
 import { Moon } from './scene/Moon'
 import { Stage } from './scene/Stage'
 import { StillArt } from './scene/ThemedArt'
@@ -1000,9 +1001,13 @@ export function Hero() {
         <div ref={frame} className="hero__frame">
           {/* The model loads in the background, with no fallback UI on mobile
               or slow networks */}
-          <Suspense fallback={null}>
-            <PointCloud />
-          </Suspense>
+          {/* `silent`: a chunk that fails to arrive after a deploy leaves the
+              sky without its cross, not the hero without its page. */}
+          <ErrorBoundary silent>
+            <Suspense fallback={null}>
+              <PointCloud />
+            </Suspense>
+          </ErrorBoundary>
 
           <div className="hero__content">
             <div className="hero__inner">

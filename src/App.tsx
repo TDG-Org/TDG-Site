@@ -12,6 +12,7 @@ import { Footer } from './components/Footer'
 import { Cursor } from './components/Cursor'
 import { Store } from './components/Store'
 import { AuthModal } from './components/AuthModal'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { FeedbackDialog } from './feedback/FeedbackDialog'
 import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
@@ -259,64 +260,75 @@ export default function App() {
   return (
     <div className="page">
       <Nav onOpenAuth={() => setAuthOpen(true)} onOpenFeedback={() => { setFeedbackApp(undefined); setFeedbackOpen(true) }} />
+      {/* Every page renders inside an ErrorBoundary, keyed on the route, so a
+          lazy chunk that is no longer on the server after a deploy — or a page
+          that throws while drawing — gets a face and a Reload button instead
+          of taking the root down with it. See components/ErrorBoundary.tsx.
+          The fallback `div` only stops the footer flying up to meet the nav
+          for the frame or two before a chunk lands; base.css has its floor. */}
       {showDev ? (
         <main>
-          {/* The chunk is local and small; the placeholder only stops the
-              footer flying up to meet the nav for one frame. */}
-          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-            <DevConsole />
-          </Suspense>
+          <ErrorBoundary key="dev">
+            <Suspense fallback={<div className="page-fallback" />}>
+              <DevConsole />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       ) : route.kind === 'store' ? (
         <main>
           {/* `app` is the index or one app's own packs, and the router has
               already dropped an id the catalogue does not claim. */}
-          <Store onOpenAuth={() => setAuthOpen(true)} app={route.app} />
+          <ErrorBoundary key={`store:${route.app ?? ''}`}>
+            <Store onOpenAuth={() => setAuthOpen(true)} app={route.app} />
+          </ErrorBoundary>
         </main>
       ) : route.kind === 'about' ? (
         <main>
-          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-            <About />
-          </Suspense>
+          <ErrorBoundary key="about">
+            <Suspense fallback={<div className="page-fallback" />}>
+              <About />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       ) : route.kind === 'account' ? (
         <main>
-          {/* The chunk is local and small; the placeholder only stops the
-              footer flying up to meet the nav for one frame. */}
-          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-            <AccountPage
-              onOpenAuth={() => setAuthOpen(true)}
-              onOpenFeedback={() => { setFeedbackApp(undefined); setFeedbackOpen(true) }}
-            />
-          </Suspense>
+          <ErrorBoundary key="account">
+            <Suspense fallback={<div className="page-fallback" />}>
+              <AccountPage
+                onOpenAuth={() => setAuthOpen(true)}
+                onOpenFeedback={() => { setFeedbackApp(undefined); setFeedbackOpen(true) }}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       ) : route.kind === 'profile' ? (
         <main>
-          {/* The chunk is local and small; the placeholder only stops the
-              footer flying up to meet the nav for one frame. */}
-          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-            {/* Keyed on the handle so following one profile to another
-                REMOUNTS rather than re-running effects inside a page still
-                holding the previous person's read. Two profiles are two
-                pages; `same()` in lib/route.ts already keeps them apart at
-                the route level, and this keeps them apart at the component. */}
-            <ProfilePage
-              key={route.username}
-              username={route.username}
-              onOpenAuth={() => setAuthOpen(true)}
-            />
-          </Suspense>
+          <ErrorBoundary key={`user:${route.username}`}>
+            <Suspense fallback={<div className="page-fallback" />}>
+              {/* Keyed on the handle so following one profile to another
+                  REMOUNTS rather than re-running effects inside a page still
+                  holding the previous person's read. Two profiles are two
+                  pages; `same()` in lib/route.ts already keeps them apart at
+                  the route level, and this keeps them apart at the component. */}
+              <ProfilePage
+                key={route.username}
+                username={route.username}
+                onOpenAuth={() => setAuthOpen(true)}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       ) : route.kind === 'app' ? (
         <main>
-          {/* The chunk is local and small; the placeholder only stops the
-              footer flying up to meet the nav for one frame. */}
-          <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-            <AppPage slug={route.slug} />
-          </Suspense>
+          <ErrorBoundary key={`app:${route.slug}`}>
+            <Suspense fallback={<div className="page-fallback" />}>
+              <AppPage slug={route.slug} />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       ) : (
         <main>
+          <ErrorBoundary key="home">
           <Hero />
           {/* Three sections, ONE backdrop. `Walk` is a wrapper rather than a
               section of its own: it owns the sticky 3D stage that has to paint
@@ -337,6 +349,7 @@ export default function App() {
           <Building />
           <Faith />
           <Outro />
+          </ErrorBoundary>
         </main>
       )}
       <Footer />

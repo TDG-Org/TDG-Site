@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react'
 import { clamp01, onFrame } from '../lib/motion'
+import { ErrorBoundary } from './ErrorBoundary'
 import { Snow } from './scene/Snow'
 import { Stage } from './scene/Stage'
 import { StillArt } from './scene/ThemedArt'
@@ -360,6 +361,7 @@ export function Walk({ children }: { children: ReactNode }) {
     if (!el) return
     let lastH = -1
     let lastVh = -1
+    let pinH = 0
     let paintedFlakes = ''
     let paintedFrost = ''
 
@@ -370,12 +372,31 @@ export function Walk({ children }: { children: ReactNode }) {
 
     const read = (vh: number) => {
       const r = el.getBoundingClientRect()
-      // `height - vh` is 0 for a wrapper shorter than the viewport, where the
-      // pin never engages at all; `max(1, ...)` keeps that from producing
+      const moved = r.height !== lastH || vh !== lastVh
+      /*
+       * ── the run is the PIN's travel, so it is measured off the pin ─────────
+       * This divided by `vh` (`window.innerHeight`), which is the pin's height
+       * only while the two agree — and on a phone they do not. The pin is
+       * `100lvh` (Walk.css says why it is not `svh`), and `innerHeight` grows
+       * by the height of the browser's bar the moment the bar retracts, which
+       * is exactly what happens as a reader scrolls down into this walk. A run
+       * of `height - innerHeight` therefore shrank by 60-110px at that
+       * moment: `p` reached 1 before the pin had released, and both marks
+       * stepped every time the bar toggled, so the camera's composed beats
+       * slid off the headings they were cut to. The pin's own box is constant
+       * across a bar toggle, so measured off it the marks hold still.
+       *
+       * `offsetHeight`, read only when the geometry it depends on has moved —
+       * the wrapper's height or the viewport's — so a scroll costs no second
+       * read. `|| vh` is the fallback for a walk rendered without its stage.
+       */
+      if (moved) pinH = el.querySelector<HTMLElement>('.stage__pin')?.offsetHeight || vh
+      // `height - pinH` is 0 for a wrapper shorter than the viewport, where
+      // the pin never engages at all; `max(1, ...)` keeps that from producing
       // Infinity rather than a pinned-at-0 backdrop.
-      const run = Math.max(1, r.height - vh)
+      const run = Math.max(1, r.height - pinH)
       state.current.p = clamp01(-r.top / run)
-      if (r.height === lastH && vh === lastVh) return
+      if (!moved) return
       lastH = r.height
       lastVh = vh
       state.current.apps = markOf('#apps', r.top, run)
@@ -492,9 +513,13 @@ export function Walk({ children }: { children: ReactNode }) {
           note that the lazy import does not fire until this renders. */}
       <Stage className="walk__stage">
         {cabin ? (
-          <Suspense fallback={null}>
-            <CabinScene className="walk__cabin" progress={progress} />
-          </Suspense>
+          // `silent`: if the cabin's chunk is gone after a deploy the walk
+          // keeps its band and its near snow; the page does not go blank.
+          <ErrorBoundary silent>
+            <Suspense fallback={null}>
+              <CabinScene className="walk__cabin" progress={progress} />
+            </Suspense>
+          </ErrorBoundary>
         ) : null}
 
         {/* The near layer of the snow, and the only snow that does not need

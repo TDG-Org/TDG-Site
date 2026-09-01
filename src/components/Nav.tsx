@@ -353,7 +353,13 @@ function AccountMenu({
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key !== 'Escape') return
+      // Rule 14: Escape returns focus to what opened it. The panel goes
+      // `inert` the moment it closes, and an inert subtree cannot hold focus,
+      // so without this the browser dropped it on `body` and the next Tab
+      // started again from the top of the page.
+      if (ref.current?.contains(document.activeElement)) triggerRef.current?.focus()
+      setOpen(false)
     }
     document.addEventListener('pointerdown', onDocPointer)
     document.addEventListener('keydown', onKey)
@@ -525,6 +531,7 @@ export function Nav({
   const strip = useRef<HTMLSpanElement | null>(null)
   const progress = useRef<HTMLDivElement | null>(null)
   const panel = useRef<HTMLDivElement | null>(null)
+  const burger = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => () => window.clearTimeout(blessTimer.current), [])
 
@@ -634,7 +641,14 @@ export function Nav({
       if (!top || !top.isConnected) top = document.getElementById('top')
       const max = document.documentElement.scrollHeight - vh || 1
       const travelled = top ? Math.max(0, -top.getBoundingClientRect().top) : 0
-      const next = `${Math.max(0, Math.min(100, (travelled / max) * 100)).toFixed(2)}%`
+      // One decimal, not two. `width` is the one layout-affecting write the
+      // frame loop makes, and at two decimals the string changed on every
+      // frame of every scroll, so every frame carried a layout and the next
+      // frame's first rect read paid to flush it. A tenth of a percent is
+      // 1.4px on a 1440px bar and under half a pixel on a phone — below what
+      // a 2px bar can show — so this is the same picture with a write only
+      // when the bar would actually move.
+      const next = `${Math.max(0, Math.min(100, (travelled / max) * 100)).toFixed(1)}%`
       if (next === painted) return
       painted = next
       return () => {
@@ -662,7 +676,11 @@ export function Nav({
   useEffect(() => {
     if (!menuOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
+      if (e.key !== 'Escape') return
+      // Same as the account menu: the panel goes `inert` on close, so focus
+      // goes back to the burger first or it lands on `body`.
+      if (panel.current?.contains(document.activeElement)) burger.current?.focus()
+      setMenuOpen(false)
     }
     const onResize = () => {
       if (window.innerWidth > 820) {
@@ -806,6 +824,7 @@ export function Nav({
 
         <div ref={actions} className="nav__actions">
           <button
+            ref={burger}
             type="button"
             className="nav__burger"
             aria-label="Menu"

@@ -77,13 +77,15 @@ function readRGB(el: Element, varName: string, fallback: string): string {
  * Falling snow on a 2D canvas, at about the cost of a gradient.
  *
  * ```tsx
- * <Stage className="origin__stage">
- *   <CabinScene className="origin__cabin" />
- *   <Snow className="origin__flakes" density={NEAR_SNOW} />
+ * <Stage className="walk__stage">
+ *   <CabinScene className="walk__cabin" />
+ *   <div className="walk__flakes">
+ *     <Snow className="walk__flakes-canvas" density={NEAR_SNOW} />
+ *   </div>
  * </Stage>
  * ```
  *
- * That is `Origin.tsx`, and it is the only caller. It is worth reading as a
+ * That is `Walk.tsx`, and it is the only caller. It is worth reading as a
  * pair rather than as an example: the cabin's three.js scene draws snow of its
  * own with real depth, between the trees and in front of them, and this canvas
  * is the layer in front of ALL of it — a few larger, faster flakes crossing the
@@ -118,9 +120,12 @@ function readRGB(el: Element, varName: string, fallback: string): string {
  * `useOffscreenPause` stamps `data-live` and `base.css` turns that into
  * `animation-play-state: paused` — and an `onFrame` subscriber never sees an
  * attribute. `Stage`'s own `data-covered` cannot reach it either, for exactly
- * the same reason. So this measures the section it lives in every frame and
- * returns before it draws OR holds when the section is off screen. It is the
- * same box `Stage` guards on, so the two flip together.
+ * the same reason. So this measures the box it lives in every frame and
+ * returns before it draws OR holds when that box is off screen — the nearest
+ * `section`, or the canvas itself when there is none, which is the walk's
+ * case. And because the walk's canvas is a sticky pin that stays on screen
+ * for the whole pinned run, it also parks while the wrapper its caller fades
+ * has been written to nothing; the tick says why.
  *
  * Nothing catches up when it comes back — and for a while that sentence was
  * only half true, which is worth writing down because the half that was false
@@ -329,6 +334,28 @@ export function Snow({
       const r = box.getBoundingClientRect()
       // Neither draw nor hold while nobody can see it.
       if (r.bottom <= 0 || r.top >= vh) return
+      /*
+       * ── parked behind a wrapper faded to nothing ──────────────────────────
+       * `Walk.tsx` fades this layer out through the cabin door by writing
+       * `opacity` on the wrapper around the canvas, and the wrapper stays at 0
+       * for the whole of the interior — Apps and Tools, most of the pinned
+       * run. The box guard above cannot see that: in the walk there is no
+       * `section` ancestor, so the box is the canvas itself, which is the
+       * sticky pin and is on screen for as long as the pin holds. Measured
+       * before this line: parked on the Apps cards, the canvas was cleared
+       * and redrawn thirty times a second and held the whole frame loop awake
+       * to do it, for a layer nobody could see.
+       *
+       * The wrapper's INLINE opacity, read off `style` rather than computed:
+       * no layout, no style flush, and it is the one writer's own value. An
+       * empty string is the layer at its stylesheet rest — the reduced-motion
+       * frame, or a wrapper nothing has written to yet — and is not parked.
+       * Before `pending += dt`, so the fall resumes exactly where it stopped
+       * when the reader scrolls back out to the approach: a park is a pause,
+       * not a gap, which is the same rule the box guard keeps.
+       */
+      const veil = (cv.parentElement as HTMLElement | null)?.style.opacity ?? ''
+      if (veil !== '' && Number(veil) <= 0) return
       if (mi === 0 && settled) return
       if (mi > 0) hold()
 

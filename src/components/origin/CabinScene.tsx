@@ -388,10 +388,10 @@ import type { WalkProgress } from '../Walk'
  *
  * - **Rule 9, all motion through the one loop.** One `onFrame` subscriber. No
  *   `requestAnimationFrame`, no `THREE.Clock`, no `setAnimationLoop`. It holds
- *   the loop only while the damped camera is still converging, while snow is
- *   falling in view, or while a theme cross-fade is running — the chimney
- *   smoke adds no new reason to hold, because it only ever moves on frames
- *   the snow was already keeping alive — and it returns
+ *   the loop only while the damped camera is still converging, while
+ *   something time-based is visibly moving — snow in the air, smoke over the
+ *   chimney, the fire on the hearth — or while a theme cross-fade is running,
+ *   and it returns
  *   before drawing *and* before holding whenever the section is off screen,
  *   because `useOffscreenPause` stamps `data-live` for CSS animations and
  *   cannot see an `onFrame` subscriber.
@@ -716,6 +716,18 @@ export function CabinScene({
     materials.push(smokeMat)
     /** Seconds of smoke that have been drawn. Frozen at 0 under reduced motion. */
     let smokeT = 0
+    /**
+     * Seconds of snow that have been drawn — the sway's clock, on the same
+     * rule as `smokeT` and as `scene/Snow.tsx`'s `elapsed`: advanced only by
+     * the `step` of a frame that is actually drawn, never read off the wall.
+     * It used to be `now * 0.001`, and a wall clock keeps running through a
+     * tab switch, a background pause or a long frame; when the loop came back
+     * the fall moved by a clamped 50ms but the sway re-evaluated seconds
+     * later, and every flake in view jumped sideways by up to twice its sway
+     * in one frame. Frozen at 0 under reduced motion, so the rest frame is
+     * the same picture it always was.
+     */
+    let swayT = 0
 
     /**
      * Lay the puffs out for the current clock and camera facing.
@@ -1213,7 +1225,15 @@ export function CabinScene({
       // survivable — see the mount note in the header.
       let dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR)
       const area = w * h * dpr * dpr
-      if (area > MAX_PIXELS) dpr = Math.max(0.75, dpr * Math.sqrt(MAX_PIXELS / area))
+      // Never below one device pixel per CSS pixel. The floor used to be 0.75,
+      // which let a 2560x1440 display at 1x render the room at 0.81 and an
+      // ultrawide at 0.75 — facet edges, the window bars and the transom
+      // softened on exactly the machines with fill to spare. The cap was
+      // written for a canvas over a whole tall section (see MAX_PIXELS); the
+      // shipped mount is one viewport, so on a 1x display the cap now only
+      // ever stops a ratio ABOVE 1 from being spent, and a 1.5x laptop at
+      // 1440x900 still comes down to 1.36 exactly as before.
+      if (area > MAX_PIXELS) dpr = Math.max(Math.min(1, dpr), dpr * Math.sqrt(MAX_PIXELS / area))
       const bw = Math.round(w * dpr)
       const bh = Math.round(h * dpr)
       // `setSize` assigns canvas.width and canvas.height unconditionally, and
@@ -1333,7 +1353,7 @@ export function CabinScene({
     const eye: V = [0, 0, 0]
     const aim: V = [0, 0, 0]
 
-    const stop = onFrame(({ vh, mi, dt, now, hold }) => {
+    const stop = onFrame(({ vh, mi, dt, hold }) => {
       if (!alive || !cssW || !cssH) return
       // The CANVAS's rect. It used to be the section's, and there is no section
       // any more — this is mounted in a `Stage` that is a SIBLING of the three
@@ -1436,7 +1456,15 @@ export function CabinScene({
       const fading = holding && fadeK > 0
 
       const converging = Math.abs(wanted - walk) > WALK_EPS
-      const animating = mi > 0
+      // Something time-based is actually moving: snow in the air, smoke over
+      // the chimney, or the fire on the hearth. These are last frame's flags
+      // (they are set further down), which is right — a layer that has just
+      // faded out gets one more frame to say so, and a layer that is about to
+      // fade in does so on a frame the camera or the theme fade is already
+      // holding, since those are the only two things that can change the
+      // opacities that decide it. With none of the three visible and the
+      // camera settled there is nothing left to draw, and the loop may park.
+      const animating = mi > 0 && (snow.visible || smokeMesh.visible || fireMesh.visible)
       if (converging || animating || holding) hold()
       if (!converging && !animating && !fading && settled && !dirty) return
 
@@ -1682,8 +1710,11 @@ export function CabinScene({
       // The sway is frozen at mi 0 rather than merely slowed. Left running it
       // would move the flakes sideways on any frame something else forced a
       // redraw — a resize, a theme change — for a visitor who asked for no
-      // motion at all.
-      const t = mi > 0 ? now * 0.001 : 0
+      // motion at all. Integrated from drawn frames, not read off the wall
+      // clock: see `swayT`.
+      if (mi > 0) swayT += step
+      else swayT = 0
+      const t = swayT
       if (snow.visible) {
         // Only advanced on frames the flakes are actually stepped, so a layer
         // that was skipped cannot come back with a whole gap's worth of
@@ -2076,10 +2107,12 @@ const WASH_FROM = 0.55
 
 /**
  * Ceiling on the backing store, in device pixels. 1.5x on a 1440x900 viewport
- * is 2.9M and clears this; a canvas stretched over a whole 2400px section does
- * not, and this is what stops that mount from allocating a 40MB buffer and
- * filling it thirty times a second — SCENE_HZ, which is the rate this file
- * actually runs at.
+ * is 2.9M, so the cap already binds there and brings the ratio down to 1.36
+ * (an earlier version of this note said 2.9M "clears" 2.4M, which it does
+ * not); a canvas stretched over a whole 2400px section would be far past it,
+ * and this is what stops that mount from allocating a 40MB buffer and filling
+ * it thirty times a second — SCENE_HZ, which is the rate this file actually
+ * runs at. The cap never takes a 1x display below native: `resize` says why.
  */
 const MAX_PIXELS = 2_400_000
 

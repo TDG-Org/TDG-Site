@@ -312,6 +312,15 @@ Three defences in cost order: the documented opt-outs (`darkreader-lock`,
 `color-scheme`), then CSS in `base.css`, then a `MutationObserver` for what is
 left.
 
+**That observer watches structure on the root and the `style` attribute on
+each control — never `style` across the whole tree.** It used to, and on a page
+whose frame loop writes inline styles to dozens of elements a frame, that meant
+a microtask under every animation frame delivering thirty to sixty records so
+the guard could learn that a `div` is not an `input`. Registered per control,
+it hears only the writes it would undo; measured over a full scroll of the home
+page, four records instead of thousands. A control that arrives later is found
+through the structural watch and registered the same way.
+
 ## `dpr.ts`
 
 Two halves of one decision — what the ceiling on a canvas's backing store is,

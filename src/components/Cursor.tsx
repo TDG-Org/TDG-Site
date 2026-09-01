@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { onFrame, settle } from '../lib/motion'
 import './Cursor.css'
 
@@ -89,6 +89,12 @@ export function Cursor() {
   const root = useRef<HTMLDivElement | null>(null)
   const ring = useRef<HTMLSpanElement | null>(null)
   const dot = useRef<HTMLSpanElement | null>(null)
+  // Read once: the primary pointer does not change under a running page, and
+  // `usePointer` and `useTilt` answer the same question from the same query.
+  // This is what makes "renders nothing" above true — the effect below also
+  // refuses a coarse pointer, but an effect cannot take three fixed boxes out
+  // of the tree, and for a while they sat there, at opacity 0, on every phone.
+  const [fine] = useState(() => window.matchMedia('(pointer: fine)').matches)
 
   useEffect(() => {
     const host = root.current
@@ -203,6 +209,8 @@ export function Cursor() {
       document.removeEventListener('pointerenter', enter)
     }
   }, [])
+
+  if (!fine) return null
 
   return (
     <div ref={root} className="cursor" data-kind="default" aria-hidden="true">

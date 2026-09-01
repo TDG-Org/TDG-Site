@@ -41,15 +41,25 @@ menu) and `ReplyInbox`, which renders nothing until a developer's reply is
 actually waiting for the signed-in account. See
 [`feedback/README.md`](feedback/README.md).
 
-**Four lazy chunks, for three different reasons.** `AppPage` and `About` are a
-lot of prose, and a visitor who reads the landing page and leaves should not
-download a word of it. `DevConsole` is lazy so its panels, labels and table
-names are never in the bundle everyone gets — tidiness, not a lock; the lock is
-in Postgres. See [`dev/README.md`](dev/README.md). The fourth is
-`hero/PointCloud`, split from `Hero.tsx` itself: the model and its twelve form
-definitions are the largest thing on the page and none of it is needed to paint
-the hero. All four ship as `assets/<hash>.js` — `vite.config.ts` says why the
-names are anonymous.
+**Seven lazy chunks, for three different reasons.** `AppPage`, `About`,
+`AccountPage` and `ProfilePage` are pages a visitor may never open, and one who
+reads the landing page and leaves should not download a word of them.
+`DevConsole` is lazy so its panels, labels and table names are never in the
+bundle everyone gets — tidiness, not a lock; the lock is in Postgres. See
+[`dev/README.md`](dev/README.md). The last two are scenery: `hero/PointCloud`,
+split from `Hero.tsx` itself because the model and its twelve form definitions
+are the largest thing on the page and none of it is needed to paint the hero,
+and `origin/CabinScene`, split from `Walk.tsx` because it carries three.js. All
+seven ship as `assets/<hash>.js` — `vite.config.ts` says why the names are
+anonymous.
+
+**And every one of them renders inside an `ErrorBoundary`**
+([`components/ErrorBoundary.tsx`](components/ErrorBoundary.tsx)), because a
+deploy replaces the whole set of hashed files and a tab opened before it will
+404 on the next chunk it asks for. Without a boundary that rejection unmounts
+the root — a blank page with no words. The five pages get a face with a Reload
+button; the two pieces of scenery are `silent` and simply leave their section
+without them.
 
 **Where the page lands is decided in two effects in `App.tsx`, over
 `lib/route.ts` and `lib/anchors.ts`.** A page change scrolls `instant`, never

@@ -127,17 +127,33 @@ function run(now: number) {
   // the finally, the throw escapes before the loop re-arms, and because rafId
   // still holds the id of the callback we are already inside, nothing can ever
   // restart it. Every animation on the page would stop, silently.
+  //
+  // And the catch is PER SUBSCRIBER, not around the loop. One try around the
+  // whole frame kept the loop alive but let the first throw skip every
+  // subscriber after it and drop every write already collected — so a single
+  // subscriber throwing every frame (a detached ref after a route change is
+  // the usual shape) froze every layer registered after it, for the life of
+  // the page, while the header promised the opposite. Now the one that threw
+  // is the only one that misses its frame.
   try {
     // read phase: subscribers measure and stash their writes
     writes.length = 0
     for (const tick of ticks) {
-      const write = tick(frame)
-      if (write) writes.push(write)
+      try {
+        const write = tick(frame)
+        if (write) writes.push(write)
+      } catch (err) {
+        console.error('[motion] subscriber threw', err)
+      }
     }
     // write phase: nothing here reads layout, so nothing forces a re-flow
-    for (let i = 0; i < writes.length; i++) writes[i]()
-  } catch (err) {
-    console.error('[motion] subscriber threw', err)
+    for (let i = 0; i < writes.length; i++) {
+      try {
+        writes[i]()
+      } catch (err) {
+        console.error('[motion] write threw', err)
+      }
+    }
   } finally {
     writes.length = 0
     if (held || now < awakeUntil) {

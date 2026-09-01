@@ -543,10 +543,34 @@
   );
 }
 
+/* ── the walk's two pins are the LARGE viewport, not the small one ─────────
+   Stage.css gives every pin `100svh`, and says why: a `vh`-sized backdrop is
+   cropped by a phone's browser bar for as long as the bar is showing. That is
+   the right answer for a backdrop a reader looks at with the bar up. It is
+   the wrong one here, because this walk is scrolled INTO — and the bar
+   retracts as they go — so for the whole of Apps and Tools the visible
+   viewport is the large one and an `svh` pin is 60-110px short of it. What
+   showed in that strip, pinned at the bottom of the screen under the lit
+   room, was `.walk`'s own flat band, with the cards scrolling over it.
+
+   `lvh` fills the large viewport exactly, and while the bar is still up the
+   surplus sits under the bar, where a crop of the bottom few percent of a
+   composed frame costs nothing anybody can point at. Walk.tsx measures the
+   run off this box for the same reason, so the camera's marks no longer step
+   when the bar toggles. Two selectors, one rule: both stages pin together or
+   the frost floats off the glass. The `100vh` line is the fallback for a
+   browser that has never heard of `lvh`, and it is the same height there. */
+.walk__stage .stage__pin,
+.walk__front .stage__pin {
+  height: 100vh;
+  height: 100lvh;
+}
+
 /* The cabin's canvas fills its stage's pin, which is one viewport tall and
    sticky — the framing CabinScene.tsx says it was composed for. It sizes its
    own backing store from this box's client size, so the box has to have one
-   before the first frame; `inset: 0` on a pin that is already 100svh does. */
+   before the first frame; `inset: 0` on a pin that is already one viewport
+   tall does. */
 .walk__cabin {
   position: absolute;
   inset: 0;

@@ -1,0 +1,43 @@
+/* ── the face a failed chunk gets ─────────────────────────────────────────
+   One viewport tall, so the footer stays where a page's footer is instead of
+   flying up under the nav, and centred, because there is one thing to read.
+   Every colour is a token and the copy sits in the site's own kicker / h2 /
+   lede primitives; the button is the ghost the Store and the hero already
+   draw, restated here from the same tokens rather than borrowed from a
+   stylesheet this component would then depend on. */
+.fail {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: calc(var(--nav-h) + 40px) clamp(18px, 4vw, 40px) 80px;
+}
+
+.fail__shell {
+  width: 100%;
+  max-width: 560px;
+  text-align: left;
+}
+
+.fail__h2 {
+  margin-top: 18px;
+}
+
+.fail__reload {
+  margin-top: 26px;
+  padding: 13px 26px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font: 600 14px var(--font-body);
+  letter-spacing: 0.01em;
+  color: var(--text);
+  background-color: var(--surface);
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    var(--t-theme);
+}
+.fail__reload:hover {
+  border-color: var(--border-hover);
+  background-color: var(--surface-hover);
+}

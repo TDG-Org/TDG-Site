@@ -188,6 +188,17 @@ stop {
   width: 100%;
 }
 
+/* What a lazy page's `Suspense` shows for the frame or two before its chunk
+   lands: a viewport of nothing, so the footer does not fly up to meet the nav
+   and drop back down. Both lines, like `.page` above — an inline
+   `minHeight: '100vh'` (which this replaced) cannot carry the `svh` fallback,
+   and on a phone `100vh` is taller than the page's own floor, so the document
+   grew and shrank by the bar's height as each chunk arrived. */
+.page-fallback {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
 .section {
   position: relative;
   overflow: hidden;
