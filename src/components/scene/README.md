@@ -220,7 +220,7 @@ element.
 This is the part of the folder somebody will try to simplify. Merging them is
 not a style preference with a cost of some duplication; it is a bug.
 
-### Never a filter
+### Never a filter that recolours
 
 The kit ships `-dark` and `-light` as **separate artwork**, and its own README
 is explicit about why: the dark set carries a midnight-blue note, the light set
@@ -228,8 +228,45 @@ is paler mist and silver with a narrow graphite line, and the two exist because
 the two themes have different contrast ranges to sit inside. A
 `filter: invert()` or a `brightness()` on one file undoes the decision the
 illustrator already made and produces art that is merely not-black rather than
-art that belongs. So these swap the `src` and nothing here ever recolours a
-pixel. `Scene.css` contains no `filter` for the same reason.
+art that belongs. So these swap the `src` and **nothing here ever recolours a
+pixel.**
+
+`Scene.css` used to have no `filter` at all, and this line used to say so. It
+has exactly one now — `filter: opacity()` on `.scene__art--crossing`, present
+only while the theme wave is running — and the distinction is the rule, not an
+exception to it. `opacity()` changes how much of a picture is drawn; it does
+not change what colour any of it is. A `brightness()`, a `hue-rotate()` or an
+`invert()` here would still be the bug this section is about.
+
+### The theme cross-fade, and why it lives in `ThemeProvider`
+
+An `<img>` swapping its `src` has no interpolable value: CSS can cross-fade a
+colour and cannot cross-fade a file, so before this the whole page's scenery
+hard-cut at the flip while everything around it waved. Measured in headless
+Chrome at 1440x900, that cut was one composited frame in which 149 of 255 mean
+RGB changed at once.
+
+So `theme/ThemeProvider.tsx` clones each on-screen art element at the start of
+the wave, leaves the clone showing the outgoing picture, and cross-fades the two
+with `--cross` over `--t-art` — the same 0.6s and the same `--wave-delay` the
+colours ride. At `WAVE_RESTORE` every clone is removed and the class comes off.
+**At rest there is exactly one `<img>` per slot and no filter on it**, which is
+the property to preserve if you touch any of this.
+
+Three things about it belong here rather than there:
+
+- **It clones instead of re-rendering.** `useParallax` captures `ref.current`
+  in an effect keyed on `factor` alone, so replacing or re-keying an element
+  under it leaves the hook writing `translate` to a detached node and that
+  slot's drift is dead for the session. Cloning leaves every original element
+  and every subscriber exactly where it was.
+- **The clone is frozen**, in position and in `opacity`. It keeps the inline
+  `translate` the hook last wrote, and its own computed `opacity` is pinned,
+  because `--art-far` and friends change with the theme and a ghost that took
+  the new theme's alpha would dim by a third on the first frame of the fade.
+- **It never runs under reduced motion.** `toggle` returns before staging
+  anything at `motionIntensity() === 0`, so the theme change is one instant,
+  complete swap with no second element anywhere.
 
 ### The opacities are tokens, not per-section guesses
 

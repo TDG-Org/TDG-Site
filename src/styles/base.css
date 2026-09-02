@@ -760,7 +760,15 @@ stop {
     --glow: transparent;
     --card-shadow: none;
     --hero-bg: #ffffff;
-    --hero-sky: none;
+    /* `.hero__sky` builds its two gradients out of stops now rather than
+       taking one whole `--hero-sky` image, so "off" is four transparent stops
+       and a transparent haze rather than `none`. Same result on paper: an
+       empty box over white. */
+    --hero-sky-0: transparent;
+    --hero-sky-1: transparent;
+    --hero-sky-2: transparent;
+    --hero-sky-3: transparent;
+    --hero-dusk-ink: transparent;
     --hero-eyebrow: rgba(20, 20, 26, 0.72);
     --hero-tag: rgba(20, 20, 26, 0.72);
     --hero-meta: rgba(20, 20, 26, 0.6);

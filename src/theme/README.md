@@ -1,7 +1,8 @@
 # `src/theme/` · two worlds, and the wave between them
 
-One file, `ThemeProvider.tsx`. It owns exactly one piece of state — `dark` or
-`light` — and the choreography of changing it.
+Two files. `ThemeProvider.tsx` owns exactly one piece of state — `dark` or
+`light` — and the choreography of changing it. `artPrefetch.ts` makes sure the
+scenery the choreography needs is already in the browser.
 
 ```tsx
 const { theme, toggle } = useTheme()
@@ -45,6 +46,53 @@ origin point.
 
 Tall elements are clamped so a full-page section does not measure its delay from
 its own middle, which would put the top of the viewport in the wrong phase.
+
+## The two things a colour transition cannot carry
+
+Everything above moves colour. Two of the page's biggest surfaces are not
+colour, and until this pass both of them cut while the rest of the page waved.
+Measured in headless Chrome at 1440x900, before: one composited frame in which
+**149 of 255 mean RGB changed at once**, and the whole change done inside three
+frames. After: the same change spread over **500–800 ms and 40–60 frames**, with
+no frame carrying more than a fraction of it.
+
+**The scenery is `<img>` files, and a resource swap has no interpolable value.**
+`crossArt` clones every on-screen `img.scene__art` at the start of the wave,
+leaves the clone holding the outgoing picture on top of the incoming one, and
+cross-fades the pair with `filter: opacity()` over `--t-art` — same 0.6s, same
+`--wave-delay`. It clones rather than re-rendering because `useParallax`
+captures its element in an effect: swap the node under it and that slot's drift
+is dead for the session. Every clone is removed at `WAVE_RESTORE`, so **at rest
+there is one `<img>` per slot and no filter on it.**
+[`../components/scene/README.md`](../components/scene/README.md) carries the
+rest.
+
+**The hero sky was a whole gradient in one token, and `background-image` does
+not transition.** Its four stops, its two stop positions and the daylight haze
+over it are `@property`-registered colours now, assigned on `.hero__sky` from
+per-theme tokens and eased by `--t-sky` — the same two-step the section bands
+use with `--band-*` into `--tint-*`.
+
+## Nothing waits on the network
+
+`artPrefetch.ts` fetches the OTHER theme's art after `load`, in batches of four
+off `requestIdleCallback`, at `fetchPriority: 'low'`, and not at all on a
+`saveData` or 2G connection. The list is read off the DOM (`img.scene__art`,
+theme suffix swapped) rather than written down, so it cannot go stale.
+
+It runs again on every theme change, held back past `WAVE_RESTORE`. That second
+pass is not redundant: the first can only warm the twins of slots the page has
+actually loaded its own file for, and everything below the fold is
+`loading="lazy"`. Without it, scrolling to the bridge and then toggling would
+find that slot's other-theme file missing. Holding it past the wave matters too
+— the wave runs on the compositor, so the main thread is free exactly when an
+idle callback goes looking, and the requests would otherwise land inside a
+toggle that needs none.
+
+Measured on the built site with GitHub Pages' cache headers, at 1440x900 and
+375x812, from both themes, at the top of the page and parked on the bridge and
+at the cross: **zero bytes fetched during any toggle**, no slot ever without a
+picture.
 
 ## Things to know before you touch it
 

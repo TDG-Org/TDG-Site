@@ -91,12 +91,19 @@
      asked to sit a sixth of its diameter into the mountains and a cloud was
      put in front of it, and 8.7 is still five times what the light theme has
      to work with. There is nothing to fix and a shade over #02040a is a shade
-     nobody can see. --hero-sky is a
-     background-IMAGE, and --t-theme transitions background-COLOR, so this
-     layer snaps across the theme wave exactly as the sky under it always
-     has — there is no interpolation to keep alive by writing a transparent
-     gradient here instead.                                                  */
-  --hero-dusk: none;
+     nobody can see, so over the night sky this layer draws nothing.
+
+     **`transparent` and not `none`, and the note here used to argue the
+     reverse.** It said: "--hero-sky is a background-IMAGE, and --t-theme
+     transitions background-COLOR, so this layer snaps across the theme wave
+     exactly as the sky under it always has — there is no interpolation to keep
+     alive by writing a transparent gradient here instead." That was true of a
+     sky that snapped. The sky crosses now — tokens.css registers its stops as
+     @property colours — so a dusk that snapped would be the one hard cut left
+     on the biggest surface on the page. The gradient is written once, at
+     `.hero__sky` below, out of a single registered colour, and this is the end
+     of the fade it crosses to rather than the absence of one.              */
+  --hero-dusk-ink: transparent;
 
   /* ── how much of the moon's light is on the air ─────────────────────────
      THE BEAMS ARE GONE AND THESE TWO REPLACED THEM. What used to live here
@@ -341,17 +348,17 @@
      point lands INSIDE the wisp, so what that number measures is the disc
      against a cloud rather than against sky. --hero-cloud-veil came down from
      0.55 to 0.46 for it; the rest is the picture, and a cloud beside the moon
-     being brighter than the sky beside the moon is what a cloud is. */
-  --hero-dusk: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--terrain-haze) 35%, transparent) 0%,
-    color-mix(in srgb, var(--terrain-haze) 33%, transparent) 14%,
-    color-mix(in srgb, var(--terrain-haze) 19%, transparent) 34%,
-    color-mix(in srgb, var(--terrain-haze) 17%, transparent) 55%,
-    color-mix(in srgb, var(--terrain-haze) 18%, transparent) 74%,
-    color-mix(in srgb, var(--terrain-haze) 12%, transparent) 90%,
-    transparent 100%
-  );
+     being brighter than the sky beside the moon is what a cloud is.
+
+     ── where the seven alphas went ────────────────────────────────────────
+     They are still the seven alphas this block measured; what moved is where
+     they are written. The shade used to be a whole `linear-gradient()` in this
+     declaration and a `none` in the dark one, and a background-image cannot
+     interpolate, so it appeared in a single frame while the page around it
+     waved. It is written once now, at `.hero__sky` below, and every stop is
+     mixed off ONE registered colour — this one — which is `transparent` in
+     dark. Same seven numbers, same ink, and the whole shade crosses.      */
+  --hero-dusk-ink: var(--terrain-haze);
 
   /* The light theme's beams used to be SHADOW — "a pale sky has nothing to be
      brighter than, so a beam in it is the air the beam is not in" — and that
@@ -846,17 +853,63 @@
   }
 }
 
-/* Two layers, and the top one is `none` in dark. --hero-dusk is the shade the
-   site owner has asked for three times — see the block at the top of this
-   file, which carries the readings that sized it and the reason it could not
-   be a stop on --hero-sky itself. It is painted HERE rather than as its own
-   element because it is the same plane: one box, one `inset: 0`, no second
+/* ── the sky, and the shade over it ────────────────────────────────────────
+   Two layers on one box. The top one is the daylight haze — the shade the site
+   owner has asked for three times; see the block at the top of this file,
+   which carries the readings that sized its seven alphas and the reason it
+   could not be a stop on the sky itself. It is painted HERE rather than as its
+   own element because it is the same plane: one box, one `inset: 0`, no second
    thing for the compositor to promote and nothing that can slide against the
-   sky it is shading. */
+   sky it is shading.
+
+   ── why the gradients are written here and the colours are tokens ─────────
+   Both used to be whole gradients held in tokens (`--hero-sky`, `--hero-dusk`)
+   and swapped per theme. A gradient is a background-IMAGE and --t-theme
+   transitions background-COLOR, so the largest surface on the page hard-cut
+   on every toggle: measured in headless Chrome at 1440x900, one composited
+   frame in which 149 of 255 mean RGB changed at once, while every colour
+   around it crossed over 600 ms.
+
+   A custom property inside a gradient can only interpolate if it is
+   `@property`-registered, and a registered property with `inherits: false`
+   has to be assigned on the element that reads it — which is why the six
+   `--sky-*` assignments are here and their per-theme values are in tokens.css.
+   It is the same two-step the section bands already use (`--band-*` assigned
+   into `--tint-*` on `.section--blend`), for the same reason, and `--t-sky`
+   is declared beside `--t-tint`.
+
+   Nothing about the picture changed: the same radial geometry, the same four
+   stops at the same two positions per theme, the same seven haze alphas off
+   the same ink. */
 .hero__sky {
   position: absolute;
   inset: 0;
-  background-image: var(--hero-dusk), var(--hero-sky);
+  --sky-0: var(--hero-sky-0);
+  --sky-1: var(--hero-sky-1);
+  --sky-2: var(--hero-sky-2);
+  --sky-3: var(--hero-sky-3);
+  --sky-at-1: var(--hero-sky-at-1);
+  --sky-at-2: var(--hero-sky-at-2);
+  --sky-dusk: var(--hero-dusk-ink);
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--sky-dusk) 35%, transparent) 0%,
+      color-mix(in srgb, var(--sky-dusk) 33%, transparent) 14%,
+      color-mix(in srgb, var(--sky-dusk) 19%, transparent) 34%,
+      color-mix(in srgb, var(--sky-dusk) 17%, transparent) 55%,
+      color-mix(in srgb, var(--sky-dusk) 18%, transparent) 74%,
+      color-mix(in srgb, var(--sky-dusk) 12%, transparent) 90%,
+      transparent 100%
+    ),
+    radial-gradient(
+      118% 96% at 74% 6%,
+      var(--sky-0) 0%,
+      var(--sky-1) var(--sky-at-1),
+      var(--sky-2) var(--sky-at-2),
+      var(--sky-3) 100%
+    );
+  transition: var(--t-sky);
   pointer-events: none;
 }
 

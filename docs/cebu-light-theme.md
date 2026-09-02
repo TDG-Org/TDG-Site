@@ -357,25 +357,58 @@ winter art already hard-cuts to silver at the flip, and nothing preloads the
 other theme's files, so **the first toggle shows empty slots until 23 files
 arrive**. With Cebu that would be night mountains cutting to nothing cutting
 to a beach. Three small pieces of plumbing fix all of it, and none of them
-adds steady-state cost:
+adds steady-state cost.
 
-1. **Prefetch the inactive theme's art at idle.** After the visible theme's
-   art has loaded and the page is idle (`requestIdleCallback`, skipped on
-   `saveData` or a 2G connection), fetch the other theme's 23 files at low
-   priority. The whole light kit is under 3 MB of WebP; on a warm cache the
-   toggle costs zero requests. Verified in the network panel: no request
-   during the toggle itself.
-2. **Cross-fade the art on the wave.** When the theme flips, `ThemedArt`
-   mounts the incoming `<img>` under the outgoing one in the same box, fades
-   the outgoing one's `opacity` to 0 over 0.6 s honouring that element's
-   `--wave-delay`, then unmounts it. Two decoded images per slot for 1.7 s,
-   only during a toggle, on the compositor. At rest there is exactly one
-   image per slot, as now.
+> **Built and landed on 2026-09-02, ahead of the artwork, in v2.43.0.** The
+> three items below are how the site behaves now; the paragraph above describes
+> what it did before. Doing it first was deliberate — the toggle had to stop
+> cutting before there was a second picture worth cutting between, and fixing
+> it against the winter art means the Cebu work inherits a wave that already
+> crosses. Each item carries the correction the build made to it.
+
+1. **Prefetch the inactive theme's art at idle** — `src/theme/artPrefetch.ts`.
+   After `load`, on `requestIdleCallback`, at `fetchPriority: 'low'`, and not
+   at all on `saveData` or a 2G `effectiveType`. **Two corrections.** The file
+   list is read off the DOM (`img.scene__art`, theme suffix swapped) rather
+   than written down, because counts in this repo have gone stale twice
+   already. And it goes in **batches of four**: one file per idle slot measured
+   too slow — a cold load, four seconds of idle, and a toggle still sent nine
+   requests. It runs again after each toggle, held past the wave, because the
+   first pass can only warm twins of slots whose own file has loaded, and
+   everything below the fold is `loading="lazy"`.
+2. **Cross-fade the art on the wave** — `crossArt` in `ThemeProvider.tsx`, and
+   **not in `ThemedArt` as proposed here.** Doing it in React means re-keying
+   each `<img>`, and `useParallax` captures its element in an effect keyed on
+   `factor` alone: replace the node under it and the hook writes `translate` to
+   something no longer in the document, killing that slot's drift for the rest
+   of the session. So the wave *clones* each on-screen element, freezes the
+   clone's position and its computed `opacity`, and cross-fades the pair with
+   `filter: opacity()` over `--t-art`. A filter and not `opacity`, because the
+   caller's own class already owns that property. At rest: one image per slot,
+   no filter, no clone.
 3. **Register the hero sky's stops as `@property <color>`** the way
-   `--tint-top/mid/bot` already are, so the biggest surface on the page
-   crosses night→day instead of snapping; add `opacity` with the wave delay
-   to `.scene__art` so `--art-*` crosses too. Both are declarations, not
-   scripts.
+   `--tint-top/mid/bot` already are — done, plus the two stop positions as
+   `<percentage>` (the themes place them differently) and the daylight haze as
+   one further registered colour, which also removes the `--hero-dusk`
+   `none`-to-gradient snap this section had not counted. **`opacity` was NOT
+   added to `.scene__art`'s wave, and should not be:** `--hero-sink` is written
+   to the hero every frame and multiplies the same property, so a 0.6 s
+   transition on it would make the terrain's scroll fade lag. The cross-fade
+   covers what that was for — the incoming element takes the new `--art-*`
+   while it is still at filter-opacity 0, and the frozen ghost keeps the old.
+
+**What it measures now.** Headless Chrome on the built site with Pages' cache
+headers, at 1440x900 and 375x812, from both themes, at the top of the page and
+parked on the bridge and at the cross. The before column is the same harness on
+the same page one commit earlier.
+
+| | Before | After |
+| --- | --- | --- |
+| Worst single composited frame, mean abs dRGB over the viewport | 149 of 255 | 19–39 |
+| Frames the change is spread across | 1–3 | 40–64 |
+| Time from 10% to 90% of the change | 0–24 ms | 500–800 ms |
+| Scenery bytes fetched during a toggle | 13 files | 0 |
+| Overshoot past the settled value, which is what a blank slot looks like | large | under 0.6% |
 
 Everything else already does the right thing: the 3D scene lerps its palette
 over `THEME_FADE`; the dust, the snow and the point cloud repaint on the

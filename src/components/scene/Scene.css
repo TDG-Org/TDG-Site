@@ -23,6 +23,41 @@
   will-change: translate;
 }
 
+/* ── the theme cross-fade ──────────────────────────────────────────────────
+   Present ONLY while the wave is running, on an on-screen slot and on the
+   clone of it that carries the outgoing artwork. `ThemeProvider.tsx`'s
+   `crossArt` adds this class with `--cross` at one end of the fade, forces a
+   layout, then adds `data-cross="run"` and writes the other end. Both come
+   back off at `WAVE_RESTORE`, so at rest this rule matches nothing and the art
+   carries no filter at all.
+
+   `filter: opacity()` rather than `opacity`, and that is not a preference: the
+   caller's own class already owns `opacity` here — `--art-far` / `--art-mid` /
+   `--art-near` from tokens.css, and in the hero a product with `--hero-sink`
+   that Hero.tsx rewrites every frame. A filter multiplies whatever that
+   resolves to; an inline `opacity` would have to restate it, and would be
+   wrong the moment either half moved. */
+.scene__art--crossing {
+  filter: opacity(var(--cross, 1));
+}
+
+/* Phase two, one forced layout after the class went on, so the value above is
+   something to interpolate FROM. The delay is `--wave-delay`, the same
+   per-element stagger the colours ride, so a slot's picture crosses in the
+   same phase as the ground under it.
+
+   **The transition is added here rather than declared with the filter above,
+   and a `0s` duration in its place does NOT work.** `transition: filter 0s
+   ease 400ms` is still a transition: it holds the property at its OLD value
+   for the whole 400 ms delay and then jumps. So phase one never landed, phase
+   two found nothing to change, and the art snapped while only the clone faded
+   — measured as every on-screen slot sitting at `opacity(1)` 300 ms into a
+   wave in which exactly one ghost was moving. Splitting the two states is what
+   makes the first write instant and the second one animate. */
+.scene__art--crossing[data-cross='run'] {
+  transition: var(--t-art);
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* At motionIntensity 0 both hooks resolve to a zero translate and stop
      writing, so these are as still as StillArt is — the hint would be for
@@ -30,6 +65,15 @@
      which is what the kit's README asks for rather than hiding it. */
   .scene__art--moves {
     will-change: auto;
+  }
+
+  /* Belt and braces. `toggle` returns before it stages anything at
+     motionIntensity 0, so no element ever gets the class in the first place
+     and the theme change is one instant, complete swap — which is what a
+     visitor who asked for less motion is owed. This is here so that stays
+     true if the guard above it is ever moved. */
+  .scene__art--crossing[data-cross='run'] {
+    transition: none;
   }
 }
 

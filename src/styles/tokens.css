@@ -25,6 +25,64 @@
   initial-value: transparent;
 }
 
+/* ── the hero sky, registered for the same reason the tints are ────────────
+   `--hero-sky` used to be one token holding a whole `radial-gradient()`, and a
+   gradient is a background-IMAGE: --t-theme transitions background-COLOR, so
+   the biggest surface on the page hard-cut on every toggle while everything
+   around it waved. Measured in headless Chrome at 1440x900, that cut was a
+   single composited frame in which 149 of 255 mean RGB changed at once.
+
+   So the STOPS are the token now and the gradient is written once, in
+   Hero.css, out of these. Same shape as --band-* -> --tint-*: an unregistered
+   palette token per theme, assigned on the element that paints it to a
+   registered property that can actually interpolate.
+
+   The two positions are registered as well, and are not decoration: the light
+   sky's stops sit at 30% and 62% against dark's 26% and 56% (see the shading
+   note beside the light values), and a stop that jumped while its colour
+   crossed would put a visible ring through the middle of the fade.
+
+   --sky-dusk is the light theme's haze layer over all of it. It was
+   `--hero-dusk: none` in dark and a seven-stop gradient in light, which snapped
+   the same way; it is one colour now, transparent in dark, and the seven
+   measured alphas are `color-mix()`ed off it in Hero.css exactly as they were
+   written. */
+@property --sky-0 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --sky-1 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --sky-2 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --sky-3 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --sky-at-1 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+@property --sky-at-2 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+@property --sky-dusk {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
 :root {
   --bg: #07070a;
   --bg2: #0b0b10;
@@ -136,7 +194,20 @@
 
   /* hero is its own scene, independent of the page surface */
   --hero-bg: #030304;
-  --hero-sky: radial-gradient(118% 96% at 74% 6%, #1b2334 0%, #0d1220 26%, #060911 56%, #02040a 100%);
+  /* The four stops and two positions of the night sky. Hero.css builds the
+     radial out of them; the @property block at the top of this file says why
+     they are six tokens rather than one gradient. */
+  --hero-sky-0: #1b2334;
+  --hero-sky-1: #0d1220;
+  --hero-sky-2: #060911;
+  --hero-sky-3: #02040a;
+  --hero-sky-at-1: 26%;
+  --hero-sky-at-2: 56%;
+  /* No haze over the night sky, and that is a decision rather than an omission
+     — see the light value for the readings. `transparent` and not `none`,
+     because the layer is now one gradient written once and this is the end of
+     the fade it crosses to. */
+  --hero-dusk-ink: transparent;
   --hero-shaft: linear-gradient(
     100deg,
     transparent 0%,
@@ -754,7 +825,18 @@
      sky behind it by better than 21 L* where it actually sits, against 12 the
      other way round before. It also takes --hero-meta's contrast over the sky
      from 4.18 up over the AA line, which was a separate open item.        */
-  --hero-sky: radial-gradient(118% 96% at 74% 6%, #f4f5f9 0%, #e6e8f0 30%, #ccd2e0 62%, #bcc4d6 100%);
+  --hero-sky-0: #f4f5f9;
+  --hero-sky-1: #e6e8f0;
+  --hero-sky-2: #ccd2e0;
+  --hero-sky-3: #bcc4d6;
+  --hero-sky-at-1: 30%;
+  --hero-sky-at-2: 62%;
+  /* The ink the daylight haze over the sky is mixed from. It is
+     `--terrain-haze` because a sky that settles toward the colour the
+     mountains' haze already is is aerial perspective, and a new colour here
+     would be a second grey on a page whose light palette has one. Hero.css
+     holds the seven alphas and the readings that sized them. */
+  --hero-dusk-ink: var(--terrain-haze);
   --hero-shaft: linear-gradient(
     100deg,
     transparent 0%,
@@ -871,4 +953,17 @@
   --t-tint:
     --tint-top 0.6s ease var(--wave-delay, 0ms), --tint-mid 0.6s ease var(--wave-delay, 0ms),
     --tint-bot 0.6s ease var(--wave-delay, 0ms);
+  /* The parallax art's cross-fade, applied by ThemeProvider to an on-screen
+     slot and to the clone holding the outgoing picture, for the length of one
+     wave. `components/scene/Scene.css` says why it is a filter and why it is
+     added a layout AFTER the value it interpolates from. */
+  --t-art: filter 0.6s ease var(--wave-delay, 0ms);
+  /* The hero sky's four stops, its two stop positions and the haze over them.
+     One consumer, `.hero__sky`, and it is named here beside the others so the
+     page's "this crosses on the wave" lists read in one place. */
+  --t-sky:
+    --sky-0 0.6s ease var(--wave-delay, 0ms), --sky-1 0.6s ease var(--wave-delay, 0ms),
+    --sky-2 0.6s ease var(--wave-delay, 0ms), --sky-3 0.6s ease var(--wave-delay, 0ms),
+    --sky-at-1 0.6s ease var(--wave-delay, 0ms), --sky-at-2 0.6s ease var(--wave-delay, 0ms),
+    --sky-dusk 0.6s ease var(--wave-delay, 0ms);
 }

@@ -157,6 +157,17 @@ so the section blend gradients can **animate** with the theme wave. An
 unregistered custom property inside a gradient snaps instead of transitioning,
 which would make the wave stop dead at every section boundary.
 
+`--sky-0` … `--sky-3`, `--sky-at-1`, `--sky-at-2` and `--sky-dusk` are the same
+argument applied to the largest surface on the page. The hero sky was one
+`--hero-sky` token holding a whole `radial-gradient()`, and the daylight haze
+over it was one `--hero-dusk` holding another; both are background-IMAGES, so
+both hard-cut on every toggle. The stops are the tokens now
+(`--hero-sky-0` … `--hero-sky-3`, `--hero-sky-at-1/2`, `--hero-dusk-ink`, per
+theme) and `Hero.css` writes the gradients once out of them — exactly the
+`--band-*` into `--tint-*` two-step, and for exactly the same reason: a
+registered property with `inherits: false` has to be assigned on the element
+that reads it.
+
 ### `--t-theme` is declared on `*`, not on `:root`
 
 ```css
@@ -167,6 +178,12 @@ Each element has to substitute `--wave-delay` in its **own** context, because
 the theme wave sets that delay per element from its distance to the toggle.
 Declared on `:root`, the value would inherit already-substituted and the whole
 change would snap at once.
+
+Four transition lists are declared in that block, and they are four because
+they have four different sets of consumers: `--t-theme` (colour, everywhere),
+`--t-tint` (the section blend gradients), `--t-sky` (the hero sky's stops and
+its haze, one consumer) and `--t-art` (the parallax cross-fade, applied by
+`theme/ThemeProvider.tsx` for the length of one wave and taken off after).
 
 **This matters when you verify a change.** Theme colours transition over ~600 ms.
 Read computed styles after it settles, and be aware that in a tab that is not
