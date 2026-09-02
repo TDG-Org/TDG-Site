@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { onFrame } from '../../lib/motion'
+import { onFrame, wake } from '../../lib/motion'
 import { MAX_DPR, onDprChange } from '../../lib/dpr'
 import { useTheme } from '../../theme/ThemeProvider'
 import { buildShapes } from './shapes'
@@ -31,6 +31,21 @@ const MAX_PX = 9
  * work halves. A drag is different, because it tracks a hand, so it runs uncapped.
  */
 const IDLE_HZ = 30
+
+/**
+ * How long the canvas may go without having its WHOLE picture pushed, in
+ * seconds of painted time.
+ *
+ * See `resync` below for what this is defending. It is a heartbeat, not the
+ * mechanism: every cause anyone has a name for — a theme flip, a tab coming
+ * back, a lost 2D context, a bfcache restore — pushes the full frame on the
+ * spot. This is what catches the one nobody has a name for yet, and it turns
+ * "corrupt until reload" into "corrupt for under two seconds".
+ *
+ * It costs one full `putImageData` per 2s against ~30 partial ones per second,
+ * and only while the model is on screen and painting at all.
+ */
+const RESYNC_S = 2
 
 /**
  * The point profile, straight out of the reference's fragment shader:
@@ -66,6 +81,11 @@ function packRGB(r: number, g: number, b: number) {
  * handed to the canvas as a single putImageData over the region that actually
  * changed. The obvious implementation, one drawImage per point, spent 72% of
  * the page's entire CPU budget on canvas call overhead alone.
+ *
+ * Because only that region is pushed, the canvas is the accumulation of many
+ * frames rather than the product of one, and the pixels between them are the
+ * browser's to keep. It does not always keep them — see the `resync` ref,
+ * which is what repairs the surface when it does not.
  */
 export function PointCloud() {
   const { theme } = useTheme()
@@ -87,9 +107,48 @@ export function PointCloud() {
    * colour.
    */
   const repaint = useRef(false)
+  /**
+   * Push the WHOLE picture on the next paint, not just the rectangle that
+   * changed.
+   *
+   * ── the bug this exists for ──────────────────────────────────────────────
+   * Every other canvas on this site — `hero/Starfield`, `scene/Snow` — opens
+   * its frame with `clearRect` and redraws all of it, so whatever the browser
+   * did to the backing store between frames is gone by the next one. This one
+   * does not: it splats into `acc`, colours only the union of what it cleared
+   * and what it drew, and hands the canvas that one rectangle. Every pixel
+   * outside it is *trusted to still be there* — which is a promise the app
+   * cannot keep, because it is not the only writer. A GPU context loss, a
+   * driver reset, the canvas hibernation Chrome runs on a tab that has been in
+   * the background, a compositor tile dropped under memory pressure: any of
+   * them can leave the surface holding something the app never painted, and
+   * because the next frames only ever push their own small rectangle, the
+   * damage is PERMANENT. What that looks like was reported after a light/dark
+   * switch and is exactly diagnostic: the model's box goes flat black, and the
+   * cross eats a ragged, staircase-edged hole in it as the dirty rects of the
+   * following seconds punch through one at a time.
+   *
+   * ── why one flag is the whole fix ────────────────────────────────────────
+   * `image` is not a scratch buffer — it is a pixel-exact mirror of what the
+   * canvas is supposed to be showing. Every write to `img32` is followed by a
+   * `putImageData` of that same rectangle, and nothing else ever draws here,
+   * so the invariant "the canvas equals `image`" is either true or the browser
+   * broke it. `ctx.putImageData(image, 0, 0)` therefore repairs any damage
+   * exactly, at any moment, for the cost of one full upload — no re-projection,
+   * no re-splatting, no state to rebuild.
+   *
+   * So the fast path stays exactly as it was, and the full push is asked for
+   * whenever the surface stops being trustworthy: a theme change (below), the
+   * tab becoming visible, a bfcache restore, a lost-and-restored 2D context,
+   * a resize, and a RESYNC_S heartbeat for everything unnamed.
+   */
+  const resync = useRef(true)
   useEffect(() => {
     themeRef.current = theme
     repaint.current = true
+    // The reported failure followed a toggle, so the toggle is the one moment
+    // this must not be merely likely to heal.
+    resync.current = true
   }, [theme])
 
   useEffect(() => {
@@ -154,6 +213,7 @@ export function PointCloud() {
     let phase: 'hold' | 'morph' = 'hold'
     let clock = 0
     let pending = 0 // unrendered time, for the frame cap
+    let sinceSync = 0 // painted time since the last full push; see RESYNC_S
     let settled = false // reduced motion: one frame painted, nothing more to do
     let labelTimer = 0 // cleared on unmount so a late swap cannot outlive us
 
@@ -204,6 +264,9 @@ export function PointCloud() {
       py0 = 0
       px1 = -1
       py1 = -1
+      // `image` is a new buffer and the canvas a new surface; the two are only
+      // known to agree once one full frame has crossed between them.
+      resync.current = true
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -211,6 +274,27 @@ export function PointCloud() {
     // Dragged onto a monitor with different OS scaling, the CSS size of the
     // canvas has not moved, so the observer above never fires. See lib/dpr.ts.
     const unwatchDpr = onDprChange(resize)
+
+    // ── surface repair ────────────────────────────────────────────────────
+    // The named ways the backing store stops matching `image`. See the
+    // `resync` ref above for what goes wrong when none of these is wired and
+    // why re-pushing the mirror is the whole repair.
+    const repair = () => {
+      resync.current = true
+      // bypasses the frame cap and the reduced-motion "painted once" rest
+      repaint.current = true
+      // the loop parks when nothing is moving, and a lost surface is not
+      // something it can observe on its own
+      wake()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') repair()
+    }
+    document.addEventListener('visibilitychange', onVisible, { passive: true })
+    window.addEventListener('pageshow', repair, { passive: true })
+    // A 2D context restores itself unless the loss event is cancelled, and the
+    // canvas comes back blank — so take the default and repaint into it.
+    cv.addEventListener('contextrestored', repair)
 
     // ── drag ──────────────────────────────────────────────────────────────
     const down = (e: PointerEvent) => {
@@ -478,7 +562,22 @@ export function PointCloud() {
       const uy0 = oldY1 >= oldY0 ? Math.min(oldY0, ny0) : ny0
       const ux1 = oldX1 >= oldX0 ? Math.max(oldX1, nx1) : nx1
       const uy1 = oldY1 >= oldY0 ? Math.max(oldY1, ny1) : ny1
-      if (ux1 < ux0 || uy1 < uy0 || !image) return applyFade
+
+      // One full push every RESYNC_S of painted time, on top of the named
+      // repairs. `sinceSync` counts the same `step` the animation does, so a
+      // model that is parked or faded out is not paying for a heartbeat.
+      sinceSync += step
+      if (sinceSync >= RESYNC_S) {
+        sinceSync = 0
+        resync.current = true
+      }
+      const pushAll = resync.current
+
+      if (!image) return applyFade
+      // A frame with nothing to redraw still owes the canvas a full push if one
+      // is pending — that is the case where the model has come to rest and the
+      // damage would otherwise sit there.
+      if (!pushAll && (ux1 < ux0 || uy1 < uy0)) return applyFade
 
       const rgb = light ? INK : WHITE
       for (let y = uy0; y <= uy1; y++) {
@@ -502,7 +601,14 @@ export function PointCloud() {
       const rh = uy1 - uy0 + 1
       return () => {
         applyFade?.()
-        ctx.putImageData(frame, 0, 0, rx0, ry0, rw, rh)
+        if (pushAll) {
+          // cleared here rather than at the read above, so a repair asked for
+          // on a frame that never reached its write survives to the next one
+          resync.current = false
+          ctx.putImageData(frame, 0, 0)
+        } else {
+          ctx.putImageData(frame, 0, 0, rx0, ry0, rw, rh)
+        }
       }
     })
 
@@ -510,6 +616,9 @@ export function PointCloud() {
       stop()
       ro.disconnect()
       unwatchDpr()
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', repair)
+      cv.removeEventListener('contextrestored', repair)
       holder.removeEventListener('pointerdown', down)
       holder.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)

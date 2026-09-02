@@ -108,6 +108,19 @@ counts scale to what the device can comfortably paint, and the dust runs at
 24 Hz on a capped DPR because nobody can tell and it is 2.5× less canvas work
 for an identical result.
 
+**`PointCloud` is the only canvas on the site that does not redraw all of
+itself**, and it carries the one rule that comes with that. `Starfield` and
+`scene/Snow` open every frame with `clearRect`, so anything the browser did to
+their backing store is gone by the next frame; `PointCloud` pushes only the
+rectangle that changed, which means every other pixel is trusted to survive
+between frames — and a lost 2D context, canvas hibernation on a backgrounded
+tab, or a dropped compositor tile can break that trust permanently. Its
+`image` buffer is kept as an exact mirror of what the canvas should show
+precisely so one full `putImageData` repairs any damage, and the `resync` ref
+asks for that push on a theme change, on the tab becoming visible, on
+`pageshow`, on `contextrestored`, on a resize, and on a two-second heartbeat.
+**If you add a partial-write canvas, it inherits this obligation.**
+
 `hero/Tagline.tsx` is the one file in there that draws no canvas: it types the
 lines of `HERO_TAGLINES` out under the wordmark and swaps them from a shuffle
 bag, so no line repeats until every line has had its turn. It is also the
