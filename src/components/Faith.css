@@ -45,7 +45,9 @@
 }
 
 :root[data-theme='light'] {
-  --faith-dusk: color-mix(in srgb, var(--band-faith) 77%, var(--text));
+  /* Cebu: the band is the late-afternoon sky the sun goes down in, so it
+     warms toward --warm rather than greying toward the ink. */
+  --faith-dusk: color-mix(in srgb, var(--band-faith) 72%, var(--warm));
 }
 
 /* ── the shaded sky ────────────────────────────────────────────────────────

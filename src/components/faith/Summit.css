@@ -477,7 +477,10 @@
   --summit-ink-near: color-mix(in srgb, var(--band-faith) 67%, var(--text));
   --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 78%, var(--text));
   --summit-wash: color-mix(in srgb, var(--moon-disc) 52%, transparent);
-  --summit-sky: color-mix(in srgb, var(--band-faith) 69%, var(--text));
+  /* Cebu: the pool of sky behind the disc is the sunset's own colour, not a
+     deepening toward the ink — a grey ellipse behind a gold sun read as a
+     storm cloud. */
+  --summit-sky: color-mix(in srgb, var(--band-faith) 52%, var(--warm));
 }
 
 /* ── the scene's own box ──────────────────────────────────────────────────
@@ -1178,4 +1181,18 @@
   .faith__summit {
     display: none !important;
   }
+}
+
+/* ── the Cebu sun, going down ──────────────────────────────────────────────
+   In light the page's disc is the sun (tokens.css: --moon-disc is warm white,
+   the halo gold, no maria). Here it is the same sun at the END of the day: the
+   three tokens redeclared on the moon's own wrapper, so the hero's morning
+   disc and this one differ in hour without a second component. The Moon SVG
+   paints through `var()` on its stops, which resolve against this element,
+   and --summit-wash mixes from --moon-disc, so the light spilling over the
+   crest turns gold with it. */
+[data-theme='light'] .faith__moon {
+  --moon-disc: #ffd56e;
+  --moon-halo: rgba(255, 176, 84, 0.88);
+  --moon-mare: transparent;
 }

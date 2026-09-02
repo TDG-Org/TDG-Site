@@ -221,12 +221,22 @@
   letter-spacing: 0.055em;
   color: var(--text);
   text-shadow: 0 0 0.6em color-mix(in srgb, var(--warm) 34%, transparent);
+}
+
+/* ── one letter, and it is the letter that rolls ──────────────────────────
+   The roll used to be on the word, three beats 90ms apart. It is on the
+   letter now, thirteen beats 38ms apart, which is the owner's ask ("roll out
+   each letter") and is also what makes the line read as written. The word
+   span keeps the font, the gap and the colour; the letter keeps everything
+   that moves. Transform and opacity only, so all thirteen composite. */
+.nav__bless-letter {
+  display: inline-block;
   transform-origin: 50% 100%;
   backface-visibility: hidden;
   opacity: 0;
   animation: nav-bless-word var(--bless-life) cubic-bezier(0.2, 0.8, 0.2, 1) both;
   /* One beat per word, read off the index Nav.tsx writes. */
-  animation-delay: calc(var(--i) * 90ms);
+  animation-delay: calc(var(--k) * 38ms);
 }
 
 /* The light it arrives in. Sized off the strip it sits behind rather than a
@@ -531,7 +541,8 @@
     animation: none;
     opacity: 1;
   }
-  .nav__bless-word {
+  .nav__bless-word,
+  .nav__bless-letter {
     transform: none;
     animation: none;
     opacity: 1;

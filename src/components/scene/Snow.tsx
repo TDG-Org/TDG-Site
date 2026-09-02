@@ -219,8 +219,26 @@ export function Snow({
     // themes — rule 2. The fallback is a plain white, and it is a fallback for
     // a token that failed to resolve, not a design colour.
     let rgb = '255,255,255'
+    /*
+     * ── the three numbers that make snow into petals ──────────────────────
+     * `--flake-ink` is the flake's hue (falling back to --glow's, which is
+     * what this read was before the Cebu theme); `--flake-scale` multiplies
+     * every flake's radius and `--flake-drift` its fall rate. All three live
+     * in tokens.css per theme, so one canvas, one flake count and one loop
+     * are snow at night and kalachuchi petals by day — bigger, slower, blush —
+     * without a second component or a re-seed at the flip. Read at mount and
+     * on the theme attribute, never in the tick.
+     */
+    let scale = 1
+    let drift = 1
+    const readNumber = (name: string, fallback: number) => {
+      const n = Number.parseFloat(getComputedStyle(cv).getPropertyValue(name))
+      return Number.isFinite(n) && n > 0 ? n : fallback
+    }
     const readColors = () => {
-      rgb = readRGB(cv, '--glow', rgb)
+      rgb = readRGB(cv, '--flake-ink', readRGB(cv, '--glow', rgb))
+      scale = readNumber('--flake-scale', 1)
+      drift = readNumber('--flake-drift', 1)
     }
     readColors()
     const mo = new MutationObserver(() => {
@@ -376,8 +394,8 @@ export function Snow({
 
       for (const f of flakes) {
         if (mi > 0) {
-          f.y += f.speed * step * mi
-          if (f.y - f.size > h) {
+          f.y += f.speed * step * mi * drift
+          if (f.y - f.size * scale > h) {
             // Back to the top with a new x, so the field never settles into
             // visible columns the way a straight wrap does.
             f.y = -f.size
@@ -389,7 +407,7 @@ export function Snow({
         const x = mi === 0 ? f.x : f.x + Math.sin(elapsed * f.swayRate + f.phase) * f.sway
         ctx.globalAlpha = f.alpha
         ctx.beginPath()
-        ctx.arc(x, f.y, f.size, 0, TAU)
+        ctx.arc(x, f.y, f.size * scale, 0, TAU)
         ctx.fill()
       }
       ctx.globalAlpha = 1

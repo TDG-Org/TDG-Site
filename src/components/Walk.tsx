@@ -602,7 +602,7 @@ export function Walk({ children }: { children: ReactNode }) {
           in its middle 60% for exactly this. */}
       <Stage className="walk__front">
         <div ref={frost} className="walk__frost">
-          <StillArt art="props/window-frost" className="walk__frost-art" />
+          <StillArt art="props/window-frost" light="props/capiz-window" className="walk__frost-art" />
         </div>
       </Stage>
     </div>

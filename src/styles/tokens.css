@@ -98,6 +98,32 @@
   --accent-soft: rgba(255, 255, 255, 0.07);
   --glow: rgba(255, 255, 255, 0.2);
   --warm: #f5c98a;
+  /* ── the near flakes (scene/Snow.tsx) ─────────────────────────────────
+     Ink, size and fall rate of the front layer of weather. In dark they are
+     snow: white, small, falling. In light they are kalachuchi petals: a soft
+     blush, twice the size, drifting at half the rate — same canvas, same
+     count, three numbers. Snow.tsx reads all three and falls back to --glow
+     for the ink if this is ever missing. */
+  --flake-ink: rgb(255, 255, 255);
+  --flake-scale: 1;
+  --flake-drift: 1;
+  /* ── the 3D walk's pigments (origin/CabinScene.tsx) ──────────────────────
+     Six two-token ramps, one per vertex class. The night cabin is ONE ramp
+     — moonlit snow between --band-origin and --text — so here every class
+     aliases it and the scene is what it always was. The Cebu hut by day is
+     where they part: see the light block. */
+  --scene-deep: var(--band-origin);
+  --scene-pale: var(--text);
+  --scene-leaf-deep: var(--band-origin);
+  --scene-leaf-pale: var(--text);
+  --scene-wood-deep: var(--band-origin);
+  --scene-wood-pale: var(--text);
+  --scene-water-deep: var(--band-origin);
+  --scene-water-pale: var(--text);
+  --scene-thatch-deep: var(--band-origin);
+  --scene-thatch-pale: var(--text);
+  --scene-sand-deep: var(--band-origin);
+  --scene-sand-pale: var(--text);
   /* ── the nav's scrolled veil, one ink at three alphas ───────────────────
      `.nav__veil` in Nav.css fades in on `[data-scrolled='true']` and is a
      180deg gradient: full at the top, roughly half at 55%, out at the bottom.
@@ -756,35 +782,52 @@
 }
 
 [data-theme='light'] {
-  --bg: #f6f6f8;
-  --bg2: #ececed;
+  --bg: #f6f8f5;
+  --bg2: #ecf1ec;
   --surface: #ffffff;
   --surface-hover: #ffffff;
-  --text: #141419;
-  --muted: rgba(20, 20, 25, 0.64);
-  --faint: rgba(20, 20, 25, 0.68);
-  --border: rgba(23, 18, 45, 0.1);
-  --border-hover: rgba(20, 20, 26, 0.34);
-  --accent: #1b1b22;
-  --accent-2: #4a4a55;
-  --accent-soft: rgba(20, 20, 26, 0.055);
-  --glow: rgba(20, 20, 26, 0.16);
-  --warm: #b8763a;
+  --text: #0b2b3c;
+  --muted: rgba(11, 43, 60, 0.66);
+  --faint: rgba(11, 43, 60, 0.7);
+  --border: rgba(11, 60, 80, 0.13);
+  --border-hover: rgba(11, 60, 80, 0.38);
+  --accent: #0a6f7e;
+  --accent-2: #1d8c9c;
+  --accent-soft: rgba(20, 150, 165, 0.09);
+  --glow: rgba(52, 196, 214, 0.22);
+  --warm: #f2a93b;
+  --flake-ink: rgb(255, 214, 208);
+  --flake-scale: 2.4;
+  --flake-drift: 0.5;
+  /* the hut: sawali and bamboo, nipa thatch, coconut palms, white sand and
+     the sea, each on its own ramp from shadow to sun */
+  --scene-deep: #6b8794;
+  --scene-pale: #fbf7ee;
+  --scene-leaf-deep: #1e6a44;
+  --scene-leaf-pale: #9de88c;
+  --scene-wood-deep: #6e4a2b;
+  --scene-wood-pale: #efcf97;
+  --scene-water-deep: #0c6d8c;
+  --scene-water-pale: #a8f2f0;
+  --scene-thatch-deep: #7d5a2a;
+  --scene-thatch-pale: #f0cd82;
+  --scene-sand-deep: #dcc6a0;
+  --scene-sand-pale: #fffaf0;
   /* the veil's three stops in the light ink, heavier at the top and the mid
      than dark's — :root carries why they are three and why the lone
      --nav-scrolled that used to sit here is not the shape to re-add */
-  --nav-veil-top: rgba(245, 243, 251, 0.72);
-  --nav-veil-mid: rgba(245, 243, 251, 0.38);
-  --nav-veil-bot: rgba(245, 243, 251, 0);
-  --card-shadow: 0 22px 54px -30px rgba(23, 18, 45, 0.28);
+  --nav-veil-top: rgba(246, 248, 245, 0.74);
+  --nav-veil-mid: rgba(246, 248, 245, 0.4);
+  --nav-veil-bot: rgba(246, 248, 245, 0);
+  --card-shadow: 0 22px 54px -30px rgba(11, 60, 80, 0.3);
   /* the same ink --card-shadow above uses in light, at the alpha a
      section-sized blur can carry without reading as a bruise across the
      boundary */
-  --origin-arrival-ink: rgba(23, 18, 45, 0.3);
-  --cross-glow: rgba(20, 20, 26, 0.45);
-  --sb: rgba(20, 20, 26, 0.15);
-  --edge-hi: rgba(20, 20, 26, 0.7);
-  --edge-mid: rgba(20, 20, 26, 0.18);
+  --origin-arrival-ink: rgba(11, 60, 80, 0.3);
+  --cross-glow: rgba(11, 43, 60, 0.45);
+  --sb: rgba(11, 43, 60, 0.16);
+  --edge-hi: rgba(11, 43, 60, 0.7);
+  --edge-mid: rgba(11, 43, 60, 0.18);
 
   --live-fg: #2e784a;
   --live-bg: rgba(45, 140, 85, 0.12);
@@ -804,10 +847,10 @@
   --chart-7: #5c7420;
   --chart-8: #566076;
 
-  --invert-bg: #141419;
-  --invert-fg: #f6f6f8;
+  --invert-bg: #0b2b3c;
+  --invert-fg: #f6f8f5;
 
-  --hero-bg: #fbfbfc;
+  --hero-bg: #dff3fb;
   /* ── shaded, and the moon is the reason ─────────────────────────────────
      It was #ffffff → #f4f4f6 → #e6e6ea → #d9d9df: a sky whose darkest corner
      is L* 88. Nothing can be brighter than that, which is why the light
@@ -825,18 +868,18 @@
      sky behind it by better than 21 L* where it actually sits, against 12 the
      other way round before. It also takes --hero-meta's contrast over the sky
      from 4.18 up over the AA line, which was a separate open item.        */
-  --hero-sky-0: #f4f5f9;
-  --hero-sky-1: #e6e8f0;
-  --hero-sky-2: #ccd2e0;
-  --hero-sky-3: #bcc4d6;
-  --hero-sky-at-1: 30%;
-  --hero-sky-at-2: 62%;
+  --hero-sky-0: #2c8ddf;
+  --hero-sky-1: #5fb6ee;
+  --hero-sky-2: #a6dbf5;
+  --hero-sky-3: #e3f5fb;
+  --hero-sky-at-1: 28%;
+  --hero-sky-at-2: 60%;
   /* The ink the daylight haze over the sky is mixed from. It is
      `--terrain-haze` because a sky that settles toward the colour the
      mountains' haze already is is aerial perspective, and a new colour here
      would be a second grey on a page whose light palette has one. Hero.css
      holds the seven alphas and the readings that sized them. */
-  --hero-dusk-ink: var(--terrain-haze);
+  --hero-dusk-ink: transparent;
   --hero-shaft: linear-gradient(
     100deg,
     transparent 0%,
@@ -850,36 +893,36 @@
   --hero-shaft-2: linear-gradient(100deg, transparent, rgba(20, 20, 26, 0.03) 50%, transparent);
   --hero-bloom: radial-gradient(
     closest-side,
-    rgba(255, 255, 255, 0.9),
-    rgba(255, 255, 255, 0.4) 46%,
+    rgba(255, 241, 196, 0.95),
+    rgba(255, 222, 148, 0.45) 46%,
     transparent 74%
   );
-  --hero-edge: linear-gradient(90deg, transparent, rgba(20, 20, 26, 0.5));
-  --hero-eyebrow: rgba(20, 20, 26, 0.66);
-  --hero-tag: rgba(20, 20, 26, 0.66);
-  --hero-meta: rgba(20, 20, 26, 0.62);
-  --hero-rule: rgba(20, 20, 26, 0.18);
-  --hero-strip-border: rgba(20, 20, 26, 0.12);
-  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(251, 251, 252, 0.7));
-  --hero-grain-opacity: 0.28;
-  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 46%, rgba(20, 20, 26, 0.1) 92%);
-  --hero-dg: linear-gradient(162deg, #14141a 0%, #25252e 32%, #5f5f6b 78%, #8a8a95 100%);
-  --hero-cta-bg: #14141a;
-  --hero-cta-fg: #fbfbfc;
-  --hero-cta-shadow: 0 18px 46px -20px rgba(20, 20, 26, 0.5);
-  --hero-cta-shadow-hover: 0 26px 60px -20px rgba(20, 20, 26, 0.62);
-  --hero-cta2-border: rgba(20, 20, 26, 0.26);
-  --hero-cta2-border-hover: rgba(20, 20, 26, 0.55);
-  --hero-cta2-bg-hover: rgba(20, 20, 26, 0.05);
-  --hero-cta2-fg: #14141a;
-  --obj-label: rgba(20, 20, 26, 0.55);
-  --cross-stop-0: #14141a;
-  --cross-stop-1: #25252e;
-  --cross-stop-2: #4e4e5a;
-  --cross-stop-3: #84848f;
-  --faith-stop-0: #14141a;
-  --faith-stop-1: #33333d;
-  --faith-stop-2: #6f6f7b;
+  --hero-edge: linear-gradient(90deg, transparent, rgba(11, 43, 60, 0.55));
+  --hero-eyebrow: rgba(11, 43, 60, 0.72);
+  --hero-tag: rgba(11, 43, 60, 0.72);
+  --hero-meta: rgba(11, 43, 60, 0.68);
+  --hero-rule: rgba(11, 43, 60, 0.2);
+  --hero-strip-border: rgba(11, 43, 60, 0.14);
+  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(223, 243, 251, 0.78));
+  --hero-grain-opacity: 0.2;
+  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 50%, rgba(8, 60, 90, 0.12) 92%);
+  --hero-dg: linear-gradient(162deg, #0b2b3c 0%, #124457 32%, #1d8c9c 78%, #5cc4cf 100%);
+  --hero-cta-bg: #0b2b3c;
+  --hero-cta-fg: #f6f8f5;
+  --hero-cta-shadow: 0 18px 46px -20px rgba(11, 43, 60, 0.5);
+  --hero-cta-shadow-hover: 0 26px 60px -20px rgba(11, 43, 60, 0.62);
+  --hero-cta2-border: rgba(11, 43, 60, 0.3);
+  --hero-cta2-border-hover: rgba(11, 43, 60, 0.6);
+  --hero-cta2-bg-hover: rgba(11, 43, 60, 0.06);
+  --hero-cta2-fg: #0b2b3c;
+  --obj-label: rgba(11, 43, 60, 0.6);
+  --cross-stop-0: #0b2b3c;
+  --cross-stop-1: #143f52;
+  --cross-stop-2: #2b6e80;
+  --cross-stop-3: #6aa3b2;
+  --faith-stop-0: #0b2b3c;
+  --faith-stop-1: #1b4d60;
+  --faith-stop-2: #4e8a9a;
 
   /* the five section bands. --band-hero / --band-outro / --band-foot are
      aliases of --hero-bg / --bg / --bg2 and already follow this block, so
@@ -887,24 +930,24 @@
   /* the ridge's foot, at this band's own lightness — the same rule the dark
      value is derived by, and the axis it does NOT move on is the one the
      measurement picked. See :root. It was #eef0f6; L* 94.80 -> 94.72. */
-  --band-origin: #ebf0fb;
-  --band-apps: #f8f8fa;
-  --band-tools: #eceff6;
-  --band-building: #f8f5f3;
-  --band-faith: #eff0f7;
+  --band-origin: #bfe6f4;
+  --band-apps: #f7f8f4;
+  --band-tools: #cfeff0;
+  --band-building: #f7ecd9;
+  --band-faith: #fbe6cf;
 
   /* the scene layer, at the light end of the kit's ranges — see :root */
-  --art-far: 0.36;
-  --art-mid: 0.44;
-  --art-near: 0.52;
+  --art-far: 0.62;
+  --art-mid: 0.74;
+  --art-near: 0.86;
   /* sampled off the -light files, which are separate artwork and not the
      dark ones filtered. The light ridge is mist and silver rather than
      midnight, so its haze is a cool grey-blue and it is drawn at --art-far's
      0.36 rather than 0.5 — which is what keeps it mist instead of a smear.
      See :root for the sampling and the composites. */
-  --terrain-haze: #3c485a;
-  --terrain-haze-rear: #98aec0;
-  --seam-fade: 0.4;
+  --terrain-haze: #7fd0e6;
+  --terrain-haze-rear: #cfeaf3;
+  --seam-fade: 0.5;
 
   /* The moon's disc is the same white it is in dark — see :root for why it
      stopped borrowing --cross-glow, and see --hero-sky above for the shading
@@ -913,29 +956,29 @@
      so every bit of it counts. The maria are a cool mid-grey and the halo is
      plain white, which over mist reads as the disc's edge softening rather
      than as light being scattered. */
-  --moon-disc: rgba(255, 255, 255, 0.99);
-  --moon-mare: rgba(124, 136, 160, 0.22);
-  --moon-halo: rgba(255, 255, 255, 0.86);
+  --moon-disc: #fff6dc;
+  --moon-mare: transparent;
+  --moon-halo: rgba(255, 214, 120, 0.9);
 
   /* The summit silhouette, lighter than dark's because this hillside is pale
      and the cross has to be the darkest thing in the frame without being the
      only black on a page that has none. See :root. */
-  --summit-stop-0: #2c3345;
-  --summit-stop-1: #3a4254;
-  --summit-stop-2: #4c5568;
+  --summit-stop-0: #0b2b3c;
+  --summit-stop-1: #143f52;
+  --summit-stop-2: #2b6e80;
 
   /* Same lantern, less darkness to glow into. See :root: at dark's alphas
      these would read as a stain on a near-white sky rather than as light. */
-  --lamp-core: rgba(255, 238, 202, 0.95);
-  --lamp-glow: rgba(247, 199, 133, 0.36);
-  --lamp-spill: rgba(242, 194, 132, 0.13);
-  --lamp-pool: rgba(240, 194, 136, 0.2);
+  --lamp-core: transparent;
+  --lamp-glow: transparent;
+  --lamp-spill: transparent;
+  --lamp-pool: transparent;
 
   /* The plate, at this theme's ground. --surface is already #ffffff here, so
      what this buys in light is the opposite of what it buys in dark: a card
      over Origin's lit snow keeps a little of the snow instead of stamping a
      hard white rectangle on it. See :root. */
-  --card-bg: rgba(255, 255, 255, 0.88);
+  --card-bg: rgba(255, 255, 255, 0.9);
 }
 
 /* ── Theme transition ─────────────────────────────────────────────────────

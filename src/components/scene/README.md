@@ -202,6 +202,18 @@ name a file in that folder at all.
 which is what to run when new art arrives. Art added without its `.webp` 404s —
 there is no fallback here, and a missing decorative image fails silently.
 
+### `light=`: a slot may name a different piece for the light theme
+
+Since 2.44.0 the light theme is Cebu — a different picture, not the winter one
+in a paler ink — so `ThemedArt`, `ThemedHeroArt` and `StillArt` take an
+optional `light` name beside `art`. The dark name stays the slot's identity
+and the winter call sites are untouched; in light the `<img>` draws
+`<light>-light.webp` instead of `<art>-light.webp`. The element also carries
+`data-twin`, the OTHER theme's URL, which `theme/artPrefetch.ts` reads
+instead of swapping the suffix on one name — the two themes are two names now.
+The mapping itself is the table in
+[`public/assets/parallax/README.md`](../../../public/assets/parallax/README.md).
+
 ### Three components, not one with a mode prop
 
 `useParallax` and `useHeroParallax` each own `element.style.translate`
@@ -828,6 +840,14 @@ code path left that could bring it back. So each of the three clears the
 this pass, so `Snow.tsx`'s own header is where it lives now. It is the same
 bug either way, and `origin/CabinScene.tsx` — the three.js scene that replaced
 that file — had to answer it again.
+
+### Petals by day
+
+The same canvas is snow at night and kalachuchi petals in the Cebu theme, from
+three tokens read at mount and on the theme attribute: `--flake-ink` (the hue,
+falling back to `--glow`'s as it always did), `--flake-scale` (a multiplier
+on every flake's radius) and `--flake-drift` (on its fall rate). No re-seed at
+the flip, no second component; tokens.css holds the two sets.
 
 ### The colour is read, not written
 

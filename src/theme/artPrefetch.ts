@@ -139,7 +139,10 @@ function scan(theme: Theme): void {
        the twin has to be derived from. */
     const src = art.getAttribute('src')
     if (src === null) continue
-    const twin = src.replace(`-${theme}.webp`, `-${other}.webp`)
+    // A slot whose light piece is a different drawing says so on the element
+    // (`data-twin`, written by ThemedArt.tsx); the suffix swap is the winter
+    // kit's case, where both themes are one name.
+    const twin = art.dataset.twin || src.replace(`-${theme}.webp`, `-${other}.webp`)
     if (twin === src || asked.has(twin)) continue
     asked.add(twin)
     queue.push(twin)

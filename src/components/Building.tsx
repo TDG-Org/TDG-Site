@@ -243,9 +243,9 @@ export function Building() {
             and the fog in the middle of it is the point: a haze band between
             two planes does more for distance than a third prop would. */}
         <div className="building__bank" />
-        <ThemedArt art="props/pine-faceted-pair" className="building__pines-far" factor={0.03} />
-        <ThemedArt art="atmosphere/fog-veil" className="building__fog" factor={0.015} />
-        <ThemedArt art="props/pine-faceted-pair" className="building__pines" factor={-0.1} />
+        <ThemedArt art="props/pine-faceted-pair" light="props/coconut-pair" className="building__pines-far" factor={0.03} />
+        <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__fog" factor={0.015} />
+        <ThemedArt art="props/pine-faceted-pair" light="props/coconut-pair" className="building__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────
             Last of the scenery, so it is in front of all of it: a band of this
             section's OWN --band-building rising out of the floor, transparent
@@ -283,8 +283,8 @@ export function Building() {
           you are looking at the far bank through the water you just crossed,
           and the post's base fades into it rather than ending anywhere. */}
       <div className="building__over" aria-hidden="true">
-        <ThemedArt art="props/wayfinding-post" className="building__post" factor={-0.05} />
-        <ThemedArt art="atmosphere/fog-veil" className="building__mist" factor={-0.12} />
+        <ThemedArt art="props/wayfinding-post" light="props/beach-signpost" className="building__post" factor={-0.05} />
+        <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__mist" factor={-0.12} />
       </div>
 
       <div className="shell building__shell">

@@ -141,6 +141,28 @@ them, light lower throughout, so no section has to re-guess and end up loud in
 one band and invisible in the next. The primitives that consume them are in
 [`../components/scene/`](../components/README.md).
 
+### The Cebu tokens
+
+Since 2.44.0 the light block is Cebu rather than a grey copy of dark: a
+sand-white page, sea-ink text, a deep teal accent, sun-gold `--warm`, bands
+that go sky → paper → sea → sand → dusk down the page, a sun where the moon
+was (`--moon-disc` warm white, `--moon-halo` gold, `--moon-mare`
+transparent) and the four `--lamp-*` inks transparent because the lamppost
+is unlit by day. Three groups of tokens exist for it and are declared in BOTH
+blocks:
+
+- `--flake-ink`, `--flake-scale`, `--flake-drift` — the near weather in
+  `scene/Snow.tsx`: white and small and falling at night, blush and twice the
+  size and drifting by day.
+- `--scene-*-deep` / `--scene-*-pale`, six pairs (base, leaf, wood, water,
+  thatch, sand) — the 3D walk's pigment ramps. In dark all six alias the one
+  ramp the cabin always had (`--band-origin` → `--text`), so the night scene
+  is unchanged; in light they are the hut's straw, bamboo, palm green, sea and
+  sand. `origin/CabinScene.tsx`'s `RAMP_TOKENS` is the reader.
+- `--summit-stop-*` in light are sea ink, and `faith/Summit.css` redeclares
+  the three moon tokens on `.faith__moon` so the Faith disc is the same sun,
+  lower and gold.
+
 ### Radii are tight, everywhere
 
 2–3px. `.chip` is 2px, `.card` and every button are 3px. A rounded pill will

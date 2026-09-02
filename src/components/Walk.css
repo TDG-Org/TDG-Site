@@ -793,6 +793,13 @@
   opacity: 0.92;
 }
 
+/* The Cebu piece in this slot, props/capiz-window, is a dark wood lattice
+   rather than pale crystal, and at the frost's 0.92 it read as a frame on
+   the cards. Lower, it is glass with a lattice in it. */
+[data-theme='light'] .walk__frost-art {
+  opacity: 0.74;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* The overlap is scroll that exists only so the hero can be climbed over
      while it holds still, and at motionIntensity 0 the hero is one screen tall

@@ -155,7 +155,7 @@ export function Outro() {
             two jobs: let a layer cross the join vertically, and keep it inside
             the frame horizontally. */}
         <div className="outro__stair-clip" aria-hidden="true">
-          <ThemedArt art="transitions/stone-stair" className="outro__stair" factor={0.03} />
+          <ThemedArt art="transitions/stone-stair" light="transitions/beach-steps" className="outro__stair" factor={0.03} />
         </div>
 
         {/* Everything that has to be cut at this section's own edges. The
@@ -195,7 +195,7 @@ export function Outro() {
               costs is 0.09 of relative travel against the arch in front of it,
               and Outro.css checks that against the opening it has to stay
               inside rather than against the frame. */}
-          <StillArt art="props/lantern-post" className="outro__lantern" />
+          <StillArt art="props/lantern-post" light="props/capiz-lantern" className="outro__lantern" />
           {/* The arch: 29vw wide and taller than the makers note, where it
               used to be 216px tucked in a gutter, and the room for that came
               from this section's own padding rather than from the copy — see
@@ -206,7 +206,7 @@ export function Outro() {
               large the factor gets. That is what lets it be one of the loudest
               layers in the section without the clearance becoming a thing to
               re-check. */}
-          <ThemedArt art="props/garden-arch" className="outro__arch" factor={-0.09} />
+          <ThemedArt art="props/garden-arch" light="props/coral-arch" className="outro__arch" factor={-0.09} />
           {/* `transitions/stepping-stones` — in the kit from the beginning and
               drawn by nothing until now. The walk has crossed water on a
               bridge, climbed to a summit and is arriving at a gate; a path of
@@ -220,7 +220,7 @@ export function Outro() {
               mirrored so the path recedes toward the arch rather than away
               from it; that is a `transform`, and `useParallax` writes the
               standalone `translate` property, so the two never touch. */}
-          <ThemedArt art="transitions/stepping-stones" className="outro__stones" factor={-0.13} />
+          <ThemedArt art="transitions/stepping-stones" light="transitions/sand-stones" className="outro__stones" factor={-0.13} />
         </div>
 
         <div ref={makers} className="outro__makers">

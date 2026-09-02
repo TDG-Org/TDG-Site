@@ -12,10 +12,13 @@ import {
   Points,
   PointsMaterial,
   Scene,
+  SRGBColorSpace,
+  TextureLoader,
   WebGLRenderer,
 } from 'three'
 import { clamp01, onFrame, settle, wake } from '../../lib/motion'
 import { MAX_DPR, onDprChange } from '../../lib/dpr'
+import { asset } from '../../lib/asset'
 import type { WalkProgress } from '../Walk'
 
 /**
@@ -624,17 +627,113 @@ export function CabinScene({
     // that make it read as low-poly art are baked in rather than lit at
     // runtime. `bodyTone` is kept because a theme change re-derives the colour
     // buffer from it — the shape never changes, only the two ends of the ramp.
-    const world = buildWorld(tier)
-    const bodyTone = new Float32Array(world.tone)
-    const bodyGeo = new BufferGeometry()
+    /*
+     * ── two worlds, one mesh ────────────────────────────────────────────
+     * The geometry is the THEME's now: the cabin at night, the nipa hut by
+     * day. One is built at mount for the theme on the page; the other is built
+     * at idle, once the loop has parked, so a toggle is a buffer swap and
+     * never a rebuild on the wave. `swapWorld` below runs at the palette
+     * cross-fade's midpoint, under the bloom ThemeProvider paints, which is
+     * the one frame where a cut is invisible; if the spare has not arrived by
+     * then (a toggle inside the first seconds) it builds synchronously, once.
+     */
+    let hut = document.documentElement.getAttribute('data-theme') === 'light'
+    let world = buildWorld(tier, hut)
+    let bodyTone = new Float32Array(world.tone)
+    let bodyPig = new Uint8Array(world.pig)
+    let bodyGeo = new BufferGeometry()
     bodyGeo.setAttribute('position', new BufferAttribute(new Float32Array(world.pos), 3))
-    const bodyColor = new BufferAttribute(new Float32Array(bodyTone.length * 3), 3)
+    let bodyColor = new BufferAttribute(new Float32Array(bodyTone.length * 3), 3)
     bodyGeo.setAttribute('color', bodyColor)
     const bodyMat = new MeshBasicMaterial({ vertexColors: true })
     const body = new Mesh(bodyGeo, bodyMat)
     scene.add(body)
     geometries.push(bodyGeo)
     materials.push(bodyMat)
+    let spare: { hut: boolean; solid: Solid } | null = null
+    let spareTimer = 0
+    const prebuild = () => {
+      spareTimer = 0
+      if (spare?.hut === !hut) return
+      spare = { hut: !hut, solid: buildWorld(tier, !hut) }
+    }
+    // Rule 9's exemption: one-shot, not animation, ends by itself.
+    const scheduleSpare = () => {
+      if (spareTimer) return
+      spareTimer =
+        typeof requestIdleCallback === 'function'
+          ? requestIdleCallback(prebuild, { timeout: 8000 })
+          : window.setTimeout(prebuild, 2500)
+    }
+    scheduleSpare()
+
+    /* The lagoon beyond the palms: a painted plate standing far out, the one
+       raster in this scene and only in the hut's world. Unfogged (it is past
+       the fog's reach) and drawn at 0.72 so the page's own sky shows through
+       it — which is the aerial perspective the fog gives everything else. */
+    const matteGeo = new BufferGeometry()
+    {
+      const MW = 150
+      const MH = MW * (784 / 1168)
+      const my0 = 4 - MH * 0.55
+      const mz = -72
+      matteGeo.setAttribute(
+        'position',
+        new BufferAttribute(
+          new Float32Array([
+            -MW / 2, my0, mz, MW / 2, my0, mz, MW / 2, my0 + MH, mz,
+            -MW / 2, my0, mz, MW / 2, my0 + MH, mz, -MW / 2, my0 + MH, mz,
+          ]),
+          3,
+        ),
+      )
+      matteGeo.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]), 2))
+    }
+    const matteMat = new MeshBasicMaterial({ transparent: true, opacity: 0.72, fog: false, depthWrite: false })
+    const matte = new Mesh(matteGeo, matteMat)
+    matte.visible = false
+    matte.renderOrder = 0
+    scene.add(matte)
+    geometries.push(matteGeo)
+    materials.push(matteMat)
+    let matteAsked = false
+    const askMatte = () => {
+      if (matteAsked) return
+      matteAsked = true
+      new TextureLoader().load(asset('assets/parallax/scene/lagoon-matte.webp'), (tex) => {
+        tex.colorSpace = SRGBColorSpace
+        matteMat.map = tex
+        matteMat.needsUpdate = true
+        matte.visible = hut
+        invalidate()
+      })
+    }
+    if (hut) askMatte()
+
+    let pendingHut: boolean | null = null
+    const swapWorld = (toHut: boolean) => {
+      if (toHut === hut) return
+      const solid = spare?.hut === toHut ? spare.solid : buildWorld(tier, toHut)
+      spare = null
+      hut = toHut
+      const geo = new BufferGeometry()
+      geo.setAttribute('position', new BufferAttribute(new Float32Array(solid.pos), 3))
+      bodyTone = new Float32Array(solid.tone)
+      bodyPig = new Uint8Array(solid.pig)
+      const col = new BufferAttribute(new Float32Array(bodyTone.length * 3), 3)
+      geo.setAttribute('color', col)
+      body.geometry = geo
+      const at = geometries.indexOf(bodyGeo)
+      if (at >= 0) geometries.splice(at, 1)
+      bodyGeo.dispose()
+      bodyGeo = geo
+      bodyColor = col
+      geometries.push(geo)
+      if (toHut) askMatte()
+      matte.visible = toHut && matteMat.map !== null
+      dirty = true
+      scheduleSpare()
+    }
 
     // The lit openings, and their bloom. Two meshes rather than one because
     // their brightness curves differ per theme: a halo that reads as bloom on a
@@ -1136,6 +1235,8 @@ export function CabinScene({
       fadeFrom = { ...shown }
       target = next
       fadeK = -waveDelay(cv) / THEME_FADE
+      // the geometry follows at the fade's midpoint; see swapWorld
+      pendingHut = document.documentElement.getAttribute('data-theme') === 'light'
       invalidate()
     })
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
@@ -1147,10 +1248,11 @@ export function CabinScene({
       const arr = bodyColor.array as Float32Array
       for (let i = 0; i < bodyTone.length; i++) {
         const t = p.floor + bodyTone[i] * span
+        const ramp = p.ramps[bodyPig[i]] ?? p.ramps[0]
         const at = i * 3
-        arr[at] = toLinear(p.deep[0] + (p.pale[0] - p.deep[0]) * t)
-        arr[at + 1] = toLinear(p.deep[1] + (p.pale[1] - p.deep[1]) * t)
-        arr[at + 2] = toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * t)
+        arr[at] = toLinear(ramp.deep[0] + (ramp.pale[0] - ramp.deep[0]) * t)
+        arr[at + 1] = toLinear(ramp.deep[1] + (ramp.pale[1] - ramp.deep[1]) * t)
+        arr[at + 2] = toLinear(ramp.deep[2] + (ramp.pale[2] - ramp.deep[2]) * t)
       }
       bodyColor.needsUpdate = true
       // The one warm on this site, made golden on the way in. `WARM_CHROMA`
@@ -1170,11 +1272,13 @@ export function CabinScene({
       // near-white sky is invisible, so the flakes sit part way down the ramp:
       // clearly lighter than the walls, clearly darker than the sky.
       const f = p.flake
-      snowMat.color.setRGB(
-        toLinear(p.deep[0] + (p.pale[0] - p.deep[0]) * f),
-        toLinear(p.deep[1] + (p.pale[1] - p.deep[1]) * f),
-        toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * f),
-      )
+      if (p.flakeInk) setLinear(snowMat.color, p.flakeInk)
+      else
+        snowMat.color.setRGB(
+          toLinear(p.deep[0] + (p.pale[0] - p.deep[0]) * f),
+          toLinear(p.deep[1] + (p.pale[1] - p.deep[1]) * f),
+          toLinear(p.deep[2] + (p.pale[2] - p.deep[2]) * f),
+        )
       // The two ALPHAS that used to be set here — the snow's and the smoke's —
       // are written in the tick now, because both of them fade with the walk as
       // well as with the theme and this function only runs on a `dirty` frame.
@@ -1392,7 +1496,15 @@ export function CabinScene({
           fadeK = 1
           dirty = true
         }
+        if (pendingHut !== null) {
+          swapWorld(pendingHut)
+          pendingHut = null
+        }
         return
+      }
+      if (pendingHut !== null && (fadeFrom === null || fadeK >= 0.5)) {
+        swapWorld(pendingHut)
+        pendingHut = null
       }
 
       /*
@@ -1797,6 +1909,11 @@ export function CabinScene({
       ro.disconnect()
       unwatchDpr()
       themes.disconnect()
+      if (spareTimer) {
+        if (typeof cancelIdleCallback === 'function') cancelIdleCallback(spareTimer)
+        window.clearTimeout(spareTimer)
+      }
+      matteMat.map?.dispose()
       cv.removeEventListener('webglcontextlost', onLost)
       cv.removeEventListener('webglcontextrestored', onRestored)
       // A leaked WebGL context on a route change is a real bug: browsers cap
@@ -2248,6 +2365,12 @@ type Palette = {
   halo: number
   /** Peak opacity of the hearth, its light in the room, and the two lanterns. */
   fire: number
+  /** One two-token ramp per pigment class, indexed by PIG_*. In dark all six
+   *  alias the base ramp; see the tokens' own note. */
+  ramps: { deep: RGB; pale: RGB }[]
+  /** The in-scene flakes' own ink, when the theme has one (petals, by day);
+   *  null means "a step up the base ramp", which is snow. */
+  flakeInk: RGB | null
 }
 
 /**
@@ -2295,10 +2418,31 @@ type Palette = {
  *
  * Every entry is a token name. There is no colour in this file.
  */
+/** The six classes' token pairs, per theme. Order is PIG_BASE … PIG_SAND. */
+const RAMP_TOKENS = {
+  dark: [
+    ['--scene-deep', '--scene-pale'],
+    ['--scene-leaf-deep', '--scene-leaf-pale'],
+    ['--scene-wood-deep', '--scene-wood-pale'],
+    ['--scene-water-deep', '--scene-water-pale'],
+    ['--scene-thatch-deep', '--scene-thatch-pale'],
+    ['--scene-sand-deep', '--scene-sand-pale'],
+  ],
+  light: [
+    ['--scene-deep', '--scene-pale'],
+    ['--scene-leaf-deep', '--scene-leaf-pale'],
+    ['--scene-wood-deep', '--scene-wood-pale'],
+    ['--scene-water-deep', '--scene-water-pale'],
+    ['--scene-thatch-deep', '--scene-thatch-pale'],
+    ['--scene-sand-deep', '--scene-sand-pale'],
+  ],
+} as const
+
 const ROLES = {
   dark: {
     pale: '--text',
     deep: '--band-origin',
+    flakeInk: null as string | null,
     sky: '--band-origin',
     skyOut: '--band-tools',
     warm: '--warm',
@@ -2313,17 +2457,26 @@ const ROLES = {
     fire: 1,
   },
   light: {
-    pale: '--surface',
-    deep: '--accent-2',
+    /*
+     * Cebu. The base ramp is the hut's own tokens now (a sand-white and a
+     * sea-shadow slate) rather than the page's surface and accent, because
+     * the page's accent is a deep teal and a teal-shadowed room read as
+     * underwater. The five other classes are read from RAMP_TOKENS.
+     */
+    pale: '--scene-pale',
+    deep: '--scene-deep',
+    /* petals, not snow: the near flakes share this token with scene/Snow.tsx */
+    flakeInk: '--flake-ink' as string | null,
     sky: '--band-origin',
     skyOut: '--band-tools',
     warm: '--warm',
     floor: 0.26,
     ceil: 1,
     flake: 0.72,
-    snowAlpha: 0.7,
+    snowAlpha: 0.78,
     smoke: 0.72,
-    smokeAlpha: 0.46,
+    /* no chimney on a nipa hut, so no smoke */
+    smokeAlpha: 0,
     // Daytime. The house is not lit; see the note above for what each of these
     // two numbers switches off and why `core` is a tint rather than a zero.
     core: 0.15,
@@ -2343,7 +2496,7 @@ const ROLES = {
      * far weaker read than warm over near-black. The same alpha does about a
      * third as much work here as it does in dark.
      */
-    fire: 0.42,
+    fire: 0.55,
   },
 } as const
 
@@ -2399,12 +2552,22 @@ function readPalette(section: Element): Palette | null {
   const skyOut = parseColor(cs.getPropertyValue(role.skyOut))
   const warm = parseColor(cs.getPropertyValue(role.warm))
   if (!pale || !deep || !sky || !skyOut || !warm) return null
+  const ramps: { deep: RGB; pale: RGB }[] = []
+  for (const [deepName, paleName] of RAMP_TOKENS[light ? 'light' : 'dark']) {
+    const d = parseColor(cs.getPropertyValue(deepName))
+    const p = parseColor(cs.getPropertyValue(paleName))
+    if (!d || !p) return null
+    ramps.push({ deep: d, pale: p })
+  }
+  const flakeInk = role.flakeInk ? parseColor(cs.getPropertyValue(role.flakeInk)) : null
   return {
     pale,
     deep,
     sky,
     skyOut,
     warm,
+    ramps,
+    flakeInk,
     floor: role.floor,
     ceil: role.ceil,
     flake: role.flake,
@@ -2460,6 +2623,11 @@ function lerpPalette(a: Palette, b: Palette, k: number): Palette {
     core: n(a.core, b.core),
     halo: n(a.halo, b.halo),
     fire: n(a.fire, b.fire),
+    ramps: a.ramps.map((ra, i) => ({
+      deep: mixRGB(ra.deep, b.ramps[i].deep, k),
+      pale: mixRGB(ra.pale, b.ramps[i].pale, k),
+    })),
+    flakeInk: a.flakeInk && b.flakeInk ? mixRGB(a.flakeInk, b.flakeInk, k) : k < 0.5 ? a.flakeInk : b.flakeInk,
   }
 }
 
@@ -2504,7 +2672,32 @@ type V = [number, number, number]
  * as a seventh argument to `tri` in all but name, without threading a seventh
  * argument through `quad`, `box`, `panel`, `post`, `stone` and `tooth`.
  */
-type Solid = { pos: number[]; tone: number[]; hearth: boolean }
+/*
+ * ── pigment classes, and why a monochrome scene grew them ─────────────────
+ * The cabin is one tone ramp between two tokens — moonlit snow does not need
+ * more. The Cebu hut does: a palm is green, a thatch roof is straw, the sea
+ * is the sea, and one ramp from sand-white to sea-ink cannot say any of it.
+ * So every vertex carries a CLASS beside its tone, and `applyPalette` picks
+ * that class's own two-token ramp. The winter world sets no class at all
+ * (every vertex is PIG_BASE), and in dark every class's ramp aliases the base
+ * ramp in tokens.css — so the night scene is byte-for-byte what it was.
+ */
+const PIG_BASE = 0
+const PIG_LEAF = 1
+const PIG_WOOD = 2
+const PIG_WATER = 3
+const PIG_THATCH = 4
+const PIG_SAND = 5
+type Solid = {
+  pos: number[]
+  tone: number[]
+  pig: number[]
+  hearth: boolean
+  /** the class every triangle pushed from now on carries */
+  pigment: number
+  /** building the Cebu hut rather than the cabin */
+  hut: boolean
+}
 
 /**
  * The one light this scene has, and it is baked.
@@ -3193,6 +3386,7 @@ function tri(s: Solid, a: V, b: V, c: V, base: number, out?: V) {
     const t = clamp01(lit)
     s.tone.push(t, t, t)
   }
+  s.pig.push(s.pigment, s.pigment, s.pigment)
 }
 
 function quad(s: Solid, a: V, b: V, c: V, d: V, base: number, out?: V) {
@@ -3920,8 +4114,10 @@ const RANK_N = [1, 1.25, 1.6]
 const TEETH_A0 = 0.86
 const TEETH_A1 = 5.16
 
-function buildWorld(tier: Quality): Solid {
-  const s: Solid = { pos: [], tone: [], hearth: false }
+function buildWorld(tier: Quality, hut = false): Solid {
+  const s: Solid = { pos: [], tone: [], pig: [], hearth: false, pigment: PIG_BASE, hut }
+  /* the wall's foot: on the ground for the cabin, up on stilts for the hut */
+  const G = hut ? HUT_BASE : 0
 
   /*
    * What is standing on the snow, as discs the ground can be shaded by. Built
@@ -3955,6 +4151,7 @@ function buildWorld(tier: Quality): Solid {
   cast(0, (CAB_Z0 + CAB_Z1) / 2, EAVE_Y, 4.6)
 
   // ── ground ───────────────────────────────────────────────────────────────
+  s.pigment = hut ? PIG_SAND : PIG_BASE
   // One enormous flat quad for everything the fog is going to eat anyway, and a
   // faceted patch around the cabin where the reader can actually see the snow.
   // The patch sits a hair above the plane so the two cannot z-fight — which is
@@ -4050,32 +4247,37 @@ function buildWorld(tier: Quality): Solid {
     )
   }
 
+  s.pigment = PIG_BASE
   // ── what is lying in the snow ────────────────────────────────────────────
   const propSeed = rng(0x9a17)
   for (let i = 0; i < tier.stones && i < STONES.length; i++) {
     const [sx, sz, sr] = STONES[i]
     stone(s, sx, sz, PLANT_Y, sr, sr * (0.6 + propSeed() * 0.5), T_STONE, propSeed() * 6.28)
   }
+  s.pigment = hut ? PIG_LEAF : PIG_BASE
   for (let i = 0; i < tier.weeds && i < WEEDS.length; i++) {
     const [wx, wz, wh] = WEEDS[i]
     weeds(s, wx, wz, PLANT_Y, wh, 2, propSeed)
   }
+  // the hut is bamboo and sawali from here to its roof
+  s.pigment = hut ? PIG_WOOD : PIG_BASE
 
   // ── front wall, with its openings cut ────────────────────────────────────
   // Vertical strips, because that is the decomposition a wall with a door and
   // two windows falls into with the fewest triangles and no T-junctions.
-  panel(s, -CAB_HW, -WIN_X - WIN_HW, 0, WALL_H, CAB_Z0, T_WALL)
-  panel(s, -WIN_X - WIN_HW, -WIN_X + WIN_HW, 0, WIN_Y0, CAB_Z0, T_WALL)
+  panel(s, -CAB_HW, -WIN_X - WIN_HW, G, WALL_H, CAB_Z0, T_WALL)
+  panel(s, -WIN_X - WIN_HW, -WIN_X + WIN_HW, G, WIN_Y0, CAB_Z0, T_WALL)
   panel(s, -WIN_X - WIN_HW, -WIN_X + WIN_HW, WIN_Y1, WALL_H, CAB_Z0, T_WALL)
-  panel(s, -WIN_X + WIN_HW, -DOOR_HW, 0, WALL_H, CAB_Z0, T_WALL)
-  panel(s, -DOOR_HW, DOOR_HW, 0, DECK_Y, CAB_Z0, T_WALL)
+  panel(s, -WIN_X + WIN_HW, -DOOR_HW, G, WALL_H, CAB_Z0, T_WALL)
+  panel(s, -DOOR_HW, DOOR_HW, G, DECK_Y, CAB_Z0, T_WALL)
   panel(s, -DOOR_HW, DOOR_HW, DECK_Y + DOOR_H, WALL_H, CAB_Z0, T_WALL)
-  panel(s, DOOR_HW, WIN_X - WIN_HW, 0, WALL_H, CAB_Z0, T_WALL)
-  panel(s, WIN_X - WIN_HW, WIN_X + WIN_HW, 0, WIN_Y0, CAB_Z0, T_WALL)
+  panel(s, DOOR_HW, WIN_X - WIN_HW, G, WALL_H, CAB_Z0, T_WALL)
+  panel(s, WIN_X - WIN_HW, WIN_X + WIN_HW, G, WIN_Y0, CAB_Z0, T_WALL)
   panel(s, WIN_X - WIN_HW, WIN_X + WIN_HW, WIN_Y1, WALL_H, CAB_Z0, T_WALL)
-  panel(s, WIN_X + WIN_HW, CAB_HW, 0, WALL_H, CAB_Z0, T_WALL)
+  panel(s, WIN_X + WIN_HW, CAB_HW, G, WALL_H, CAB_Z0, T_WALL)
   // the gable above it, with two course lines across it — the one face of the
   // front wall wide enough and empty enough to carry them
+  if (!hut) {
   tri(s, [-CAB_HW, WALL_H, CAB_Z0], [CAB_HW, WALL_H, CAB_Z0], [0, RIDGE_Y, CAB_Z0], T_WALL, [0, 0, 1])
   for (let i = 0; i < 2; i++) {
     const gy = WALL_H + 0.34 + i * 0.62
@@ -4083,17 +4285,18 @@ function buildWorld(tier: Quality): Solid {
     if (gw > 0.2) panel(s, -gw, gw, gy, gy + 0.08, 0.012, T_TRIM)
   }
 
+  }
   // back wall and gable
   quad(
     s,
-    [-CAB_HW, 0, CAB_Z1],
-    [CAB_HW, 0, CAB_Z1],
+    [-CAB_HW, G, CAB_Z1],
+    [CAB_HW, G, CAB_Z1],
     [CAB_HW, WALL_H, CAB_Z1],
     [-CAB_HW, WALL_H, CAB_Z1],
     T_WALL,
     [0, 0, -1],
   )
-  tri(s, [-CAB_HW, WALL_H, CAB_Z1], [CAB_HW, WALL_H, CAB_Z1], [0, RIDGE_Y, CAB_Z1], T_WALL, [0, 0, -1])
+  if (!hut) tri(s, [-CAB_HW, WALL_H, CAB_Z1], [CAB_HW, WALL_H, CAB_Z1], [0, RIDGE_Y, CAB_Z1], T_WALL, [0, 0, -1])
 
   // side walls. The left one carries a window, because the walk comes in from
   // the left and that side is what the reader sees for most of it. Its four
@@ -4101,20 +4304,20 @@ function buildWorld(tier: Quality): Solid {
   // glow layer has to light the same hole this cuts.
   const sideL = (z0: number, z1: number, y0: number, y1: number) =>
     quad(s, [-CAB_HW, y0, z0], [-CAB_HW, y0, z1], [-CAB_HW, y1, z1], [-CAB_HW, y1, z0], T_WALL, [-1, 0, 0])
-  sideL(CAB_Z1, SW_Z0, 0, WALL_H)
-  sideL(SW_Z0, SW_Z1, 0, SW_Y0)
+  sideL(CAB_Z1, SW_Z0, G, WALL_H)
+  sideL(SW_Z0, SW_Z1, G, SW_Y0)
   sideL(SW_Z0, SW_Z1, SW_Y1, WALL_H)
-  sideL(SW_Z1, CAB_Z0, 0, WALL_H)
+  sideL(SW_Z1, CAB_Z0, G, WALL_H)
   // The east flank, cut round its own window for the first time in this pass.
   // It is a wall no position on the walk can see — the arc never leaves the
   // west side — so the six triangles are bought entirely for the INSIDE, where
   // the opening is what stops the desk's corner being a dead black wall.
   const sideR = (z0: number, z1: number, y0: number, y1: number) =>
     quad(s, [CAB_HW, y0, z1], [CAB_HW, y0, z0], [CAB_HW, y1, z0], [CAB_HW, y1, z1], T_WALL, [1, 0, 0])
-  sideR(CAB_Z1, EW_Z0, 0, WALL_H)
-  sideR(EW_Z0, EW_Z1, 0, EW_Y0)
+  sideR(CAB_Z1, EW_Z0, G, WALL_H)
+  sideR(EW_Z0, EW_Z1, G, EW_Y0)
   sideR(EW_Z0, EW_Z1, EW_Y1, WALL_H)
-  sideR(EW_Z1, CAB_Z0, 0, WALL_H)
+  sideR(EW_Z1, CAB_Z0, G, WALL_H)
 
   // ── roof ─────────────────────────────────────────────────────────────────
   // Two slanted slabs: the shingle plane, its underside and the fascia that
@@ -4132,6 +4335,8 @@ function buildWorld(tier: Quality): Solid {
   // at is a building — but it does mean the cap is a wide-shot detail. It is
   // still bought for `low`, because `low` is a phone, and on a phone the
   // FRAME_PULL keeps the reader further out for longer.
+  if (hut) hipRoof(s)
+  else {
   for (const sign of [-1, 1]) {
     const ex = sign * EAVE_X
     const up: V = [sign * -0.5, 0.87, 0]
@@ -4174,6 +4379,8 @@ function buildWorld(tier: Quality): Solid {
     )
   }
 
+  }
+
   // ── chimney ──────────────────────────────────────────────────────────────
   // On the LEFT slope, because the walk comes in from the left and stays
   // there: a chimney on the far side is a chimney whose smoke rises out of
@@ -4183,6 +4390,7 @@ function buildWorld(tier: Quality): Solid {
   // A stack, a wider footing where it meets the roof, and four stones set
   // proud. One box is a pipe; the footing and the proud stones are what make
   // it masonry at 12 metres, which is the only distance it is ever read at.
+  if (!hut) {
   box(s, CHIM_X, 1.9, CHIM_Z, 0.78, 1.5, 0.78, T_STONE)
   box(s, CHIM_X, 3.3, CHIM_Z, 0.64, 2.6, 0.64, T_STONE)
   // `floor` on the footing only: it overhangs the 0.64 stack by 9cm on every
@@ -4205,6 +4413,8 @@ function buildWorld(tier: Quality): Solid {
     )
   }
 
+  }
+
   // ── log courses ──────────────────────────────────────────────────────────
   // What makes a cabin a LOG cabin, and the cheapest true thing to say about
   // it. Not banded walls — the front wall is already cut into ten strips
@@ -4216,6 +4426,8 @@ function buildWorld(tier: Quality): Solid {
   //
   // Three corners, never four. The back-right one is behind the cabin from
   // every position on the walk.
+  if (hut) sawali(s)
+  else {
   const corners: [number, number, number][] = [
     [-CAB_HW, CAB_Z0, 1],
     [CAB_HW, CAB_Z0, -1],
@@ -4253,6 +4465,8 @@ function buildWorld(tier: Quality): Solid {
     )
   }
 
+  }
+
   // ── porch ────────────────────────────────────────────────────────────────
   // The roof and its posts are narrow, over the door only. A porch wide enough
   // to reach the windows would put a post in front of each of them and the roof
@@ -4267,8 +4481,10 @@ function buildWorld(tier: Quality): Solid {
   for (const sign of [-1, 1]) post(s, sign * 1, DECK_Y, DECK_Z - 0.3, 0.11, 2.5, T_TRIM, 0.4)
   // `floor` because the eye now arrives BELOW this. Its underside is the porch
   // ceiling, and a ceiling in shade is what gives the porch depth; see `box`.
+  if (hut) s.pigment = PIG_THATCH
   box(s, 0, DECK_Y + 2.5, DECK_Z / 2 + 0.25, 2.5, 0.18, DECK_Z + 0.5, T_ROOF, true)
-  box(s, 0, DECK_Y + 2.68, DECK_Z / 2 + 0.25, 2.3, 0.1, DECK_Z + 0.2, T_SNOW)
+  if (hut) s.pigment = PIG_WOOD
+  else box(s, 0, DECK_Y + 2.68, DECK_Z / 2 + 0.25, 2.3, 0.1, DECK_Z + 0.2, T_SNOW)
   // A rail each side, so the porch reads as a porch and not as a canopy on
   // two sticks. Flat quads, not boxes: a rail is seen edge-on from the walk
   // and its underside is never in the shot.
@@ -4289,14 +4505,14 @@ function buildWorld(tier: Quality): Solid {
   // steps down to the snow, snow-topped like everything else out here
   for (let i = 0; i < 3; i++) {
     const h = (DECK_Y * (3 - i)) / 4
-    box(s, 0, 0, DECK_Z + 0.24 + i * 0.42, 2.4, h, 0.42, T_SNOW)
+    box(s, 0, 0, DECK_Z + 0.24 + i * 0.42, 2.4, h, 0.42, hut ? T_TRIM : T_SNOW)
   }
 
   // window frames, as a thin surround on the wall plane
   for (const sign of [-1, 1]) {
     const cx = sign * WIN_X
     panel(s, cx - WIN_HW - 0.09, cx + WIN_HW + 0.09, WIN_Y1, WIN_Y1 + 0.09, 0.01, T_TRIM)
-    panel(s, cx - WIN_HW - 0.09, cx + WIN_HW + 0.09, WIN_Y0 - 0.11, WIN_Y0, 0.01, T_SNOW)
+    panel(s, cx - WIN_HW - 0.09, cx + WIN_HW + 0.09, WIN_Y0 - 0.11, WIN_Y0, 0.01, hut ? T_TRIM : T_SNOW)
     /*
      * The bars across the glass, and they are the cheapest legibility in the
      * whole cabin: two quads turn a warm rectangle into a WINDOW, and a warm
@@ -4347,7 +4563,9 @@ function buildWorld(tier: Quality): Solid {
   // four flat panels that used to stand behind the openings. `interior` has it
   // all, and it is a separate function because it is half the geometry in this
   // file and `buildWorld` was already long.
+  s.pigment = PIG_BASE
   interior(s, tier)
+  s.pigment = hut ? PIG_WOOD : PIG_BASE
 
   // ── the door, standing open ──────────────────────────────────────────────
   // The whole section is about arriving somewhere, so the door is ajar rather
@@ -4398,6 +4616,10 @@ function buildWorld(tier: Quality): Solid {
   const treeSeed = rng(0xc4b1)
   const plant = (tx: number, tz: number, ts: number, rk: number) => {
     const r = RANKS[rk]
+    if (hut) {
+      palm(s, tx, tz, PLANT_Y, ts, treeSeed() * Math.PI * 2, r.tone, r.tall)
+      return
+    }
     conifer(
       s,
       tx,
@@ -4475,6 +4697,11 @@ function buildWorld(tier: Quality): Solid {
   // Three arcs now, the outermost of which stands where the hill band used to.
   // See RANK_R for what that swap is and whose call it was.
   const rankSeed = rng(0x71d3)
+  if (hut) {
+    sea(s)
+    poolside(s)
+    stilts(s)
+  } else {
   for (let r = 0; r < tier.ranks && r < RANK_R.length; r++) {
     const n = Math.round(tier.teeth * RANK_N[r])
     for (let i = 0; i < n; i++) {
@@ -4495,6 +4722,9 @@ function buildWorld(tier: Quality): Solid {
       )
     }
   }
+
+  }
+  s.pigment = PIG_BASE
 
   return s
 }
@@ -4796,6 +5026,16 @@ function logAt(s: Solid, cx: number, y: number, z: number, half: number, r: numb
  * the light and `tri` for why the two are evaluated differently.
  */
 function interior(s: Solid, tier: Quality) {
+  /* In the hut the floor, the beams and the furniture are bamboo and the
+     ceiling is the underside of the thatch; the walls, the hearth and the
+     paper keep the base ramp. In the cabin all of this is one ramp, so these
+     resolve to PIG_BASE and change nothing. */
+  const wood = () => {
+    s.pigment = s.hut ? PIG_WOOD : PIG_BASE
+  }
+  const base = () => {
+    s.pigment = PIG_BASE
+  }
   s.hearth = true
   const props = tier.room
 
@@ -4807,6 +5047,7 @@ function interior(s: Solid, tier: Quality) {
    * own horizon) and every value between rgb green 31 in the south-east corner
    * and 78 on the hearth stone lives on these thirty cells.
    */
+  wood()
   field(s, -IN_X, IN_X, IN_Z1, IN_Z0, IN_Y, T_FLOOR, 5, 6)
   // Floorboards: five lines cut across the floor, a shade under it. `tri`
   // shades from the facet's own NORMAL, and every cell of the floor has the
@@ -4838,6 +5079,7 @@ function interior(s: Solid, tier: Quality) {
    * surface is the steepest anywhere in the room, and it is what puts a warm
    * patch on the roof over the hearth and leaves the rest of it black.
    */
+  s.pigment = s.hut ? PIG_THATCH : PIG_BASE
   const CEIL_NX = 2
   const CEIL_NZ = 4
   for (const sign of [-1, 1]) {
@@ -4885,6 +5127,7 @@ function interior(s: Solid, tier: Quality) {
    * mantel and the breast already cover every other part of the fireplace's
    * footprint, and outside the opening the wall is what the reader should see.
    */
+  base()
   const fbL = FIRE_X - FP_OPEN_HW
   const fbR = FIRE_X + FP_OPEN_HW
   wallZ(s, -IN_X, fbL, IN_Y, WALL_H, IN_Z1, 1, 2, 2)
@@ -4965,6 +5208,7 @@ function interior(s: Solid, tier: Quality) {
    * beat is composed on. `interior`'s note on the big table is the same
    * argument at the other beat.
    */
+  wood()
   box(s, -IN_X + 0.065, SW_Y0 - 0.05, (SW_Z0 + SW_Z1) / 2, 0.13, 0.05, SW_Z1 - SW_Z0 + 0.16, T_TIMBER)
   /*
    * ── the window's casing ──────────────────────────────────────────────────
@@ -5019,7 +5263,9 @@ function interior(s: Solid, tier: Quality) {
   }
 
   // ── the fireplace ────────────────────────────────────────────────────────
+  base()
   hearth(s)
+  wood()
 
   // ── the big table, and the paper on it ───────────────────────────────────
   const tcx = (TABLE_X0 + TABLE_X1) / 2
@@ -5071,6 +5317,7 @@ function interior(s: Solid, tier: Quality) {
    * beat's answer to "the table's edges should be visible somewhere in the
    * frame", and it is worth six centimetres of sheet to double its length.
    */
+  base()
   sheet(s, PAPER_X0, PAPER_X1, PAPER_Z0, PAPER_Z1, TABLE_Y + 0.002, T_PAPER, PAPER_RIM, PAPER_LIFT, true)
   /*
    * The shadow, on the two edges `LIGHT` is behind — north and east.
@@ -5119,6 +5366,7 @@ function interior(s: Solid, tier: Quality) {
    */
   slip(s, -1.55, -2.05, 0.4, 0.6, -0.19, TABLE_Y + 0.006, T_PAPER + 0.045)
   if (props >= 1) slip(s, -2.62, -1.85, 0.26, 0.22, 0.35, TABLE_Y + 0.006, T_SHEET)
+  wood()
   /*
    * **Nothing else stands on this table, and that is the second attempt.**
    *
@@ -5221,6 +5469,7 @@ function interior(s: Solid, tier: Quality) {
   // room: the one thing between hearth and table that is neither floor nor
   // furniture, landing exactly where the camera's pan crosses the floor.
   field(s, -2.9, -0.2, -4.5, -2.7, IN_Y + 0.008, T_RUG, 3, 2)
+  base()
 
   s.hearth = false
 }
@@ -5499,6 +5748,204 @@ function skirt(
       tri(s, q0, q1, [cx, y0 + h * 0.55, cz], T_SNOW, [mx * 0.3, 1, mz * 0.3])
     }
   }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   The hut — what the Cebu theme stands where the cabin is
+   ──────────────────────────────────────────────────────────────────────────
+
+   A bahay kubo: the same footprint, the same door, the same two windows and
+   the same room — every number the walk and the card grid are measured
+   against is untouched — with the walls lifted onto stilts, a steep thatched
+   hip roof in place of the gables, bamboo battens across sawali panels in
+   place of log courses, coconut palms where the pines were, and the sea where
+   the treeline was. Built by the same helpers, in the same voice, so it sits
+   beside the Cebu art kit the way the cabin sits beside the winter one.
+   ──────────────────────────────────────────────────────────────────────────*/
+
+/** Where the hut's walls start: 14cm below the deck, so a strip of open air
+ *  and the stilts show under the floor. The floor itself (IN_Y) is unmoved. */
+const HUT_BASE = DECK_Y - 0.14
+
+/** A steep four-sided thatch roof with a short ridge and wide eaves. */
+function hipRoof(s: Solid) {
+  s.pigment = PIG_THATCH
+  const EX = EAVE_X + 0.5
+  const EY = EAVE_Y
+  const RY = RIDGE_Y + 0.45
+  const Z0 = ROOF_Z0 + 0.75
+  const Z1 = ROOF_Z1 - 0.75
+  const RZ0 = ROOF_Z0 - 1.35
+  const RZ1 = ROOF_Z1 + 1.35
+  for (const sign of [-1, 1]) {
+    const ex = sign * EX
+    const up: V = [sign * -0.46, 0.89, 0]
+    quad(s, [ex, EY, Z0], [0, RY, RZ0], [0, RY, RZ1], [ex, EY, Z1], T_ROOF, up)
+    quad(
+      s,
+      [ex, EY - ROOF_T, Z0],
+      [0, RY - ROOF_T, RZ0],
+      [0, RY - ROOF_T, RZ1],
+      [ex, EY - ROOF_T, Z1],
+      T_ROOF * 0.8,
+      [-up[0], -up[1], 0],
+    )
+    // fascia along the long eave
+    quad(s, [ex, EY - ROOF_T, Z1], [ex, EY - ROOF_T, Z0], [ex, EY, Z0], [ex, EY, Z1], T_TRIM, [sign, 0, 0])
+    // three courses of thatch lying on the slope, reading as layers at 12m
+    for (let i = 1; i <= 3; i++) {
+      const k = i / 4
+      const x = ex * (1 - k)
+      const y = EY + (RY - EY) * k + 0.03
+      const za = Z0 - (Z0 - RZ0) * k
+      const zb = Z1 + (RZ1 - Z1) * k
+      const x2 = ex * (1 - k + 0.035)
+      const y2 = y - (RY - EY) * 0.035
+      quad(s, [x2, y2, za - 0.05], [x, y, za], [x, y, zb], [x2, y2, zb + 0.05], T_ROOF * 0.72, up)
+    }
+  }
+  // the two hips
+  tri(s, [-EX, EY, Z0], [EX, EY, Z0], [0, RY, RZ0], T_ROOF * 0.94, [0, 0.55, 1])
+  tri(s, [EX, EY, Z1], [-EX, EY, Z1], [0, RY, RZ1], T_ROOF * 0.94, [0, 0.55, -1])
+  tri(s, [EX, EY - ROOF_T, Z0], [-EX, EY - ROOF_T, Z0], [0, RY - ROOF_T, RZ0], T_ROOF * 0.8, [0, -0.55, 1])
+  tri(s, [-EX, EY - ROOF_T, Z1], [EX, EY - ROOF_T, Z1], [0, RY - ROOF_T, RZ1], T_ROOF * 0.8, [0, -0.55, -1])
+  quad(s, [-EX, EY - ROOF_T, Z0], [EX, EY - ROOF_T, Z0], [EX, EY, Z0], [-EX, EY, Z0], T_TRIM, [0, 0, 1])
+  quad(s, [EX, EY - ROOF_T, Z1], [-EX, EY - ROOF_T, Z1], [-EX, EY, Z1], [EX, EY, Z1], T_TRIM, [0, 0, -1])
+  // the ridge cap
+  s.pigment = PIG_WOOD
+  box(s, 0, RY - 0.04, (RZ0 + RZ1) / 2, 0.34, 0.16, RZ0 - RZ1 + 0.24, T_TRIM)
+  s.pigment = PIG_BASE
+}
+
+/** Bamboo battens over sawali: what makes a hut a hut at twelve metres. */
+function sawali(s: Solid) {
+  s.pigment = PIG_WOOD
+  const top = WALL_H - 0.02
+  // the front: a post either side of the door and one past each window
+  for (const x of [-2.72, -1.02, 1.02, 2.72]) {
+    post(s, x, HUT_BASE, CAB_Z0 + 0.06, 0.05, top - HUT_BASE, T_TIMBER, 0.3)
+  }
+  // the west flank, which the walk looks straight down: clear of its window
+  for (const z of [-1.1, -4.75, -5.7]) {
+    post(s, -CAB_HW - 0.06, HUT_BASE, z, 0.05, top - HUT_BASE, T_TIMBER, 0.3)
+  }
+  // top plates along the front and the flank, and a lighter mid band
+  box(s, 0, top - 0.08, CAB_Z0 + 0.05, CAB_HW * 2 + 0.24, 0.1, 0.1, T_TIMBER)
+  box(s, -CAB_HW - 0.05, top - 0.08, (CAB_Z0 + CAB_Z1) / 2, 0.1, 0.1, CAB_Z0 - CAB_Z1 + 0.24, T_TIMBER)
+  panel(s, -CAB_HW, -DOOR_HW - 0.2, 1.08, 1.14, CAB_Z0 + 0.012, T_TRIM)
+  panel(s, DOOR_HW + 0.2, CAB_HW, 1.08, 1.14, CAB_Z0 + 0.012, T_TRIM)
+  s.pigment = PIG_BASE
+}
+
+/** The posts the hut stands on, and the underside of its floor. */
+function stilts(s: Solid) {
+  s.pigment = PIG_WOOD
+  const xs = [-CAB_HW + 0.12, -1.1, 1.1, CAB_HW - 0.12]
+  const zs = [CAB_Z0 - 0.12, -3, CAB_Z1 + 0.12]
+  for (const x of xs) {
+    for (const z of zs) {
+      if (Math.abs(x) < 2 && z !== -3) continue
+      post(s, x, PLANT_Y - 0.05, z, 0.09, HUT_BASE - PLANT_Y + 0.08, T_TIMBER, 0.6)
+    }
+  }
+  quad(
+    s,
+    [-CAB_HW, HUT_BASE, CAB_Z1],
+    [CAB_HW, HUT_BASE, CAB_Z1],
+    [CAB_HW, HUT_BASE, CAB_Z0],
+    [-CAB_HW, HUT_BASE, CAB_Z0],
+    T_BEAM,
+    [0, -1, 0],
+  )
+  s.pigment = PIG_BASE
+}
+
+/** A coconut palm: a leaning trunk in stepped segments, a crown of drooping
+ *  fronds, three nuts. Same footprint and height budget as the pine it
+ *  replaces, so the tree table and the shadows cast on the sand still hold. */
+function palm(s: Solid, x: number, z: number, y0: number, scale: number, rot: number, tone: number, tall: number) {
+  const h = tall * scale * 0.92
+  const lean = 0.18 * h
+  const lx = Math.cos(rot) * lean
+  const lz = Math.sin(rot) * lean
+  // one rotation for every segment, so the three faces line up down the
+  // trunk and the lean reads as a curve rather than a stair
+  const SEGS = 7
+  s.pigment = PIG_WOOD
+  for (let i = 0; i < SEGS; i++) {
+    const k = i / SEGS
+    const r = (0.14 - 0.06 * k) * scale
+    post(s, x + lx * k * k, y0 + h * k, z + lz * k * k, r, h / SEGS + 0.03, T_TRUNK + 0.12, rot)
+  }
+  const cx = x + lx
+  const cy = y0 + h
+  const cz = z + lz
+  s.pigment = PIG_LEAF
+  const N = 8
+  for (let i = 0; i < N; i++) {
+    const a = rot * 0.3 + (i / N) * Math.PI * 2 + (i % 2) * 0.12
+    const L = (1.55 + 0.22 * ((i * 7) % 3)) * scale
+    const droop = 0.62 * L
+    const tip: V = [cx + Math.cos(a) * L, cy + 0.2 * scale - droop, cz + Math.sin(a) * L]
+    const mx = cx + Math.cos(a) * L * 0.48
+    const mz = cz + Math.sin(a) * L * 0.48
+    const my = cy + 0.34 * scale - droop * 0.2
+    const w = 0.3 * scale
+    const px = -Math.sin(a) * w
+    const pz = Math.cos(a) * w
+    const t = tone * (0.8 + 0.3 * ((i % 3) / 2))
+    const outN: V = [Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35]
+    tri(s, [cx, cy + 0.1 * scale, cz], [mx + px, my, mz + pz], tip, t, outN)
+    tri(s, [cx, cy + 0.1 * scale, cz], tip, [mx - px, my, mz - pz], t * 0.92, outN)
+  }
+  s.pigment = PIG_WOOD
+  for (let i = 0; i < 3; i++) {
+    const a = rot + i * 2.1
+    stone(s, cx + Math.cos(a) * 0.15 * scale, cz + Math.sin(a) * 0.15 * scale, cy - 0.14 * scale, 0.09 * scale, 0.13 * scale, T_TREE, a)
+  }
+  s.pigment = PIG_BASE
+}
+
+/** The sea, from a little past the sand patch out to where the painted
+ *  lagoon stands: one plane, a foam line at the shore, a few crests. */
+const SHORE_Z = -24
+function sea(s: Solid) {
+  s.pigment = PIG_WATER
+  const Y = PLANE_Y + 0.05
+  quad(s, [-PLANE_HX, Y, -71.8], [PLANE_HX, Y, -71.8], [PLANE_HX, Y, SHORE_Z], [-PLANE_HX, Y, SHORE_Z], 0.6, [0, 1, 0])
+  quad(s, [-PLANE_HX, Y + 0.015, SHORE_Z + 1.1], [PLANE_HX, Y + 0.015, SHORE_Z + 1.1], [PLANE_HX, Y + 0.015, SHORE_Z - 0.4], [-PLANE_HX, Y + 0.015, SHORE_Z - 0.4], 0.98, [0, 1, 0])
+  for (let i = 0; i < 7; i++) {
+    const z = SHORE_Z - 2.4 - i * 3.6
+    const x0 = -70 + i * 11
+    const x1 = x0 + 30 + i * 7
+    quad(s, [x0, Y + 0.02, z], [x1, Y + 0.02, z], [x1, Y + 0.02, z - 0.5], [x0, Y + 0.02, z - 0.5], 0.95, [0, 1, 0])
+  }
+  s.pigment = PIG_BASE
+}
+
+/** A small pool on the hut's east side, sunk in a pale coping. */
+function poolside(s: Solid) {
+  const X0 = 5.0
+  const X1 = 8.8
+  const Z0 = -0.6
+  const Z1 = -4.4
+  const TOP = PLANT_Y + 0.34
+  const W = 0.36
+  s.pigment = PIG_BASE
+  box(s, (X0 + X1) / 2, PLANT_Y - 0.3, Z0 + W / 2, X1 - X0 + W * 2, TOP - PLANT_Y + 0.3, W, 0.92)
+  box(s, (X0 + X1) / 2, PLANT_Y - 0.3, Z1 - W / 2, X1 - X0 + W * 2, TOP - PLANT_Y + 0.3, W, 0.92)
+  box(s, X0 - W / 2, PLANT_Y - 0.3, (Z0 + Z1) / 2, W, TOP - PLANT_Y + 0.3, Z0 - Z1, 0.92)
+  box(s, X1 + W / 2, PLANT_Y - 0.3, (Z0 + Z1) / 2, W, TOP - PLANT_Y + 0.3, Z0 - Z1, 0.92)
+  s.pigment = PIG_WATER
+  const WY = TOP - 0.1
+  quad(s, [X0, WY, Z0], [X1, WY, Z0], [X1, WY, Z1], [X0, WY, Z1], 0.72, [0, 1, 0])
+  // caught light: three pale slivers on the water
+  for (let i = 0; i < 3; i++) {
+    const x = X0 + 0.7 + i * 1.1
+    const z = Z0 - 0.9 - i * 0.8
+    tri(s, [x, WY + 0.01, z], [x + 0.9, WY + 0.01, z - 0.25], [x + 0.35, WY + 0.01, z - 0.7], 0.98, [0, 1, 0])
+  }
+  s.pigment = PIG_BASE
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

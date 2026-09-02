@@ -902,10 +902,10 @@ export function Hero() {
             so the near one passes in front of it; both are behind the ranges,
             which is what keeps them sky rather than fog. */}
         <div ref={cloud2} className="hero__cloud-drift hero__cloud-drift--far">
-          <StillArt art="props/moon-cloud" className="hero__cloud hero__cloud--far" />
+          <StillArt art="props/moon-cloud" light="props/cumulus-far" className="hero__cloud hero__cloud--far" />
         </div>
         <div ref={cloud} className="hero__cloud-drift">
-          <StillArt art="props/moon-cloud" className="hero__cloud" />
+          <StillArt art="props/moon-cloud" light="props/cumulus-near" className="hero__cloud" />
         </div>
 
         {/* The haze is FIRST so the silhouette paints over it, and it is
@@ -916,7 +916,7 @@ export function Hero() {
             exactly zero rather than nearly zero. Hero.css has the rest. */}
         <div ref={rear} className="hero__rear-drift">
           <div className="hero__rear-haze" />
-          <StillArt art="landscapes/mountain-ridge-rear" className="hero__rear" />
+          <StillArt art="landscapes/mountain-ridge-rear" light="landscapes/far-island" className="hero__rear" />
         </div>
 
         {/* The third range, and it carries NO haze — which is the one thing
@@ -928,7 +928,7 @@ export function Hero() {
             hide a cut nobody can reach is a layer paid for and never seen.
             Hero.css has the arithmetic and the worst case. */}
         <div ref={mid} className="hero__mid-drift">
-          <StillArt art="landscapes/mountain-ridge-mid" className="hero__mid" />
+          <StillArt art="landscapes/mountain-ridge-mid" light="landscapes/island-mid" className="hero__mid" />
         </div>
 
         {/* The basin. One gradient in the near range's own foot ink, anchored
@@ -952,12 +952,12 @@ export function Hero() {
             compositor `transform`, and one element gets one writer of each.
             The wrapper takes the translate; the art takes the transform. */}
         <div ref={weather} className="hero__weather">
-          <StillArt art="landscapes/valley-fog" className="hero__weather-art" />
+          <StillArt art="landscapes/valley-fog" light="landscapes/shore-foam" className="hero__weather-art" />
         </div>
 
         <div ref={ridge} className="hero__ridge-drift">
           <div className="hero__ridge-haze" />
-          <StillArt art="landscapes/mountain-ridge" className="hero__ridge" />
+          <StillArt art="landscapes/mountain-ridge" light="landscapes/sea-band" className="hero__ridge" />
         </div>
 
         <Starfield />
@@ -965,7 +965,7 @@ export function Hero() {
         <div ref={bloom} className="hero__bloom" />
 
         <div ref={pine} className="hero__pine-drift">
-          <StillArt art="props/tall-pine" className="hero__pine" />
+          <StillArt art="props/tall-pine" light="props/coconut-palm-tall" className="hero__pine" />
         </div>
 
         {/* The nearest thing in the frame: a bough entering from the TOP-LEFT,
@@ -974,7 +974,7 @@ export function Hero() {
             carries its own veil — and it is held clear of the copy column by
             measurement rather than by hope; Hero.css has that table. */}
         <div ref={branch} className="hero__branch-drift">
-          <StillArt art="props/near-branch" className="hero__branch" />
+          <StillArt art="props/near-branch" light="props/palm-frond" className="hero__branch" />
         </div>
 
         <div className="hero__grain" />

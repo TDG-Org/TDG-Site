@@ -427,6 +427,7 @@ export function Origin() {
       <div className="origin__tops" aria-hidden="true">
         <ThemedArt
           art="landscapes/far-treeline"
+          light="landscapes/far-palms"
           className="origin__tops-art"
           factor={FAR_TOPS_FACTOR}
         />
@@ -459,7 +460,7 @@ export function Origin() {
           viewport on purpose, and the section's 130svh clip margin opens the
           sides as well as the top. */}
       <div className="origin__mist" aria-hidden="true">
-        <ThemedArt art="atmosphere/mist-bank" className="origin__mist-art" factor={MIST_FACTOR} />
+        <ThemedArt art="atmosphere/mist-bank" light="atmosphere/sea-haze" className="origin__mist-art" factor={MIST_FACTOR} />
       </div>
 
       {/* ── the treeline, and it is the thing that welds the two bands ──
@@ -509,7 +510,7 @@ export function Origin() {
             of the timeline below and has been since this section was written.
             One class name, two meanings, is a stylesheet that breaks on a
             selector nobody looked twice at. */}
-        <ThemedArt art="props/pine-row" className="origin__pines" factor={NEAR_ROW_FACTOR} />
+        <ThemedArt art="props/pine-row" light="props/palm-row" className="origin__pines" factor={NEAR_ROW_FACTOR} />
       </div>
 
       {/* ── the ground, and it crosses the boundary ───────────────────
@@ -541,7 +542,7 @@ export function Origin() {
           inside it, so the clip travels with the thing it is clipping and the
           drift's own bottom edge cannot slide out from under it. */}
       <div ref={ground} className="origin__ground" aria-hidden="true">
-        <StillArt art="landscapes/snow-bank" className="origin__snow" />
+        <StillArt art="landscapes/snow-bank" light="landscapes/sand-bank" className="origin__snow" />
       </div>
 
       {/* ── the lamppost ─────────────────────────────────────
@@ -602,7 +603,7 @@ export function Origin() {
           move. */}
       <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
         <span className="origin__lamp-pool" />
-        <StillArt art="hero/lamppost-left" className="origin__lamp" />
+        <StillArt art="hero/lamppost-left" light="hero/lamppost-cebu" className="origin__lamp" />
         {/* Two haloes, not one. The owner asked for "a 2nd layer bigger glow
             for the light pole, but more faint/transparent" — which is what a
             lantern in cold air actually does: a tight bright halo on the glass

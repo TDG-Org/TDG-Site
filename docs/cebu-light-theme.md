@@ -1,5 +1,15 @@
 # The Cebu light theme · what to make, what changes, and how it stays fast
 
+> **Status: implemented in 2.44.0, the same day.** The owner supplied the
+> pieces as JPG plates and props; `scripts/cebu-art.py` cut them into the
+> kit. What differs from the plan below: the sea took the NEAR ridge slot (so
+> its horizon bites the sun) and the two islands took the far ones, pinned to
+> a `--horizon` the hero stage now publishes; the beach is one plate rather
+> than a separate shore and sand bank; the building is a nipa hut rather than
+> a white villa, with the hearth kept as a dapog and a small pool beside it;
+> and the 3D scene grew per-vertex pigment classes so a palm can be green.
+> The kit README carries the final slot table.
+
 Written 2026-09-01 from the live page, not from memory: every section of the
 home page was captured in both themes at 1600×900 and 390×844, every art slot
 was measured off the CSS, and every place the light theme differs from dark

@@ -383,8 +383,8 @@
      visible lift beside the disc is 3 units rather than 6, the glow reads the
      same because the ground under it fell as far as the gain did, and the
      measurement the pass is judged on keeps the difference. */
-  --hero-air-gain: 0.09;
-  --hero-air-core-gain: 0.12;
+  --hero-air-gain: 0.5;
+  --hero-air-core-gain: 0.66;
 
   /* 38% -> 18%, and this one turned out to be the single biggest thing in the
      frame washing out the measurement. See the dark half for what it is; what
@@ -400,19 +400,19 @@
      still a visible ring of light around the disc against a sky that is now
      dark enough to show one. It also sharpens the rim, which is the other
      half of what "visible and clear" asked for. */
-  --hero-moon-air: color-mix(in srgb, var(--moon-halo) 18%, transparent);
+  --hero-moon-air: var(--moon-halo);
 
   /* 20%. See the dark half for why this needs a second name at all and for
      the 254 -> 238 measurement it undoes; at 20% the disc's centre reads 248
      and the three maria are still there at about 4 units below it. */
-  --hero-moon-mare: color-mix(in srgb, var(--moon-mare) 20%, transparent);
+  --hero-moon-mare: transparent;
 
   /* 0.10 -> 0.20 with the artwork. The dark half carries both readings and
      why the old pair could not survive the gradient being replaced by a
      painted bank. Twice dark's alpha buys a tenth of dark's visible step,
      because a pale bank on a pale sky is a much smaller difference than a
      pale bank on a night one. */
-  --hero-weather-veil: 0.2;
+  --hero-weather-veil: 0.78;
 
   /* A little over dark's, and the dark half carries the two readings that set
      the pair. A pale wisp on a pale sky and a dark one on a night sky are not
@@ -420,10 +420,10 @@
      scroll 700, where the wisp has lagged 139px and is beside the climbing
      disc, the sky sample this section measures its contrast at lands INSIDE
      the cloud, and every point of alpha there comes off that number. */
-  --hero-cloud-veil: 0.46;
+  --hero-cloud-veil: 0.92;
 
   /* Half of dark's. See :root. */
-  --hero-valley-veil: 0.16;
+  --hero-valley-veil: 0.2;
 
   /* --hero-bloom in light opens on rgba(255,255,255,0.9), which was composed
      for a bloom sitting in the top corner of a near-white sky. It sits on the
@@ -444,7 +444,7 @@
      at length: the sky this glow is laid on dropped about 17 units, so the
      same alpha now lifts it further, and the lift immediately outside the
      disc's rim is the one place this section cannot afford it. */
-  --hero-bloom-gain: 0.3;
+  --hero-bloom-gain: 0.95;
 
   /* Dark motes, because in light the dust is what the beam is NOT passing
      through. The gain goes UP every time this theme's sky comes down, and it
@@ -457,8 +457,8 @@
      bracket, so 0.72 x 220/190 = 0.83. Rounded up to 0.85, because the same
      shade costs the WHITE glow beside these motes nothing and a mote that is
      only just visible is not dust, it is dirt on the screen. */
-  --hero-dust: rgb(20, 20, 26);
-  --hero-dust-gain: 0.85;
+  --hero-dust: rgb(255, 250, 232);
+  --hero-dust-gain: 1;
 }
 
 /* ── the section ───────────────────────────────────────────────────────────
@@ -773,6 +773,11 @@
      Together: centre 777.6, 668.7 -> 734.4, 674.5 at 1440x900. 43px left, 6px
      DOWN from where it began two passes ago, 15% more moon, and a lower limb a
      sixth of the way into the mountains. */
+  /* The near range's own --art-rise, published under a second name that the
+     rear and mid wrappers do NOT shadow (each overrides --art-rise for
+     itself). In the Cebu theme the near slot is the SEA, so this is where
+     the horizon is, and the two islands are parked on it. */
+  --horizon: var(--art-rise);
   --moon-w: clamp(230px, 30vw, 470px);
   --moon-x: 51%;
   --moon-drop: 0.053;
@@ -1141,10 +1146,24 @@
   --haze-ink: var(--terrain-haze-rear);
 }
 [data-theme='light'] .hero__rear-drift {
-  /* the light artwork is drawn higher in the same box — see the table above */
-  --art-head: 0.1601;
-  --art-foot-hi: 0.06754;
-  --art-foot-lo: 0.06692;
+  /* Cebu: landscapes/far-island. An island stands ON the water, so its box is
+     pinned to the sea's horizon (--horizon, from the stage) and the head is
+     the file's own foot: the waterline at 0.998 of the file lands exactly on
+     the sea's top edge and the hill rises from there. */
+  --art-rise: var(--horizon);
+  --art-head: 0.0014;
+  --art-foot-hi: 0.0018;
+  --art-foot-lo: 0.0014;
+}
+
+/* The mid range shares one head between the two winter files (the table above
+   says why). The Cebu piece in that slot, landscapes/island-mid, starts its ink
+   at 0.593 of the file; a shared 0.2688 would float it 0.13 widths above
+   --art-rise, so it gets its own. */
+[data-theme='light'] .hero__mid-drift {
+  /* the same rule as the rear island: foot on the horizon */
+  --art-rise: var(--horizon);
+  --art-head: 0.0009;
 }
 
 /* ── the third range, and what it is standing in for ───────────────────────
@@ -1249,6 +1268,15 @@
   --haze-ink: var(--terrain-haze);
 }
 [data-theme='light'] .hero__ridge-drift {
+  /* The winter ranges are drawn at --art-far so three of them can overlap as
+     haze. The sea is one opaque body of water and the islands behind it
+     must not show through it. --hero-sink still takes it away under Origin. */
+  opacity: var(--hero-sink, 1);
+  /* ── Cebu: landscapes/sea-band ────────────────────────────────────────
+     The file's top row IS the horizon and the ink runs off the bottom, so
+     the head is the whole box (a third of its width) and there is no cut
+     foot for the haze to dissolve. The numbers below the argument are that
+     file's; the argument itself, about the winter pair, still stands. */
   /* ── the head this range did NOT have, and what it cost ─────────────────
      The table above says the near range's two artworks start their ink at
      0.5141 and 0.5760 of the file — heads of 0.1620 and 0.1413 of the box's
@@ -1274,9 +1302,9 @@
      and it is what makes ONE --moon-drop true in both themes: with it the two
      themes' skylines at the moon's column differ by 2px at 1440x900 instead
      of by 43. */
-  --art-head: 0.1413;
-  --art-foot-hi: 0.03002;
-  --art-foot-lo: 0.00876;
+  --art-head: 0.3329;
+  --art-foot-hi: 0.0005;
+  --art-foot-lo: 0.0005;
 }
 
 /* ── where the mountains stop being mountains ──────────────────────────────
@@ -1585,9 +1613,9 @@
   transform: translate3d(-4.2%, 0, 0);
 }
 [data-theme='light'] .hero__weather-art {
-  /* the light artwork's ink starts higher in the same box — see the head
-     tables on the ranges above, which is the same measurement on other files */
-  --fog-top: 0.8143;
+  /* Cebu: landscapes/shore-foam. Torn shards reach the top row; the foam's
+     mass starts at ~0.17 of the file, which is the edge that reads. */
+  --fog-top: 0.83;
 }
 @keyframes heroWeather {
   0%,
@@ -2659,4 +2687,25 @@
   .hero__strip {
     opacity: 1;
   }
+}
+
+
+/* ── the Cebu clouds ───────────────────────────────────────────────────────
+   props/cumulus-near and -far are whole cumulus rather than torn wisps, and a
+   whole cloud centred where the wisp was covers the sun's upper half at rest.
+   The near one sits 0.2 disc-widths higher, so the frame opens on a sun with
+   a cloud on its crown; the far one, mirrored and larger, goes up and left
+   and reads as a second cloud in the sky rather than a veil over the disc.
+   Both still ride the same drift wrappers, so the exit is unchanged. */
+[data-theme='light'] .hero__cloud {
+  /* centred 0.56 disc-widths above the disc's centre: it kisses the sun's
+     crown at rest and the sun rises into it on the exit, which is the
+     crossing the winter wisp was placed for */
+  bottom: calc(var(--moon-cy) + var(--moon-w) * 0.56 - var(--cloud-w) * 0.1667);
+  opacity: calc(var(--hero-cloud-veil) * 0.8);
+}
+[data-theme='light'] .hero__cloud--far {
+  left: calc(var(--moon-x) - var(--moon-w) * 0.62);
+  bottom: calc(var(--moon-cy) + var(--moon-w) * 0.98 - var(--cloud-w) * 0.1667);
+  opacity: calc(var(--hero-cloud-veil) * 0.55);
 }

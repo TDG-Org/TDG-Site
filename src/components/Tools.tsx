@@ -281,7 +281,7 @@ export function Tools() {
         </div>
         <div ref={blob} className="blob tools__blob" />
 
-        <ThemedArt art="landscapes/stone-footbridge" className="tools__bridge" factor={-0.05} />
+        <ThemedArt art="landscapes/stone-footbridge" light="landscapes/beach-pier" className="tools__bridge" factor={-0.05} />
         {/* The haze BETWEEN the bridge and the boulders, and it is drawn
             between them in the DOM for exactly that reason: it washes the
             bridge's footings and the boulders are drawn over it crisp, which
@@ -293,7 +293,7 @@ export function Tools() {
             and what guardrail 8's "plus optional low foliage" clause permits
             beside an anchor. `StillArt` for the same reason as the bench, and
             after the spray so it is crisp where the bench is hazed. */}
-        <StillArt art="props/bushes-reeds" className="tools__reeds" />
+        <StillArt art="props/bushes-reeds" light="props/pandan-clump" className="tools__reeds" />
         {/* The fence along the near shore — the piece the site owner asked for
             by name in the same sentence that asked for the bench, and which
             did not exist in the kit until this pass. "maybe instead of a tree
@@ -319,11 +319,11 @@ export function Tools() {
             is up the bank in front of them, and the rocks are underfoot in
             front of both. Everything here is z-index auto, so DOM order is the
             only thing saying so. */}
-        <StillArt art="props/fence-rail" className="tools__fence" />
+        <StillArt art="props/fence-rail" light="props/bamboo-rail" className="tools__fence" />
         {/* The sway box is the boulders' own box, not the section: see useSway.
             One writer per element — pointer here, scroll on the <img> inside. */}
         <div ref={sway} className="tools__rocks-sway">
-          <ThemedArt art="props/boulder-cluster" className="tools__rocks" factor={-0.15} />
+          <ThemedArt art="props/boulder-cluster" light="props/coral-rocks" className="tools__rocks" factor={-0.15} />
         </div>
         {/* The far bank's own colour coming across the water, last of all, so
             every cut end at this section's bottom edge dissolves into the

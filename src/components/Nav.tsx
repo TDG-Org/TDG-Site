@@ -31,6 +31,19 @@ const DEV_LINK = { href: DEV_HASH, label: 'Developer' } as const
  */
 const BLESSING = ['Jesus', 'Loves', 'You'] as const
 
+/** Where each word's first letter falls in the phrase, so a letter's stagger
+ *  index (`--k` in Nav.css) counts across the words rather than restarting. */
+const LETTER_OFFSET = BLESSING.reduce<number[]>((acc, _word, i) => {
+  acc.push(i === 0 ? 0 : acc[i - 1] + BLESSING[i - 1].length)
+  return acc
+}, [])
+/** How many letters the phrase has; the last one's stagger is what BLESS_MS
+ *  has to outlast. */
+const LETTERS = BLESSING.join('').length
+/** The per-letter stagger. Must match `.nav__bless-letter`'s animation-delay
+ *  in Nav.css, which is where it is spent. */
+const LETTER_STAGGER_MS = 38
+
 /**
  * How long the whole flourish lives, roll-out through roll-up, in ms.
  *
@@ -46,7 +59,7 @@ const BLESSING = ['Jesus', 'Loves', 'You'] as const
  * four seconds to do a thing that happens once; and it ends by itself and is
  * cleared on unmount and on a second press, so nothing outlives the strip.
  */
-const BLESS_MS = 4600
+const BLESS_MS = 4250 + LETTERS * LETTER_STAGGER_MS + 256 /* --bless-life, the last letter's start, slack */
 
 /** The size the phrase wants, and must match `--bless-size` in Nav.css. */
 const BLESS_SIZE = 17
@@ -805,13 +818,22 @@ export function Nav({
             <span key={bless} ref={strip} className="nav__bless" aria-hidden="true">
               <span className="nav__bless-aura" />
               <span className="nav__bless-clip">
+                {/* Each LETTER rolls out on its own beat now, not each word:
+                    `--k` is the letter's index across the whole phrase and
+                    Nav.css spends it as the stagger, so the line reads as
+                    written rather than as stamped. The word span stays as the
+                    unit the gap and the clip are measured by. */}
                 {BLESSING.map((word, i) => (
-                  <span
-                    key={word}
-                    className="nav__bless-word"
-                    style={{ '--i': i } as React.CSSProperties}
-                  >
-                    {word}
+                  <span key={word} className="nav__bless-word" style={{ '--i': i } as React.CSSProperties}>
+                    {[...word].map((ch, j) => (
+                      <span
+                        key={j}
+                        className="nav__bless-letter"
+                        style={{ '--k': LETTER_OFFSET[i] + j } as React.CSSProperties}
+                      >
+                        {ch}
+                      </span>
+                    ))}
                   </span>
                 ))}
               </span>

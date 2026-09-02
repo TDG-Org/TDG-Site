@@ -27,19 +27,38 @@ type ArtName = string
  */
 function Art({
   art,
+  light,
   className,
   moves,
   elementRef,
 }: {
   art: ArtName
+  light?: ArtName
   className: string
   moves: boolean
   elementRef?: RefObject<HTMLImageElement | null>
 }): JSX.Element {
   const { theme } = useTheme()
+  /*
+   * ── `light`: the Cebu theme is a different PICTURE, not a different ink ──
+   * The winter kit's two files per piece are one drawing in two palettes, so
+   * one name with a theme suffix was the whole story. The Cebu set replaces
+   * the light picture outright — a palm where the pine was, the sea where the
+   * ridge was — and a palm saved as `pine-row-light.webp` would be a lie the
+   * next reader has to discover. So a slot may name its light piece: the dark
+   * name stays the slot's identity and every winter call site is untouched.
+   *
+   * `data-twin` carries the OTHER theme's URL for `theme/artPrefetch.ts`,
+   * which used to derive the twin by swapping the suffix on the same name and
+   * cannot once the two themes are two names.
+   */
+  const shown = theme === 'light' && light ? light : art
+  const twin = theme === 'light' ? art : (light ?? art)
+  const twinTheme = theme === 'light' ? 'dark' : 'light'
   return (
     <img
       ref={elementRef}
+      data-twin={asset(`assets/parallax/${twin}-${twinTheme}.webp`)}
       className={`scene__art${moves ? ' scene__art--moves' : ''} ${className}`}
       /* `.webp`, not `.png`, and this is not a preference.
          The kit ships both: the PNG is the source art the illustrator's tool
@@ -56,7 +75,7 @@ function Art({
          that had already grown to 36 and 35.4 MB. Nothing about the argument
          needs the number, and the number belongs beside the files.
          `asset()`, never a leading slash — rule 15. */
-      src={asset(`assets/parallax/${art}-${theme}.webp`)}
+      src={asset(`assets/parallax/${shown}-${theme}.webp`)}
       alt=""
       aria-hidden="true"
       loading="lazy"
@@ -90,15 +109,17 @@ function Art({
  *  usual choice for anything below the hero. */
 export function ThemedArt({
   art,
+  light,
   className,
   factor,
 }: {
   art: ArtName
+  light?: ArtName
   className: string
   factor: number
 }): JSX.Element {
   const ref = useParallax<HTMLImageElement>(factor)
-  return <Art art={art} className={className} moves elementRef={ref} />
+  return <Art art={art} light={light} className={className} moves elementRef={ref} />
 }
 
 /**
@@ -122,20 +143,30 @@ export function ThemedArt({
  */
 export function ThemedHeroArt({
   art,
+  light,
   className,
   factor,
 }: {
   art: ArtName
+  light?: ArtName
   className: string
   factor: number
 }): JSX.Element {
   const ref = useHeroParallax<HTMLImageElement>(factor)
-  return <Art art={art} className={className} moves elementRef={ref} />
+  return <Art art={art} light={light} className={className} moves elementRef={ref} />
 }
 
 /** Art that does not move at all. The right answer more often than it looks:
  *  a prop anchored to a section edge reads as part of the place, and giving
  *  every layer a drift is how a page starts to feel like it is sliding. */
-export function StillArt({ art, className }: { art: ArtName; className: string }): JSX.Element {
-  return <Art art={art} className={className} moves={false} />
+export function StillArt({
+  art,
+  light,
+  className,
+}: {
+  art: ArtName
+  light?: ArtName
+  className: string
+}): JSX.Element {
+  return <Art art={art} light={light} className={className} moves={false} />
 }

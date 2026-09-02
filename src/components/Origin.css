@@ -431,7 +431,8 @@
   pointer-events: none;
 }
 [data-theme='light'] .origin__tops {
-  --tops-head: 0.10373;
+  /* Cebu: landscapes/far-palms, ink from row 352 of 724 */
+  --tops-head: 0.1621;
 }
 .origin__tops-art {
   left: 50%;
@@ -508,7 +509,8 @@
   pointer-events: none;
 }
 [data-theme='light'] .origin__mist {
-  --mist-eye: 0.17032;
+  /* Cebu: atmosphere/sea-haze, an elliptical window centred in its file */
+  --mist-eye: 0.1664;
 }
 .origin__mist-art {
   left: 50%;
@@ -793,7 +795,9 @@
   will-change: translate;
 }
 [data-theme='light'] .origin__ground {
-  --snow-head: 0.21513;
+  /* Cebu: landscapes/sand-bank — the beach, its shallows feathering out above
+     the foam line; ink from row 352 of 724 */
+  --snow-head: 0.1621;
 }
 @media (min-width: 1366px) {
   /* Both halves of "the snow follows the foot", and they are one edit: the

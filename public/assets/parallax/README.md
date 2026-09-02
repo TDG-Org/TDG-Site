@@ -92,6 +92,66 @@ So: one more prop is not free.  Add the `.webp`, keep the sizes above, and if a
 piece cannot justify its kilobytes at the scale it actually renders, it does not
 go in.
 
+## The Cebu set (the light theme since 2.44.0)
+
+**The light theme is a different picture, not the winter one in silver.** Every
+slot the home page draws still names its winter piece, and in light it draws a
+Cebu piece instead: the call site says which with the `light=` prop on
+`ThemedArt` / `StillArt` (`<StillArt art="props/tall-pine"
+light="props/coconut-palm-tall" />`). The dark name stays the slot's identity,
+so nothing about the winter kit moved, and a palm is never filed under
+`pine-row-light.webp`. The `-light` suffix still means "the file the light
+theme loads"; the name in front of it says what is in it.
+
+The set is 24 pieces, every one a `-light.png` source with its `-light.webp`
+beside it, encoded with the same ffmpeg line as the winter kit. They were cut
+from the owner's JPG plates and props by `scripts/cebu-art.py` driven by
+`scripts/cebu-art.json`, which records per piece the source, the mode (a
+white-background key, a per-row sky key, a cropped scene plate with baked
+feathers, a luminance haze, an elliptical patch), the crop, and where the
+cut-out sits on its canvas. Re-running it regenerates the PNGs exactly; the
+sources themselves live in the owner's DevFleet logbook and are not in the
+repo.
+
+| Slot (winter piece) | Cebu piece | Where |
+| --- | --- | --- |
+| `landscapes/mountain-ridge-rear` | `landscapes/far-island` | Hero, the far island, standing on the horizon |
+| `landscapes/mountain-ridge-mid` | `landscapes/island-mid` | Hero, the near island, left |
+| `landscapes/mountain-ridge` | `landscapes/sea-band` | Hero, **the sea** — its top row is the horizon the sun sits on, drawn opaque |
+| `landscapes/valley-fog` | `landscapes/shore-foam` | Hero, the drifting weather |
+| `props/moon-cloud` (near / far) | `props/cumulus-near` / `props/cumulus-far` | Hero, one cloud on the sun's crown, one high and left |
+| `props/tall-pine` | `props/coconut-palm-tall` | Hero, right edge |
+| `props/near-branch` | `props/palm-frond` | Hero, top-left bough |
+| `hero/lamppost-left` | `hero/lamppost-cebu` | Origin, the heritage post, unlit by day (the `--lamp-*` tokens are transparent in light) |
+| `landscapes/far-treeline` | `landscapes/far-palms` | Origin's far shore |
+| `atmosphere/mist-bank` | `atmosphere/sea-haze` | Origin's haze, and Building's fog and mist (one file, three slots) |
+| `props/pine-row` | `props/palm-row` | Origin's near palms |
+| `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach, shallows feathering out above the foam line |
+| `props/window-frost` | `props/capiz-window` | The walk's front stage; a capiz lattice at the corners, drawn at 0.74 rather than the frost's 0.92 |
+| `landscapes/stone-footbridge` | `landscapes/beach-pier` | Tools' floor |
+| `props/bushes-reeds` | `props/pandan-clump` | Tools' floor |
+| `props/fence-rail` | `props/bamboo-rail` | Tools' floor |
+| `props/boulder-cluster` | `props/coral-rocks` | Tools' floor |
+| `props/wayfinding-post` | `props/beach-signpost` | Building, crossing up into Tools |
+| `props/pine-faceted-pair` (both stands) | `props/coconut-pair` | Building |
+| `transitions/stone-stair` | `transitions/beach-steps` | Outro, drawn at 2172×724 like the dark file (the light-only aspect override stays for the winter pair) |
+| `props/lantern-post` | `props/capiz-lantern` | Outro |
+| `props/garden-arch` | `props/coral-arch` | Outro |
+| `transitions/stepping-stones` | `transitions/sand-stones` | Outro |
+| — | `scene/lagoon-matte` | Not a slot: the painted lagoon `origin/CabinScene.tsx` stands far behind the hut, the one raster in the 3D scene |
+
+**The placement fractions are per file, and the Cebu ones are in the same
+light-only blocks the winter light files used** — `Hero.css`'s
+`[data-theme='light'] .hero__rear-drift` and its siblings, `Origin.css`'s
+`--tops-head` / `--mist-eye` / `--snow-head`. Two of those blocks do more
+than measure now: the two islands pin their `--art-rise` to the stage's
+`--horizon` so they stand ON the sea rather than behind it, and the sea's
+wrapper drops the `--art-far` haze opacity because water is not haze. Replace
+a Cebu file and re-measure its ink the way the winter table above was.
+
+**Guardrail 8 still holds.** One structural anchor per section: the pier, the
+signpost, the arch. Nothing in this set is a scene; the scene is the 3D walk.
+
 ## Visual language
 
 - Flat 2D graphic art: chunky low-poly planes, broad matte shapes, and clean
@@ -120,7 +180,8 @@ Every art folder holds four files per piece: `-dark.png` / `-light.png`, and the
 
 **`-dark` and `-light` are separate artwork.  Do not recolour one with a CSS
 filter:** the pair already accounts for the different contrast ranges of TDG's
-two worlds.  This is a different axis from the PNG/WebP pair above and the two
+two worlds — and since 2.44.0 the light file a slot draws is usually a different
+PIECE altogether; see [The Cebu set](#the-cebu-set-the-light-theme-since-2440).  This is a different axis from the PNG/WebP pair above and the two
 are never traded against each other — the `.webp` step is a re-encode of one
 file at a smaller size, and it never touches which of the two artworks is drawn.
 

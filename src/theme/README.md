@@ -94,6 +94,15 @@ Measured on the built site with GitHub Pages' cache headers, at 1440x900 and
 at the cross: **zero bytes fetched during any toggle**, no slot ever without a
 picture.
 
+## Two names, one slot
+
+`artPrefetch.ts` used to derive the inactive theme's file by swapping the
+suffix on the one name a slot had. Since 2.44.0 a slot may draw a different
+piece in light (`ThemedArt`'s `light=` prop), so the element carries
+`data-twin` — the other theme's URL, written by `scene/ThemedArt.tsx` — and
+the prefetch reads that first, falling back to the suffix swap for the winter
+pairs that are still one name.
+
 ## Things to know before you touch it
 
 - **`THEMED` is a selector list**, not a class. Adding a new kind of element that
