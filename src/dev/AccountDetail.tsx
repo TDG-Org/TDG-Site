@@ -1891,7 +1891,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
   const labelOf = (pack: DevStorePack, id: HoldingId | null) =>
     holdingsFor(pack.supportsSubscriptionStates, pack.revoked != null, resettable).find(
       (h) => h.id === id,
-    )?.label ?? 'Unrecognised shape'
+    )?.label ?? 'Unrecognised Shape'
 
   const appRevokeMoved = revokeApp !== (app.revoked != null)
   // While the whole app is blocked every picker is disabled and every draft
