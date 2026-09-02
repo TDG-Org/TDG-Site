@@ -116,7 +116,8 @@ section stylesheets, which is two sections separately deciding one thing.
 **`--seam-lift` is the odd one out: a length, `4vh`.** It is how much of its own
 ink a seam's drift wrapper backfills ABOVE its top edge, so that parallax cannot
 slide a `Seam` path's straight horizontal top edge out from behind the join and
-draw a line across the page. Four section stylesheets declared it; `tokens.css`
+draw a line across the page. Three section stylesheets use it (`Building`,
+`Faith`, `Tools`); `tokens.css`
 carries why 4 and why a `vh` rather than a px, and `Apps.css` carries the
 artefact. Theme-independent, so it has no light twin — and unlike the tokens
 above it, a boundary opts out by having no `::before` rather than by not
@@ -190,7 +191,7 @@ forces them to land.
 | `.badge` `.sr-only` | |
 | `.texture` `.blob` | Decorative layers. |
 
-### Three things about `.card` that will bite you
+### Four things about `.card` that will bite you
 
 1. **Every direct child is forced to `position: relative`** by
    `.card > *:not(.card__spot):not(.card__edge):not(.card__cover)`. That rule is

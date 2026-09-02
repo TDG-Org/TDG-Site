@@ -64,6 +64,17 @@ The block also removed the entitlement when it went on, and remembers exactly
 what it removed, so lifting it restores the same grant with the same dates.
 Nothing in this folder writes any of that; it reads the answer.
 
+**What it removed can still be a bill.** A revoked subscription is still a
+subscription at Stripe, charging every period for a pack the account cannot
+use, and nothing on the site could stop it: the card drew the block and the
+Manage button lived only on an owned card. So a `Revocation` carries
+`held_grants` — the grants the block took — and `Store.tsx` reads that copy for
+exactly one purpose: when it holds a subscription still in force, the revoked
+card says so above the same Manage or Cancel Plan button an owner gets, with
+only the rows that stop money leaving (Cancel Subscription, Payment & Receipts;
+never Change Plan or Buy It Outright, and never Resume). The held copy is not
+ownership: `state.kind` stays `revoked`, and nothing else on the card reads it.
+
 **A failed read is not a revocation.** The blocks are held apart from ownership
 for that reason: a refusal leaves the last answer standing rather than accusing
 somebody of something on a hiccup, which is the same rule the ownership read

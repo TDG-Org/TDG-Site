@@ -263,7 +263,16 @@ function PackCard({
    * must never turn a one-time Theme Pack into a subscription merely because
    * its stored object says `kind: subscription`.
    */
-  const standing = standingOfGrant(subscription ? grant : null)
+  /**
+   * A revoked pack's grant is not on the entitlements row any more — the block
+   * took it, and holds it so lifting gives it back — but the subscription
+   * behind it is still a subscription at Stripe, charging every period for a
+   * thing this account cannot use. The block's held copy is read for exactly
+   * one purpose: so the card can draw the button that stops that. Nothing
+   * else on the card treats it as ownership; `state.kind` is still `revoked`.
+   */
+  const heldGrant = state.kind === 'revoked' ? (state.block.held_grants[pack.id] ?? null) : null
+  const standing = standingOfGrant(subscription ? (grant ?? heldGrant) : null)
 
   /**
    * Is a chooser open over this card, and which one?
@@ -325,7 +334,8 @@ function PackCard({
   // left open with nothing behind it would be a dialog the reader cannot get
   // back to and cannot act in.
   useEffect(() => {
-    if ((state.kind !== 'buy' && state.kind !== 'owned') || (state.kind === 'owned' && !canManage)) {
+    const manages = state.kind === 'owned' || state.kind === 'revoked'
+    if ((state.kind !== 'buy' && !manages) || (manages && !canManage)) {
       setChoosing(false)
       setStep({ at: 'menu' })
     }
@@ -565,7 +575,28 @@ function PackCard({
                   ? `Payment received. ${shown.note}`
                   : shown.note}
             </p>
+          </>
+        )}
 
+        {/*
+          A revoked pack whose subscription is still running. The block took
+          the grant off the entitlements row, not the charge off the card, and
+          the button below is the one thing on the site that can stop it — so
+          the fact is said plainly, above that button, and never folded into
+          the reason for the block.
+        */}
+        {state.kind === 'revoked' && canManage && (
+          <p className="store__note store__note--warn" role="status">
+            {shown.ending
+              ? shown.endsAt
+                ? `Its subscription is already stopping: nothing more is charged after ${formatDay(shown.endsAt.toISOString())}.`
+                : 'Its subscription is already stopping, and nothing more is charged.'
+              : 'Its subscription is still renewing, so you are still being charged for it. Stop the renewals below.'}
+          </p>
+        )}
+
+        {(state.kind === 'owned' || state.kind === 'revoked') && (
+          <>
             {/*
               ONE button, in the same place and at the same size as the Buy
               button the card carries in its other state, per rule 11. A
@@ -616,11 +647,16 @@ function PackCard({
                      one height. See `Store.css`; the buy chooser deliberately
                      does not carry it. */
                   <ul className="store__plan-list" data-menu>
-                    <PlanRow
-                      label="Change Plan"
-                      note="Move between plans on Stripe's page. You pay the difference."
-                      onClick={() => void goToStripe('update')}
-                    />
+                    {/* Only for a pack the account can use. A revoked one gets
+                        the rows that stop money leaving, and nothing that
+                        would move more of it. */}
+                    {state.kind === 'owned' && (
+                      <PlanRow
+                        label="Change Plan"
+                        note="Move between plans on Stripe's page. You pay the difference."
+                        onClick={() => void goToStripe('update')}
+                      />
+                    )}
                     {/* Only while it is still renewing. Offering to stop the
                         renewals of something already stopping is a row that
                         does nothing, and a row that does nothing on a panel
@@ -629,12 +665,12 @@ function PackCard({
                         keys, outright ones included (rule 5's `closed`), and
                         the row is replaced by the reason rather than left to
                         press a cancel it cannot follow with a checkout. */}
-                    {lifetimePlan && !shown.ending && !saleOpen && (
+                    {state.kind === 'owned' && lifetimePlan && !shown.ending && !saleOpen && (
                       <li className="store__plan-notice">
                         Buying it outright is off for now. {saleWording(sale, appTitle).short}
                       </li>
                     )}
-                    {lifetimePlan && !shown.ending && saleOpen && (
+                    {state.kind === 'owned' && lifetimePlan && !shown.ending && saleOpen && (
                       <PlanRow
                         label="Buy It Outright"
                         note={
@@ -651,18 +687,24 @@ function PackCard({
                       />
                     )}
                     {shown.ending ? (
-                      <PlanRow
-                        label="Resume Subscription"
-                        note="Renewals start again, on the same plan. Nothing is charged today."
-                        onClick={() => void changeRenewal(true)}
-                      />
+                      // Not for a revoked pack: renewals it cannot use are not
+                      // something this page will offer to start again.
+                      state.kind === 'owned' && (
+                        <PlanRow
+                          label="Resume Subscription"
+                          note="Renewals start again, on the same plan. Nothing is charged today."
+                          onClick={() => void changeRenewal(true)}
+                        />
+                      )
                     ) : (
                       <PlanRow
                         label="Cancel Subscription"
                         note={
-                          shown.endsAt
-                            ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}.`
-                            : 'Renewals stop. Yours to the end of the period you have paid for.'
+                          state.kind === 'revoked'
+                            ? 'Renewals stop, and nothing more is charged.'
+                            : shown.endsAt
+                              ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}.`
+                              : 'Renewals stop. Yours to the end of the period you have paid for.'
                         }
                         tone="leave"
                         onClick={() => setStep({ at: 'confirm', what: 'cancel' })}
@@ -683,9 +725,11 @@ function PackCard({
                     </p>
                     <p className="store__ask-what">
                       {step.what === 'cancel'
-                        ? shown.endsAt
-                          ? `Nothing more is charged, and nothing is taken away today. Every part of ${pack.name} keeps working until ${formatDay(shown.endsAt.toISOString())}, and you can start the renewals again before then.`
-                          : `Nothing more is charged, and nothing is taken away today. ${pack.name} keeps working to the end of the period you have paid for.`
+                        ? state.kind === 'revoked'
+                          ? `Nothing more is charged. ${pack.name} stays unavailable on this account either way.`
+                          : shown.endsAt
+                            ? `Nothing more is charged, and nothing is taken away today. Every part of ${pack.name} keeps working until ${formatDay(shown.endsAt.toISOString())}, and you can start the renewals again before then.`
+                            : `Nothing more is charged, and nothing is taken away today. ${pack.name} keeps working to the end of the period you have paid for.`
                         : shown.endsAt
                           ? `We stop the renewals first, so you are never charged for both. ${pack.name} stays yours until ${formatDay(shown.endsAt.toISOString())} either way, and Stripe opens in a new tab for the one-off payment.`
                           : `We stop the renewals first, so you are never charged for both. Stripe opens in a new tab for the one-off payment.`}

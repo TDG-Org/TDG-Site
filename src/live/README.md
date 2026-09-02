@@ -14,7 +14,7 @@ real button, a new repo becoming a card — never a downgrade and never a blank.
 | Question | Asked of | What it covers |
 | --- | --- | --- |
 | What repositories does the org show the public? | `api.github.com/orgs/TDG-Org/repos`, unauthenticated | Public repos only: name, description, Website field, topics, whether Pages serves a site |
-| Does `https://tdg-org.github.io/<repo>/` exist? | `tdg-site-deploys`, the edge function beside the site's other two | **Private repos with a public deploy** — Bible Educator is exactly that on the org's Team plan, invisible to the API without a token this site must never carry |
+| Does `https://tdg-org.github.io/<repo>/` exist? | `tdg-site-deploys`, one of the site's nine edge functions | **Private repos with a public deploy** — Bible Educator is exactly that on the org's Team plan, invisible to the API without a token this site must never carry |
 
 The second question is not asked of GitHub Pages directly, although a browser
 could: a hit works, but every miss is a 404 the browser prints in the console
@@ -112,6 +112,8 @@ one hiccup at boot cannot pin "we do not know" for a whole visit.
 
 Callers today: `components/Apps.tsx` (cards and discovered cards),
 `components/Tools.tsx`, `components/Building.tsx` (the MARANATHA panel, verb
-`Play`), and `components/AppPage.tsx` via `liveRepoForPage()` here in
+`Play`), `components/AppPage.tsx` via `liveRepoForPage()` here in
 `useLive.ts`, which reads the RESOLVED cards so the Content tab's overrides
-count.
+count, and `store/sale.ts`, which asks `useLiveAccess` whether an app the
+catalogue still calls unreleased has a live deploy before it decides what that
+app's shop says.

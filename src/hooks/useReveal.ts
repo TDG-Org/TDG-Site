@@ -124,6 +124,10 @@ export function useReveal<T extends HTMLElement>(kind: RevealKind, index = 0) {
 
     // Safety net: if the loop never runs (page opened in a background tab),
     // still show anything that is already on screen.
+    //
+    // Rule 9's exemption, taken: this is the one case the loop cannot cover,
+    // because it is the loop not running that it guards against. One shot,
+    // 1.6 s, paints once at most, and clears itself in the cleanup below.
     const rescue = window.setTimeout(() => {
       if (done || framesRun() > 0) return
       if (el.getBoundingClientRect().top < (window.innerHeight || 800) * 0.92) {

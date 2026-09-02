@@ -326,23 +326,22 @@ it, because this section has already been wrong once.
 | --- | --- | --- |
 | `components/Hero.tsx` | `usePointer` | The tall pine (26 × 11 px) and the moon (7 × 3). The ridges and the sky answer the mouse with nothing at all, which is what makes the pine read as near. |
 | `components/Origin.tsx` | `usePointer` | The lamppost, **on the x axis only** — a foot that bobs off the snow loses the illusion the whole arrangement exists to build. |
-| `components/Apps.tsx` | `usePointer` | Its private `useSway` helper, on the tall pine's wrapper. |
-| `components/Tools.tsx` | `usePointer` | The same `useSway`, on the boulder cluster's wrapper. |
+| `components/Tools.tsx` | `usePointer` | Its private `useSway` helper, on the boulder cluster's wrapper. |
 | `components/faith/Summit.tsx` | `usePointer` | The moon and the far ridge, by a few pixels. The cross takes no pointer response, deliberately. |
 | `components/Faith.tsx` | `useSectionProgress` | Read on the section and handed straight down to `faith/Summit.tsx` as the frozen accessor, where the moon, the far ridge and the crest lag the page by 30 / 26 / 13 px across the whole of `p`. |
 
 Two things in that table are worth copying rather than re-deriving.
 
 **A pointer layer goes on a WRAPPER, never on the element a parallax hook
-owns.** `Apps`, `Tools`, `Origin` and `Hero` all do it that way. `useParallax`
+owns.** `Tools`, `Origin` and `Hero` all do it that way. `useParallax`
 writes the whole of `element.style.translate` every frame and so does a pointer
 tick, so one element with both is the same race `useHeroParallax` and
 `useParallax` have — see **Never put both on one element** above. The wrapper
 takes the pointer; the child takes the scroll.
 
-**`Apps.tsx` and `Tools.tsx` carry the same fifteen-line `useSway` twice**, and
-`Apps.tsx`'s own comment sets the trigger for fixing that: a third section that
-wants one is when it stops being worth duplicating and belongs here, beside
-`usePointer`. `faith/Summit.tsx` is not that third — it drives three layers from
-one tick with scroll and pointer terms mixed, which is not what `useSway` does —
-so the count still stands at two.
+**`Tools.tsx` carries its own fifteen-line `useSway`**, the last copy standing:
+`Apps.tsx` had the twin until its parallax layers went. The trigger for moving
+it here is unchanged — a second section that wants one is when it stops being
+worth keeping private and belongs beside `usePointer`. `faith/Summit.tsx` is
+not that second — it drives three layers from one tick with scroll and pointer
+terms mixed, which is not what `useSway` does — so the count stands at one.

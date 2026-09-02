@@ -124,6 +124,11 @@ function paintBloom(cx: number, cy: number, toLight: boolean): () => void {
   ring.style.transform = `scale(${(far + 60) / 5})`
   ring.style.opacity = '0'
 
+  // Rule 9's exemption, taken: a one-shot timer that sequences a CSS
+  // transition. Nothing repaints on a tick — the browser runs the fade
+  // itself — and putting a 300 ms delay on the frame loop would hold it awake
+  // for eighteen frames to fire once. It dies with the wipe: the cleanup
+  // below clears it and removes both elements.
   const fade = window.setTimeout(() => {
     wash.style.transition = 'opacity 640ms ease'
     wash.style.opacity = '0'
@@ -195,6 +200,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     setTheme(next)
 
+    // Rule 9's exemption, taken twice: two one-shot timers that end the wave
+    // — one clears the bloom and lets a press queued mid-wave go, the other
+    // takes the stagger delays back off the sections. Neither repaints
+    // anything; the CSS transitions are the animation, and a loop subscriber
+    // would have held the loop awake for a second to fire two events. Both
+    // end by themselves, and a second press cannot stack them: `wiping`
+    // refuses it until the first has cleared.
     window.setTimeout(() => {
       clearBloom()
       wiping.current = false

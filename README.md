@@ -166,7 +166,7 @@ a card's caption becomes a real button the moment a deploy answers, and says
 | **Styling** | Hand-written CSS. No framework, no CSS-in-JS, no component library. Every colour is a token with a light value and a dark one. |
 | **Router** | Hash routes, hand-rolled in [`src/lib/route.ts`](src/lib/README.md). No router library. |
 | **State** | React context and hooks. No Redux, Zustand, Jotai, or React Query. |
-| **Backend** | Supabase — **TDG Core**, shared with the other TDG apps. Six edge functions and the SQL live in [`supabase/`](supabase/README.md). |
+| **Backend** | Supabase — **TDG Core**, shared with the other TDG apps. Nine edge functions and the SQL live in [`supabase/`](supabase/README.md). |
 | **Motion** | One frame loop, five hooks, and everything pauses off-screen. `prefers-reduced-motion` is honoured, not approximated. |
 | **Hosting** | GitHub Pages from `main`, at `/TDG-Site/`. The deploy is **manual** (`workflow_dispatch`) — pushing does not publish. |
 | **Tests** | There are none. The typecheck and the build are the entire safety net — which is why [`AGENTS.md` §7](AGENTS.md) defines what "done" means instead. |

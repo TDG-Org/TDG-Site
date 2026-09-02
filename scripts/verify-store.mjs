@@ -45,6 +45,24 @@ function extractCatalog(source) {
   // Walk `paymentLink` occurrences and, for each, find the nearest preceding
   // `priceCents` and (for plans) `id: '...'` within the same object literal.
   const linkRe = /paymentLink:\s*'(https:\/\/buy\.stripe\.com\/[^']+)'/g
+  // Which app and pack a link sits under, read from the catalogue's own
+  // indentation: an app's `id` sits at four spaces, a pack's at eight. Sent
+  // so the server can hold Stripe's `metadata.app`/`pack` against them — two
+  // links at one price used to pass as each other on amount alone.
+  const idsAt = (indent) =>
+    [...source.matchAll(new RegExp(`^${' '.repeat(indent)}id: '([a-z0-9-]+)',\\r?$`, 'gm'))].map(
+      (m) => ({ at: m.index, id: m[1] }),
+    )
+  const appIds = idsAt(4)
+  const packIds = idsAt(8)
+  const lastBefore = (list, at) => {
+    let hit = null
+    for (const e of list) {
+      if (e.at < at) hit = e.id
+      else break
+    }
+    return hit
+  }
   for (const match of source.matchAll(linkRe)) {
     const url = match[1]
     const before = source.slice(0, match.index)
@@ -54,7 +72,13 @@ function extractCatalog(source) {
     const planId = scope.match(/id:\s*'(monthly|annual|lifetime|one-time)'/)?.[1] ?? null
     if (cents === undefined) continue
     const recurring = planId === 'monthly' ? 'month' : planId === 'annual' ? 'year' : null
-    entries.push({ url, cents: Number(cents), recurring })
+    entries.push({
+      url,
+      cents: Number(cents),
+      recurring,
+      app: lastBefore(appIds, match.index),
+      pack: lastBefore(packIds, match.index),
+    })
   }
   // A pack with plans states its primary price twice (pack + plans[0]) on the
   // same link by design; dedupe on url, keeping the PLAN row when both exist

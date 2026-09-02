@@ -330,6 +330,12 @@ export function PointCloud() {
         next = (index + 1) % shapes.length
         to.set(shapes[next].pts)
         setLabelVisible(false)
+        // Rule 9's exemption, taken: a one-shot delay before a React state
+        // flip, not a paint — the label's fade is CSS, and its text should
+        // change once the old one has gone, a quarter-second after the morph
+        // starts. Counting that on this tick's clock would work too; a timer
+        // keeps a state write out of the paint path. Cleared on the next
+        // morph and on unmount, so it never outlives the canvas.
         window.clearTimeout(labelTimer)
         labelTimer = window.setTimeout(() => {
           setLabel({ index: next + 1, name: shapes[next].name })

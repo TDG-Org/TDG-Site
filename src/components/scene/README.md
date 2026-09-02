@@ -40,11 +40,11 @@ the new `Walk.tsx`. Treat the table as a snapshot with a grep beside it.
 
 | Primitive | Drawn by |
 | --- | --- |
-| `ThemedArt` | `Building` ×5 (two stands of faceted pines, two fog veils, the wayfinding post) · `Origin` ×2 (pine pair, pine grove) · `Outro` ×2 (garden arch, stepping stones) · `Tools` ×2 (footbridge, boulders) — **eleven** |
+| `ThemedArt` | `Building` ×5 (two stands of faceted pines, two fog veils, the wayfinding post) · `Origin` ×3 (far treeline, mist bank, pine row) · `Outro` ×3 (stone stair, garden arch, stepping stones) · `Tools` ×2 (footbridge, boulders) — **thirteen** |
 | `ThemedHeroArt` | **Nobody.** Kept on purpose — see below. |
-| `StillArt` | `Hero` (rear ridge, main ridge, tall pine) · `Origin` (snow bank, lamppost) — **five** |
-| `Seam` | `Building` · `Faith` ×2 · `Outro` ×2 — **five**, across three boundaries. One is `edge="bottom"` (Faith's rising range) and one boundary draws the same shape twice (the Outro's terrace and the lit nosing under its treads) |
-| `Stage` | `Hero` (the whole pinned valley) · `Walk` (the cabin, which used to be `Origin`'s) |
+| `StillArt` | `Hero` ×8 (two moon clouds, the rear, mid and main ridges, valley fog, tall pine, near branch) · `Origin` ×2 (snow bank, lamppost) · `Outro` (lantern post) · `Tools` ×2 (bushes and reeds, fence rail) · `Walk` (window frost) — **fourteen** |
+| `Seam` | `Building` · `Faith` ×2 — **three**, across two boundaries. One is `edge="bottom"` (Faith's rising range). The Outro no longer draws one; its stair and stepping stones are `ThemedArt` now. |
+| `Stage` | `Hero` (the whole pinned valley) · `Walk` ×2 (`walk__stage`, the cabin that used to be `Origin`'s, and `walk__front`) |
 | `Moon` | `Hero` (on the horizon) · `faith/Summit.tsx` (behind the cross) |
 | `Snow` | `Walk` (the near flake layer, in front of the cabin) |
 

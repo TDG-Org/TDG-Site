@@ -40,7 +40,7 @@
  *  release. It answers `ok: false` the day any of this drifts.
  */
 
-const SOURCE_STAMP = 'tdg-store-verify@2';
+const SOURCE_STAMP = 'tdg-store-verify@3';
 
 /**
  * One sweep a minute, per isolate, for the GET.
@@ -228,7 +228,14 @@ function checkWebhooks(
   return report;
 }
 
-type CatalogEntry = { url: string; cents: number; recurring: 'month' | 'year' | null };
+type CatalogEntry = {
+  url: string;
+  cents: number;
+  recurring: 'month' | 'year' | null;
+  /** The app and pack the site sells this link under, when the caller knows. */
+  app: string | null;
+  pack: string | null;
+};
 
 /** The site's own catalogue, held against Stripe entry by entry. */
 function checkCatalog(
@@ -250,6 +257,16 @@ function checkCatalog(
       wrongs.push(`recurs '${fact.recurring}', site says '${entry.recurring}'`);
     }
     if (fact.currency !== 'usd') wrongs.push(`currency ${fact.currency}`);
+    // Two links at one price passed as each other on amount alone: the
+    // DevFleet and Veditor theme packs are both $7.99, and a catalogue that
+    // swapped their URLs would have sold one app's pack under the other's
+    // card and still read green. The link's own metadata says which it is.
+    if (entry.app !== null && fact.metadata.app !== entry.app) {
+      wrongs.push(`Stripe tags it app=${fact.metadata.app}, the site sells it under ${entry.app}`);
+    }
+    if (entry.pack !== null && (fact.metadata.pack ?? null) !== entry.pack) {
+      wrongs.push(`Stripe tags it pack=${fact.metadata.pack ?? '(none)'}, the site sells it as ${entry.pack}`);
+    }
     for (const what of wrongs) problems.push({ where, what });
     return {
       url: entry.url,
@@ -279,7 +296,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const cents = Number(entry.cents);
         const recurring = entry.recurring === 'month' || entry.recurring === 'year' ? entry.recurring : null;
         if (!url.startsWith('https://buy.stripe.com/') || !Number.isFinite(cents)) throw new Error('entry');
-        return { url, cents, recurring };
+        const app = typeof entry.app === 'string' && entry.app !== '' ? entry.app : null;
+        const pack = typeof entry.pack === 'string' && entry.pack !== '' ? entry.pack : null;
+        return { url, cents, recurring, app, pack };
       });
     } catch {
       return json({ error: 'bad_request' }, 400);

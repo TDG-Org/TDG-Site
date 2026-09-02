@@ -28,8 +28,8 @@ import { STORE_APPS } from '../data/store'
  * else: the one long Store, scrolled to that app's shelf. The shelves are gone
  * — the Store is an index of app cards now and each card opens a page of packs
  * — so the route that used to name a place on a page names a page. Nothing
- * about the hash changed, which is the point: every link written to it, here
- * and in `appPages.ts`, still lands on the same app's packs.
+ * about the hash changed, which is the point: every link ever written to it
+ * still lands on the same app's packs.
  *
  * `dev` is the Developer console, and it is not a secret because of this file:
  * anything the router can recognise has to be named here. What keeps it out of
@@ -155,9 +155,8 @@ export const userHash = (username: string) => `#/user/${encodeURIComponent(usern
 /**
  * The hash that opens one app's own page of packs, the way `appHash` opens one
  * app's own page. Both exist so a component builds the route from an id rather
- * than concatenating the string itself; the two literals in `appPages.ts` stay
- * literals, because a data file writes an href the same way it writes any
- * other one.
+ * than concatenating the string itself. (`data/appPages.ts` no longer writes
+ * this hash itself, so there is no literal left there to keep in step.)
  */
 export const storeAppHash = (appId: string) => `#/store/${appId}`
 

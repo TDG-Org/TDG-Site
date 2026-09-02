@@ -106,6 +106,15 @@ export type Revocation = {
   reason: string | null
   /** ISO: when it was put on. */
   created_at: string
+  /**
+   * What the block took, keyed by pack: the grants that were on the account's
+   * entitlements row the moment it went on, kept so lifting gives back exactly
+   * that. Here so the Store can see a subscription still renewing under a pack
+   * the person can no longer use, and draw the one button that stops it —
+   * that is the only thing on the site that reads it. `{}` when the block took
+   * nothing (an app the registry does not know, or a pack never held).
+   */
+  held_grants: Record<string, PackGrant>
 }
 
 /** A tab left open with nobody touching it. The events cover somebody who is here. */
@@ -263,7 +272,21 @@ export function useOwnedPacks(): OwnedPacks {
         Object.fromEntries(
           rows
             .filter((r) => typeof r?.app === 'string' && typeof r?.pack === 'string')
-            .map((r) => [`${r.app}:${r.pack}`, r]),
+            .map((r) => [
+              `${r.app}:${r.pack}`,
+              {
+                ...r,
+                // Absent from an answer served before 20260901130000 (a
+                // schema cache mid-reload), and never anything but an object
+                // after it. Missing reads as "took nothing", never as a crash.
+                held_grants:
+                  r.held_grants !== null &&
+                  typeof r.held_grants === 'object' &&
+                  !Array.isArray(r.held_grants)
+                    ? r.held_grants
+                    : {},
+              },
+            ]),
         ),
       )
     })

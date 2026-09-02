@@ -21,6 +21,12 @@ export function useTilt<T extends HTMLElement>(soft = false) {
     const amount = soft ? 1.05 : 3.2
     const lift = soft ? -2.5 : -8
 
+    // Rule 9 sends animation through the shared frame loop, and this is not
+    // animation: nothing here ticks. Each write is one pointer event turned
+    // into one transform, it happens only while a cursor is over this card,
+    // and it ends by itself the moment the cursor leaves (`leave` writes
+    // REST). Routing it through the loop would hold the loop awake to re-read
+    // a position the event has already delivered.
     const move = (e: PointerEvent) => {
       const r = el.getBoundingClientRect()
       const px = ((e.clientX - r.left) / r.width) * 2 - 1

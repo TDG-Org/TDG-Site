@@ -114,7 +114,7 @@ Four things to keep true when you add one:
    already said which app it means should not make the reader find it again.
    (It used to mean "the Store, scrolled to that app's shelf". The shelves are
    pages now and the hash did not change, which is why every link written to it
-   still works — including the two literals in `data/appPages.ts`.)
+   still works.)
 2. **Unknown values fall through, hash untouched.** `#/app/banana` renders home,
    exactly like `#/banana`. `#/store/banana` renders the Store's index, because
    it is unmistakably a request for the shop. No "not found" screen and
@@ -257,7 +257,7 @@ and the public folded pages, because both want a long page that opens as an inde
 and one pair of buttons that can reach every section on it.
 
 **Shared state rather than a `useState` per panel**, because Expand All has to
-reach the nine sections inside a Developer console account detail: panels that
+reach the ten sections inside a Developer console account detail: panels that
 page never renders directly and that mount and unmount as you click between
 people. Each section registers its id on mount, so the buttons work from that
 register rather than from a list somebody has to remember to update.

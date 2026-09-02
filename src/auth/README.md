@@ -75,7 +75,8 @@ on it carries `iss sub name email picture full_name avatar_url provider_id
 email_verified phone_verified` — no `username`, no `display_name` — so its
 profile row was written with a null username and GoTrue never set a password.
 
-That account prints as `@(no username yet)` wherever a profile is read, has no
+That account has no handle to print (the console shows `no username`, the
+account page falls back to its display name), has no
 profile page at all (a TDG page is addressed by its handle), and **cannot log
 in anywhere but the two apps that draw a Google button**: Bible Educator ships
 `PUBLIC_SUPABASE_OAUTH` empty, and Music Everything, DevFleet and Makullveny

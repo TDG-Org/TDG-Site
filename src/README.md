@@ -90,6 +90,10 @@ up to 452px of camera padding above the heading. See
 | `badges/` | Global account badges, and the account count the footer prints | [→](badges/README.md) |
 | `feedback/` | Send Feedback, and the panel that delivers our replies | [→](feedback/README.md) |
 | `store/` | Which packs an account owns | [→](store/README.md) |
+| `content/` | The site-content overlay: what the Developer console has changed about our products, applied without a deploy | [→](content/README.md) |
+| `live/` | What GitHub can confirm about a product at runtime: which apps have a live deploy, and org repositories the catalogue has not been taught | [→](live/README.md) |
+| `cloud/` | TDG Cloud's account surface — plans, usage, hosted files — built complete and shipped switched off | [→](cloud/README.md) |
+| `notices/` | Telling somebody what we changed about their account | [→](notices/README.md) |
 | `theme/` | The theme wave and `data-theme` | [→](theme/README.md) |
 | `dev/` | The internal Developer console | [→](dev/README.md) |
 

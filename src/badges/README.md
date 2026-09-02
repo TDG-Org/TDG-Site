@@ -104,8 +104,10 @@ overview calls `accounts`. One fact, one source.
 **The site footer used to print it and no longer does.** The owner asked for it
 gone on 2026-08-27; the hook, `api.ts`'s `publicStats` and the SQL behind them
 were left in place rather than torn out with it, and that is a decision rather
-than an oversight. `tdg_public_stats` is **the only function on this project
-granted to `anon`**, and it was written, granted and audited for exactly this
+than an oversight. `tdg_public_stats` is **one of the three functions on this
+project granted to `anon`** (with `tdg_site_content` and
+`tdg_cloud_public_config`, each identity-free for the same reason), and it was
+written, granted and audited for exactly this
 shape of question — a number about the whole system that carries no identity.
 Dropping the client would leave that grant standing with nothing to justify it,
 which is a worse state than an unused hook: the next person reading the grants

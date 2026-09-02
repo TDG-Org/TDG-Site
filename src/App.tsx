@@ -37,7 +37,7 @@ const DevConsole = lazy(() => import('./dev/DevConsole'))
 /**
  * An app's own page, in its own chunk.
  *
- * The ten pages are a lot of prose, and a visitor who reads the landing page
+ * The eleven pages are a lot of prose, and a visitor who reads the landing page
  * and leaves should not download a word of it. The router recognises the
  * routes without this file, from the cards themselves, so the request is only
  * made once somebody actually opens a card. See src/lib/route.ts.

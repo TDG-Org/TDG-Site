@@ -4,7 +4,7 @@ import type { SiteContentDoc } from './types'
 /**
  * One product's own page, with the overlay's edits over the built-in copy.
  *
- * Its own file, and this is not tidiness. `src/data/appPages.ts` is the ten
+ * Its own file, and this is not tidiness. `src/data/appPages.ts` is the eleven
  * pages of prose — by far the largest content file on the site — and it ships
  * in a lazy chunk that only a visitor who opens a product page ever downloads.
  * `resolve.ts` must therefore never import it, or the home page starts paying

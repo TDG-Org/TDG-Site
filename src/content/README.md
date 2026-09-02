@@ -65,7 +65,7 @@ a tab open on a build older than the one that last published.
 | `store.ts` | The one copy this tab holds, the fetch that fills it, and `useSiteContent()`. |
 | `api.ts` | The two privileged calls behind the console's Content tab. |
 
-**`resolve.ts` must never import `appPages.ts`.** That file is the ten pages of
+**`resolve.ts` must never import `appPages.ts`.** That file is the eleven pages of
 prose and travels in a lazy chunk; `lib/route.ts` explains at length why the
 home page must not pay for it. Page resolution is a separate file for exactly
 that reason.

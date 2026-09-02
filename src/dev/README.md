@@ -524,8 +524,9 @@ list that is not a state — see *Resetting a product* below. It sits with
 sit where the eye looks for the pack's current value.
 
 The sentence under each picker is what the Store's own card will say in that
-state, from the same `src/dev/grantShapes.ts` both ends read — so choosing a
-state is choosing a card, and the two cannot drift.
+state, from the same `standingOfGrant` in `src/store/grant.ts` both ends read
+(`src/dev/grantShapes.ts` imports it rather than re-deriving it) — so choosing
+a state is choosing a card, and the two cannot drift.
 
 ### Ownership stages, and one press writes it
 
@@ -839,10 +840,11 @@ this console is one of its callers.
 
 ## Content · what the site says about our own apps
 
-The **Content** tab is the one place that changes the public site rather than
-somebody's account. It manages every product card the site draws — the six under
-Apps, the three under Tools, and the game in Building now — and behind each of
-them, that product's own page.
+The **Content** tab is one of the two places that change the public site rather
+than somebody's account (the other is Cloud, whose launch switch and price list
+are what the Store sells). It manages every product card the site draws — the
+seven under Apps, the three under Tools, and the game in Building now — and
+behind each of them, that product's own page.
 
 What it can change, per product:
 
@@ -1080,7 +1082,7 @@ reference implementation of the startup reply panel the other apps copy.
 
 | File | What it is |
 | --- | --- |
-| `DevConsole.tsx` | The page: header, the overview numbers, the five tabs, the roster, and the one action runner every write goes through. |
+| `DevConsole.tsx` | The page: header, the overview numbers, the six tabs, the roster, and the one action runner every write goes through. |
 | `AccountDetail.tsx` | The panels for one account, in six top-level sections. Three of them nest: Permissions sits inside Identity, Cloud's own Store panel sits inside TDG Core & Cloud, and Makullveny plus a Store panel per remaining app sit inside Apps. Each states what it is and names the table it writes. |
 | `CloudTab.tsx` | The Cloud tab: the staged config editor with its launch confirmation, the metrics and economics readout, the retention report, and the Backblaze bucket audit (`BucketPanel`) that holds B2's own listing against the catalogue. Its verbs come from `src/cloud/api.ts`. |
 | `ContentTab.tsx` | The Content tab: the product roster with its reordering, and the seven panels that edit one product's card and its page. Holds no state of its own — `useSiteContentDraft` lives here and is called by `DevConsole`, so a draft survives a tab switch. |

@@ -48,7 +48,7 @@ shared primitives every one of these builds on live in
 | `Folded.tsx` | The folding, and the blocks inside it. Shared by the app pages and About so the two cannot drift into different ideas of what a section looks like. Runs on the same state as the Developer console, via `lib/sections.tsx`. Also home to the site's three page-navigation primitives — `BackButton`, its mirror `OnwardButton`, and the `PageNav` row they share — used by every routed page. Its stylesheet is `AppPage.css`. |
 | `AppIcon.tsx` | One app's icon, drawn the same way in all four places it appears. One component rather than four copies, because the alignment is the whole difficulty and four copies is four chances to get it wrong differently. |
 | `ImageSlot.tsx` | A picture slot: key art, else a real screenshot. `art` wins over `shot` and over a local drop, because the two are for different places — the card wants the cover, the app's own page wants the software. Its drop-to-fill authoring layer is gated on `import.meta.env.DEV` and **must never reach a visitor**. |
-| `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the five drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
+| `KeyArt.tsx` | An app card's cover, **drawn rather than photographed** — one inline SVG at the exact `1120×700` of Bible Educator's raster, so the six drawings and the one photo sit in the grid identically. Everything it says comes from `KeyArtSpec` in `data/content.ts`; a sixth app is a data entry, not a file. Its palette is **fixed in both themes** and the literal hexes in `KeyArt.css` are that decision, not a rule-2 miss — §4 of [`AGENTS.md`](../../AGENTS.md) and its own header say why. |
 | `CrossGlyph.tsx` | The TDG cross. One path, one continuous gradient across both bars, so the light reads as a single fall across the whole glyph — and painted through `<stop>`s rather than a flat `fill` so it rides the theme wave. Three of them render on the home page, so its gradient id is per instance from `useId`, the way `scene/Moon.tsx` and `KeyArt.tsx` do it. |
 
 ### `Walk.tsx` — the one component here that is not a surface
@@ -120,8 +120,9 @@ the first line renders whole, immediately, with no caret.
 three.js on a `WebGLRenderer`** — the only file in `src/` that imports `three`,
 and the reason that dependency is in `package.json` at all. It replaced
 `OriginField.tsx`, a 2D projected point field standing in for depth this
-section can now have properly, so there is one canvas in Origin where there
-were two. The cabin is **built in code** rather than loaded: no `.glb`, no
+section can now have properly, so depth is one canvas where there were two (it
+hangs in `Walk` now, the section that grew out of Origin's stage, with the near
+`Snow` layer as its own 2D canvas in front of it). The cabin is **built in code** rather than loaded: no `.glb`, no
 loader, ~540 triangles in four draw calls, in the flat faceted language of the
 art kit. Its header argues each of those and is the file to read first; it is
 also lazy, behind a `Suspense`, so the chunk does not reach a reader who never
@@ -169,8 +170,9 @@ for the shaped boundaries between sections, and for anything drawn rather than
 photographed: `ThemedArt` / `ThemedHeroArt` / `StillArt`, `Seam`, `Stage`,
 `Moon` and `Snow`. It was written **before** the sections that use it, so that
 seven of them would reach for the same primitives instead of each wrapping an
-`<img>` its own way; `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith` and
-`Outro` draw from it today — every section on the home page.
+`<img>` its own way; `Hero`, `Origin`, `Walk`, `Tools`, `Building`, `Faith` and
+`Outro` draw from it today — every section on the home page but `Apps`, which
+is a grid of cards and draws none of them.
 
 Read [`scene/README.md`](scene/README.md) before you decorate anything. It
 carries the caller map, the reason there are three art components rather than
