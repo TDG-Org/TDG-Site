@@ -30,6 +30,10 @@
  *     rent; a one-off payment reaching this endpoint with `app=cloud` is a
  *     mistake, so it is RECORDED and grants nothing, and the ledger row is
  *     the support trail.
+ *  4. The grant write is a Postgres function, `cloud_apply_grant`, and not a
+ *     PostgREST upsert, so a pack under a revocation can never come back
+ *     through here — see "A pack a developer has revoked stays revoked"
+ *     below. The veditor copy still upserts, and needs the same treatment.
  *
  *  ── Authentication: the event is REFETCHED, never trusted ──
  *  The posted body is used for exactly one thing: the event id. The event is
@@ -64,6 +68,23 @@
  *  so this fallback is not an account-existence oracle. A payment that
  *  resolves to nobody is RECORDED with a null user and granted to no one.
  *
+ *  ── A pack a developer has revoked stays revoked ──
+ *  `tdg_admin_set_revocation` takes a pack's grant OFF the live row and keeps
+ *  it in `tdg_product_revocations.held_before`, and the Store's revoked card
+ *  can cancel the subscription behind it — but Stripe goes on raising events
+ *  for that subscription until somebody does. Every write on this path goes
+ *  through `cloud_apply_grant` in Postgres, and for a pack under a block
+ *  (its own row, or the whole app's `*` row) that function writes Stripe's
+ *  latest word into the block's held copy and leaves the live row alone.
+ *  `cloud_user_for_subscription` looks under the block too, so the renewal
+ *  is still attributed to its account in the ledger: money taken is money
+ *  taken, revoked or not. Lifting the block then restores the CURRENT
+ *  grant — the latest period end, the latest status — not a snapshot from
+ *  the day of the block. Before @3 this function upserted straight onto the
+ *  live row, so the first renewal after a revocation put the pack back in
+ *  force inside TDG Cloud itself, since `cloud_packs_in_force()` reads that
+ *  row. Latent (no Cloud subscription exists yet), and found by reading.
+ *
  *  ── Two checkout events, because a payment is not always instant ──
  *  Managed Payments means Stripe picks the payment methods, several of which
  *  are delayed-notification: `checkout.session.completed` can arrive carrying
@@ -85,7 +106,7 @@
  *  IS the authentication. GET answers a version stamp.
  */
 
-const SOURCE_STAMP = 'cloud-stripe-webhook@2';
+const SOURCE_STAMP = 'cloud-stripe-webhook@3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -353,40 +374,32 @@ async function periodEndForSession(
   return { end: end.toISOString(), plan };
 }
 
-async function currentRow(userId: string): Promise<{ grants: Record<string, PackGrant>; customerId: string | null }> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/cloud_entitlements?user_id=eq.${userId}&select=grants,stripe_customer_id`,
-    { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
-  );
-  // A failed read is NOT "this user holds nothing". Throw so the handler
-  // answers 500 and Stripe redelivers.
-  if (!res.ok) throw new Error(`cloud_entitlements read failed: ${res.status}`);
-  const rows = await res.json();
-  const grants = rows?.[0]?.grants;
-  const customer = rows?.[0]?.stripe_customer_id;
-  return {
-    grants:
-      grants !== null && typeof grants === 'object' && !Array.isArray(grants)
-        ? (grants as Record<string, PackGrant>)
-        : {},
-    customerId: typeof customer === 'string' && customer !== '' ? customer : null,
-  };
-}
-
 /**
- * Write one pack's grant, leaving every other pack alone — and, when the
- * subscription MOVED between packs (a portal plan change), take the old key
- * with it in the same write, or the account would hold both quotas on one
- * payment.
+ * Write one pack's grant — through `cloud_apply_grant` in Postgres, which is
+ * the ONE writer of `cloud_entitlements.grants` on this path since @3, for
+ * the reason every other Cloud rule lives there (AGENTS.md rule 12): the
+ * revocation boundary. A pack a developer has revoked (its own row in
+ * `tdg_product_revocations`, or the whole app's `*` row) never lands on the
+ * live row again — not on a renewal, a plan change, a cancellation, or a
+ * payment link used by hand. It lands in the block's `held_before`, which is
+ * what lifting the block writes back, so the lift restores Stripe's latest
+ * word rather than the day of the block. `cloud_packs_in_force()` reads the
+ * live row, so a revoked account stays out of TDG Cloud itself, not only
+ * off the Store's card.
  *
- * WRITES `grants` AND NOT `owned_packs`: `cloud_entitlements_sync_owned`, a
- * BEFORE trigger, derives `owned_packs` through `cloud_packs_in_force()`. A
- * write that set `owned_packs` directly would be wiped on INSERT and honoured
- * on UPDATE — the veditor webhook's header carries the story of what that
- * asymmetry costs.
+ * The function keeps everything the upsert here used to keep: `since`
+ * survives a renewal, a perpetual grant is never downgraded, an event that
+ * changes nothing writes nothing (the retention anchor reads `updated_at`),
+ * `stripe_customer_id` is written once and a second payer is reported rather
+ * than written, and the pack a portal plan change moved away from is taken
+ * off in the same write — from the live row or from a held copy — or the
+ * account would hold both quotas on one payment.
  *
- * A perpetual grant already held is never downgraded: an account granted
- * Cloud outright from the console keeps it whatever a subscription does.
+ * It WRITES `grants` AND NOT `owned_packs`: `cloud_entitlements_sync_owned`,
+ * a BEFORE trigger, derives `owned_packs` through `cloud_packs_in_force()`.
+ * A write that set `owned_packs` directly would be wiped on INSERT and
+ * honoured on UPDATE — the veditor webhook's header carries the story of
+ * what that asymmetry costs.
  */
 async function applyGrant(
   userId: string,
@@ -395,57 +408,35 @@ async function applyGrant(
   customerId: string | null,
   removePack: string | null = null,
 ): Promise<void> {
-  const { grants, customerId: knownCustomer } = await currentRow(userId);
-  const held = grants[pack];
-  if (held?.kind === 'perpetual' && grant.kind !== 'perpetual') return;
-  if (
-    held !== undefined &&
-    removePack === null &&
-    held.kind === grant.kind &&
-    held.status === grant.status &&
-    held.currentPeriodEnd === grant.currentPeriodEnd &&
-    held.cancelAtPeriodEnd === grant.cancelAtPeriodEnd &&
-    held.plan === grant.plan
-  ) {
-    return;
-  }
-
-  const next: Record<string, PackGrant> = {
-    ...grants,
-    [pack]: { ...grant, since: held?.since ?? grant.since ?? new Date().toISOString() },
-  };
-  if (removePack !== null && removePack !== pack && next[removePack]?.kind !== 'perpetual') {
-    delete next[removePack];
-  }
-
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/cloud_entitlements?on_conflict=user_id`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cloud_apply_grant`, {
     method: 'POST',
     headers: {
       apikey: SERVICE_KEY,
       Authorization: `Bearer ${SERVICE_KEY}`,
       'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates',
     },
-    body: JSON.stringify([
-      {
-        user_id: userId,
-        grants: next,
-        /*
-         * The Stripe customer is written ONCE, when the row has none. An
-         * account that checks out twice under two emails is two Stripe
-         * customers, and the last payer used to overwrite the first — so
-         * Manage or Cancel Plan then opened the portal of whichever paid
-         * last, showing that customer's card and invoices only. The first
-         * customer stays; a different one is logged so a human can merge
-         * them in Stripe if they ever want to.
-         */
-        ...(customerId && knownCustomer === null ? { stripe_customer_id: customerId } : {}),
-      },
-    ]),
+    body: JSON.stringify({
+      p_user: userId,
+      p_pack: pack,
+      p_grant: grant,
+      p_customer: customerId,
+      p_remove_pack: removePack,
+    }),
   });
-  if (!res.ok) throw new Error(`cloud_entitlements upsert failed: ${res.status} ${await res.text()}`);
-  if (customerId && knownCustomer !== null && knownCustomer !== customerId) {
-    console.warn('cloud-stripe-webhook: account paid from a second Stripe customer', userId, knownCustomer, customerId);
+  // A refused write throws, so the handler answers 500 with no ledger row
+  // and Stripe's retry re-applies — the ordering the header argues for.
+  if (!res.ok) throw new Error(`cloud_apply_grant failed: ${res.status} ${await res.text()}`);
+  const outcome = (await res.json()) as Record<string, unknown> | null;
+  if (outcome?.blocked === true) {
+    console.warn(
+      'cloud-stripe-webhook: pack is under a revocation; written to the block, not the live row',
+      userId,
+      pack,
+      outcome.block,
+    );
+  }
+  if (outcome?.second_customer === true) {
+    console.warn('cloud-stripe-webhook: account paid from a second Stripe customer', userId, customerId);
   }
 }
 
@@ -564,9 +555,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (subscriptionEvent) {
       /*
        * A renewal, a cancellation, a failed card, a plan change. Identified by
-       * the subscription id against grants this function has already written,
-       * with the LIVE PRICE deciding which pack and cadence it now buys — the
-       * one fact portal plan changes move that metadata does not follow.
+       * the subscription id against grants this function has already written
+       * — on the live row, or held under a revocation — with the LIVE PRICE
+       * deciding which pack and cadence it now buys, the one fact portal plan
+       * changes move that metadata does not follow.
        */
       const subscriptionId = String(object.id ?? '');
       const known = subscriptionId === '' ? null : await userForSubscription(subscriptionId);
