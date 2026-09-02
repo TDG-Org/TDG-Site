@@ -265,16 +265,6 @@ export async function saveProfile(userId: string, patch: ProfilePatch): Promise<
   if (error) throw new Error(profileRefusal(error))
 }
 
-/** Is this username free? Answers **true on any failure**, deliberately: this
- *  is a courtesy that saves a round trip, and the real answer is the unique
- *  index. Guessing "taken" when the check itself failed would refuse a name
- *  that is actually available. */
-export async function usernameAvailable(name: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('tdg_username_available', { uname: name })
-  if (error) return true
-  return data !== false
-}
-
 /* ── the social graph ────────────────────────────────────────────────────────
  *
  * Four reads and seven writes, every one of them a `tdg_*` verb: friends,

@@ -111,9 +111,17 @@ export default function App() {
    * Account page shows the same gap in its own words; a form that reopened on
    * every render would be a wall, not a prompt.
    */
+  /*
+   * Keyed on WHETHER setup is outstanding, not on the object. `readSetup`
+   * builds a fresh object on every auth event — each profile save, each
+   * hourly token refresh — so keyed on the object this reopened the form over
+   * a half-built account every time it saved a field on #/account, and once
+   * an hour on any page. The boolean only changes when the answer does.
+   */
+  const needsSetup = setup !== null
   useEffect(() => {
-    if (oauthError || recovery || setup) setAuthOpen(true)
-  }, [oauthError, recovery, setup])
+    if (oauthError || recovery || needsSetup) setAuthOpen(true)
+  }, [oauthError, recovery, needsSetup])
 
   /*
    * `#/feedback` and `#/feedback/<app>`: the address our OTHER apps point at.
@@ -358,6 +366,7 @@ export default function App() {
       <FeedbackDialog
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
+        onOpenAuth={() => setAuthOpen(true)}
         app={feedbackApp}
       />
       {/* Renders nothing until a developer's reply is actually waiting. */}

@@ -9,6 +9,7 @@ import { formatBytes, formatQuota } from '../data/cloud'
 import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
 import { cloudDeleteAll, cloudDownloadUrl } from './transfer'
+import { CloudBlock } from './CloudBlock'
 import { CloudViz } from './CloudViz'
 import { CloudManage } from './CloudManage'
 import './Cloud.css'
@@ -315,7 +316,12 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
         title="Your Plan"
         what="What you are on, what it is doing next, and the controls for it."
       >
-        {status.plan === null ? (
+        {status.revoked !== null ? (
+          /* Said BEFORE the plan, whatever the plan says: a block outranks a
+             grant on the shelf and it outranks one here. See CloudBlock.tsx
+             for the face this fold used to lack. */
+          <CloudBlock block={status.revoked} />
+        ) : status.plan === null ? (
           <p className="acct__note">
             No Cloud plan on this account{status.usedBytes > 0 ? ', and hosted data is read-only' : ''}.
             The plans live in the Store's TDG Cloud section.

@@ -365,6 +365,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null)
         setTier(null)
         setSetup(null)
+        // A recovery only makes sense for the session that opened it. This
+        // branch is also reached by a sign-out this app did not make — Sign
+        // Out Everywhere from the console, or Sign out in another tab — and a
+        // `recovery` left true then opened "Choose a new password" for the
+        // next visitor to press Sign in, whose updateUser had no session.
+        setRecovery(false)
         return
       }
       const uid = session.user.id

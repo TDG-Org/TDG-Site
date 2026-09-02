@@ -379,6 +379,8 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
   const [loginPassword, setLoginPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+  /** A reset just completed in THIS opening of the modal; see the recovery branch. */
+  const [passwordDone, setPasswordDone] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [showLoginPassword, setShowLoginPassword] = useState(false)
@@ -437,6 +439,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
     setLoginPassword('')
     setNewPassword('')
     setNewPasswordConfirm('')
+    setPasswordDone(false)
     setShowPassword(false)
     setShowConfirm(false)
     setShowLoginPassword(false)
@@ -501,10 +504,18 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       return
     }
     setUsernameStatus('checking')
+    // A check that is no longer about the box's contents must not land. The
+    // timer is cleared on every keystroke, but an RPC already in flight is
+    // not — and a slow first answer (a cold function, one to two seconds)
+    // landing after a fast second one left `taken` printed under a name that
+    // was free, and the form refused it. `stale` is flipped by the cleanup,
+    // so an answer to a question nobody is asking any more is dropped.
+    let stale = false
     const timer = window.setTimeout(() => {
       supabase
         .rpc('bea_username_available', { uname: normalized })
         .then(({ data, error }) => {
+          if (stale) return
           if (error) {
             setUsernameStatus('idle')
             return
@@ -512,7 +523,10 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
           setUsernameStatus(data ? 'available' : 'taken')
         })
     }, 450)
-    return () => window.clearTimeout(timer)
+    return () => {
+      stale = true
+      window.clearTimeout(timer)
+    }
   }, [open, tab, inSetup, username])
 
   if (!open) return null
@@ -712,7 +726,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
       setFormError(error)
       return
     }
-    setNotice('Password updated. Close this and carry on.')
+    setPasswordDone(true)
     setNewPassword('')
     setNewPasswordConfirm('')
   }
@@ -821,8 +835,28 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
           </p>
         </div>
 
-        {recovery ? (
-          <form className="authmodal__form" onSubmit={handleUpdatePasswordSubmit}>
+        {recovery || passwordDone ? (
+          passwordDone ? (
+            /* The password has just been changed and the account is signed in.
+               `recovery` is false the moment `updatePassword` succeeds, and
+               without this branch the card fell through to the Log in form —
+               a sign-in offered to somebody already signed in, with the
+               "Password updated" notice sitting between the fields it
+               contradicted. One line and a way out instead. */
+            <div className="authmodal__form">
+              <div className="authmodal__notice" role="status">
+                Password updated. You are signed in, and every TDG app takes the new one from
+                now on.
+              </div>
+              <div className="authmodal__guest-row">
+                <button type="button" className="authmodal__guest" onClick={onClose}>
+                  Done
+                </button>
+              </div>
+              <div className="authmodal__foot">TDG Brothers</div>
+            </div>
+          ) : (
+          <form className="authmodal__form" noValidate onSubmit={handleUpdatePasswordSubmit}>
             <GlowField
               id="rec-password"
               label="New password"
@@ -874,6 +908,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
             </div>
             <div className="authmodal__foot">TDG Brothers</div>
           </form>
+          )
         ) : inSetup ? (
           /*
            * The Sign up tab's own fields, minus the ones a provider already
@@ -888,7 +923,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
            * exactly as it is, and the account menu keeps a Finish Setting Up
            * door so the form is never lost.
            */
-          <form className="authmodal__form" onSubmit={handleSetupSubmit}>
+          <form className="authmodal__form" noValidate onSubmit={handleSetupSubmit}>
             {setup?.needsUsername && (
               <div className="authmodal__grid2">
                 <GlowField
@@ -968,11 +1003,28 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
           </form>
         ) : (
           <>
-        <div className="authmodal__tabs" role="tablist">
+        {/* A real tablist: one tab stop (the selected tab), and the arrow keys
+            move between the two — the contract `role="tab"` promises a screen
+            reader, which two ordinary buttons wearing the role did not keep.
+            The feedback form's kind picker and the privacy radios already do
+            the same roving pattern. */}
+        <div
+          className="authmodal__tabs"
+          role="tablist"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+            e.preventDefault()
+            const next: TabKey = tab === 'signup' ? 'login' : 'signup'
+            switchTab(next)
+            const tabs = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+            tabs[next === 'signup' ? 0 : 1]?.focus()
+          }}
+        >
           <button
             type="button"
             role="tab"
             aria-selected={tab === 'signup'}
+            tabIndex={tab === 'signup' ? 0 : -1}
             className={`authmodal__tab${tab === 'signup' ? ' authmodal__tab--active' : ''}`}
             onClick={() => switchTab('signup')}
           >
@@ -982,6 +1034,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
             type="button"
             role="tab"
             aria-selected={tab === 'login'}
+            tabIndex={tab === 'login' ? 0 : -1}
             className={`authmodal__tab${tab === 'login' ? ' authmodal__tab--active' : ''}`}
             onClick={() => switchTab('login')}
           >
@@ -990,7 +1043,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
         </div>
 
         {tab === 'signup' ? (
-          <form className="authmodal__form" onSubmit={handleSignUpSubmit}>
+          <form className="authmodal__form" noValidate onSubmit={handleSignUpSubmit}>
             <div className="authmodal__grid2">
               <GlowField
                 id="su-username"
@@ -1087,7 +1140,7 @@ export function AuthModal({ open, initialTab, onClose }: AuthModalProps) {
             <div className="authmodal__foot">TDG Brothers</div>
           </form>
         ) : (
-          <form className="authmodal__form" onSubmit={handleLoginSubmit}>
+          <form className="authmodal__form" noValidate onSubmit={handleLoginSubmit}>
             <GlowField
               id="li-id"
               label="Email or username"

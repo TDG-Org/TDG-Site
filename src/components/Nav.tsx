@@ -342,7 +342,7 @@ function AccountMenu({
   /** True while `#/account` is already the page, so the door says so. */
   onAccountPage: boolean
 }) {
-  const { user, profile, setup, signOut, isAdmin } = useAuth()
+  const { user, profile, setup, recovery, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
   const ref = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -394,7 +394,14 @@ function AccountMenu({
             missing handle under a name that says "Signed in". Rendered only
             while something is genuinely outstanding, so it is never a control
             that does nothing. */}
-        {setup && (
+        {/* `recovery` gets the same door, for the same reason. A reset link
+            opens "Choose a new password" once; Escape closes it (rule 14
+            says it must), and the account is then signed in on the OLD
+            password with nothing on screen saying a new one was never set
+            and no way back to the form short of another email. The modal
+            already shows the recovery form ahead of everything else, so the
+            door only has to open it. */}
+        {(setup || recovery) && (
           <button
             type="button"
             className="nav__account-finish"
@@ -407,13 +414,17 @@ function AccountMenu({
               onOpenAuth()
             }}
           >
-            <span className="nav__account-finish-label">Finish Setting Up</span>
+            <span className="nav__account-finish-label">
+              {recovery ? 'Choose a New Password' : 'Finish Setting Up'}
+            </span>
             <span className="nav__account-finish-why">
-              {setup.needsUsername && setup.needsPassword
-                ? 'No username or password yet'
-                : setup.needsUsername
-                  ? 'No username yet'
-                  : 'No password yet'}
+              {recovery
+                ? 'No new password set yet'
+                : setup?.needsUsername && setup.needsPassword
+                  ? 'No username or password yet'
+                  : setup?.needsUsername
+                    ? 'No username yet'
+                    : 'No password yet'}
             </span>
           </button>
         )}

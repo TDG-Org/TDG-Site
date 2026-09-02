@@ -178,6 +178,10 @@ export function CloudViz({
                 }
                 onMouseEnter={() => setHot(seg.id)}
                 onMouseLeave={() => setHot(null)}
+                // Chips and segments are the same control (docs/cloud-visualizer.md):
+                // keyboard focus inspects a chip exactly as hover does.
+                onFocus={() => setHot(seg.id)}
+                onBlur={() => setHot(null)}
                 onClick={() => press(seg.id)}
               >
                 <span className="cloudviz__dot" aria-hidden="true" />

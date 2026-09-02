@@ -168,8 +168,8 @@ export async function getRetentionReport(): Promise<RetentionRow[]> {
  * This one does not go through Postgres: the B2 credential lives in Vault and
  * only an Edge Function may read it, so the call is a POST to
  * `cloud-maintenance` carrying the developer's own session token (the
- * function resolves it and re-checks `profiles.is_admin` — rule 12 again,
- * nothing here is the permission layer).
+ * function resolves it and asks Postgres `tdg_cloud_is_developer()` — rule
+ * 12 again, nothing here is the permission layer).
  *
  * It is a slow read by nature: a full ListObjectVersions sweep of the bucket.
  * The Cloud tab therefore asks for it on a press rather than folding it into

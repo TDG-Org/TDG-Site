@@ -127,10 +127,22 @@ function AboutField({
 export function FeedbackDialog({
   open,
   onClose,
+  onOpenAuth,
   app,
 }: {
   open: boolean
   onClose: () => void
+  /**
+   * Opens sign-in OVER this dialog. The signed-out face used to say "sign in
+   * and try again" with no control to do it: the nav's Sign in is behind
+   * the scrim and Tab is kept inside the card, so the only exits were Close
+   * and Escape — and a reader who arrived from another app at
+   * `#/feedback/<app>` then lost which app the report was about, because
+   * reopening from the account menu files under this site. The auth modal
+   * paints above this one (`MODAL_LAYER`), so this dialog stays open, keeps
+   * its `about`, and turns into the form the moment the session lands.
+   */
+  onOpenAuth?: () => void
   /**
    * Which app the reader ARRIVED about, when they did not arrive from this
    * site. Set by `#/feedback/<app>`, and the reason that route exists: several
@@ -361,15 +373,34 @@ export function FeedbackDialog({
           </button>
         </header>
 
-        {status !== 'signedIn' ? (
+        {status === 'loading' ? (
+          <>
+            {/* The session is still being restored — a signed-in reader saw
+                "Sign In First" for the first few hundred milliseconds of a
+                cold load, which is a refusal they had not earned. */}
+            <h2 className="fb__title" id="fb-title">
+              One Moment
+            </h2>
+            <p className="fb__sub" role="status">
+              Restoring your session…
+            </p>
+          </>
+        ) : status !== 'signedIn' ? (
           <>
             <h2 className="fb__title" id="fb-title">
               Sign In First
             </h2>
             <p className="fb__sub">
-              Feedback travels with your account, so we can write back to you. Sign in and try
-              again.
+              Feedback travels with your account, so we can write back to you.
+              {onOpenAuth ? ' Sign in here and this form stays open.' : ' Sign in and try again.'}
             </p>
+            {onOpenAuth && (
+              <div className="fb__row">
+                <button type="button" className="fb__btn fb__btn--primary" onClick={onOpenAuth}>
+                  Sign In
+                </button>
+              </div>
+            )}
           </>
         ) : sentId != null ? (
           <>

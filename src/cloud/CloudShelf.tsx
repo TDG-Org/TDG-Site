@@ -10,12 +10,13 @@ import {
   formatQuota,
   type CloudPlan,
 } from '../data/cloud'
-import { formatDay, standingOfGrant } from '../store/grant'
+import { standingOfGrant } from '../store/grant'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { ACCOUNT_HASH, CLOUD_ANCHOR } from '../lib/route'
 import { useCloudConfig } from './config'
 import { useCloudStatus, type CloudStatus } from './useCloudStatus'
+import { CloudBlock } from './CloudBlock'
 import { CloudManage } from './CloudManage'
 import './Cloud.css'
 
@@ -91,24 +92,6 @@ function Caret() {
   )
 }
 
-function Cross() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M6 6l12 12M18 6 6 18" />
-    </svg>
-  )
-}
-
 /** A little cloud, for the section mark. Drawn where it is used (AGENTS §5). */
 function CloudGlyph() {
   return (
@@ -164,11 +147,16 @@ function CloudPlanCard({
   const held = status?.plan?.pack === plan.id
   const grant = held ? (status?.plan?.grant ?? null) : null
   const standing = standingOfGrant(grant)
-  // A whole-Cloud block (`*`) covers both plans; a per-plan block only its own.
-  const block =
-    status?.revoked && (status.revoked.pack === '*' || status.revoked.pack === plan.id)
-      ? status.revoked
-      : null
+  /*
+   * ANY Cloud revocation blocks BOTH plans, because that is what the server
+   * does: `tdg_cloud_write_gate` refuses every write for an account with any
+   * `app = 'cloud'` revocation row, whichever pack the row names. This used
+   * to block only the named plan and leave the other on sale — so a person
+   * revoked from Standard could pay for Studio and then have every upload
+   * refused with 42501. The shop must never sell what the database has
+   * already decided to refuse (rule 5), so the shelf reads the gate's rule.
+   */
+  const block = status?.revoked ?? null
   // Can THIS person buy? The public flag, or the tester door once Core opened
   // it for them — either way the links must have arrived from the live server.
   const buyable =
@@ -202,28 +190,7 @@ function CloudPlanCard({
 
       <div className="cloud__action">
         {block !== null ? (
-          <>
-            <p className="store__revoked">
-              <span className="store__revoked-mark" aria-hidden="true">
-                <Cross />
-              </span>
-              <span>
-                <strong>
-                  {block.pack === '*'
-                    ? 'TDG Cloud is not available on this account'
-                    : `${plan.name} is not available on this account`}
-                </strong>
-                <span className="store__revoked-why">
-                  {block.reason ?? 'No reason was recorded with it.'}
-                </span>
-              </span>
-            </p>
-            <p className="store__note store__note--warn">
-              We removed it on {formatDay(block.created_at) ?? 'an earlier date'}, and it cannot be
-              bought again from here. If you think this is wrong, send us feedback from the account
-              menu.
-            </p>
-          </>
+          <CloudBlock block={block} planId={plan.id} planName={plan.name} />
         ) : held ? (
           <>
             <p className="store__owned" data-tone={standing.kind === 'perpetual' ? 'ok' : undefined}>
@@ -497,6 +464,9 @@ export function CloudShelf({ onOpenAuth }: { onOpenAuth: () => void }) {
             <div
               className="cloud__bar"
               role="img"
+              // Warm from 80%, the same line the server's `quota_high` warning
+              // is drawn at. Cloud.css carried the rule and nothing set it.
+              data-tone={usedShare >= 0.8 ? 'warn' : undefined}
               aria-label={`${formatBytes(status.usedBytes)} of ${formatBytes(status.quotaBytes)} used`}
             >
               <span className="cloud__bar-fill" style={{ width: `${usedShare * 100}%` }} />

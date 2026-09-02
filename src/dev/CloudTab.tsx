@@ -79,25 +79,58 @@ function applyDraft(doc: Record<string, unknown>, draft: Draft): Record<string, 
   availability.auto_purge = draft.autoPurge
   next.availability = availability
 
+  /*
+   * The numbers are taken as typed and NEVER coerced. This used to run every
+   * field through `Math.max(1, Math.round(Number(x) || 0))`, which turned a
+   * cleared price box into 1 — and a save then put `monthly_cents: 1` in the
+   * live config, so within a minute the shelf printed "$0.01/mo" and a saving
+   * computed against it, beside a Stripe link that charges $2.99. Advertising
+   * one amount and charging another is the one mistake a shop may not make
+   * (rule 10). `draftProblems` below is what refuses a draft like that, and
+   * Save is disabled while it has anything to say.
+   */
   const retention = { ...((next.retention ?? {}) as Record<string, unknown>) }
-  retention.read_only_days = Math.max(1, Math.round(Number(draft.retentionDays) || 90))
+  retention.read_only_days = Number(draft.retentionDays)
   next.retention = retention
 
   const egress = { ...((next.egress ?? {}) as Record<string, unknown>) }
-  egress.monthly_allowance_x_quota = Math.max(0.1, Number(draft.egressX) || 1)
+  egress.monthly_allowance_x_quota = Number(draft.egressX)
   next.egress = egress
 
   const plans = { ...((next.plans ?? {}) as Record<string, Record<string, unknown>>) }
   for (const [pack, fields] of Object.entries(draft.plans)) {
     plans[pack] = {
       ...(plans[pack] ?? {}),
-      quota_gb: Math.max(1, Math.round(Number(fields.quotaGb) || 0)),
-      monthly_cents: Math.max(1, Math.round(Number(fields.monthlyCents) || 0)),
-      annual_cents: Math.max(1, Math.round(Number(fields.annualCents) || 0)),
+      quota_gb: Number(fields.quotaGb),
+      monthly_cents: Number(fields.monthlyCents),
+      annual_cents: Number(fields.annualCents),
     }
   }
   next.plans = plans
   return next
+}
+
+/** A whole number of at least one, typed as such — no blank, no decimal, no sign. */
+const wholeFrom1 = (v: string) => /^\d+$/.test(v.trim()) && Number(v) >= 1
+
+/**
+ * Everything wrong with a draft, in the developer's own words, one line each.
+ * Empty means it may be saved. Each line names the field so the fix is one
+ * glance away; the panel prints them beside the Save button.
+ */
+function draftProblems(draft: Draft): string[] {
+  const out: string[] = []
+  if (!wholeFrom1(draft.retentionDays)) out.push('Read-only days must be a whole number of at least 1.')
+  const x = Number(draft.egressX)
+  if (draft.egressX.trim() === '' || !Number.isFinite(x) || x < 0.1) {
+    out.push('The egress allowance must be a number of at least 0.1 times the quota.')
+  }
+  for (const [pack, fields] of Object.entries(draft.plans)) {
+    if (!wholeFrom1(fields.quotaGb)) out.push(`${pack}: the quota must be a whole number of GB, at least 1.`)
+    if (!wholeFrom1(fields.monthlyCents)) out.push(`${pack}: the monthly price must be a whole number of cents, at least 1.`)
+    if (!wholeFrom1(fields.annualCents)) out.push(`${pack}: the yearly price must be a whole number of cents, at least 1.`)
+  }
+  return out
 }
 
 function MetricTile({ label, value, what, tone }: { label: string; value: string; what: string; tone?: 'warn' | 'bad' }) {
@@ -147,6 +180,7 @@ export function CloudTab({
 
   const dirty = stored !== null && draft !== null && JSON.stringify(stored) !== JSON.stringify(draft)
   const launching = dirty && draft !== null && stored !== null && draft.available && !stored.available
+  const problems = draft !== null ? draftProblems(draft) : []
 
   const save = async () => {
     if (config === null || draft === null) return
@@ -271,10 +305,17 @@ export function CloudTab({
               />
             )}
 
+            {problems.length > 0 && (
+              <div className="dev__warn" role="alert">
+                {problems.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
+              </div>
+            )}
             <div className="dev__fields">
               <Button
                 variant="primary"
-                disabled={!dirty || saving || (launching && !launchTick)}
+                disabled={!dirty || saving || problems.length > 0 || (launching && !launchTick)}
                 busy={saving}
                 onClick={() => void save()}
               >

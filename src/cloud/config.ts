@@ -24,8 +24,10 @@ import {
  *   - `available` is only ever true from a fresh server answer. The cache and
  *     the fallback both read as Coming Soon, so a build that outlived the
  *     shop, an outage, or a blocked request can show the plans and can never
- *     open a checkout. (The cached copy is stripped before storing rather
- *     than on the way back, so even a hand-edited cache row cannot arm it.)
+ *     open a checkout. (The server's document is stored as it came, and the
+ *     stripping happens on the way BACK out of the cache — so a hand-edited
+ *     cache row cannot arm it either, because nothing that reads the cache
+ *     ever trusts those two fields.)
  *   - payment links come only from the same fresh answer, for the same
  *     reason: the one mistake a shop may not make is charging a number it did
  *     not advertise, and a stale link is that mistake wearing a URL.
@@ -175,6 +177,3 @@ const snapshot = () => config
 export function useCloudConfig(): CloudConfig {
   return useSyncExternalStore(subscribe, snapshot, snapshot)
 }
-
-/** Whether the last read worked, for a surface that wants to say so. */
-export const cloudConfigPhase = (): Phase => phase
