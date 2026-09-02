@@ -39,6 +39,7 @@ import {
 import { formatBytes, formatQuota } from '../data/cloud'
 import {
   DURATIONS,
+  eventKind,
   fmtDate,
   fmtRelative,
   fmtUsd,
@@ -1347,7 +1348,7 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
   const brokenMirror = a.mak_tier === 'candle' && !savedCandle
 
   const PLANS = [
-    { value: 'free', label: 'No subscription' },
+    { value: 'free', label: 'No Subscription' },
     ...catalog.mak_tiers
       .filter((t) => t === 'lantern' || t === 'hearth')
       .map((t) => ({ value: t, label: prettyId(t) })),
@@ -1582,10 +1583,16 @@ function MakullvenyPanel({ account: a, catalog, run, busy }: Props) {
         hint="Themes bought one at a time from the Market page. This switch is that purchase and nothing else: a theme can also be unlocked by the Candle bundle or by Hearth, and where it is, the tile says which — the same four answers the app's own themeEntitlement gives. One fact each, so they write on the press rather than waiting for Save."
       >
         <div className="dev__tiles">
-          {catalog.mak_themes.map((theme) => (
+          {/* The catalogue's list UNIONED with what the account actually holds
+              (rule 17): a theme retired from `mak_known_themes()`, or one a
+              webhook wrote that the list has not been taught, is still owned,
+              still counted in the roster's OWNED figure, and still has a
+              revoke path on the server — so it gets a tile that says it is
+              not in the list, rather than being dropped from the panel. */}
+          {[...new Set([...catalog.mak_themes, ...a.mak_themes])].map((theme) => (
             <OwnTile
               key={theme}
-              name={prettyId(theme)}
+              name={catalog.mak_themes.includes(theme) ? prettyId(theme) : `${prettyId(theme)} (not in the list)`}
               owned={a.mak_themes.includes(theme)}
               busy={busy === `theme:${theme}`}
               // Only when the tile would otherwise be misread. A theme bought
@@ -2151,7 +2158,7 @@ function StorePanel({ account: a, run, busy, app }: Props & { app: DevStoreApp }
                 value={value ?? ''}
                 options={[
                   ...(current[pack.id] === null
-                    ? [{ value: '', label: 'Unrecognised shape' }]
+                    ? [{ value: '', label: 'Unrecognised Shape' }]
                     : []),
                   ...states.map((h) => ({ value: h.id, label: h.label })),
                 ]}
@@ -2564,7 +2571,7 @@ function HistoryPanel({ events, audit, historyState }: Props) {
     <Panel
       title="This Account's History"
       what="Every payment, grant and moderation action recorded against them, newest first."
-      writes="*_purchase_events + mak_subscription_events + bea_moderation_audit"
+      writes="tdg_purchase_events + bea_moderation_audit"
       matchCount={historyState === 'ready' ? shown : 0}
       right={
         historyState === 'ready' ? (
@@ -2597,9 +2604,19 @@ function HistoryPanel({ events, audit, historyState }: Props) {
                   <span className="dev__log-when" title={fmtDate(e.at)}>
                     {fmtRelative(e.at)}
                   </span>
-                  <Tag tone={e.event_id.startsWith('admin:') ? 'warn' : 'ok'}>
-                    {e.event_id.startsWith('admin:') ? 'GRANTED' : 'PAID'}
-                  </Tag>
+                  {/* The same three-way reading the Purchases ledger gives a
+                      row, through the same `eventKind`: a Stripe test-mode
+                      payment is TEST here too, not PAID. Two surfaces reading
+                      one row two ways is the drift this shared helper exists
+                      to prevent. */}
+                  {(() => {
+                    const k = eventKind(e)
+                    return (
+                      <Tag tone={k === 'grant' ? 'warn' : k === 'test' ? 'plain' : 'ok'}>
+                        {k === 'grant' ? 'GRANTED' : k === 'test' ? 'TEST' : 'PAID'}
+                      </Tag>
+                    )
+                  })()}
                   <span className="dev__log-what">
                     <code className="dev__code">
                       <Highlight text={e.event_type} />

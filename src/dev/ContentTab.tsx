@@ -11,12 +11,19 @@ import {
   resolvedTools,
   type ItemKind,
 } from '../content/resolve'
-import { EMPTY_DOC, type CardOverride, type PageOverride, type SiteContentDoc } from '../content/types'
+import {
+  EMPTY_DOC,
+  unreadableCount,
+  type CardOverride,
+  type PageOverride,
+  type SiteContentDoc,
+} from '../content/types'
 import { asset } from '../lib/asset'
 import { KeyArt } from '../components/KeyArt'
 import { appHash } from '../lib/route'
 import {
   Button,
+  Check,
   Fact,
   Field,
   Panel,
@@ -263,6 +270,18 @@ export function useSiteContentDraft(push: (tone: 'ok' | 'bad', text: string) => 
   const [note, setNote] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [conflict, setConflict] = useState(false)
+  /**
+   * How many values of the LIVE document this build cannot read, and the
+   * explicit tick that lets a publish drop them anyway. A publish sends the
+   * parsed document, so anything the parser did not recognise — a block kind
+   * from a newer build, a field this bundle predates — is removed from
+   * tdg-core by any edit at all, silently, unless it is said here first.
+   */
+  const unreadable = useMemo(
+    () => (published ? unreadableCount(published.raw, published.doc) : 0),
+    [published],
+  )
+  const [dropTick, setDropTick] = useState(false)
 
   /** The published document the draft was seeded from, as text to compare. */
   const baseline = useRef<string>(JSON.stringify(EMPTY_DOC))
@@ -307,6 +326,7 @@ export function useSiteContentDraft(push: (tone: 'ok' | 'bad', text: string) => 
       baseline.current = JSON.stringify(doc)
       setNote('')
       setConflict(false)
+      setDropTick(false)
       push('ok', 'Published. The site is showing it now.')
       await reload()
     } catch (e) {
@@ -363,6 +383,9 @@ export function useSiteContentDraft(push: (tone: 'ok' | 'bad', text: string) => 
     orderChanged,
     conflict,
     publishing,
+    unreadable,
+    dropTick,
+    setDropTick,
     reload,
     publish,
     discard,
@@ -520,6 +543,23 @@ function PublishBar({ c }: { c: ContentDraft }) {
             placeholder="hid Music Everything until the demo lands"
           />
         </Field>
+        {c.unreadable > 0 && (
+          <div className="dev__warn dev__warn--wide" role="alert">
+            <p>
+              The live document holds {c.unreadable} {c.unreadable === 1 ? 'value' : 'values'} this
+              build of the console cannot read — a block kind or a field from a newer deploy, or
+              something edited by hand. A publish sends back only what this build understands, so
+              publishing from here would remove {c.unreadable === 1 ? 'it' : 'them'} from the site.
+              Reload on the current build first, or tick below to publish anyway. The server keeps
+              earlier versions, so a mistake can be put back.
+            </p>
+            <Check
+              checked={c.dropTick}
+              onChange={c.setDropTick}
+              label={`Publish anyway, removing the ${c.unreadable === 1 ? 'value' : `${c.unreadable} values`} this console cannot read`}
+            />
+          </div>
+        )}
         <div className="dev__row dev__row--end">
           <Button onClick={c.discard} disabled={!c.dirty || c.publishing}>
             Discard Changes
@@ -527,7 +567,7 @@ function PublishBar({ c }: { c: ContentDraft }) {
           <Button
             variant="primary"
             onClick={() => void c.publish()}
-            disabled={!c.dirty}
+            disabled={!c.dirty || (c.unreadable > 0 && !c.dropTick)}
             busy={c.publishing}
           >
             Publish Changes
@@ -600,7 +640,7 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
           </p>
         </div>
         <div className="dev__detail-tags">
-          {hidden ? <Tag tone="bad">HIDDEN</Tag> : <Tag tone="ok">ON THE SITE</Tag>}
+          {hidden ? <Tag tone="bad">OFF THE GRID</Tag> : <Tag tone="ok">IN ITS GRID</Tag>}
           {isEdited(draft, slug) && <Tag tone="warn">EDITED</Tag>}
           <a className="dev__link" href={appHash(slug)} target="_blank" rel="noopener">
             Open its page ↗
@@ -614,26 +654,35 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
         title="On The Site"
         what="Whether this card is shown at all, and where it sits in its grid."
         writes="tdg_site_content.doc → items.<slug>.hidden, order"
-        right={hidden ? <Tag tone="bad">HIDDEN</Tag> : <Tag tone="ok">SHOWN</Tag>}
+        right={hidden ? <Tag tone="bad">OFF THE GRID</Tag> : <Tag tone="ok">SHOWN</Tag>}
         terms={[slug, item.title, hidden ? 'hidden' : 'shown']}
       >
+        {/* "Show In Its Grid", not "Show On The Site": the switch takes the
+            card off the home page's grid and the console's roster, and
+            nothing else — the app's own page still opens, and if the app
+            sells packs its Store card and its Store page are still on sale
+            (rule 17 deliberately keeps the Store off this list). A label
+            that said "the site" was reported as "hidden but still on the
+            site", which is exactly what it was. */}
         <Switch
           checked={!hidden}
           onChange={(next) => setDraft(withItem(draft, slug, { hidden: next ? undefined : true }))}
-          label="Show On The Site"
+          label="Show In Its Grid"
           tone={hidden ? 'danger' : 'plain'}
           hint={
             hidden ? (
               <>
                 Off {GRID_OF[item.kind].where}. Its own page is untouched and still opens at{' '}
                 <code className="dev__code">{appHash(slug)}</code> — a link somebody has already
-                shared should not start answering &ldquo;nothing here&rdquo;. Turn this on to put
-                the card back.
+                shared should not start answering &ldquo;nothing here&rdquo; — and if it sells
+                packs, it is still on the Store index and at its own Store page. Turn this on to
+                put the card back.
               </>
             ) : (
               <>
-                The card is in {GRID_OF[item.kind].where}. Turning this off takes the card away and
-                leaves the page at its own link.
+                The card is in {GRID_OF[item.kind].where}. Turning this off takes the card away
+                and leaves the page at its own link; the Store, if the app sells packs, is not
+                touched by this switch.
               </>
             )
           }

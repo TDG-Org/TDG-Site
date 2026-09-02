@@ -26,12 +26,14 @@ import type { PageBlock, PageLink, PageSection } from '../data/pageBlocks'
  * card, never a thrown render, never `undefined` printed into a heading.
  *
  * So nothing here is cast. `parseDoc` walks the whole document, keeps what it
- * recognises in the shape it recognises, and drops the rest silently. A chip
- * with no label is not a chip. A section with no id cannot be opened, so it is
- * not a section. The console shows what actually survived — see
- * `src/content/README.md` — so a field the site is ignoring is visible in the
- * one place somebody could fix it, rather than being a mystery about why an
- * edit did not take.
+ * recognises in the shape it recognises, and drops the rest for rendering. A
+ * chip with no label is not a chip. A section with no id cannot be opened, so
+ * it is not a section. What it dropped is COUNTED rather than forgotten:
+ * `unreadableCount` below says how many values of the live document this
+ * build could not read, and the Content tab refuses to publish over them
+ * without an explicit tick — because a publish sends the parsed document
+ * back, and for a while "the console shows what survived" was written here
+ * while nothing did.
  */
 
 /** Everything the overlay can say about one product. */
@@ -355,6 +357,30 @@ export function parseDoc(raw: unknown): SiteContentDoc {
     order: { apps: strings(order.apps) ?? [], tools: strings(order.tools) ?? [] },
     items,
   }
+}
+
+/**
+ * How many values in the stored document this bundle could NOT read.
+ *
+ * `parseDoc` keeps what it recognises and drops the rest — a block kind from
+ * a newer build, a field renamed since, a hand-edited key — and a publish
+ * sends the PARSED document back, so anything dropped is dropped from
+ * tdg-core the moment an older console publishes any edit at all. That is
+ * the stale-tab hazard the file header names, and for a while the header
+ * claimed the console showed what survived while nothing counted it. This
+ * counts it: the leaves (strings, numbers, booleans) in `raw` minus the
+ * leaves that came through, corrected for the `v` the parser always writes.
+ * Zero means a publish loses nothing; anything else is what the Content tab
+ * warns about before it lets a publish go.
+ */
+export function unreadableCount(raw: unknown, parsed: SiteContentDoc): number {
+  const leaves = (v: unknown): number => {
+    if (Array.isArray(v)) return v.reduce<number>((n, x) => n + leaves(x), 0)
+    if (isObj(v)) return Object.values(v).reduce<number>((n, x) => n + leaves(x), 0)
+    return v === null || v === undefined ? 0 : 1
+  }
+  const rawHasV = isObj(raw) && 'v' in raw
+  return Math.max(0, leaves(raw) - leaves(parsed) + (rawHasV ? 0 : 1))
 }
 
 /** True when this document says nothing at all, so the site is the repo's. */

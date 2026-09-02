@@ -40,11 +40,20 @@ fixed that line in `content.ts` the site would go on printing the old one with
 nothing on screen to say why.
 
 **Nothing that arrives is trusted.** `types.ts` walks the whole document, keeps
-what it recognises in the shape it recognises, and drops the rest silently. A
-chip with no label is not a chip; a section with no id could not be opened, so
-it is not a section; a block of a kind this bundle has never heard of is
-dropped whole. The only acceptable failure is the built-in copy — never a blank
-card, never a thrown render, never `undefined` printed into a heading.
+what it recognises in the shape it recognises, and drops the rest for the
+site's own rendering. A chip with no label is not a chip; a section with no id
+could not be opened, so it is not a section; a block of a kind this bundle has
+never heard of is dropped whole. The only acceptable failure is the built-in
+copy — never a blank card, never a thrown render, never `undefined` printed
+into a heading.
+
+**And a publish says what it would drop before it drops it.** A publish sends
+the PARSED document back, so anything the parser did not recognise would leave
+tdg-core the moment an older console published any edit. `unreadableCount()`
+in `types.ts` counts the values of the live document this build cannot read;
+the Content tab prints that count beside Publish and refuses the press until
+an explicit tick says to drop them. Zero is the usual answer; anything else is
+a tab open on a build older than the one that last published.
 
 ## The files
 

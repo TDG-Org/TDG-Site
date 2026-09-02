@@ -396,8 +396,12 @@ export function useRememberView(
       window.clearTimeout(timer)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('pagehide', save)
-      // Leaving the console is also a moment worth recording: coming back to
-      // #/dev in this tab should land where you left it.
+      // Leaving the console is also a moment worth recording — not for the
+      // next click on Developer in this tab, which `readView` deliberately
+      // answers with a fresh page (see its note), but for a RELOAD made from
+      // some other page of the site afterwards: the first mount after that
+      // reload restores this, so the account you were reading is still the
+      // one on screen.
       save()
     }
   }, [ready, save])

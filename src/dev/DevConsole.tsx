@@ -232,6 +232,48 @@ function DevConsoleBody({
     [rows, selectedId],
   )
 
+  /*
+   * An account asked for by id that the roster does not hold.
+   *
+   * The roster is the newest 200 accounts, and Open Account on a feedback
+   * report or a ledger row can name one older than that — which used to
+   * select nothing and leave the pane saying "Pick an account", with nothing
+   * on screen to say why the click did nothing. So a selection the roster
+   * cannot answer is fetched on its own and merged into the roster, and while
+   * that runs the pane says so; an id that answers nothing gets a sentence
+   * too. `sought` stops a missing id being asked for again on every roster
+   * change.
+   */
+  const [seeking, setSeeking] = useState<'idle' | 'loading' | 'missing'>('idle')
+  const sought = useRef<string | null>(null)
+  useEffect(() => {
+    if (!selectedId || rows.length === 0 || rows.some((r) => r.user_id === selectedId)) {
+      if (seeking !== 'idle' && (!selectedId || rows.some((r) => r.user_id === selectedId))) setSeeking('idle')
+      return
+    }
+    if (sought.current === selectedId) return
+    sought.current = selectedId
+    let live = true
+    setSeeking('loading')
+    void api
+      .getAccount(selectedId)
+      .then((fresh) => {
+        if (!live) return
+        if (fresh) {
+          setRows((list) => (list.some((r) => r.user_id === fresh.user_id) ? list : [...list, fresh]))
+          setSeeking('idle')
+        } else {
+          setSeeking('missing')
+        }
+      })
+      .catch(() => {
+        if (live) setSeeking('missing')
+      })
+    return () => {
+      live = false
+    }
+  }, [selectedId, rows, seeking])
+
   /**
    * Every app with a pack Store, in one place, for the three surfaces on this
    * page that used to name their apps by hand: the overview tiles, the
@@ -397,26 +439,34 @@ function DevConsoleBody({
     const seq = ++cloudSeq.current
     setCloudConfigState((s) => (s === 'ready' ? s : 'loading'))
     setCloudMetricsState((s) => (s === 'ready' ? s : 'loading'))
-    try {
-      const [cfg, metrics, retention] = await Promise.all([
-        getCloudConfig(),
-        getCloudMetrics(),
-        getRetentionReport(),
-      ])
-      if (seq !== cloudSeq.current) return false
-      setCloudConfig(cfg)
+    /*
+     * Three reads, three answers, each on its own. `Promise.all` threw the
+     * config away when the metrics or the retention report refused — and the
+     * metrics read is the heavy one, with a snapshot side effect — so one bad
+     * read printed UNREADABLE on the document that launches the product and
+     * hid the LIVE tag from the tab strip while `tdg_admin_cloud_config` had
+     * answered perfectly well. Each state now reports its own read.
+     */
+    const [cfg, metrics, retention] = await Promise.allSettled([
+      getCloudConfig(),
+      getCloudMetrics(),
+      getRetentionReport(),
+    ])
+    if (seq !== cloudSeq.current) return false
+    if (cfg.status === 'fulfilled') {
+      setCloudConfig(cfg.value)
       setCloudConfigState('ready')
-      setCloudMetrics(metrics)
-      setCloudMetricsState('ready')
-      setCloudRetention(retention)
-      return true
-    } catch {
-      if (seq === cloudSeq.current) {
-        setCloudConfigState((s) => (s === 'ready' ? s : 'error'))
-        setCloudMetricsState((s) => (s === 'ready' ? s : 'error'))
-      }
-      return false
+    } else {
+      setCloudConfigState((s) => (s === 'ready' ? s : 'error'))
     }
+    if (metrics.status === 'fulfilled') {
+      setCloudMetrics(metrics.value)
+      setCloudMetricsState('ready')
+    } else {
+      setCloudMetricsState((s) => (s === 'ready' ? s : 'error'))
+    }
+    if (retention.status === 'fulfilled') setCloudRetention(retention.value)
+    return cfg.status === 'fulfilled' && metrics.status === 'fulfilled' && retention.status === 'fulfilled'
   }, [])
 
   /* ── Refresh: the whole page, without losing the page ─────────────────
@@ -530,9 +580,26 @@ function DevConsoleBody({
       const here = captureAnchor()
       setBusy(key)
       void (async () => {
+        /*
+         * The WRITE and the RE-READ are two tries, not one. In one try, a
+         * refused write skipped the re-read — so a save of three packs whose
+         * second one was refused left the first, which had landed, still
+         * tagged NOT SAVED with the save bar still listing all three, until
+         * somebody pressed Refresh; and a write that landed followed by a
+         * re-read that failed toasted "Couldn't reach the server" a moment
+         * after "Saved", about a write that had succeeded. Now the re-read
+         * always runs when there is an account to re-read, whatever the
+         * write said, and each half reports itself.
+         */
+        let wrote = false
         try {
           await fn()
+          wrote = true
           push('ok', okMessage)
+        } catch (e) {
+          push('bad', message(e))
+        }
+        try {
           if (id) {
             const fresh = await api.getAccount(id)
             if (fresh) {
@@ -558,9 +625,8 @@ function DevConsoleBody({
           }
           void loadOverview()
           setReadAt(Date.now())
-
         } catch (e) {
-          push('bad', message(e))
+          push('bad', wrote ? `Saved, but the page could not re-read the account: ${message(e)} Press Refresh.` : message(e))
         } finally {
           setBusy(null)
           holdAnchor(here, { ms: 600 })
@@ -1024,6 +1090,33 @@ function DevConsoleBody({
                   badgesState={badgesState}
                   badgesError={badgesError}
                 />
+              ) : selected && !catalog ? (
+                /* The catalogue read failed at boot, so the detail cannot be
+                   drawn — say so, rather than answer a click on a highlighted
+                   row with the same placeholder an un-clicked page shows. */
+                <div className="dev__placeholder">
+                  <h2 className="dev__placeholder-title">The catalogue could not be read</h2>
+                  <p className="dev__placeholder-copy">
+                    This account is selected, but the list of apps, packs and tiers the panels are
+                    drawn from did not arrive, so nothing about it can be shown yet. Press Refresh.
+                  </p>
+                </div>
+              ) : selectedId && seeking === 'loading' ? (
+                <div className="dev__placeholder">
+                  <h2 className="dev__placeholder-title">Finding that account</h2>
+                  <p className="dev__placeholder-copy" role="status">
+                    It is not in the newest {rows.length} the list holds, so it is being read on its
+                    own…
+                  </p>
+                </div>
+              ) : selectedId && seeking === 'missing' ? (
+                <div className="dev__placeholder">
+                  <h2 className="dev__placeholder-title">No such account</h2>
+                  <p className="dev__placeholder-copy">
+                    Nothing answers to that id any more. It may have been deleted, or the read failed
+                    — press Refresh to ask again.
+                  </p>
+                </div>
               ) : (
                 <div className="dev__placeholder">
                   <h2 className="dev__placeholder-title">Pick an account</h2>
@@ -1083,11 +1176,20 @@ function DevConsoleBody({
                 onChange={setSource}
                 ariaLabel="Which app's ledger to show"
                 options={[
-                  { value: 'all', label: 'Every app' },
+                  { value: 'all', label: 'Every App' },
                   ...stores
                     .filter((s) => s.onServer)
                     .map((s) => ({ value: s.id, label: s.title })),
-                  { value: 'makullveny', label: 'Makullveny' },
+                  /* Every OTHER source the merged ledger actually holds —
+                     Makullveny, whose ledger is tier-shaped and so is not a
+                     discovered Store, and any app renamed or dropped since its
+                     rows were written. Derived from the rows, never typed
+                     (rule 17): a source missing from this list is money a
+                     reader cannot filter to, and they would not know it. */
+                  ...[...new Set(allEvents.map((e) => e.source))]
+                    .filter((id) => !stores.some((s) => s.onServer && s.id === id))
+                    .sort()
+                    .map((id) => ({ value: id, label: appTitle(id) })),
                 ]}
               />
               {/* Real money, Stripe's test mode, and grants nobody paid for,
@@ -1123,8 +1225,8 @@ function DevConsoleBody({
             </p>
             <Panel
               title="Every Payment And Grant"
-              what="All three Stripe ledgers merged, newest first. PAID is real money, TEST is Stripe test mode and nobody was charged, GRANTED is somebody switching a pack on from this console. The two filters above narrow by app and by kind; the page search filters this list as you type — try a pack id, an amount, or who bought it."
-              writes="veditor_purchase_events + devfleet_purchase_events + mak_subscription_events"
+              what="Every app's ledger, merged into one table and shown newest first. PAID is real money, TEST is Stripe test mode and nobody was charged, GRANTED is somebody switching a pack on from this console. The two filters above narrow by app and by kind; the page search filters this list as you type — try a pack id, an amount, or who bought it."
+              writes="tdg_purchase_events"
               matchCount={shownEvents.length}
               right={<LedgerTag state={ledgerState} n={shownEvents.length} noun="ENTRIES" />}
             >
