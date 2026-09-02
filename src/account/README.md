@@ -25,7 +25,7 @@ are the authority for every sentence below.
 | `useAccount.ts` | `useAccountStats()`, `usePrivacy()`, `useSocial()`, `usePeopleSearch()`, `useProfileEditor()`. |
 | `appNames.ts` | `useAppNames()` — what to call an app the DATABASE named. `useAppWhere()` — where to SEND somebody from it: that app's own page, and its packs when it sells any. Both derived through the content overlay, both allowed to answer nothing. |
 | `format.ts` | `fmtDay`, `fmtRelative`, `prettyId`, `fmtCount`, `usernameFreeAt`. A deliberate twin of `src/dev/format.ts` — see below. |
-| `AccountFold.tsx` | `AccountFold` and `AccountSub`: one section of the page, open or shut. |
+| `AccountFold.tsx` | `AccountFold` and `AccountSub`: one section of the page, open or shut. A fold title accepts React content so a product-owned section such as TDG Cloud can carry its real mark while ordinary titles remain strings. |
 | `AccountPage.tsx` | The page at `#/account`, in its own lazy chunk. |
 | `Account.css` | Only what is new here: the fields, the counters, the people, the apps and the privacy list. |
 

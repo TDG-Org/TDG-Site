@@ -67,7 +67,7 @@ export function AccountFold({
   children,
 }: {
   id: string
-  title: string
+  title: ReactNode
   what: string
   count?: string
   children: ReactNode

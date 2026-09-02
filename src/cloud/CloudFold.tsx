@@ -12,6 +12,7 @@ import { cloudDeleteAll, cloudDownloadUrl } from './transfer'
 import { CloudBlock } from './CloudBlock'
 import { CloudViz } from './CloudViz'
 import { CloudManage } from './CloudManage'
+import { CloudMark } from './CloudMark'
 import './Cloud.css'
 
 /**
@@ -411,7 +412,12 @@ export function CloudFold() {
   return (
     <AccountFold
       id="cloud"
-      title="TDG Cloud"
+      title={
+        <span className="cloud__fold-title">
+          <CloudMark className="cloud__fold-mark" sizes="26px" />
+          TDG Cloud
+        </span>
+      }
       what="Pooled storage for your whole account — your plan, what is using it, and every way to take your data with you."
       count={count}
     >

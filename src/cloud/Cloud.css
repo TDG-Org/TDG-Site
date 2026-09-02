@@ -48,15 +48,25 @@
 }
 
 .cloud__title-glyph {
+  display: block;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.cloud__fold-title {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-hover);
-  border-radius: 3px;
-  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  gap: 8px;
+}
+
+.cloud__fold-mark {
+  display: block;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .cloud__lede {
