@@ -141,7 +141,7 @@ export const ABOUT: AboutPage = {
           items: [
             {
               name: 'Bible Educator',
-              text: 'Reading, listening to and studying Scripture, with notes you can write and draw in. Sixteen translations, free, and no account needed.',
+              text: 'Reading, listening to and studying Scripture, with notes you can write and draw in. Seventeen translations, free, and no account needed.',
               href: '#/app/bible-educator',
             },
             {

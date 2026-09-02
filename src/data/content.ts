@@ -357,7 +357,7 @@ export const APPS: AppCard[] = [
     repo: 'Bible-Educator',
     backend: 'bea',
     title: 'Bible Educator',
-    copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Any of the 16 translations can be downloaded to your device in one file.',
+    copy: 'Open a passage, have it read aloud while you follow, and mark it up as you go. Any of the 17 translations can be downloaded to your device in one file.',
     icon: 'icon-bible-educator.webp',
     iconShape: 'glyph',
     chips: [

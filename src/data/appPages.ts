@@ -65,14 +65,14 @@ const BIBLE_EDUCATOR: AppPage = {
   backHash: '#apps',
   backLabel: 'Apps',
   title: 'Bible Educator',
-  lede: 'Bible Educator is for reading, listening to, studying and taking real notes on Scripture, all in one place. It opens in a browser, installs like an app, and a whole translation can be downloaded to your own device.',
+  lede: 'Bible Educator is for reading, listening to, studying and taking real notes on Scripture, all in one place. It is a web app: it opens in a browser, it can be installed from that browser so it gets its own icon and window, and a whole translation can be downloaded to your own device. It is not on the App Store or Google Play yet.',
   intro:
-    'Sixteen public-domain translations are readable straight away and each one can be downloaded whole to your device. Everything you write, highlight and save stays on your own device.',
+    'Seventeen public-domain translations are readable straight away and each one can be downloaded whole to your device. Everything you write, highlight and save stays on your own device.',
   facts: [
     {
       label: 'Where it runs',
       value:
-        'Any modern browser, on a phone, tablet or computer. Nothing to install, and it can be added to your home screen or desktop so it opens in its own window',
+        'Any modern browser, on a phone, tablet or computer. Nothing to install before you can read, and it can be added to your home screen or desktop so it opens in its own window. Not on the App Store or Google Play',
     },
     {
       label: 'Downloads',
@@ -97,11 +97,11 @@ const BIBLE_EDUCATOR: AppPage = {
           steps: [
             {
               title: 'Open it and read',
-              text: 'It starts on the World English Bible. Pick a book and a chapter, then swipe or use the arrows to turn pages. Your place is remembered, and you can keep more than one reading tab open at once.',
+              text: 'It starts on the Berean Standard Bible, which is the one translation that comes with its own recorded Audio Bible. Pick a book and a chapter, then swipe or use the arrows to turn pages. Your place is remembered, and you can keep more than one reading tab open at once.',
             },
             {
               title: 'Choose your translation',
-              text: 'Settings then Bible lists all sixteen. The NIV and NASB are listed too, and are honestly marked as needing a licence we do not have, so their text is never bundled or downloaded.',
+              text: 'The version dropdown at the top of the Read tab switches translation, and “Manage Versions…” inside it lists all seventeen. The NIV and NASB are listed too, and are honestly marked as needing a licence we do not have, so their text is never bundled or downloaded.',
             },
             {
               title: 'Download one to your device',
@@ -109,7 +109,7 @@ const BIBLE_EDUCATOR: AppPage = {
             },
             {
               title: 'Install it as an app',
-              text: 'Settings then Install app, or your browser’s own install button. It gets its own window and its own icon and stops looking like a tab.',
+              text: 'Settings then Install App, or your browser’s own install button. That section says what your browser can actually do, including telling an iPhone to use Share then Add to Home Screen. It gets its own window and its own icon and stops looking like a tab.',
             },
             {
               title: 'Tap a verse',
@@ -137,8 +137,8 @@ const BIBLE_EDUCATOR: AppPage = {
           kind: 'features',
           items: [
             {
-              name: 'Sixteen translations',
-              text: 'Public-domain versions including WEB, KJV, ASV, YLT, Darby, the Clementine Vulgate and the Cherokee New Testament. Read one on demand or download it whole.',
+              name: 'Seventeen translations',
+              text: 'Public-domain versions including the Berean Standard Bible (the default), WEB, KJV, ASV, YLT, Darby, the Clementine Vulgate and the Cherokee New Testament. Read one on demand or download it whole.',
             },
             {
               name: 'Highlights that stay',
@@ -178,22 +178,26 @@ const BIBLE_EDUCATOR: AppPage = {
           kind: 'features',
           items: [
             {
-              name: 'Your device’s voices',
-              text: 'Always available, run on your own device, and cost nothing. This is what it uses out of the box.',
+              name: 'A real recorded Audio Bible',
+              text: 'This is what it uses out of the box. The Berean Standard Bible, the version it opens on, comes with a narration read aloud by an actual person, word for word: Bob Souer by default, with Barry Hays and Jordan Gilbert also there. Those recordings are public domain, and they play on any host.',
             },
             {
-              name: 'Natural voices',
-              text: 'Microsoft Azure AI Speech and Google Cloud Text-to-Speech voices, grouped in the picker under friendly names. They are synthesized through a server route so the keys never reach the browser, and each chapter is cached after its first play.',
+              name: 'Synthesized voices',
+              text: 'For every translation with no recording of its own, and for anyone who prefers one. The free Microsoft Edge voices are on from the start; Azure AI Speech, Google Cloud and the rest stay switched off until you turn them on in Settings. They are synthesized through a server route so the keys never reach the browser, and each chapter is cached after its first play.',
+            },
+            {
+              name: 'Your device’s voices',
+              text: 'Always available, run on your own device, and cost nothing. They are the fallback that cannot fail, whatever else is unreachable.',
             },
             {
               name: 'Tap a verse to play from it',
-              text: 'Optional, off by default. With it on, tapping any verse starts reading there instead of opening the action panel.',
+              text: 'On by default, and switchable in Settings. Tapping any verse starts reading there; with it off, a tap opens the verse action panel instead. A right-click or a long press gets that panel either way.',
             },
           ],
         },
         {
           kind: 'note',
-          text: 'The natural voices need the app’s own server route running. On a plain static host it falls back to your device voices, which is the same reading with a plainer voice.',
+          text: 'The synthesized voices need the app’s own server route running. The recorded Audio Bible and your device’s own voices do not, so on a plain static host you still get a real narrator on the default version rather than nothing.',
         },
       ],
     },
