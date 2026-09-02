@@ -35,7 +35,7 @@
 // you can tell which source is deployed without guessing. (The Veditor's copy
 // has a script that digests the file; this one does not, so the stamp is only
 // as honest as whoever last edited it. See supabase/README.md.)
-const SOURCE_STAMP = '2026-08-21-a';
+const SOURCE_STAMP = '2026-09-01-a';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 /** The key that may talk to `bea_login_identity`. Never reaches the caller. */
@@ -94,6 +94,13 @@ async function passwordGrant(email: string, password: string): Promise<Response>
 
   const code = String(body?.error_code ?? body?.error ?? '');
   if (res.status === 429) return json({ error: 'rate_limited' }, 429);
+  // GoTrue itself broke — a cold start, an incident, a 502 from the edge.
+  // That is not a wrong password, and saying it was sent people off to reset
+  // a password that was right. `server_error` reveals nothing about the
+  // account (the same answer a thrown fetch already gives below), so the
+  // small-vocabulary rule in the header is kept: a name that matches nothing
+  // and a wrong password still answer identically.
+  if (res.status >= 500) return json({ error: 'server_error' }, 502);
   if (code === 'email_not_confirmed') return json({ error: 'email_not_confirmed' }, 400);
   return json({ error: 'invalid_credentials' }, 400);
 }

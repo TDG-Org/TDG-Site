@@ -85,7 +85,7 @@
  *  IS the authentication. GET answers a version stamp.
  */
 
-const SOURCE_STAMP = 'cloud-stripe-webhook@1';
+const SOURCE_STAMP = 'cloud-stripe-webhook@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -182,8 +182,8 @@ type EventAnnotation = {
 };
 
 async function recordEvent(eventId: string, eventType: string, annotation: EventAnnotation): Promise<void> {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/cloud_purchase_events`, {
+  const write = async (userId: string | null): Promise<Response> =>
+    await fetch(`${SUPABASE_URL}/rest/v1/cloud_purchase_events`, {
       method: 'POST',
       headers: {
         apikey: SERVICE_KEY,
@@ -195,13 +195,24 @@ async function recordEvent(eventId: string, eventType: string, annotation: Event
         {
           stripe_event_id: eventId,
           event_type: eventType,
-          user_id: annotation.userId,
+          user_id: userId,
           pack: annotation.pack,
           amount_cents: annotation.amountCents,
           currency: annotation.currency,
         },
       ]),
     });
+  try {
+    let res = await write(annotation.userId);
+    if (!res.ok && annotation.userId !== null) {
+      // The merged ledger keys `user_id` to `profiles`, so an id that names
+      // no account (deleted since, or never one) is refused — and a refused
+      // ledger row is money taken with no trail. The row is written again
+      // with no user rather than not at all; the amount and the event id
+      // are what a refund needs, and the console prints it as unattributed.
+      console.error('cloud-stripe-webhook ledger write refused, retrying unattributed', eventId, res.status, await res.text());
+      res = await write(null);
+    }
     if (!res.ok) console.error('cloud-stripe-webhook ledger write failed', eventId, res.status, await res.text());
   } catch (err) {
     console.error('cloud-stripe-webhook ledger write threw', eventId, err);
@@ -342,9 +353,9 @@ async function periodEndForSession(
   return { end: end.toISOString(), plan };
 }
 
-async function currentGrants(userId: string): Promise<Record<string, PackGrant>> {
+async function currentRow(userId: string): Promise<{ grants: Record<string, PackGrant>; customerId: string | null }> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/cloud_entitlements?user_id=eq.${userId}&select=grants`,
+    `${SUPABASE_URL}/rest/v1/cloud_entitlements?user_id=eq.${userId}&select=grants,stripe_customer_id`,
     { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
   );
   // A failed read is NOT "this user holds nothing". Throw so the handler
@@ -352,9 +363,14 @@ async function currentGrants(userId: string): Promise<Record<string, PackGrant>>
   if (!res.ok) throw new Error(`cloud_entitlements read failed: ${res.status}`);
   const rows = await res.json();
   const grants = rows?.[0]?.grants;
-  return grants !== null && typeof grants === 'object' && !Array.isArray(grants)
-    ? (grants as Record<string, PackGrant>)
-    : {};
+  const customer = rows?.[0]?.stripe_customer_id;
+  return {
+    grants:
+      grants !== null && typeof grants === 'object' && !Array.isArray(grants)
+        ? (grants as Record<string, PackGrant>)
+        : {},
+    customerId: typeof customer === 'string' && customer !== '' ? customer : null,
+  };
 }
 
 /**
@@ -379,7 +395,7 @@ async function applyGrant(
   customerId: string | null,
   removePack: string | null = null,
 ): Promise<void> {
-  const grants = await currentGrants(userId);
+  const { grants, customerId: knownCustomer } = await currentRow(userId);
   const held = grants[pack];
   if (held?.kind === 'perpetual' && grant.kind !== 'perpetual') return;
   if (
@@ -414,32 +430,72 @@ async function applyGrant(
       {
         user_id: userId,
         grants: next,
-        ...(customerId ? { stripe_customer_id: customerId } : {}),
+        /*
+         * The Stripe customer is written ONCE, when the row has none. An
+         * account that checks out twice under two emails is two Stripe
+         * customers, and the last payer used to overwrite the first — so
+         * Manage or Cancel Plan then opened the portal of whichever paid
+         * last, showing that customer's card and invoices only. The first
+         * customer stays; a different one is logged so a human can merge
+         * them in Stripe if they ever want to.
+         */
+        ...(customerId && knownCustomer === null ? { stripe_customer_id: customerId } : {}),
       },
     ]),
   });
   if (!res.ok) throw new Error(`cloud_entitlements upsert failed: ${res.status} ${await res.text()}`);
+  if (customerId && knownCustomer !== null && knownCustomer !== customerId) {
+    console.warn('cloud-stripe-webhook: account paid from a second Stripe customer', userId, knownCustomer, customerId);
+  }
 }
 
-/** Whose subscription is this, from the id recorded when it started. */
+/** Whose subscription is this, from the id recorded when it started.
+ *
+ *  Asked of Postgres (`cloud_user_for_subscription`, service role only)
+ *  rather than by reading every `cloud_entitlements` row and searching the
+ *  grants here: PostgREST caps one read at 1000 rows and says nothing when
+ *  it does, so past a thousand subscribers the scan simply did not contain
+ *  the newest of them, their renewals were dismissed as a sibling app's, and
+ *  their grant expired on schedule while they were paying. */
 async function userForSubscription(subscriptionId: string): Promise<{ userId: string; pack: string } | null> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/cloud_entitlements?select=user_id,grants`,
-    { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } },
-  );
-  if (!res.ok) throw new Error(`cloud_entitlements scan failed: ${res.status}`);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cloud_user_for_subscription`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_subscription_id: subscriptionId }),
+  });
+  if (!res.ok) throw new Error(`cloud_user_for_subscription failed: ${res.status}`);
   const rows = await res.json();
-  if (!Array.isArray(rows)) return null;
-  for (const row of rows) {
-    const grants = row?.grants;
-    if (grants === null || typeof grants !== 'object') continue;
-    for (const [pack, grant] of Object.entries(grants as Record<string, PackGrant>)) {
-      if (grant?.subscriptionId === subscriptionId) {
-        return { userId: String(row.user_id), pack };
-      }
-    }
-  }
-  return null;
+  const row = Array.isArray(rows) ? (rows[0] as Record<string, unknown> | undefined) : undefined;
+  const userId = String(row?.user_id ?? '');
+  const pack = String(row?.pack ?? '');
+  return userId !== '' && pack !== '' ? { userId, pack } : null;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Is this a real account? The Buy button writes the buyer's uuid into
+ *  `client_reference_id`, and the URL is the buyer's to edit: `hello`, or a
+ *  uuid that was deleted, used to reach the grant upsert and fail there —
+ *  a 500 Stripe retried for three days, with no ledger row written for money
+ *  that was taken. A value that is not an account falls through to the
+ *  email, and failing that to a null user: recorded, granted to no one. */
+async function userExists(userId: string): Promise<boolean> {
+  if (!UUID_RE.test(userId)) return false;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cloud_user_exists`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_user: userId }),
+  });
+  if (!res.ok) throw new Error(`cloud_user_exists failed: ${res.status}`);
+  return (await res.json()) === true;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -570,6 +626,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       annotation.pack = KNOWN_PACKS.includes(pack) ? pack : null;
 
       let userId = String(object.client_reference_id ?? metadata.user_id ?? '');
+      if (userId !== '' && !(await userExists(userId))) userId = '';
       if (userId === '') {
         const details = (object.customer_details ?? {}) as Record<string, unknown>;
         userId = (await userForEmail(String(details.email ?? ''))) ?? '';

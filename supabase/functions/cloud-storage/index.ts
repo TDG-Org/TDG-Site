@@ -40,7 +40,7 @@
  *  GET → health stamp (no identity, no secrets).
  */
 
-const SOURCE_STAMP = 'cloud-storage@3';
+const SOURCE_STAMP = 'cloud-storage@4';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -276,31 +276,60 @@ async function s3(
   });
 }
 
+const xmlUnescape = (s: string) =>
+  s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#3[49];/g, (m) => (m === '&#34;' ? '"' : "'"))
+    .replace(/&amp;/g, '&');
+
+/** Every version of exactly this name, newest first as B2 lists them, or
+ *  null when the listing failed.
+ *
+ *  PAGED, which the first version of this was not: it asked for one page of
+ *  100 and stopped, so an object rewritten 150 times in a day — a sync app
+ *  re-saving `settings.json` — kept 50 versions after a "delete", the 51st
+ *  newest became the current object, the catalogue row was gone, and the
+ *  bytes were an orphan billed to us with the delete reported as done. */
+async function listVersions(cfg: B2, objectKey: string): Promise<{ id: string; latest: boolean }[] | null> {
+  const out: { id: string; latest: boolean }[] = [];
+  let keyMarker = '';
+  let versionMarker = '';
+  for (let round = 0; round < 200; round++) {
+    const query: Record<string, string> = { versions: '', prefix: objectKey, 'max-keys': '1000' };
+    if (keyMarker !== '') query['key-marker'] = keyMarker;
+    if (versionMarker !== '') query['version-id-marker'] = versionMarker;
+    const list = await s3(cfg, 'GET', '', query);
+    const text = await list.text();
+    if (!list.ok) {
+      console.error('cloud-storage: version list failed', list.status, text.slice(0, 200));
+      return null;
+    }
+    for (const m of text.matchAll(/<(?:Version|DeleteMarker)>[\s\S]*?<\/(?:Version|DeleteMarker)>/g)) {
+      const key = xmlUnescape(m[0].match(/<Key>([^<]*)<\/Key>/)?.[1] ?? '');
+      const id = m[0].match(/<VersionId>([^<]*)<\/VersionId>/)?.[1] ?? '';
+      // The prefix also matches LONGER names; only exactly this object counts.
+      if (key !== objectKey || id === '') continue;
+      out.push({ id, latest: m[0].includes('<IsLatest>true</IsLatest>') });
+    }
+    if (!text.includes('<IsTruncated>true</IsTruncated>')) break;
+    keyMarker = xmlUnescape(text.match(/<NextKeyMarker>([^<]*)<\/NextKeyMarker>/)?.[1] ?? '');
+    versionMarker = text.match(/<NextVersionIdMarker>([^<]*)<\/NextVersionIdMarker>/)?.[1] ?? '';
+    // Keys list in order, so a marker past this name means every version of
+    // it has been seen; the rest of the prefix is longer names.
+    if (keyMarker === '' || keyMarker > objectKey) break;
+  }
+  return out;
+}
+
 /** Delete means GONE, not hidden. A plain S3 DELETE on a B2 bucket writes a
  *  hide marker (the lifecycle sweeps those a day later), and deleting only
  *  the newest version would resurrect the one beneath it — so a real delete
  *  lists every version of exactly this name and destroys each by versionId. */
 async function hardDelete(cfg: B2, objectKey: string): Promise<boolean> {
-  const list = await s3(cfg, 'GET', '', { versions: '', prefix: objectKey, 'max-keys': '100' });
-  const text = await list.text();
-  if (!list.ok) {
-    console.error('cloud-storage: version list failed', list.status, text.slice(0, 200));
-    return false;
-  }
-  const unescape = (s: string) =>
-    s
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#3[49];/g, (m) => (m === '&#34;' ? '"' : "'"))
-      .replace(/&amp;/g, '&');
-  const versions = [...text.matchAll(/<(?:Version|DeleteMarker)>[\s\S]*?<\/(?:Version|DeleteMarker)>/g)]
-    .map((m) => ({
-      key: unescape(m[0].match(/<Key>([^<]*)<\/Key>/)?.[1] ?? ''),
-      id: m[0].match(/<VersionId>([^<]*)<\/VersionId>/)?.[1] ?? '',
-    }))
-    // The prefix also matches LONGER names; only exactly this object dies.
-    .filter((v) => v.key === objectKey && v.id !== '');
+  const versions = await listVersions(cfg, objectKey);
+  if (versions === null) return false;
   for (const v of versions) {
     const gone = await s3(cfg, 'DELETE', objectKey, { versionId: v.id });
     if (!gone.ok && gone.status !== 404) {
@@ -309,6 +338,56 @@ async function hardDelete(cfg: B2, objectKey: string): Promise<boolean> {
     }
   }
   return true;
+}
+
+/** The OTHER delete: only the newest version goes, and whatever stood
+ *  beneath it becomes current again.
+ *
+ *  For an upload that must not be kept — larger than its reservation, or
+ *  with no reservation behind it at all. `hardDelete` here destroyed every
+ *  version of the name, the previously booked good file included, and left
+ *  the catalogue row promising bytes that would 404 on download: a client
+ *  that lied about size lost the object it had, not only the object it
+ *  sent. Taking the newest version alone puts the bucket back to what the
+ *  catalogue says. (B2's lifecycle keeps superseded versions for a day, so
+ *  the good one is still there on any honest timescale.) */
+async function deleteLatestVersion(cfg: B2, objectKey: string): Promise<boolean> {
+  const versions = await listVersions(cfg, objectKey);
+  if (versions === null) return false;
+  const latest = versions.find((v) => v.latest);
+  if (!latest) return true;
+  const gone = await s3(cfg, 'DELETE', objectKey, { versionId: latest.id });
+  if (!gone.ok && gone.status !== 404) {
+    console.error('cloud-storage: latest-version delete failed', gone.status);
+    return false;
+  }
+  return true;
+}
+
+/** The bytes the catalogue books for this path, or NaN when it books none. */
+async function bookedBytes(uid: string, app: string, path: string): Promise<number> {
+  const res = await rest(
+    `/rest/v1/tdg_cloud_files?user_id=eq.${uid}&app=eq.${encodeURIComponent(app)}&path=eq.${encodeURIComponent(path)}&select=bytes`,
+  );
+  if (!res.ok) return NaN;
+  return Number(((await res.json())?.[0] as Record<string, unknown> | undefined)?.bytes ?? NaN);
+}
+
+/** The reservation standing behind this path, or null when there is none. */
+async function reservationFor(
+  uid: string,
+  app: string,
+  path: string,
+): Promise<{ bytes: number; live: boolean } | null> {
+  const res = await rest(
+    `/rest/v1/tdg_cloud_reservations?user_id=eq.${uid}&app=eq.${encodeURIComponent(app)}&path=eq.${encodeURIComponent(path)}&select=bytes,expires_at`,
+  );
+  if (!res.ok) return null;
+  const row = (await res.json())?.[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+  const bytes = Number(row.bytes ?? NaN);
+  if (!Number.isFinite(bytes)) return null;
+  return { bytes, live: Date.parse(String(row.expires_at ?? '')) > Date.now() };
 }
 
 // ── input hygiene (the RPCs re-check; this keeps bad names out of URLs) ─────
@@ -392,6 +471,21 @@ async function uploadPartUrls(uid: string, body: Record<string, unknown>): Promi
   const from = Math.max(1, Number(body.from) || 1);
   const count = Math.min(64, Math.max(1, Number(body.count) || 1));
   if (!APP_RE.test(app) || !validPath(path) || uploadId === '') return refuse('22023', 'bad request');
+  /*
+   * A part URL is a licence to put 256 MiB somewhere we pay for, so it is
+   * handed out only against a LIVE reservation, and only for the parts that
+   * reservation's size can hold. Nothing bounded this before: a caller could
+   * ask for parts 1…∞ under any `upload_id` and stack terabytes of unfinished
+   * multipart parts in the bucket, billed and invisible to every audit.
+   */
+  const reservation = await reservationFor(uid, app, path);
+  if (reservation === null || !reservation.live) {
+    return refuse('no_reservation', 'no live reservation stands behind this upload — begin it again', 409);
+  }
+  const maxPart = Math.max(1, Math.ceil(reservation.bytes / PART_SIZE));
+  if (from + count - 1 > maxPart) {
+    return refuse('22023', `this upload has at most ${maxPart} part${maxPart === 1 ? '' : 's'}`);
+  }
   const cfg = await b2();
   return json({ part_urls: await partUrlsFor(cfg, `${uid}/${app}/${path}`, uploadId, from, count) });
 }
@@ -428,13 +522,32 @@ async function uploadFinish(uid: string, body: Record<string, unknown>): Promise
   if (!head.ok) return refuse('not_landed', 'no uploaded object was found to book', 409);
   const actual = Number(head.headers.get('content-length') ?? 0);
 
-  // The reservation promised a size and quota was granted for THAT size. More
-  // bytes than promised do not get booked — the object goes, the space stays.
+  /*
+   * The reservation promised a size and quota was granted for THAT size —
+   * and it is the ONLY key to booking. With no reservation behind the path,
+   * one of two things is true: this is a retry of a finish that already
+   * booked (the answer was lost on the way back; the catalogue holds exactly
+   * these bytes, and the honest reply is the same "ok" again), or it is an
+   * object nothing promised space for — a reservation cancelled or reaped
+   * after the PUT, which is how a one-byte reservation used to book four
+   * gigabytes, because a missing row read as NaN and the size guard below
+   * was simply skipped. That object is not kept.
+   */
   const where = `user_id=eq.${uid}&app=eq.${encodeURIComponent(app)}&path=eq.${encodeURIComponent(path)}`;
-  const resRes = await rest(`/rest/v1/tdg_cloud_reservations?${where}&select=bytes`);
-  const reserved = resRes.ok ? Number(((await resRes.json())?.[0] as Record<string, unknown>)?.bytes ?? NaN) : NaN;
-  if (Number.isFinite(reserved) && actual > reserved) {
-    await hardDelete(cfg, objectKey);
+  const reservation = await reservationFor(uid, app, path);
+  if (reservation === null) {
+    const booked = await bookedBytes(uid, app, path);
+    if (Number.isFinite(booked) && booked === actual) {
+      return json({ ok: true, bytes: actual, object_path: objectKey, already_booked: true });
+    }
+    await deleteLatestVersion(cfg, objectKey);
+    return refuse('no_reservation', 'no reservation stands behind this upload, so it was not kept — begin it again', 409);
+  }
+  // More bytes than promised do not get booked — the newest version goes
+  // (and only the newest: the file this was replacing stays current, so the
+  // catalogue row it has still describes a real object), the space stays.
+  if (actual > reservation.bytes) {
+    await deleteLatestVersion(cfg, objectKey);
     // This reservation is spent: the object it was for is gone and no retry
     // of THIS finish can ever book it. Leaving it to die of its own TTL would
     // hold quota, and one of the 64 open-reservation slots, for an hour —
@@ -452,6 +565,10 @@ async function uploadFinish(uid: string, body: Record<string, unknown>): Promise
     p_bytes: actual,
   });
   if (!book.ok) {
+    // Postgres holds the same two rules (TDGC5 no reservation, TDGC3 larger
+    // than it) and is the boundary; a refusal from there passes through in
+    // its own words rather than being dressed as a server fault.
+    if (book.status >= 400 && book.status < 500) return await passthrough(book);
     console.error('cloud-storage: account_upsert failed', book.status, await book.text());
     return refuse('server_error', 'the upload landed but could not be booked — retry finish', 500);
   }
@@ -464,11 +581,31 @@ async function uploadCancel(token: string, body: Record<string, unknown>): Promi
   const uploadId = String(body.upload_id ?? '');
   const app = String(body.app ?? '');
   const path = String(body.path ?? '');
-  if (uploadId !== '' && APP_RE.test(app) && validPath(path)) {
+  if (APP_RE.test(app) && validPath(path)) {
     const uid = await callerId(token);
     if (uid !== null) {
       const cfg = await b2();
-      await s3(cfg, 'DELETE', `${uid}/${app}/${path}`, { uploadId }).catch(() => undefined);
+      const key = `${uid}/${app}/${path}`;
+      if (uploadId !== '') {
+        // A multipart upload is aborted so its parts stop being billed.
+        await s3(cfg, 'DELETE', key, { uploadId }).catch(() => undefined);
+      } else {
+        // A single PUT may already have landed. Bytes that arrived under a
+        // reservation which is now cancelled are bytes nothing will ever
+        // book: unless the catalogue already holds exactly what is there (a
+        // cancel sent after a finish, harmless), the newest version goes and
+        // whatever was booked before it stands.
+        try {
+          const head = await s3(cfg, 'HEAD', key);
+          if (head.ok) {
+            const size = Number(head.headers.get('content-length') ?? NaN);
+            const booked = await bookedBytes(uid, app, path);
+            if (!(Number.isFinite(booked) && booked === size)) await deleteLatestVersion(cfg, key);
+          }
+        } catch (err) {
+          console.error('cloud-storage: cancel cleanup failed', err);
+        }
+      }
     }
   }
   return json({ ok: true });

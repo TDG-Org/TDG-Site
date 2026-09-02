@@ -40,7 +40,26 @@
  *  release. It answers `ok: false` the day any of this drifts.
  */
 
-const SOURCE_STAMP = 'tdg-store-verify@1';
+const SOURCE_STAMP = 'tdg-store-verify@2';
+
+/**
+ * One sweep a minute, per isolate, for the GET.
+ *
+ * A GET costs about fifteen Stripe reads (one per app-tagged link, plus the
+ * endpoints), and this function is callable by anybody — the header says why
+ * that is fine for what it RETURNS. What it did not weigh is the account
+ * those reads land on: the same Stripe account the three webhooks refetch
+ * every event from, which is their only authentication. A few GETs a second
+ * from anyone would walk that account into Stripe's read rate limit, and the
+ * webhooks' refetches would start answering 429 → 502 → Stripe retries, so
+ * purchases would land late until the backoff cleared. Serving a sweep that
+ * is under a minute old from memory bounds the cost at one sweep a minute
+ * per isolate, whatever the request rate. The POST (a catalogue to verify)
+ * always sweeps fresh: it is the release check, and it is what `npm run
+ * verify:store` calls.
+ */
+const SWEEP_TTL_MS = 60_000;
+let sweepCache: { at: number; body: string } | null = null;
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -166,15 +185,24 @@ function checkWebhooks(
   endpoints: Record<string, unknown>[],
   problems: Problem[],
 ): Record<string, unknown> {
+  // `customer.subscription.deleted` is the event Stripe sends when a plan
+  // cancelled at period end actually ENDS (and when dunning gives up), and it
+  // is the only thing that turns an owned subscription into a lapsed one on
+  // our side. The header above promised the subscription events "where
+  // grants can lapse" and this list did not include the one where they do —
+  // an endpoint subscribed to exactly the two listed here passed green while
+  // an ended subscription stayed Owned for ever.
   const need: Record<string, string[]> = {
     [`${SUPABASE_URL}/functions/v1/veditor-stripe-webhook`]: [
       'checkout.session.completed',
       'customer.subscription.updated',
+      'customer.subscription.deleted',
     ],
     [`${SUPABASE_URL}/functions/v1/devfleet-stripe-webhook`]: ['checkout.session.completed'],
     [`${SUPABASE_URL}/functions/v1/cloud-stripe-webhook`]: [
       'checkout.session.completed',
       'customer.subscription.updated',
+      'customer.subscription.deleted',
     ],
   };
   const report: Record<string, unknown> = {};
@@ -258,6 +286,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
+  if (req.method === 'GET' && sweepCache !== null && Date.now() - sweepCache.at < SWEEP_TTL_MS) {
+    return new Response(sweepCache.body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'X-Sweep-Cached': 'true' },
+    });
+  }
+
   try {
     const [links, endpoints, cfgRes] = await Promise.all([
       linkFacts(),
@@ -273,25 +308,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const webhooks = checkWebhooks((endpoints.data as Record<string, unknown>[]) ?? [], problems);
     const catalogReport = catalog.length > 0 ? checkCatalog(catalog, links, problems) : undefined;
 
-    return json({
-      function: 'tdg-store-verify',
-      stamp: SOURCE_STAMP,
-      ok: problems.length === 0,
-      problems,
-      cloud,
-      webhooks,
-      ...(catalogReport ? { catalog: catalogReport } : {}),
-      links: [...links.values()].map((f) => ({
-        url: f.url,
-        app: f.metadata.app,
-        pack: f.metadata.pack,
-        plan: f.metadata.plan ?? null,
-        cents: f.cents,
-        recurring: f.recurring,
-        active: f.active,
-        managedPayments: f.managedPayments,
-      })),
-    });
+    const body = JSON.stringify(
+      {
+        function: 'tdg-store-verify',
+        stamp: SOURCE_STAMP,
+        ok: problems.length === 0,
+        problems,
+        cloud,
+        webhooks,
+        ...(catalogReport ? { catalog: catalogReport } : {}),
+        links: [...links.values()].map((f) => ({
+          url: f.url,
+          app: f.metadata.app,
+          pack: f.metadata.pack,
+          plan: f.metadata.plan ?? null,
+          cents: f.cents,
+          recurring: f.recurring,
+          active: f.active,
+          managedPayments: f.managedPayments,
+        })),
+      },
+      null,
+      1,
+    );
+    if (req.method === 'GET') sweepCache = { at: Date.now(), body };
+    return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
     console.error('tdg-store-verify failed', err);
     return json({ error: 'verify_failed', message: err instanceof Error ? err.message : String(err) }, 500);

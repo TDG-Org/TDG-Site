@@ -51,13 +51,26 @@
  *  the purge simply removes the account from the report.
  */
 
-const SOURCE_STAMP = 'cloud-maintenance@4';
+const SOURCE_STAMP = 'cloud-maintenance@5';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
 
+/** The console at `#/dev` calls this from a browser, with `Authorization`,
+ *  `apikey` and `Content-Type` — every one of which makes the browser
+ *  preflight. Without these headers the preflight failed, the fetch threw,
+ *  and the console's Backblaze Bucket panel could never succeed: every press
+ *  of Read The Bucket said "Couldn't reach the server", blaming a connection
+ *  that was fine. Same map as `cloud-storage`, the sibling that got it right. */
+const CORS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+};
+
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
 async function rest(path: string, init: RequestInit = {}): Promise<Response> {
@@ -72,20 +85,23 @@ async function rest(path: string, init: RequestInit = {}): Promise<Response> {
   });
 }
 
-/** The caller: a developer's user token, or the project's own service key. */
-async function callerAllowed(req: Request): Promise<boolean> {
+/** The caller: a developer's user token, or the project's own service key.
+ *  Answers WHO — the developer's uuid, or `'service'` for the project itself
+ *  — so a purge can be audited to the person who pressed it, or null when
+ *  the caller is neither. */
+async function callerAllowed(req: Request): Promise<string | null> {
   const auth = req.headers.get('Authorization') ?? '';
   const token = auth.replace(/^Bearer\s+/i, '');
-  if (token === '') return false;
-  if (token === SERVICE_KEY) return true;
+  if (token === '') return null;
+  if (token === SERVICE_KEY) return 'service';
 
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return false;
+  if (!res.ok) return null;
   const user = await res.json();
   const id = String(user?.id ?? '');
-  if (id === '') return false;
+  if (id === '') return null;
 
   //  NOT a read of `profiles`: service_role has no SELECT on that table and
   //  is not meant to (a table of names, emails and recovery addresses is not
@@ -99,9 +115,26 @@ async function callerAllowed(req: Request): Promise<boolean> {
   });
   if (!prof.ok) {
     console.error('cloud-maintenance: developer check failed', prof.status, await prof.text());
-    return false;
+    return null;
   }
-  return (await prof.json()) === true;
+  return (await prof.json()) === true ? id : null;
+}
+
+/** Every row of a table the service may read, a page at a time. PostgREST
+ *  caps one answer at 1000 rows and says nothing when it does, so a single
+ *  unpaged read of `tdg_cloud_usage` would silently leave the 1001st
+ *  account out of the retention report — an account that is then never
+ *  purged and never warned. */
+async function allRows<T>(pathWithSelect: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let page = 0; page < 400; page++) {
+    const res = await rest(`${pathWithSelect}&limit=1000&offset=${page * 1000}`);
+    if (!res.ok) throw new Error(`read failed: ${pathWithSelect} → ${res.status}`);
+    const batch = (await res.json()) as T[];
+    out.push(...batch);
+    if (batch.length < 1000) break;
+  }
+  return out;
 }
 
 type Grant = {
@@ -148,26 +181,38 @@ async function retentionCandidates(): Promise<Candidate[]> {
   const cfg = (await cfgRes.json())?.[0]?.doc ?? {};
   const days = Number(cfg?.retention?.read_only_days ?? 90) || 90;
 
-  const usageRes = await rest('/rest/v1/tdg_cloud_usage?select=user_id,bytes,files');
-  const usage = (await usageRes.json()) as { user_id: string; bytes: number; files: number }[];
-  const totals = new Map<string, { bytes: number; files: number }>();
+  const usage = await allRows<{ user_id: string; bytes: number; files: number; updated_at: string }>(
+    '/rest/v1/tdg_cloud_usage?select=user_id,bytes,files,updated_at&order=user_id,app',
+  );
+  const totals = new Map<string, { bytes: number; files: number; touched: number | null }>();
   for (const row of usage ?? []) {
-    const t = totals.get(row.user_id) ?? { bytes: 0, files: 0 };
+    const t = totals.get(row.user_id) ?? { bytes: 0, files: 0, touched: null };
     t.bytes += Number(row.bytes) || 0;
     t.files += Number(row.files) || 0;
+    const at = Date.parse(row.updated_at ?? '');
+    if (Number.isFinite(at) && (t.touched === null || at > t.touched)) t.touched = at;
     totals.set(row.user_id, t);
   }
 
-  const entRes = await rest('/rest/v1/cloud_entitlements?select=user_id,grants');
-  const ents = (await entRes.json()) as { user_id: string; grants: Record<string, Grant> }[];
-  const grantsOf = new Map((ents ?? []).map((e) => [e.user_id, e.grants ?? {}]));
+  const ents = await allRows<{ user_id: string; grants: Record<string, Grant>; updated_at: string }>(
+    '/rest/v1/cloud_entitlements?select=user_id,grants,updated_at&order=user_id',
+  );
+  const entOf = new Map((ents ?? []).map((e) => [e.user_id, e]));
 
   const out: Candidate[] = [];
   for (const [userId, t] of totals) {
     if (t.bytes <= 0) continue;
-    const grants = grantsOf.get(userId) ?? {};
+    const ent = entOf.get(userId);
+    const grants = ent?.grants ?? {};
     if (inForce(grants)) continue;
-    const anchor = lapsedAt(grants) ?? Date.now();
+    // The same anchor `tdg_cloud_plan_of` derives: the last period end, or
+    // when the grants last changed, or when the hosted bytes last changed.
+    // Never "now" — a deadline counted from the moment it is read moves every
+    // day and is never reached, so an account that never held a subscription
+    // (a reset perpetual grant, a tester whose door shut) was reported as
+    // read-only for ever with a date that kept walking away from it.
+    const changed = Date.parse(ent?.updated_at ?? '');
+    const anchor = lapsedAt(grants) ?? (Number.isFinite(changed) ? changed : null) ?? t.touched ?? Date.now();
     const deadline = anchor + days * 86400000;
     out.push({
       user_id: userId,
@@ -454,14 +499,25 @@ async function bucketAudit(): Promise<BucketAudit> {
   };
 }
 
-async function audit(targetId: string, action: string, detail: string): Promise<void> {
-  await rest('/rest/v1/tdg_moderation_audit', {
-    method: 'POST',
-    body: JSON.stringify([{ app: 'tdg-core', actor_id: null, target_id: targetId, action, detail }]),
-  }).catch((err) => console.error('cloud-maintenance audit write failed', err));
+/** One audit line, naming who did it. Answers whether it landed: a purge
+ *  whose record did not write is a purge nobody can account for, and the
+ *  caller is told so rather than shown a clean "purged". */
+async function audit(actorId: string | null, targetId: string, action: string, detail: string): Promise<boolean> {
+  try {
+    const res = await rest('/rest/v1/tdg_moderation_audit', {
+      method: 'POST',
+      body: JSON.stringify([{ app: 'tdg-core', actor_id: actorId, target_id: targetId, action, detail }]),
+    });
+    if (!res.ok) console.error('cloud-maintenance audit write refused', res.status, await res.text());
+    return res.ok;
+  } catch (err) {
+    console.error('cloud-maintenance audit write failed', err);
+    return false;
+  }
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method === 'GET') {
     return json({
       function: 'cloud-maintenance',
@@ -472,7 +528,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method !== 'POST') return json({ error: 'bad_request' }, 405);
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'server_error' }, 500);
 
-  if (!(await callerAllowed(req))) return json({ error: 'unauthorized' }, 401);
+  const caller = await callerAllowed(req);
+  if (caller === null) return json({ error: 'unauthorized' }, 401);
+  const actorId = caller === 'service' ? null : caller;
 
   let body: Record<string, unknown> = {};
   try {
@@ -515,22 +573,41 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (dryRun) return json({ dry_run: true, would_purge: ready });
 
       const cfg2 = await b2();
-      const purged: { user_id: string; objects: number }[] = [];
+      const purged: { user_id: string; objects: number; settled: boolean; audited: boolean }[] = [];
+      let unsettled = 0;
       for (const candidate of ready) {
         const removed = await purgePrefix(cfg2, `${candidate.user_id}/`);
-        await rest(`/rest/v1/rpc/tdg_cloud_account_remove_all`, {
+        /*
+         * The bytes are gone; now the books, and each write is CHECKED. They
+         * were fire-and-forget: a 5xx from PostgREST left the catalogue
+         * still billing quota for objects that no longer existed, with an
+         * audit line saying "removed" and a 200 to the caller. A settle
+         * that fails is now said per account and turns the whole answer
+         * into a 500, so the next run — and the person reading it — knows
+         * which account's books still disagree with the bucket.
+         */
+        const settle = await rest(`/rest/v1/rpc/tdg_cloud_account_remove_all`, {
           method: 'POST',
           body: JSON.stringify({ p_uid: candidate.user_id }),
         });
-        await rest(`/rest/v1/tdg_cloud_sync_state?user_id=eq.${candidate.user_id}`, { method: 'DELETE' });
-        await audit(
+        const sync = await rest(`/rest/v1/tdg_cloud_sync_state?user_id=eq.${candidate.user_id}`, {
+          method: 'DELETE',
+        });
+        const settled = settle.ok && sync.ok;
+        if (!settled) {
+          unsettled++;
+          console.error('cloud-maintenance: purge settle failed', candidate.user_id, settle.status, sync.status);
+        }
+        const audited = await audit(
+          actorId,
           candidate.user_id,
           'cloud-purge',
-          `retention expired ${candidate.deadline}; removed ${removed} hosted object versions (${candidate.bytes} bytes)`,
+          `retention expired ${candidate.deadline}; removed ${removed} hosted object versions (${candidate.bytes} bytes)` +
+            (settled ? '' : '; THE BOOKS DID NOT SETTLE — catalogue still holds this account'),
         );
-        purged.push({ user_id: candidate.user_id, objects: removed });
+        purged.push({ user_id: candidate.user_id, objects: removed, settled, audited });
       }
-      return json({ dry_run: false, purged });
+      return json({ dry_run: false, purged, unsettled }, unsettled > 0 ? 500 : 200);
     }
 
     return json({ error: 'bad_request' }, 400);
