@@ -680,7 +680,7 @@ export const MARANATHA = {
  * The queue behind the one playable game, as pills under the Games panel.
  *
  * They are GAMES, or things you would play inside one. The section was called
- * "Building now" until 2.51.0 and these three said "A shared design system",
+ * "Building now" until 2.52.0 and these three said "A shared design system",
  * "More Bible tools" and "Utilities for students" — true of the workshop, and
  * read under a heading that says Games they would each have been a promise of
  * a game we are not making. `MARANATHA.count` counts them, so a fourth pill

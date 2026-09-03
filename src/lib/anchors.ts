@@ -160,7 +160,7 @@ export function landOnAnchor(id: string): (() => void) | null {
  * The two aliases this site has.
  *
  * The Origin section was `#story` until the rename in 1.5.0 (August 2026), and
- * the Games section was `#building` until 2.51.0 (September 2026). Bookmarks
+ * the Games section was `#building` until 2.52.0 (September 2026). Bookmarks
  * and shared links still carry both, and each is resolved here so that every
  * way of arriving at it agrees. The hash itself is deliberately NOT rewritten
  * — see `App.tsx`, which says why at the effect that used to own the first of
