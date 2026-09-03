@@ -2906,40 +2906,73 @@
    crown's own ink starts at x 1288 against a point cloud whose widest form
    reaches about 1408, in a frame where the palm is the only thing to the right
    of it. Rendered, the two do not touch. */
-/* ── the model moves, because the palm cannot ──────────────────────────────
-   Two passes were spent moving the TREE and both of them had to give up
-   something: pushed far enough right to clear the model it is a sliver of
-   crown with no trunk, and lifted far enough it shows its cut-off foot. The
-   arithmetic says why. The crown fills the top 0.54 of a 2:3 box, so its
-   lowest ink sits 0.69 x --pine-w above the box's bottom edge; for that to
-   clear the model's top AND the box's foot to stay under the frame at the same
-   time, --pine-w has to be at least `(100svh - modelTop) / 0.69` — 1159px at
-   1904x940. A palm that wide is the whole frame.
+/* ── the model does not move. It never should have ─────────────────────────
+   A previous version of this file moved `.hero__model` left in light — `right`
+   and `width` both overridden — and argued it at length: the palm could not
+   clear the cross without either losing its trunk or showing its cut foot, so
+   the model was "the layer with room to give".
 
-   So the palm keeps the placement that reads as a whole tree and the MODEL
-   steps left out of its way. It is the layer with room to give: the hero's
-   copy ends at about 40% of the frame and everything between there and the
-   palm is open sky.
+   That argument answered a question nobody asked. The instruction was to move
+   the TREE, and it was given alongside a standing rule that anything which is
+   not part of the theme stays exactly where it is — the point cloud is the
+   hero of this section in both themes and its placement is not a Cebu
+   decision. A correct-looking derivation applied to the wrong element is still
+   the wrong element.
 
-   `right` is the palm's own crown line plus air: the crown's leading ink sits
-   `0.507 x --pine-w` in from the right edge (0.947 of the box's width, less
-   the 0.44 the box hangs off the frame), and 5.4vw on top of that is the gap.
-   Written from `min(38vw, 540px)` — the palm's own width expression — so the
-   two cannot drift apart; if `--pine-w` changes, change it in both places.
+   `.hero__model` therefore has no geometry override in light at all: `right:
+   2%` and `width: min(50vw, 660px)` from the base rule, identical to dark. The
+   overlap is solved on the palm below, which is where it was always supposed
+   to be solved, and the number that does it is `right` — pushing the box
+   further off the frame so the crown's ink clears the cross's arm sideways —
+   rather than `bottom`, which is the lever that produced both of the failures
+   the old note listed. */
+/* ── the palm, sized so the cross is never behind it ───────────────────────
+   Three numbers, and all three come from measurements rather than from taste.
 
-   `width` comes down 660 -> 560 for the narrow end. At 1600 the 660 box put
-   the point cloud over the lede: rendered at 1904, 1600 and 1280, this is the
-   pair that clears the palm AND the copy at all three. Height is untouched —
-   `PointCloud` projects off `halfH`, so narrowing the box crops transparent
-   margin and does not resize the form. */
-[data-theme='light'] .hero__model {
-  right: calc(0.507 * min(38vw, 540px) + 5.4vw);
-  width: min(44vw, 560px);
-}
+   **The cloud's ink envelope.** `.hero__model`'s box is 660x660 at 1904x940
+   but the point cloud MORPHS — cross, boat, controller, arch — and each form
+   fills a different part of it, which is why single-frame measurements of this
+   disagreed with each other for two passes. Rendered six times with the palm
+   hidden and each frame diffed against a seventh with the model hidden too,
+   the union of the ink is x 1150..1745: the cloud's rightmost ink stops 121px
+   short of its own box, at `boxLeft + 0.83 x width`.
 
+   **The plate's own alpha**, binned at 1/16 over `coconut-palm-tall-light.png`
+   (2048x3072): crown from y 0 to 0.50, at its widest x 0.068..0.936; coconuts
+   at y 0.50..0.62, x 0.27..0.68; trunk from y 0.55 down, LEANING RIGHT as it
+   descends — x 0.549 at the top and 0.658..0.895 at the bottom edge.
+
+   That lean is the whole difficulty and it is why two earlier passes concluded
+   the model had to move instead. Pushing this box right to clear the cloud
+   takes the trunk off the frame before the crown is clear, because the trunk
+   is further right than the crown's leading fronds. Combining the two:
+
+       crown clear      viewport - 0.497 x --pine-w  >=  cloud ink right
+       trunk still in   --pine-w small enough that 0.549 x it stays on screen
+
+   and the pair only holds together below about 320px at this width. Rendered
+   at 300, 380, 460 and 540 side by side, that is exactly what the pictures
+   show: 460 and 540 are fronds alone in the corner, 380 keeps the coconuts and
+   loses the trunk, and 300 is the only one that is still a tree — crown,
+   coconuts, and trunk running off the right edge rather than ending in mid
+   air.
+
+   `min(17vw, 280px)` holds the clearance at every width rather than at one:
+   checked against the cloud's envelope at 1280 (27px of air), 1600 (8px) and
+   1904 (20px), where the tightest is 1600 because `.hero__model`'s own width
+   reaches its 660px cap there and stops growing.
+
+   `right` and `bottom` keep the forms they had. -0.435 is where the crown's
+   leading ink lands on the clearance line, and `bottom` resolves to its -8px
+   branch at this width, so the box's foot is below the frame and the trunk
+   still runs off it — the property the "way too high, and I can see the bottom
+   of the tree" report was about.
+
+   The model is NOT part of this. It has no light override at all; see the
+   block above for why. */
 [data-theme='light'] .hero__pine {
-  --pine-w: min(38vw, 540px);
-  right: calc(-0.44 * var(--pine-w));
+  --pine-w: min(17vw, 280px);
+  right: calc(-0.435 * var(--pine-w));
   bottom: min(-8px, calc(8svh - 0.225 * var(--pine-w)));
 }
 
