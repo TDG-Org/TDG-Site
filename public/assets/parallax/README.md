@@ -103,42 +103,66 @@ so nothing about the winter kit moved, and a palm is never filed under
 `pine-row-light.webp`. The `-light` suffix still means "the file the light
 theme loads"; the name in front of it says what is in it.
 
-The set is 24 pieces, every one a `-light.png` source with its `-light.webp`
-beside it, encoded with the same ffmpeg line as the winter kit. They were cut
-from the owner's JPG plates and props by `scripts/cebu-art.py` driven by
-`scripts/cebu-art.json`, which records per piece the source, the mode (a
-white-background key, a per-row sky key, a cropped scene plate with baked
-feathers, a luminance haze, an elliptical patch), the crop, and where the
-cut-out sits on its canvas. Re-running it regenerates the PNGs exactly; the
-sources themselves live in the owner's DevFleet logbook and are not in the
-repo.
+The set is 23 pieces, every one a `-light.png` source with its `-light.webp`
+beside it, encoded with the same ffmpeg line as the winter kit. They are built
+by `scripts/cebu-art.py` driven by `scripts/cebu-art.json`, which records per
+piece the source, the mode, the crop, and where the cut-out sits on its canvas.
+Re-running it regenerates the PNGs exactly; the sources themselves live in the
+owner's DevFleet logbook and are not in the repo.
+
+**The modes changed and one of them must not come back.** The first version of
+this set was cut out of white-background JPGs by a distance-to-white key (and a
+per-row variant of it), which returns zero alpha exactly where the subject IS
+white — the clouds shipped at about a twentieth of an alpha and painted as grey
+ghosts, the surf vanished, and the palms lost their pale trunks and kept a rind
+of speckle where the anti-aliased edge fell between the two thresholds. No pair
+of thresholds fixes that, because the information is not in the file. The owner
+supplied the same art as PNGs with real alpha, so the modes now are:
+
+| Mode | What it does |
+| --- | --- |
+| `alpha` | the source already carries its alpha — trim to the ink, fit onto the canvas, touch no pixel's colour |
+| `chroma` | a flat backdrop the subject does not contain (the owner's magenta plates), keyed on the colour read off the plate's OWN corners |
+| `plate` | crop a region of a full-frame scene, scale, mirror-extend, feather the edges |
+| `skyline` | a plate whose alpha follows its own horizon, so a beach is a drift with a crest and not a rectangle |
+| `luma` | alpha from luminance, for the haze plates |
+| `ellipse` | alpha from an elliptical window, for a patch of ground that fades out |
 
 | Slot (winter piece) | Cebu piece | Where |
 | --- | --- | --- |
 | `landscapes/mountain-ridge-rear` | `landscapes/far-island` | Hero, the far island, standing on the horizon |
 | `landscapes/mountain-ridge-mid` | `landscapes/island-mid` | Hero, the near island, left |
 | `landscapes/mountain-ridge` | `landscapes/sea-band` | Hero, **the sea** — its top row is the horizon the sun sits on, drawn opaque |
-| `landscapes/valley-fog` | `landscapes/shore-foam` | Hero, the drifting weather |
+| `landscapes/valley-fog` | `props/bangka` | Hero, the outrigger crossing the bay on the drifting layer |
 | `props/moon-cloud` (near / far) | `props/cumulus-near` / `props/cumulus-far` | Hero, one cloud on the sun's crown, one high and left |
 | `props/tall-pine` | `props/coconut-palm-tall` | Hero, right edge |
 | `props/near-branch` | `props/palm-frond` | Hero, top-left bough |
-| `hero/lamppost-left` | `hero/lamppost-cebu` | Origin, the heritage post, unlit by day (the `--lamp-*` tokens are transparent in light) |
+| `hero/lamppost-left` | `props/coconut-pair` | Origin, the left-edge anchor planted in the sand bank (a lit lantern at midday belonged to the other theme; `hero/lamppost-cebu` is deleted, not hidden) |
 | `landscapes/far-treeline` | `landscapes/far-palms` | Origin's far shore |
 | `atmosphere/mist-bank` | `atmosphere/sea-haze` | Origin's haze, and Building's fog and mist (one file, three slots) |
 | `props/pine-row` | `props/palm-row` | Origin's near palms |
-| `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach, shallows feathering out above the foam line |
-| `props/window-frost` | `props/capiz-window` | The walk's front stage; a capiz lattice at the corners, drawn at 0.74 rather than the frost's 0.92 |
+| `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach. `skyline` mode, so its top edge is the dune's own ridge and the palm row behind it shows over the crest |
+| `props/window-frost` | `props/capiz-window` | The walk's front stage. The frost is a vignette by construction and this file is not — its ink covers the whole canvas with a cross cut through it — so `Walk.css` masks the middle out and keeps the panes at the edges, at 0.66 rather than the frost's 0.92 |
 | `landscapes/stone-footbridge` | `landscapes/beach-pier` | Tools' floor |
 | `props/bushes-reeds` | `props/pandan-clump` | Tools' floor |
 | `props/fence-rail` | `props/bamboo-rail` | Tools' floor |
 | `props/boulder-cluster` | `props/coral-rocks` | Tools' floor |
 | `props/wayfinding-post` | `props/beach-signpost` | Building, crossing up into Tools |
-| `props/pine-faceted-pair` (both stands) | `props/coconut-pair` | Building |
+| `props/pine-faceted-pair` (both stands) | `props/palm-row` | Building. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Building.css` gives light its own box — a band across the floor at each stand's own clearance |
 | `transitions/stone-stair` | `transitions/beach-steps` | Outro, drawn at 2172×724 like the dark file (the light-only aspect override stays for the winter pair) |
 | `props/lantern-post` | `props/capiz-lantern` | Outro |
 | `props/garden-arch` | `props/coral-arch` | Outro |
 | `transitions/stepping-stones` | `transitions/sand-stones` | Outro |
-| — | `scene/lagoon-matte` | Not a slot: the painted lagoon `origin/CabinScene.tsx` stands far behind the hut, the one raster in the 3D scene |
+| — | `props/cumulus-near` / `-far` again | Faith, two clouds in the summit's gutters — never over the disc |
+| — | `scene/lagoon-matte` | Not a slot: the painted lagoon `origin/CabinScene.tsx` stands far behind the hut, the one raster in the 3D scene. Feathered on all four edges now, because a quad with a hard rim showed its corners in the sky |
+
+`landscapes/shore-foam` was in this table and is not in the kit any more. It sat
+on the hero's drifting layer at the fog's altitude, which over open water is
+empty air — the owner read it exactly as it rendered, "triangles by the sun that
+move when you scroll". Surf is a thing that happens at a WATERLINE and this
+composition has none it could stand on: tried along the sand bank's crest it
+read as ice shards on a beach. An asset with no place to be is not kept for
+later.
 
 **The placement fractions are per file, and the Cebu ones are in the same
 light-only blocks the winter light files used** — `Hero.css`'s

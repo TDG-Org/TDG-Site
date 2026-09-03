@@ -66,20 +66,6 @@
       "lift": 0.012
     }
   },
-  "shore-foam": {
-    "src": "shore-foam-transparent.png",
-    "mode": "alpha",
-    "canvas": [
-      2172,
-      724
-    ],
-    "out": "landscapes/shore-foam-light.png",
-    "fit": {
-      "width": 0.94,
-      "anchor": "bottom",
-      "dy": -0.06
-    }
-  },
   "cumulus-near": {
     "src": "cumulus-wisp-transparent.png",
     "mode": "alpha",

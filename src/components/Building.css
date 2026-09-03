@@ -652,16 +652,44 @@
 
      `--row-w` is a vw length and not a percentage, and it has to be: a
      percentage in `bottom` resolves against the container's HEIGHT, so the
-     translation would silently stop being the same expression. */
-  bottom: calc(var(--floor-line) - var(--row-w) / 3);
+     translation would silently stop being the same expression.
+
+     `--floor-line` is where the box's TOP goes, and for a row that is where
+     the CROWNS go — which is why it is a clearance ABOVE the floor here and a
+     clearance BELOW it for the pines. A pine pair is one and a half boxes tall
+     for one box of width, so most of the tree is under the frame by
+     construction and `floor - clear` still leaves a whole stand standing; a
+     3:1 row is a third as tall as it is wide, and the same line left 214px of
+     palm above the section's edge with 415px of it wasted below. Above the
+     floor by the same clearance, the row stands IN the empty band this section
+     has, which is what it was asked here for. */
+  bottom: calc(var(--floor-line) - var(--row-w) / 3 * var(--ink-frac, 1));
 }
+/* Two stands, and the ladder between them is the same one the pines use: a
+   smaller facet scale reads as further away, a higher crown line reads as
+   further back, and `.building__fog` is drawn between the two. 104vw against
+   66vw is a bigger step than the pines' 27vw against 14vw looks, because a
+   row's height follows its width — at 66vw the far palms are 352px tall
+   against the near row's 555, which is the distance doing the work rather than
+   the opacity tokens on their own.
+
+   The near row's crowns land ON the floor line and the far one's a little more
+   than a third of its clearance above it, so the far crowns show through the
+   near row's gaps and nowhere else. Both feet are inside `.building__haze`,
+   which is the band that takes a row of trunks into the ground. */
 [data-theme='light'] .building__pines {
-  --row-w: 118vw;
-  --floor-line: calc(var(--building-floor) - var(--building-pine-clear));
+  --row-w: 104vw;
+  --floor-line: var(--building-floor);
 }
 [data-theme='light'] .building__pines-far {
-  --row-w: 92vw;
-  --floor-line: calc(var(--building-floor) - var(--building-far-pine-clear));
+  /* Same width as the near row and the same edges, so neither box can be seen.
+     The distance is in the FILE: `landscapes/far-palms` is the same palms
+     drawn at a quarter of the canvas's height, so its ink is the bottom 0.26
+     of the box — which `--ink-frac` is, and which is why the two rows can
+     share one `bottom` expression while standing at different scales. */
+  --row-w: 104vw;
+  --ink-frac: 0.26;
+  --floor-line: calc(var(--building-floor) + var(--building-far-pine-clear) * 0.55);
 }
 
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its

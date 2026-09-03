@@ -272,10 +272,24 @@ Three things about it belong here rather than there:
   under it leaves the hook writing `translate` to a detached node and that
   slot's drift is dead for the session. Cloning leaves every original element
   and every subscriber exactly where it was.
-- **The clone is frozen**, in position and in `opacity`. It keeps the inline
-  `translate` the hook last wrote, and its own computed `opacity` is pinned,
+- **The clone is frozen**, in position, in size and in `opacity`. It keeps the
+  inline `translate` the hook last wrote; its own computed `opacity` is pinned,
   because `--art-far` and friends change with the theme and a ghost that took
-  the new theme's alpha would dim by a third on the first frame of the fade.
+  the new theme's alpha would dim by a third on the first frame of the fade;
+  and its six resolved geometry lengths — `top`, `right`, `bottom`, `left`,
+  `width`, `height` — are pinned for a reason the winter kit never had.
+
+  **Cebu is a different GEOMETRY, not only different art.** `.hero__rear`,
+  `.hero__mid` and `.hero__ridge` are placed from `--terrain-w`, `--art-rise`
+  and `--art-head`, and all three differ per theme, because a sea horizon and a
+  mountain skyline do not stand at the same height. A ghost laid out by the new
+  theme's rules therefore SNAPPED to the incoming composition on frame one and
+  then cross-faded there — reported as "a weird visual where the mountains jump
+  up". Pinned, the outgoing picture fades out where it was while the incoming
+  one fades in where it belongs, which is a cross-dissolve between two
+  compositions rather than one composition being yanked. `bottom` alone is not
+  enough: `left` and `width` are built from `--terrain-w` too, so a ghost pinned
+  only vertically slides sideways and changes size instead.
 - **It never runs under reduced motion.** `toggle` returns before staging
   anything at `motionIntensity() === 0`, so the theme change is one instant,
   complete swap with no second element anywhere.

@@ -2848,9 +2848,27 @@
   border-radius: 50%;
   background-image: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--text) 21%, transparent) 0%,
-    color-mix(in srgb, var(--text) 13%, transparent) 46%,
+    color-mix(in srgb, var(--text) 34%, transparent) 0%,
+    color-mix(in srgb, var(--text) 22%, transparent) 46%,
     transparent 100%
   );
   pointer-events: none;
+}
+
+/* ── and the boat has to be in FRONT of the sea ────────────────────────────
+   `.hero__weather` is drawn before `.hero__ridge-drift` in Hero.tsx, and in
+   the winter frame that is load-bearing: the fog bank belongs BETWEEN the
+   basin plane and the near silhouette, so the ridge occluding it is the whole
+   depth cue. `landscapes/sea-band` fills that slot in Cebu and it is opaque
+   from the horizon down, so the same order put the boat behind the water it
+   is floating on — measured, the hull lands at y 663..758 against a sea whose
+   top edge is at 625, which is to say entirely invisible.
+
+   One `z-index` on the WRAPPER rather than a reordering, because the DOM order
+   is right for dark and there is nothing wrong with it. Nothing later in the
+   stage can be wrongly overpainted at this value: `.hero__bloom` is haze the
+   boat is nearer than, and the two near props are at x 1280+ while the hull
+   drifts between 650 and 993, so they never share a column. */
+[data-theme='light'] .hero__weather {
+  z-index: 1;
 }

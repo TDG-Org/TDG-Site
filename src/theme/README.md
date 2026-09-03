@@ -60,7 +60,10 @@ no frame carrying more than a fraction of it.
 `crossArt` clones every on-screen `img.scene__art` at the start of the wave,
 leaves the clone holding the outgoing picture on top of the incoming one, and
 cross-fades the pair with `filter: opacity()` over `--t-art` — same 0.6s, same
-`--wave-delay`. It clones rather than re-rendering because `useParallax`
+`--wave-delay`. The clone is pinned to the six geometry lengths it was measured
+with as well as to its opacity, because the two themes are not the same
+composition in the hero: without that the outgoing art snapped to the incoming
+art's position before the fade started, and the ranges visibly jumped. It clones rather than re-rendering because `useParallax`
 captures its element in an effect: swap the node under it and that slot's drift
 is dead for the session. Every clone is removed at `WAVE_RESTORE`, so **at rest
 there is one `<img>` per slot and no filter on it.**

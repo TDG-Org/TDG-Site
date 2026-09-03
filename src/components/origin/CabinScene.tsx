@@ -2470,8 +2470,29 @@ const ROLES = {
     sky: '--band-origin',
     skyOut: '--band-tools',
     warm: '--warm',
-    floor: 0.26,
-    ceil: 1,
+    /* ── 0.26 -> 0.06, and the ceiling down with it ─────────────────────
+       `t = floor + tone * (ceil - floor)` is where every vertex lands on its
+       own class's deep->pale ramp, so a floor of 0.26 means NOTHING in the
+       scene is ever more than three quarters of the way from its shadow
+       colour — the darkest facet of the thatch was already a quarter of the
+       way to sunlight before the light hit it. Rendered, the whole hut came
+       out as one pale wash with the roof, the walls, the deck and the sand
+       within a few points of each other, which is the second half of the site
+       owner's "the Hut's colors are wrong as well and are even grey": the
+       first half was the base ramp (tokens.css), and this is why even the
+       classes with warm ramps had no colour in them.
+
+       0.06 gives the shadows their pigment back, and the ceiling comes off 1
+       for the matching reason at the other end: at exactly 1 every lit facet
+       resolves to the ramp's pale token and the sunlit side of the roof was
+       the same near-white as the sand beside it. 0.94 keeps a step of thatch
+       in the brightest facet.
+
+       It stays a DAY: 0.06..0.94 of a ramp whose pale end is #f0cd82 for the
+       roof and #fffaf0 for the sand is a bright scene with shading in it,
+       which is what dark's own 0.03..0.55 is at the other end of the page. */
+    floor: 0.06,
+    ceil: 0.94,
     flake: 0.72,
     snowAlpha: 0.78,
     smoke: 0.72,

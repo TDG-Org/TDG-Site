@@ -254,9 +254,20 @@ export function Building() {
             It is an aspect change and not only a file change: the row is a 3:1
             band, so Building.css gives both slots a light-theme box (a band
             across the floor) rather than trying to letterbox a 3:1 file into
-            the 2:3 hole the pines left. The dark stands are untouched. */}
+            the 2:3 hole the pines left. The dark stands are untouched.
+
+            The FAR stand takes `landscapes/far-palms` rather than the same row
+            at a smaller width, and that is a rendering fact rather than a
+            preference: a 3:1 box locks height to width, so making the far
+            palms smaller by shrinking the element also makes the element
+            narrower — and at 66vw its own edges were visible as a bright
+            rectangle down the middle of the section, because inside it two
+            rows overlap and outside it only one does. `far-palms` is the same
+            palms drawn small INSIDE a full-width canvas (Origin's far shore
+            uses it for the same reason), so the far stand can be both smaller
+            and edge to edge. */}
         <div className="building__bank" />
-        <ThemedArt art="props/pine-faceted-pair" light="props/palm-row" className="building__pines-far" factor={0.03} />
+        <ThemedArt art="props/pine-faceted-pair" light="landscapes/far-palms" className="building__pines-far" factor={0.03} />
         <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__fog" factor={0.015} />
         <ThemedArt art="props/pine-faceted-pair" light="props/palm-row" className="building__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────

@@ -220,7 +220,20 @@ export function Outro() {
               mirrored so the path recedes toward the arch rather than away
               from it; that is a `transform`, and `useParallax` writes the
               standalone `translate` property, so the two never touch. */}
-          <ThemedArt art="transitions/stepping-stones" light="transitions/sand-stones" className="outro__stones" factor={-0.13} />
+          {/* ── -0.13 -> -0.035, because a path LIES ON the ground ──────────
+              `.outro__ground` has no parallax hook at all — its own comment
+              says why: a floor that slides against the things standing on it
+              is a rug. So every pixel of this layer's travel is travel away
+              from the plane it is supposed to be lying on. At -0.13 the box
+              had risen 145px against that floor by the time the section was
+              centred, and the far end of the path stood 84px ABOVE the
+              horizon — which is the largest single reason this beat read as
+              "seemingly randomly placed images": a row of flat stones seen
+              from above, hanging in the air with nothing under them.
+
+              -0.035 keeps a hint of nearness against the arch's -0.09 and
+              never takes the path off the ground. */}
+          <ThemedArt art="transitions/stepping-stones" light="transitions/sand-stones" className="outro__stones" factor={-0.035} />
         </div>
 
         <div ref={makers} className="outro__makers">
