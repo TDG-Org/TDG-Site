@@ -966,6 +966,20 @@
 [data-theme='light'] .building__mist {
   opacity: var(--art-near);
   object-position: 50% 48%;
+  /* ── and it has to reach the thing standing in it ───────────────────────
+     Measured at 1600x900 with the Tools floor centred: the band ran y 662..790
+     and the pier's own base and the patch of water painted into its file sit
+     at about 470..620, so the jetty stood fifty pixels clear of the shore it
+     is supposed to be going out from — which is the whole of "a bunch of crap
+     just thrown together and literally make no sense" at this beat.
+
+     Up by 8vw and half again as tall puts the band at 534..752, with the
+     pier's feet, the reeds at its near end and the foot of the coral rocks all
+     inside it. The mask still takes both long edges to nothing, so widening it
+     cannot put an edge anywhere; `--building-mist-h` and `--building-mist-rise`
+     are untouched, because dark's fog bank is solved against them. */
+  top: calc(var(--building-cross) - var(--building-mist-rise) - 8vw);
+  height: calc(var(--building-mist-h) * 1.7);
 }
 
 /* The terrace is a FLOOR here, so what this band wants out of the plate is the
