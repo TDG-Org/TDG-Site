@@ -25,7 +25,7 @@
    So the backdrop for all three sections of the walk is ONE gradient, on
    `.walk`, underneath the canvas: transparent at the top for the hero's
    dissolve, --band-origin through the approach, --band-apps and --band-tools
-   through the interior, --band-building at the floor so `#building` still
+   through the interior, --band-games at the floor so `#games` still
    meets a band identical to its own. Walk.css carries it. What this section
    gains for giving its own band up is the thing the whole pass is about: there
    is no boundary at either end of it left to treat.
@@ -299,7 +299,7 @@
 }
 
 /* Bleeds to the card's own edges (top corners clip via the card's radius +
-   overflow:hidden) rather than sitting inset. Same idea as .building__art. */
+   overflow:hidden) rather than sitting inset. Same idea as .games__art. */
 .apps__shot {
   position: relative;
   width: 100%;
@@ -380,7 +380,7 @@
 }
 
 /* Takes the status caption's place on a card that has a real download. Same
-   solid pill as .building__play, one size down to sit inside a card, and it
+   solid pill as .games__play, one size down to sit inside a card, and it
    answers with shadow rather than a lift so it never fights the card's tilt.
    Focus comes from the shared a:focus-visible ring in base.css, which clears
    the card's overflow clip inside .apps__body's 28px padding. */

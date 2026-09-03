@@ -5,7 +5,7 @@ import { Walk } from './components/Walk'
 import { Origin } from './components/Origin'
 import { Apps } from './components/Apps'
 import { Tools } from './components/Tools'
-import { Building } from './components/Building'
+import { Games } from './components/Games'
 import { Faith } from './components/Faith'
 import { Outro } from './components/Outro'
 import { Footer } from './components/Footer'
@@ -354,7 +354,7 @@ export default function App() {
             <Apps />
             <Tools />
           </Walk>
-          <Building />
+          <Games />
           <Faith />
           <Outro />
           </ErrorBoundary>

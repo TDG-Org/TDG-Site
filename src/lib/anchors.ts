@@ -157,20 +157,24 @@ export function landOnAnchor(id: string): (() => void) | null {
 }
 
 /**
- * The one alias this site has.
+ * The two aliases this site has.
  *
- * The Origin section was `#story` until the rename in 1.5.0 (August 2026);
- * bookmarks and shared links still carry it, and it is resolved here so that
- * every way of arriving at it agrees. The hash itself is deliberately NOT
- * rewritten — see `App.tsx`, which says why at the effect that used to own
- * this alias on its own.
+ * The Origin section was `#story` until the rename in 1.5.0 (August 2026), and
+ * the Games section was `#building` until 2.51.0 (September 2026). Bookmarks
+ * and shared links still carry both, and each is resolved here so that every
+ * way of arriving at it agrees. The hash itself is deliberately NOT rewritten
+ * — see `App.tsx`, which says why at the effect that used to own the first of
+ * these on its own.
  *
- * Not a table. One id has ever been renamed here, and a lookup map for one
- * entry invites the next person to add a second without asking whether the old
- * link was ever real. If a second is ever renamed, write it beside this one
- * and say when.
+ * Still not a table. Two renames written out are two decisions a reader can
+ * check; a map is an invitation to add a third without asking whether the old
+ * link was ever real. Both of these were: `#story` was the Origin section's id
+ * for the site's whole first year, and `#building` was in the nav, in the
+ * footer and on MARANATHA's own Back control right up to the rename. If a
+ * third is ever renamed, write it beside these and say when.
  */
-const resolveAlias = (id: string): string => (id === 'story' ? 'origin' : id)
+const resolveAlias = (id: string): string =>
+  id === 'story' ? 'origin' : id === 'building' ? 'games' : id
 
 /**
  * The query key a ROUTE uses to name a place on the page it opens.

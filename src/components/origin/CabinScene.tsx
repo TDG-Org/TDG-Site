@@ -2194,7 +2194,7 @@ const FOG_FAR = 100
  * So the last leg brings the fog in with the camera. `FOG_NEAR` 12 to 0.35 and
  * `FOG_FAR` 100 to 3.2 puts every tree in the window past the far plane before
  * the pin releases, so the opening fills with flat `--band-tools` — which is
- * exactly the colour `#building` opens on. The frame the reader carries into
+ * exactly the colour `#games` opens on. The frame the reader carries into
  * the next section has nothing in it to cut against, which is what
  * `ST_WINDOW_IN` was composed for and could not do on its own. Re-measured
  * with it, at the same three late samples: 109 at 0.90, 97 at 0.95 and 153 at

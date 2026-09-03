@@ -9,12 +9,12 @@ The kit is wired in, through `ThemedArt` and `StillArt` in
 [`src/components/scene/`](../../../src/components/scene/README.md) — **sixteen
 layers across five sections** of the home page, plus four more as app-card
 covers in `KeyArt.tsx`.  Counted with `grep -rn '<ThemedArt\|<StillArt' src/
---include=*.tsx`: eleven `ThemedArt` (Building 5, Origin 2, Outro 2, Tools 2)
+--include=*.tsx`: eleven `ThemedArt` (Games 5, Origin 2, Outro 2, Tools 2)
 and five `StillArt` (Hero 3, Origin 2).  It said thirteen across six until this
 pass, and both halves of that had moved.
 
 Sixteen LAYERS, not sixteen pieces: `atmosphere/fog-veil` and
-`props/pine-faceted-pair` are each drawn twice in `#building`, and the same
+`props/pine-faceted-pair` are each drawn twice in `#games`, and the same
 file answers both times, so the layer count runs two ahead of the piece count.
 (`ThemedHeroArt` is the third of those components and has no caller;
 `scene/README.md` says why it is kept.)  It stays what it always was: framing
@@ -167,7 +167,7 @@ supplied the same art as PNGs with real alpha, so the modes now are:
 | `props/near-branch` | `props/palm-frond` | Hero, top-left bough |
 | `hero/lamppost-left` | `props/coconut-pair` | Origin, the left-edge anchor planted in the sand bank (a lit lantern at midday belonged to the other theme; `hero/lamppost-cebu` is deleted, not hidden) |
 | `landscapes/far-treeline` | `landscapes/far-palms` | Origin's far shore |
-| `atmosphere/mist-bank` | `atmosphere/sea-haze` | Origin's haze, and Building's fog and mist (one file, three slots) |
+| `atmosphere/mist-bank` | `atmosphere/sea-haze` | Origin's haze, and Games' fog and mist (one file, three slots) |
 | `props/pine-row` | `props/palm-row` | Origin's near palms |
 | `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach. `skyline` mode, so its top edge is the dune's own ridge and the palm row behind it shows over the crest |
 | `props/window-frost` | `props/capiz-window` | The walk's front stage. The frost is a vignette by construction and this file is not — its ink covers the whole canvas with a cross cut through it — so `Walk.css` masks the middle out and keeps the panes at the edges, at 0.66 rather than the frost's 0.92 |
@@ -175,8 +175,8 @@ supplied the same art as PNGs with real alpha, so the modes now are:
 | `props/bushes-reeds` | `props/pandan-clump` | Tools' floor |
 | `props/fence-rail` | `props/bamboo-rail` | Tools' floor |
 | `props/boulder-cluster` | `props/coral-rocks` | Tools' floor |
-| `props/wayfinding-post` | `props/beach-signpost` | Building, crossing up into Tools |
-| `props/pine-faceted-pair` (both stands) | `props/palm-row` | Building. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Building.css` gives light its own box — a band across the floor at each stand's own clearance |
+| `props/wayfinding-post` | `props/beach-signpost` | Games, crossing up into Tools |
+| `props/pine-faceted-pair` (both stands) | `props/palm-row` | Games. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Games.css` gives light its own box — a band across the floor at each stand's own clearance |
 | `transitions/stone-stair` | `transitions/beach-steps` | Outro, drawn at 2172×724 like the dark file (the light-only aspect override stays for the winter pair) |
 | `props/lantern-post` | `props/capiz-lantern` | Outro |
 | `props/garden-arch` | `props/coral-arch` | Outro |
@@ -255,7 +255,7 @@ column — this table has already been out of date once.
 | Snow bank | `landscapes/snow-bank` | **Origin**, and it is that section's entire boundary treatment: the crest stands up into the hero and the body fills down into Origin. It replaced the `Seam` that used to sit there — two silhouettes on one boundary is mush. | A low foreground drift that runs beyond both section edges; a floor, not a scene. |
 | Park lamppost | `hero/lamppost-left` | **Origin**, not the hero — and that is the trick. It is a child of `#origin`, so it paints over the hero's stage while its foot plants 30px inside Origin's snow; a pole living in a pinned hero is painted over the instant Origin rises. `display: none` below 1366px. | Far-left edge, below navigation, no closer than 30px to the wordmark. |
 | Pine pair | `props/pine-pair` | **Origin**, the far tree layer. | A secondary edge prop, never adjacent to the lamppost. The faceted pair below is the default; this is the plainer variation. |
-| Faceted pine pair | `props/pine-faceted-pair` | **Building, twice** — one stand at 27vw against the floor and a second at 14vw much further back, the same file at `--art-far` with the fog band drawn between them. Size, opacity and haze are the three things doing the distance, and none of them costs a byte. Also the Say2Quill app cover. | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
+| Faceted pine pair | `props/pine-faceted-pair` | **Games, twice** — one stand at 27vw against the floor and a second at 14vw much further back, the same file at `--art-far` with the fog band drawn between them. Size, opacity and haze are the three things doing the distance, and none of them costs a byte. Also the Say2Quill app cover. | **Recommended tree pair.** Strong graphic facets with no realistic foliage. |
 | Tall foreground pine | `props/tall-pine` | **Hero** (the near foreground, and the layer that answers the mouse most). It was also in **Apps** until that section's scenery moved into `Walk.tsx` this pass. | One oversized edge prop, cropped by the frame. Alone in its composition, not alongside another pine family — which is a rule about one section, not about the page. |
 | Pine row | `props/pine-row` | Not placed. | A single wide foreground/midground treeline with varied trees. Use it instead of duplicating and mirroring the two-tree props. |
 | Near branch | `props/near-branch` | Not placed. | A top-left through-frame foreground bough; its top and left crops are intentional. |
@@ -269,9 +269,9 @@ column — this table has already been out of date once.
 | Canopy tree | `props/canopy-tree` | Not placed. It was in **Apps** until that section's scenery moved this pass. | A distinct, softer silhouette for a later section. |
 | Park bench | `props/park-bench` | Not placed. | Compact lower-corner accent opposite a tree or lamppost. |
 | Bushes and reeds | `props/bushes-reeds` | Not placed. It was **Apps**' low floor cover until that section's scenery moved this pass. | A low foreground cover or section seam. |
-| Fog veil | `atmosphere/fog-veil` | **Building, twice** — the far backdrop between its two stands of pines, and a shallow band cropped out of the same file at the section's top boundary. One URL, one request, two layers. It is no longer the only piece drawn twice inside one section: `props/pine-faceted-pair` is now as well, in the same one, for the same reason. | Far backdrop; place behind mountains and props. |
+| Fog veil | `atmosphere/fog-veil` | **Games, twice** — the far backdrop between its two stands of pines, and a shallow band cropped out of the same file at the section's top boundary. One URL, one request, two layers. It is no longer the only piece drawn twice inside one section: `props/pine-faceted-pair` is now as well, in the same one, for the same reason. | Far backdrop; place behind mountains and props. |
 | Mist bank | `atmosphere/mist-bank` | Not placed. | An edge-free section-boundary atmosphere layer. It replaces neither the existing fog veil nor a CSS mask until a section measures better with it. |
-| Wayfinding post | `props/wayfinding-post` | **Building**, its one structural anchor — the signpost on the far bank, in the band that crosses up into `#tools`. Not Origin, which this Intent column still says: a signpost belongs where a path arrives at somewhere, and Origin's far edge is a clearing with a cabin in it. | Origin's far edge; its boards must stay blank. |
+| Wayfinding post | `props/wayfinding-post` | **Games**, its one structural anchor — the signpost on the far bank, in the band that crosses up into `#tools`. Not Origin, which this Intent column still says: a signpost belongs where a path arrives at somewhere, and Origin's far edge is a clearing with a cabin in it. | Origin's far edge; its boards must stay blank. |
 | Stone footbridge | `landscapes/stone-footbridge` | **Tools** — not Origin, which this row used to say. Also the Music Everything app cover, where its repeating arches read as a bar line. | A low seam, used instead of—not with—the stepping stones. |
 | Garden arch | `props/garden-arch` | **Outro**, the far-edge threshold. Also the Makullveny app cover. | A far-edge threshold, never a content container. |
 | Stepping stones | `transitions/stepping-stones` | **Outro**, in the right gutter, mirrored so the path recedes toward the arch. Not Origin: that section's behind-the-timeline layer is `origin/CabinScene.tsx` now. It is not a second structural anchor beside the arch — it is a path on the ground, which is what guardrail 8's "plus optional low foliage" clause is for. | A subtle Origin transition, behind the timeline. |
@@ -342,7 +342,7 @@ mist/silver with a narrow graphite-blue note.  This contrast shift is why both
 files must be swapped as actual themed assets rather than filtered.
 
 Five of the six are placed today — `pine-grove` in Origin, `stone-footbridge`
-in Tools, `wayfinding-post` in Building, and `garden-arch` plus
+in Tools, `wayfinding-post` in Games, and `garden-arch` plus
 `stepping-stones` in the Outro.  It was two when this paragraph was written and
 the ratio was called the guardrail working; read it again now and the guardrail
 is still what it always was, which is **one structural anchor per SECTION** and

@@ -1,11 +1,11 @@
 /* ── one colour this file needs and no token has ───────────────────────────
-   The lit bank the far bank's trees stand on. #building is the page's one WARM
+   The lit bank the far bank's trees stand on. #games is the page's one WARM
    band and its only light is the blob in the upper right; a light source with
    nowhere to fall is a smudge, and a floor that two stands of trees are cropped
    by has to be a floor rather than an absence.
 
    **One declaration and no `[data-theme='light']` twin, deliberately.** Both
-   operands already carry the theme — --band-building and --text are each
+   operands already carry the theme — --band-games and --text are each
    stated per theme in tokens.css — so the mix flips with them and a second
    declaration would be the same string written twice, which is the drift rule
    2 exists to prevent. base.css declares every --seam-fill exactly once for
@@ -16,7 +16,7 @@
    more separation before it is seen at all. It cannot become a stripe, because
    it has no edge to make one out of.                                        */
 :root {
-  --building-bank-ink: color-mix(in srgb, var(--band-building) 89%, var(--text));
+  --games-bank-ink: color-mix(in srgb, var(--band-games) 89%, var(--text));
   /* The pool the blob's light makes where it reaches the bank. Same mix, one
      step further from the band — 16% against the bank's 11% — so it reads as
      the bank being LIT rather than as a second band lying on it. Under the
@@ -28,7 +28,7 @@
      way moonlight on snow does; near-black in light, so it reads as the ground
      shading under a bright sky. One declaration, correct twice, because both
      operands already carry the theme. */
-  --building-pool-ink: color-mix(in srgb, var(--band-building) 84%, var(--text));
+  --games-pool-ink: color-mix(in srgb, var(--band-games) 84%, var(--text));
 
   /* ── the light theme's sky, and the one ink here that IS stated twice ───
      Every other colour in this file is one declaration because both operands
@@ -49,7 +49,7 @@
      the 2.8 is the blob rather than the scene. The whole section is one value.
 
      The card is NOT the argument, and it is worth saying so because it looks
-     like it should be: `.building__feature` measures L* 100.0 against a band of
+     like it should be: `.games__feature` measures L* 100.0 against a band of
      96.7 in light, which is 1.03:1 — but in dark it measures 10.4 against 9.5,
      which is 1.02:1. --card-bg is a dark plate on a dark band and a white plate
      on a white band; that asymmetry does not exist. What does exist is in the
@@ -66,7 +66,7 @@
      paint something brighter than white, and its note carries the L* the two
      halves were solved against. This is a pale hillside instead of a pale sky
      and the arithmetic is identical. The band cannot be shaded at the token —
-     --band-building is two sections' worth of one value and the lead owns that
+     --band-games is two sections' worth of one value and the lead owns that
      file — so the shading is local, sits BEHIND every other layer in the
      section, and is masked to nothing at both of this section's edges so
      neither join can move.
@@ -83,11 +83,11 @@
      uses it. `background-color` is on base.css's --t-theme list and Chrome
      interpolates colour with premultiplied alpha, so the wave fades this in
      from nothing rather than crossing through a grey.                       */
-  --building-dusk: transparent;
+  --games-dusk: transparent;
 }
 
 :root[data-theme='light'] {
-  --building-dusk: color-mix(in srgb, var(--band-building) 88%, var(--text));
+  --games-dusk: color-mix(in srgb, var(--band-games) 88%, var(--text));
 }
 
 /* ── the floor: the band of section under the pills ────────────────────────
@@ -97,7 +97,7 @@
 
    It used to be `.section`'s own `clamp(72px, 9vw, 130px)`, and that is why
    the pines were 78–132px wide. The band is the only place a layer can be —
-   `.card` is a plate now (--card-bg) and `.building__pill` is still a 4.5%
+   `.card` is a plate now (--card-bg) and `.games__pill` is still a 4.5%
    white wash in dark, so art parked behind them is either not seen at all or
    read straight through the copy. A bigger floor is what buys scale, and this
    section carries TWO stands of trees now rather than one, so it takes 23vw
@@ -108,8 +108,8 @@
    tree buys width and never height. 288px of floor showed 157px of the near
    stand and 86px of the far one; 331px shows 202px and 134px, which is a
    treeline rather than a row of tips.                                       */
-.section.building {
-  --building-floor: clamp(220px, 23vw, 380px);
+.section.games {
+  --games-floor: clamp(220px, 23vw, 380px);
 
   /* The near stand. The distance is from the pills' bottom edge to the TOP of
      the pines' ink, which is what the `bottom` below is written to produce.
@@ -122,15 +122,15 @@
      same order as the thing it is standing behind. At 27vw it is 389px wide
      and 583px tall with 202px of it above the floor, so two thirds of the tree
      is below the frame. */
-  --building-pine-w: clamp(220px, 27vw, 480px);
-  --building-pine-clear: clamp(116px, 9.6vw, 168px);
+  --games-pine-w: clamp(220px, 27vw, 480px);
+  --games-pine-clear: clamp(116px, 9.6vw, 168px);
   /* The far stand: the same file at 52% of the width, a much bigger clearance
      so it shows 134px of crown against the near stand's 202px, and --art-far
      rather than --art-mid. Size, opacity and the fog band drawn between them
      are the three things doing the distance; nothing here is a second piece of
      art. +0.03 is worth 18px of drift against 202px of clearance. */
-  --building-far-pine-w: clamp(120px, 14vw, 250px);
-  --building-far-pine-clear: clamp(150px, 14vw, 250px);
+  --games-far-pine-w: clamp(120px, 14vw, 250px);
+  --games-far-pine-clear: clamp(150px, 14vw, 250px);
 
   /* ── the ground haze ────────────────────────────────────────────────────
      How deep the band of this section's own ink rises out of the floor. It has
@@ -146,7 +146,7 @@
      Every row is a floor with room to spare, and the haze is transparent for
      its own first third besides. The ≤640 block below re-states it, because
      there the floor is 72px and a 84px band would be painting over them.    */
-  --building-haze-h: clamp(84px, 10vw, 168px);
+  --games-haze-h: clamp(84px, 10vw, 168px);
 
   /* ── the crossing ───────────────────────────────────────────────────────
      How far the mist and the wayfinder rise out of this section's top edge
@@ -154,12 +154,12 @@
      into this one. Both are proved against a neighbouring clamp rather than a
      screenshot:
 
-       above  --building-cross must stay inside #tools' own floor, the empty
+       above  --games-cross must stay inside #tools' own floor, the empty
               band under its last card row, `clamp(220px, 23vw, 400px)`
               (and `clamp(130px, 15vw, 190px)` below 640px):
                   320   220 vs  60      1440   331 vs 108
                   640   130 vs  60      1920   400 vs 130
-       below  --building-over-depth must stay above this section's first line
+       below  --games-over-depth must stay above this section's first line
               of copy, which starts at its own `padding-top`,
               `clamp(72px, 9vw, 130px)`:
                   320    72 vs  52      1440   130 vs  92
@@ -167,14 +167,14 @@
 
      Every row is a floor twice over, because the band's mask has reached zero
      alpha before either edge. Do not raise either without redoing this. */
-  --building-cross: clamp(60px, 7.5vw, 130px);
-  --building-over-depth: clamp(52px, 6.4vw, 96px);
-  --building-post-w: clamp(150px, 15vw, 270px);
-  --building-post-rise: clamp(46px, 5.4vw, 92px);
-  --building-mist-rise: clamp(34px, 4.2vw, 70px);
-  --building-mist-h: clamp(64px, 8vw, 128px);
+  --games-cross: clamp(60px, 7.5vw, 130px);
+  --games-over-depth: clamp(52px, 6.4vw, 96px);
+  --games-post-w: clamp(150px, 15vw, 270px);
+  --games-post-rise: clamp(46px, 5.4vw, 92px);
+  --games-mist-rise: clamp(34px, 4.2vw, 70px);
+  --games-mist-h: clamp(64px, 8vw, 128px);
 
-  padding-bottom: var(--building-floor);
+  padding-bottom: var(--games-floor);
   /* `hidden` cannot be given a margin — `overflow-clip-margin` is defined only
      for `clip` — and a margin is the only way a layer leaves its own section.
      #origin made the same change for its lamppost and its header carries the
@@ -184,7 +184,7 @@
      ## 131px, and why it is a literal
 
      **Chrome does not accept a math function here.** This line read
-     `calc(var(--building-cross) + 1px)` and computed to `0px`, so the crossing
+     `calc(var(--games-cross) + 1px)` and computed to `0px`, so the crossing
      band never crossed anything: the wayfinder and the mist were cut dead on
      the #tools join, and that join measured a step of +5.9 to +16.4 L* across
      fifteen columns in dark — a ruled line at the top of this section, made by
@@ -198,21 +198,21 @@
          content-box 109px   -> content-box 109px
          calc(100px)         -> 0px
          calc(108px + 1px)   -> 0px
-         var(--building-cross) -> 0px
+         var(--games-cross) -> 0px
          calc(var(--x) + 1px)  -> 0px
 
      Plain lengths and `<visual-box> <length>` are honoured and every math
      function is dropped, so `clamp()` is out too and the value has to be a
-     literal. 131px is `--building-cross`'s own ceiling plus the pixel that
+     literal. 131px is `--games-cross`'s own ceiling plus the pixel that
      stops subpixel rounding shaving the band's top row — i.e. the widest this
      ever needs to be, spent at every width.
 
      **Being larger than the band at narrow widths costs nothing**, and that is
-     structural rather than lucky: `.building__clip` is `inset: 0` with no
-     margin of its own and holds everything that must be cut, `.building__over`
+     structural rather than lucky: `.games__clip` is `inset: 0` with no
+     margin of its own and holds everything that must be cut, `.games__over`
      is `left: 0; right: 0` and clips itself, and neither can reach a side or
      the bottom however far this opens them. The one layer allowed out is the
-     crossing band, and its own box is exactly `--building-cross` tall.
+     crossing band, and its own box is exactly `--games-cross` tall.
 
      `#origin` and `Walk.css` were never bitten by this because both write
      `130svh`, a plain length. `#tools` has deleted its margin outright, which
@@ -227,7 +227,7 @@
    accident is the trap Stage.tsx's header measures — and `inset: 0` is the
    section's PADDING box, which is what every percentage in here was already
    resolving against. */
-.building__clip {
+.games__clip {
   position: absolute;
   inset: 0;
   overflow: clip;
@@ -235,7 +235,7 @@
 }
 
 /* ── the shaded sky ────────────────────────────────────────────────────────
-   See --building-dusk at the top of this file for the two readings that bought
+   See --games-dusk at the top of this file for the two readings that bought
    it and why it is the only ink here stated per theme. This rule is the part
    that has to be exact: it is a flat colour under a mask, and the mask is what
    keeps both of this section's joins where they were.
@@ -269,8 +269,8 @@
    **80% is the near stand's crowns, and that number was measured twice.** The
    fade ran to 100% first — a shaded sky dissolving all the way down through the
    floor — and that is wrong in a way only a render shows. At 82% of the section,
-   which is where the near stand's crowns begin (`--building-floor` less
-   `--building-pine-clear`, 193px above the bottom edge at 1440), the alpha was
+   which is where the near stand's crowns begin (`--games-floor` less
+   `--games-pine-clear`, 193px above the bottom edge at 1440), the alpha was
    still 0.47, so the band the trees are read against had come DOWN to meet them.
    The near stand's own minimum is L* 84.7 in light whatever is behind it:
    against a bare band of 96.6 that is 1.37:1, and against a shaded 88.3 it is
@@ -285,16 +285,16 @@
    rather than a line. At the floor's own top edge, 69% of the section, the alpha
    is 0.39, which is what the pills are read against.
 
-   `.building__haze` still covers the last 144px with --band-building rising to
+   `.games__haze` still covers the last 144px with --band-games rising to
    alpha 1, and this layer is at zero well above it, so the section's final row
    is that token twice over.
 
    No parallax hook and no `will-change`: it is the sky, it does not move, and
    under reduced motion it is already still.                                 */
-.building__dusk {
+.games__dusk {
   position: absolute;
   inset: 0;
-  background-color: var(--building-dusk);
+  background-color: var(--games-dusk);
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0%,
@@ -342,7 +342,7 @@
    or `path`, so this seam used to SNAP to the new theme while the page around
    it crossed on the wave. On a div, `color` transitions; the svg inherits the
    animated value and `currentColor` resolves against it. */
-.building__seam-drift {
+.games__seam-drift {
   position: absolute;
   /* ── the drop, and why it is stated in viewport height ─────────────────
      The mask below starts at `transparent 0`, so the band's own top edge
@@ -380,7 +380,7 @@
   pointer-events: none;
   will-change: translate;
 }
-/* --seam-fill: this section's own --band-building, stepped --seam-step toward
+/* --seam-fill: this section's own --band-games, stepped --seam-step toward
    --text by base.css. A band worn flat would be invisible here — a boundary is
    exactly where two bands are equal — and that step is what fixes it.
 
@@ -390,7 +390,7 @@
    things say don't. --band-tools is not calibrated to sit at a seam's
    distance from anything — against this band it is roughly a third of the
    step --seam-step gives, and under the mask below it would very likely
-   vanish in dark. And #building is the page's one WARM band; a cool blue
+   vanish in dark. And #games is the page's one WARM band; a cool blue
    band across its top edge works against the single thing that makes it the
    contrast anchor. The shape carries the beat instead — `dune` is the far
    bank — and the mist, the wayfinder and the pine crowns under it say the
@@ -416,7 +416,7 @@
    case --seam-step was calibrated against, since it paints most of its band at
    part opacity. A mask is an alpha channel, not a colour: the #000 here paints
    nothing, exactly as in .tools__road-grid.                                  */
-.building__seam {
+.games__seam {
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0,
@@ -439,7 +439,7 @@
    A band of this section's own ink with no edge at either end: it fades in
    under the pills, is fully itself 54% of the way down the floor, and is gone
    again before the section's bottom edge, so it cannot draw a line at the
-   #faith join. See --building-bank-ink at the top of this file for why it is a
+   #faith join. See --games-bank-ink at the top of this file for why it is a
    colour and why it has no light twin.
 
    ## The pool
@@ -448,7 +448,7 @@
    this pass it had nowhere to fall: a 420px glow floating in the top corner of
    a flat band, with a floor underneath it that was the same value from edge to
    edge. The radial layer is the light reaching the ground — an ellipse of
-   --building-pool-ink centred at 80% of the width, which is within four per
+   --games-pool-ink centred at 80% of the width, which is within four per
    cent of where the blob's core now sits, and at 46% of the band's height,
    which is where the bank's own linear layer is strongest.
 
@@ -473,33 +473,33 @@
    It takes NO parallax hook, and that is deliberate. It is the ground this
    section stands on rather than an object on it, and a floor that slides
    against the things standing on it is a rug. One fewer frame subscriber.  */
-.building__bank {
+.games__bank {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: var(--building-floor);
+  height: var(--games-floor);
   background:
     radial-gradient(
       54% 62% at 80% 46%,
-      var(--building-pool-ink) 0%,
-      color-mix(in srgb, var(--building-pool-ink) 62%, transparent) 34%,
-      color-mix(in srgb, var(--building-pool-ink) 22%, transparent) 56%,
+      var(--games-pool-ink) 0%,
+      color-mix(in srgb, var(--games-pool-ink) 62%, transparent) 34%,
+      color-mix(in srgb, var(--games-pool-ink) 22%, transparent) 56%,
       transparent 74%
     ),
-    linear-gradient(180deg, transparent 0%, var(--building-bank-ink) 54%, transparent 100%);
+    linear-gradient(180deg, transparent 0%, var(--games-bank-ink) 54%, transparent 100%);
 }
 
 /* ── the ground haze ───────────────────────────────────────────────────────
    The band that ends this section, and the fix for the ruled line the previous
-   Faith builder measured at the #building -> #faith join. Building.tsx has the
+   Faith builder measured at the #games -> #faith join. Games.tsx has the
    beat; this is the arithmetic and the argument.
 
    ## What the defect was
 
-   `atmosphere/fog-veil` is a pale raster and `.building__fog` masks it opaque
+   `atmosphere/fog-veil` is a pale raster and `.games__fog` masks it opaque
    from 58% of its box down, while the box hangs 44px BELOW the section and is
-   cut there by `.building__clip`. So the brightest part of the fog met the
+   cut there by `.games__clip`. So the brightest part of the fog met the
    boundary at full alpha and stopped on a line. Measured from the other side
    at fifteen columns, dark stepped by up to 10.1 units of luminance across one
    pixel row and light stepped by nothing at all — which is the signature of a
@@ -507,7 +507,7 @@
 
    ## Why a band and not a mask on the fog
 
-   The obvious fix is a bottom fade on `.building__fog`, and it is not enough:
+   The obvious fix is a bottom fade on `.games__fog`, and it is not enough:
    the fog is not the only thing cut on that line. Both stands of pines are
    drawn at a tree's full height and cropped by the same edge, and in the LIGHT
    theme they are the only thing that steps there — Faith's fifteen columns
@@ -526,32 +526,32 @@
    line where a ragged one had been — because that veil was Faith's own ink
    lifted 16% toward --text and capped at 0.55 alpha, so it painted something
    that was not either neighbour's colour. This one ends at exactly
-   `var(--band-building)` at alpha 1. #building paints `background-color:
+   `var(--band-games)` at alpha 1. #games paints `background-color:
    var(--tint-mid)`, which base.css resolves to that same token, and #faith's
    --tint-top is that token too. So the last row of this section, the first row
    of the next, and this band's last stop are one value written once. There is
    no number here to tune and nothing for it to be wrong by.
 
    Five stops rather than two. A two-stop gradient over a 144px box on a
-   near-black band is exactly the case that banded in `.building__scan`, and a
+   near-black band is exactly the case that banded in `.games__scan`, and a
    band whose job is to be invisible cannot afford steps in it.
 
    No parallax hook: it is the air standing in this section's floor, not an
    object in it, and one fewer frame subscriber. Under reduced motion it is
    already still.                                                            */
-.building__haze {
+.games__haze {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: var(--building-haze-h);
+  height: var(--games-haze-h);
   background: linear-gradient(
     180deg,
     transparent 0%,
-    color-mix(in srgb, var(--band-building) 18%, transparent) 30%,
-    color-mix(in srgb, var(--band-building) 52%, transparent) 56%,
-    color-mix(in srgb, var(--band-building) 84%, transparent) 80%,
-    var(--band-building) 100%
+    color-mix(in srgb, var(--band-games) 18%, transparent) 30%,
+    color-mix(in srgb, var(--band-games) 52%, transparent) 56%,
+    color-mix(in srgb, var(--band-games) 84%, transparent) 80%,
+    var(--band-games) 100%
   );
   pointer-events: none;
 }
@@ -567,15 +567,15 @@
    closes the join with #faith at the section's own bottom edge — the last stop
    is unchanged and that is the stop the boundary contract is written on — and
    what it buries now is the bottom of the trunks rather than all of them. */
-[data-theme='light'] .building__haze {
-  height: calc(var(--building-haze-h) * 0.62);
+[data-theme='light'] .games__haze {
+  height: calc(var(--games-haze-h) * 0.62);
   background: linear-gradient(
     180deg,
     transparent 0%,
-    color-mix(in srgb, var(--band-building) 10%, transparent) 42%,
-    color-mix(in srgb, var(--band-building) 44%, transparent) 72%,
-    color-mix(in srgb, var(--band-building) 80%, transparent) 90%,
-    var(--band-building) 100%
+    color-mix(in srgb, var(--band-games) 10%, transparent) 42%,
+    color-mix(in srgb, var(--band-games) 44%, transparent) 72%,
+    color-mix(in srgb, var(--band-games) 80%, transparent) 90%,
+    var(--band-games) 100%
   );
 }
 
@@ -612,27 +612,27 @@
    written, for the same reason and at the same price — one URL, one request.
 
    At 1440 the near stand shows 202px of crown at 389px wide and the far stand
-   shows 134px at 202px, with the fog between them — and `.building__haze`
+   shows 134px at 202px, with the fog between them — and `.games__haze`
    drawn in front of both, so what used to be two trees cut off on the section's
    bottom edge is two trees whose feet go into the ground. */
-.building__pines,
-.building__pines-far {
+.games__pines,
+.games__pines-far {
   /* 1000x1500 is the .webp, not the 1024x1536 PNG source. Stated so the box is
      the right size before a lazy image arrives; re-measure after any art swap,
      because a ratio that disagrees with the file letterboxes it. */
   aspect-ratio: 1000 / 1500;
 }
-.building__pines {
+.games__pines {
   right: clamp(-40px, -1vw, 6px);
-  width: var(--building-pine-w);
-  bottom: calc(var(--building-floor) - var(--building-pine-clear) - var(--building-pine-w) * 1.478);
+  width: var(--games-pine-w);
+  bottom: calc(var(--games-floor) - var(--games-pine-clear) - var(--games-pine-w) * 1.478);
   opacity: var(--art-mid);
 }
-.building__pines-far {
+.games__pines-far {
   left: clamp(-10px, 6vw, 140px);
-  width: var(--building-far-pine-w);
+  width: var(--games-far-pine-w);
   bottom: calc(
-    var(--building-floor) - var(--building-far-pine-clear) - var(--building-far-pine-w) * 1.478
+    var(--games-floor) - var(--games-far-pine-clear) - var(--games-far-pine-w) * 1.478
   );
   opacity: var(--art-far);
 }
@@ -651,8 +651,8 @@
    floor.
 
    The two stands stay two stands. The far one is 62% of the near one's height
-   and sits `--building-far-pine-clear` higher up the bank, with
-   `.building__fog` between them, so size + altitude + haze still do the
+   and sits `--games-far-pine-clear` higher up the bank, with
+   `.games__fog` between them, so size + altitude + haze still do the
    distance exactly as the block above argues — the only thing that changed is
    that each stand is now nine palms wide instead of two trees.
 
@@ -661,14 +661,14 @@
    ran out. Overhanging both sides by the same 9% is rule 6 — one number
    applied in mirror image — and the section is `overflow: clip`, so nothing
    here can reach `document.scrollWidth`. */
-[data-theme='light'] .building__pines,
-[data-theme='light'] .building__pines-far {
+[data-theme='light'] .games__pines,
+[data-theme='light'] .games__pines-far {
   aspect-ratio: 2172 / 724;
   right: auto;
   width: var(--row-w);
   left: calc((100% - var(--row-w)) / 2);
   /* The winter rule puts the element's TOP — the crowns — at
-     `--building-floor - --building-*-pine-clear` above the section's bottom
+     `--games-floor - --games-*-pine-clear` above the section's bottom
      edge, and lets the feet run off it; `bottom` there is that line minus the
      box's own height, which for a 2:3 pine is `1.478 x width`. Same sentence,
      3:1 box: the height is a third of the width.
@@ -690,7 +690,7 @@
 }
 /* Two stands, and the ladder between them is the same one the pines use: a
    smaller facet scale reads as further away, a higher crown line reads as
-   further back, and `.building__fog` is drawn between the two. 104vw against
+   further back, and `.games__fog` is drawn between the two. 104vw against
    66vw is a bigger step than the pines' 27vw against 14vw looks, because a
    row's height follows its width — at 66vw the far palms are 352px tall
    against the near row's 555, which is the distance doing the work rather than
@@ -698,7 +698,7 @@
 
    The near row's crowns land ON the floor line and the far one's a little more
    than a third of its clearance above it, so the far crowns show through the
-   near row's gaps and nowhere else. Both feet are inside `.building__haze`,
+   near row's gaps and nowhere else. Both feet are inside `.games__haze`,
    which is the band that takes a row of trunks into the ground. */
 /* ── `palm-row-mid`, and the reason is a rendered frame ────────────────────
    `props/palm-row` is nine palms across its canvas, so at the 104vw this band
@@ -714,10 +714,10 @@
    drawing fitted at 0.62 of the canvas height and mirror-extended, so the band
    carries roughly twice as many palms at a bit over half the size and still
    reaches both edges. Same width here, same lift, a row instead of a wall. */
-[data-theme='light'] .building__pines {
+[data-theme='light'] .games__pines {
   --row-w: 104vw;
   /* ── lifted, because a palm without a trunk is a bush ───────────────────
-     `--building-floor` put the row's crowns on the floor line, and a coconut
+     `--games-floor` put the row's crowns on the floor line, and a coconut
      crown is the top third of the drawing — so what stood above the ground was
      nine crowns and about forty pixels of stem: "I can barely see their
      trunks."
@@ -726,9 +726,9 @@
      raises the whole row by 154px at this width and shows the shafts. Nothing
      about the crop changes: the box is the same size and its feet still run off
      the bottom of the section by construction. */
-  --floor-line: calc(var(--building-floor) + var(--building-pine-clear));
+  --floor-line: calc(var(--games-floor) + var(--games-pine-clear));
 }
-[data-theme='light'] .building__pines-far {
+[data-theme='light'] .games__pines-far {
   /* Same width as the near row and the same edges, so neither box can be seen.
      The distance is in the FILE: `landscapes/far-palms` is the same palms
      drawn at a quarter of the canvas's height, so its ink is the bottom 0.26
@@ -736,7 +736,7 @@
      share one `bottom` expression while standing at different scales. */
   --row-w: 104vw;
   --ink-frac: 0.26;
-  --floor-line: calc(var(--building-floor) + var(--building-far-pine-clear) * 0.55);
+  --floor-line: calc(var(--games-floor) + var(--games-far-pine-clear) * 0.55);
 }
 
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its
@@ -762,18 +762,18 @@
    ## Its own bottom edge, and why the fade is not here
 
    The mask above is opaque from 58% down, and the box hangs 44px below the
-   section where `.building__clip` cuts it — so this layer's brightest row met
+   section where `.games__clip` cuts it — so this layer's brightest row met
    the #faith boundary at full alpha and stopped on a line. That was the ruled
-   join Faith measured. The fade that closes it is `.building__haze`, a band in
+   join Faith measured. The fade that closes it is `.games__haze`, a band in
    front of everything at the floor, and the long argument for why it is one
    band rather than a bottom stop on this mask and two more on the pines is at
    that rule. Do not add a second one here: two mechanisms for one edge is how
    a boundary ends up over-corrected, which is the exact failure Faith recorded
    from the other side.                                                      */
-.building__fog {
+.games__fog {
   left: -2%;
   width: 104%;
-  height: var(--building-floor);
+  height: var(--games-floor);
   bottom: -44px;
   object-fit: cover;
   object-position: 50% 55%;
@@ -783,7 +783,7 @@
 }
 
 /* ── the far bank, standing in two sections ────────────────────────────────
-   Building.tsx has the beat and the paint order; the geometry is here.
+   Games.tsx has the beat and the paint order; the geometry is here.
 
    `overflow: clip` with NO margin of its own — the section's margin is what
    lets this box escape upward, and this box is what keeps everything else in.
@@ -806,12 +806,12 @@
    below it is a fade. A layer that drifts past either end fades out instead of
    meeting the clip — which matters most for the mist, whose -0.12 is the
    largest factor in the section and moves it 61px on a 900px viewport.      */
-.building__over {
+.games__over {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(-1 * var(--building-cross));
-  height: calc(var(--building-cross) + var(--building-over-depth));
+  top: calc(-1 * var(--games-cross));
+  height: calc(var(--games-cross) + var(--games-over-depth));
   overflow: clip;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(
@@ -827,7 +827,7 @@
 /* ── the wayfinder ─────────────────────────────────────────────────────────
    `props/wayfinding-post` — in the kit from the beginning, drawn by nothing
    until now, and the one piece in it whose boards are deliberately blank. It
-   is this section's structural anchor under guardrail 8, which #building did
+   is this section's structural anchor under guardrail 8, which #games did
    not previously have: it had fog and a pine pair, which is what the guardrail
    allows BESIDE an anchor rather than instead of one.
 
@@ -835,8 +835,8 @@
    the reason is the walk rather than a preference: a signpost belongs where a
    path arrives at somewhere, and Origin's far edge is a clearing with a cabin
    in it while this is the bank you step onto after crossing the water. The
-   section is also called "Building now" and lists what is queued, which is a
-   signpost's job written in words.
+   section is called "Games" and lists what is queued behind the one that is
+   playable, which is a signpost's job written in words.
 
    1000x1500 in the .webp, ink y 1.33%..98.07% in dark and 0.67%..97.87% in
    light, so for a box `w` wide:
@@ -846,7 +846,7 @@
                                          0.0067 x 1.5w = 0.0101w  (light)
 
    The DARK figure is written because it is the larger: `top` is solved from
-   the band's own top edge, so the larger offset makes --building-post-rise a
+   the band's own top edge, so the larger offset makes --games-post-rise a
    floor and light simply stands 0.010w taller, which the band's mask absorbs.
    Solved at the clamp stops the expression comes out 11.0px at 320, 11.0px at
    760, 25.9px at 1440 and 32.6px at 1920 — inside the band at every width,
@@ -859,11 +859,11 @@
    in weather rather than ending anywhere. That is also why it is only the
    second-fastest layer here at -0.05 — a post planted in the ground does not
    move like the air in front of it.                                        */
-.building__post {
+.games__post {
   left: clamp(-10px, 4vw, 90px);
-  width: var(--building-post-w);
+  width: var(--games-post-w);
   aspect-ratio: 1000 / 1500;
-  top: calc(var(--building-cross) - var(--building-post-rise) - var(--building-post-w) * 0.02);
+  top: calc(var(--games-cross) - var(--games-post-rise) - var(--games-post-w) * 0.02);
   opacity: var(--art-mid);
 }
 
@@ -871,7 +871,7 @@
    The same `atmosphere/fog-veil` file the floor fog uses — same URL, same
    request, no extra bytes — cropped to a band that STRADDLES the join now
    rather than sitting under it, and softened at both ends so this boundary has
-   no hard edge in it anywhere. Building.tsx has the beat: the water you
+   no hard edge in it anywhere. Games.tsx has the beat: the water you
    crossed in #tools coming off the surface as you reach the far bank.
 
    Crossing is what changed. The render of the #tools floor showed the bridge,
@@ -888,7 +888,7 @@
    into a box far wider than 3:1 is what does it: the image is scaled to the
    box's WIDTH, and `object-position`'s second value then chooses which slice
    of the much taller scaled image the box shows. At 50% 62%, computed against
-   the band's own `--building-mist-h`:
+   the band's own `--games-mist-h`:
 
        width   scaled H   box H    slice of the file
         320     106.6      64.0    0.248 .. 0.848
@@ -913,9 +913,9 @@
    rebuilt on this rule since, so both layers at this boundary are now softened
    by the same mechanism rather than two.
 
-   It matters most for this one, which lives in `.building__over` and is the
+   It matters most for this one, which lives in `.games__over` and is the
    only thing on the page that crosses UP into #tools: a solid backfill here
-   would be a bar of #building ink standing over the section above.
+   would be a bar of #games ink standing over the section above.
 
    ## Where it sits
 
@@ -944,7 +944,7 @@
                    BLOB with soft ends
 
    That last line is the whole answer. Both of this section's fog layers are
-   full-width: `.building__fog` is `left: -2%; width: 104%` and this one is
+   full-width: `.games__fog` is `left: -2%; width: 104%` and this one is
    `left: 0; width: 100%`, and this one in particular is the half of a crossing
    band that has to dissolve #tools' floor across the ENTIRE width of the page.
    Stretch a blob to 100% and its two soft ends are a varying alpha at the two
@@ -960,11 +960,11 @@
 
    `mist-bank` stays a spare, and the kit's own README says an unplaced piece
    is not a bug.                                                              */
-.building__mist {
+.games__mist {
   left: 0;
   width: 100%;
-  height: var(--building-mist-h);
-  top: calc(var(--building-cross) - var(--building-mist-rise));
+  height: var(--games-mist-h);
+  top: calc(var(--games-cross) - var(--games-mist-rise));
   object-fit: cover;
   object-position: 50% 62%;
   opacity: var(--art-far);
@@ -977,7 +977,7 @@
    as neither water nor haze; the piece is drawn with its own light in it and
    wants to be seen. The mask still takes both long edges to nothing, so it has
    no straight edge anywhere and still crosses the join. */
-[data-theme='light'] .building__mist {
+[data-theme='light'] .games__mist {
   opacity: var(--art-near);
   object-position: 50% 48%;
   /* ── and it has to reach the thing standing in it ───────────────────────
@@ -990,10 +990,10 @@
      Up by 8vw and half again as tall puts the band at 534..752, with the
      pier's feet, the reeds at its near end and the foot of the coral rocks all
      inside it. The mask still takes both long edges to nothing, so widening it
-     cannot put an edge anywhere; `--building-mist-h` and `--building-mist-rise`
+     cannot put an edge anywhere; `--games-mist-h` and `--games-mist-rise`
      are untouched, because dark's fog bank is solved against them. */
-  top: calc(var(--building-cross) - var(--building-mist-rise) - 8vw);
-  height: calc(var(--building-mist-h) * 1.7);
+  top: calc(var(--games-cross) - var(--games-mist-rise) - 8vw);
+  height: calc(var(--games-mist-h) * 1.7);
 }
 
 /* The terrace is a FLOOR here, so what this band wants out of the plate is the
@@ -1002,7 +1002,7 @@
    a 180px conch lying between the trunks of a palm grove is one more object
    nobody put there on purpose. `object-position` takes the band from the
    plate's top eighth; the facets are the same, the props are not in it. */
-[data-theme='light'] .building__fog {
+[data-theme='light'] .games__fog {
   object-position: 50% 9%;
 }
 
@@ -1026,8 +1026,8 @@
    at its floor it is 120px wide and 180px tall against a band 112px deep, so
    there would be more of it faded than drawn. */
 @media (max-width: 640px) {
-  .section.building {
-    --building-floor: clamp(72px, 9vw, 130px);
+  .section.games {
+    --games-floor: clamp(72px, 9vw, 130px);
     /* The floor is a flat 72px anywhere this block applies — 9vw does not
        reach 72 until 800px wide — so the desktop clamp's 84px minimum would be
        MORE than the whole floor and the haze would be washing the pills. 32px
@@ -1035,18 +1035,18 @@
        the two are one decision rather than two guesses. It is still needed at
        375px: the pines come off at this width but the fog does not, and the
        fog is the layer that was cut on the section's bottom edge. */
-    --building-haze-h: 32px;
+    --games-haze-h: 32px;
   }
-  .building__pines,
-  .building__pines-far,
-  .building__post {
+  .games__pines,
+  .games__pines-far,
+  .games__post {
     display: none;
   }
   /* The push-down is a fixed 44px and the band here is only 72px, so the fog
      would be a 28px strip. 26px is the same trade one size down: the mask still
      hides the file's speckled top edge, and +0.015 is worth 7px of drift at
      375x812, so 19px of the clearance survives. */
-  .building__fog {
+  .games__fog {
     bottom: -26px;
   }
 }
@@ -1055,22 +1055,22 @@
   /* Every hook resolves to a zero translate at motionIntensity 0, so all seven
      layers rest exactly where they composed. The hint would be a promoted
      layer paid for and never used. */
-  .building__seam-drift {
+  .games__seam-drift {
     will-change: auto;
   }
   /* The two state-change transforms in this section: the title arrow's nudge
      on a lit card and the Play button's lift on hover. The colour and the
      theme ease stay. */
-  .building__title-arrow {
+  .games__title-arrow {
     transition: color 0.3s ease;
   }
-  .building__feature[data-lit='true'] .building__title-arrow {
+  .games__feature[data-lit='true'] .games__title-arrow {
     transform: none;
   }
-  .building__play {
+  .games__play {
     transition: var(--t-theme);
   }
-  .building__play:hover {
+  .games__play:hover {
     transform: none;
   }
 }
@@ -1080,7 +1080,7 @@
    opacity — and at the bottom of this section, where the band is near-black
    and the fog behind it is pale, twenty of those rules read as banding across
    the left third of the frame rather than as texture. The fresh render of the
-   #building -> #faith join is unambiguous about it: parallel lines, evenly
+   #games -> #faith join is unambiguous about it: parallel lines, evenly
    spaced, exactly the artefact a gradient produces when it has run out of
    steps. A ruled horizontal line across the viewport is the one thing this
    section is not allowed to have.
@@ -1119,7 +1119,7 @@
    `var(--border)` and no literal: it is per theme already, 10% white in dark
    and 10% of a near-black violet in light, so one declaration is a pale ray in
    one theme and a grey one in the other.                                   */
-.building__scan {
+.games__scan {
   opacity: 0.3;
   background-image: repeating-linear-gradient(135deg, var(--border) 0 1px, transparent 1px 14px);
   -webkit-mask-image: radial-gradient(
@@ -1140,7 +1140,7 @@
    It was a 420px circle at `top: 18%; right: 4%` and at that size, behind a
    1180px card, it was a smudge with nothing to show for itself: the render has
    a faint warmth in the top right corner and no reader would call it a light.
-   It is the only light source #building has and every other change in this
+   It is the only light source #games has and every other change in this
    file hangs off it — the rays above fall away from it, the pool on the bank
    is where it lands, and the near stand is read against that pool.
 
@@ -1154,10 +1154,10 @@
    square box the top edge's midpoint sits at 0.707 of the radius against a
    `transparent 72%` stop — 4% of the accent's alpha, which is nothing. Hang
    the box any further above the section and there is real ink where
-   `.building__clip` cuts it, which is a lit edge drawn along the #tools join:
+   `.games__clip` cuts it, which is a lit edge drawn along the #tools join:
    the exact defect the rest of this pass is removing. Negative `top` is not
    available here.                                                          */
-.building__blob {
+.games__blob {
   top: 0;
   right: -2%;
   width: clamp(340px, 42vw, 620px);
@@ -1165,11 +1165,11 @@
   filter: blur(34px);
 }
 
-.shell.building__shell {
+.shell.games__shell {
   max-width: 1180px;
 }
 
-.building__head {
+.games__head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -1177,23 +1177,23 @@
   gap: 16px;
   margin-bottom: 44px;
 }
-.h2.building__heading {
+.h2.games__heading {
   margin-top: 18px;
 }
-.lede.building__lede {
+.lede.games__lede {
   max-width: 520px;
 }
-.building__count {
+.games__count {
   font: 500 13px var(--font-body);
   color: var(--faint);
 }
 
-.building__feature {
+.games__feature {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
 }
 
-.building__art {
+.games__art {
   position: relative;
   min-height: 300px;
   display: flex;
@@ -1212,7 +1212,7 @@
     var(--bg)
   );
 }
-.building__art-img {
+.games__art-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1220,7 +1220,7 @@
   object-fit: cover;
   display: block;
 }
-.building__body {
+.games__body {
   padding: 42px 44px;
   display: flex;
   flex-direction: column;
@@ -1233,12 +1233,12 @@
      with the cover for the click. */
   --card-layer: auto;
 }
-.building__tags {
+.games__tags {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
 }
-.building__tag {
+.games__tag {
   font: 600 10px var(--font-mono);
   letter-spacing: 0.1em;
   padding: 5px 11px;
@@ -1247,19 +1247,19 @@
   border: 1px solid var(--border-hover);
   color: var(--accent-2);
 }
-.building__tag.building__tag--live {
+.games__tag.games__tag--live {
   background: var(--live-bg);
   color: var(--live-fg);
   border-color: var(--live-border);
 }
-.building__title {
+.games__title {
   margin: 0 0 13px;
   font: 700 26px var(--font-display);
   color: var(--text);
 }
 /* The panel opens the game's own page. Inline rather than on its own line, so
    a two-line heading keeps the arrow with its last word. */
-.building__title-arrow {
+.games__title-arrow {
   display: inline-block;
   margin-left: 9px;
   font-size: 18px;
@@ -1268,22 +1268,22 @@
     transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
     color 0.3s ease;
 }
-.building__feature[data-lit='true'] .building__title-arrow {
+.games__feature[data-lit='true'] .games__title-arrow {
   transform: translateX(4px);
   color: var(--text);
 }
-.building__copy {
+.games__copy {
   margin: 0 0 24px;
   font: 400 15.5px/1.7 var(--font-body);
   color: var(--muted);
 }
-.building__actions {
+.games__actions {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
-.building__play {
+.games__play {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1299,37 +1299,37 @@
 /* Above .card__cover, so the one link inside a link-card still gets the
    click — the element-qualified selector keeps the lift off the `--soon`
    SPAN, which must NOT intercept clicks meant for the card. Same pair as
-   `.apps__download`; `.building__body` above opts out of being a stacking
+   `.apps__download`; `.games__body` above opts out of being a stacking
    context so this z-index can actually win. */
-a.building__play {
+a.games__play {
   position: relative;
   z-index: 5;
 }
-.building__play:hover {
+.games__play:hover {
   transform: translateY(-3px);
 }
 /* not a link until the demo is actually reachable */
-.building__play.building__play--soon {
+.games__play.games__play--soon {
   background-color: var(--surface);
   border: 1px solid var(--border-hover);
   color: var(--faint);
   cursor: default;
 }
-.building__play.building__play--soon:hover {
+.games__play.games__play--soon:hover {
   transform: none;
 }
-.building__note {
+.games__note {
   font: 500 12.5px var(--font-body);
   color: var(--faint);
 }
 
-.building__pills {
+.games__pills {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
 }
-.building__pill {
+.games__pill {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1340,13 +1340,13 @@ a.building__play {
   font: 500 13px var(--font-body);
   color: var(--muted);
 }
-.building__pill-dot {
+.games__pill-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--accent-2);
 }
-.building__pill-dot[data-alt] {
+.games__pill-dot[data-alt] {
   background-color: var(--accent);
 }
 
@@ -1358,9 +1358,9 @@ a.building__play {
      base.css does not neutralise the --band-* tokens, so all three would come
      out as grey slabs on white paper. Decorative, so they go, like everything
      else that block drops. */
-  .building__bank,
-  .building__haze,
-  .building__over {
+  .games__bank,
+  .games__haze,
+  .games__over {
     display: none !important;
   }
 }

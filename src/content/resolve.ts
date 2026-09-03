@@ -162,7 +162,7 @@ export const visibleApps = (doc: SiteContentDoc): AppCard[] =>
 export const visibleTools = (doc: SiteContentDoc): ToolCard[] =>
   resolvedTools(doc).filter((tool) => !isHidden(doc, tool.page))
 
-/** What the Building section draws, or null when the game is hidden. */
+/** What the Games section draws, or null when the game is hidden. */
 export const visibleGame = (doc: SiteContentDoc): SiteGame | null =>
   isHidden(doc, MARANATHA.page) ? null : resolvedGame(doc)
 

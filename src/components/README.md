@@ -18,7 +18,7 @@ shared primitives every one of these builds on live in
 | `Walk.tsx` | **Not a section — a wrapper around three of them.** It owns the one 3D backdrop the whole cabin walk is read against, and the `margin-top: -100svh` that pulls this half of the page onto the pinned hero. See below. |
 | `Origin.tsx` | Seven chapters on a timeline that fills as you read, over the walk's `origin/CabinScene.tsx` — a cabin in the snow the reader walks toward as they read, and then goes inside. In the Cebu theme the same walk crosses sand to a nipa hut on stilts among palms, with the sea and a painted lagoon behind it: same camera, same room, a second geometry set built by the same file. |
 | `Apps.tsx` · `Tools.tsx` | The card grids. Every card carries its app's icon and opens that app's page. Both are read against the walk's camera — the projects over a table, the tools over a window — so neither paints a background of its own. Both ask `src/live/` at runtime whether each card's app is actually deployed, and a yes turns its status caption into a real link; the Apps grid also appends a derived card per `tdg-app`-tagged org repository the catalogue has not been taught (`OrgTile`, with a drawn-monogram stand-in for the icon GitHub cannot provide). |
-| `Building.tsx` | What is on our screens right now. |
+| `Games.tsx` | The games we are making: the one in playtest, and the queue behind it. |
 | `Faith.tsx` | A slow gradient field, one verse, and the summit below it — `faith/Summit.tsx`, where the page's moon finally arrives behind the cross. |
 | `Outro.tsx` | The makers note and the GitHub card that close the page. |
 
@@ -80,8 +80,8 @@ touch anything in this half of the page:
 - **The three sections paint no background.** `#origin` is `z-index: 4` and the
   other two are positioned siblings of the stage, so any band on them is a lid
   on the canvas. The backdrop for all three is one gradient on `.walk`,
-  underneath it — transparent at the top for the hero dissolve, `--band-building`
-  at the floor so `#building` still meets an identical band.
+  underneath it — transparent at the top for the hero dissolve, `--band-games`
+  at the floor so `#games` still meets an identical band.
 - **The copy is plated, and a plate is a LOCAL object.** `.card` already had
   `--card-bg`; the five blocks of copy read against the room — Origin's intro,
   its seven chapter rows, the link that closes its timeline, and the heads of
@@ -183,7 +183,7 @@ for the shaped boundaries between sections, and for anything drawn rather than
 photographed: `ThemedArt` / `ThemedHeroArt` / `StillArt`, `Seam`, `Stage`,
 `Moon` and `Snow`. It was written **before** the sections that use it, so that
 seven of them would reach for the same primitives instead of each wrapping an
-`<img>` its own way; `Hero`, `Origin`, `Walk`, `Tools`, `Building`, `Faith` and
+`<img>` its own way; `Hero`, `Origin`, `Walk`, `Tools`, `Games`, `Faith` and
 `Outro` draw from it today — every section on the home page but `Apps`, which
 is a grid of cards and draws none of them.
 

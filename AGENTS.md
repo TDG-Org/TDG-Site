@@ -87,7 +87,7 @@ drawing.** `AppPage.tsx` does not, and it draws eleven — so the eleven live in
 which is the only reason they have stayed consistent with each other.
 `Apps.tsx` draws its own kicker, heading and lede once and will never draw a
 second set, so those live in `Apps.tsx`. Every home-page section is written that
-way: `Hero`, `Origin`, `Apps`, `Tools`, `Building`, `Faith`, `Outro`, `Store`,
+way: `Hero`, `Origin`, `Apps`, `Tools`, `Games`, `Faith`, `Outro`, `Store`,
 `Footer`. Moving a one-off headline into a data file buys no consistency —
 there is no second instance for it to agree with — and costs the thing that
 makes a section legible, which is reading its words and its layout in one file.
@@ -114,7 +114,7 @@ is still what renders when the read fails — which is the only reason a static
 marketing page is allowed to depend on a database at all. **So a surface that
 draws a product reads it through `src/content/`, never from `content.ts`
 directly**, or that surface goes on printing the words the site stopped saying
-an hour ago. `Apps.tsx`, `Tools.tsx`, `Building.tsx`, `AppPage.tsx` and
+an hour ago. `Apps.tsx`, `Tools.tsx`, `Games.tsx`, `AppPage.tsx` and
 `Store.tsx` are the five that do, and adding a sixth means doing the same.
 
 ### 2. Never write a colour, and never write a second one.
@@ -457,7 +457,7 @@ Makullveny keeps a hand-written panel because it sells a tier ladder plus themes
 plus two flags, which is not the pack-Store shape wearing a different name.
 
 **Derive it through `src/content/`, not from `content.ts`.** The Apps grid, the
-Tools shelf, the Building panel and the Developer console's own Content roster
+Tools shelf, the Games panel and the Developer console's own Content roster
 all map `visibleApps()` / `visibleTools()` / `visibleGame()`, so a card hidden
 in one place cannot still be printed in another. That is the same rule this one
 already was — one derived list, no second copy — with one more thing folded into
@@ -708,7 +708,7 @@ verification is manual and you have to actually do it.
 **This is the rule that has been broken most, and every one of the site
 owner's angriest reports is the same failure: a change was reasoned about,
 committed, and reported, and nobody rendered it.** Not once — repeatedly, in
-the same week, across the palm placement, the cloud removal, the Building row
+the same week, across the palm placement, the cloud removal, the Games row
 and the theme seam.
 
 The three ways it goes wrong, all of them observed on this repo:
@@ -724,7 +724,7 @@ The three ways it goes wrong, all of them observed on this repo:
   cloud slots were pointed at the good drawing and the sky still had two
   clouds. Rendering it and comparing against the owner's screenshot would have
   shown two clouds where the note says one.
-- **Fixing one beat and breaking its neighbour.** Lifting the Building palm row
+- **Fixing one beat and breaking its neighbour.** Lifting the Games palm row
   to show its trunks made a nine-palm row fill the lower half of the section.
   The lift was right; nobody looked at what it did to the scale.
 

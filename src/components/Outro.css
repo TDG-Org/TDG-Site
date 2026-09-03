@@ -319,7 +319,7 @@
      this property.** This line read `calc(var(--outro-cross) + 14px)` and
      computed to `0px`, so the air band — the only thing crossing this
      boundary, and the whole of what was meant to dissolve it — was being cut
-     off exactly on the join it was drawn to hide. Building.css carries the
+     off exactly on the join it was drawn to hide. Games.css carries the
      probe: plain lengths and `<visual-box> <length>` are honoured on Chrome
      152, `calc()`, `var()` and therefore `clamp()` compute to zero.
 
@@ -403,7 +403,7 @@
    near-black violet in light, so one declaration is moonlight over a ridge in
    one theme and the hill's own shade falling into the section in the other.
    Five stops rather than two — a two-stop radial across 374px of near-black is
-   exactly the case that banded in `.building__scan`, and this is the largest
+   exactly the case that banded in `.games__scan`, and this is the largest
    soft gradient on the page's last beat.
 
    The linear under it is `--band-faith`, the band this section is walking out
@@ -417,7 +417,7 @@
    The element starts at the section's top edge, so the mask does that rather
    than the backgrounds: `transparent 0 -> #000 30% -> #000 62% -> transparent
    100%`. Zero alpha at its own first row means the boundary carries none of it
-   however the radial is centred, which is the same mechanism `.building__over`
+   however the radial is centred, which is the same mechanism `.games__over`
    uses one section up and is what makes the layer safe to move later.
 
    ## Where the bloom sits

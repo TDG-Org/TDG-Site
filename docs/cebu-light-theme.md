@@ -64,7 +64,7 @@ What the captures showed about the light theme **as it stands** (the reason
 this is worth doing, in one paragraph): at rest the hero's three ranges are
 almost invisible against the pale sky, the lamppost is still *lit* at noon,
 the snow falls as dark specks that read as dirt, the window frost is ice, and
-the bridge, fence and signpost at the Tools/Building join are ghosts. It is a
+the bridge, fence and signpost at the Tools/Games join are ghosts. It is a
 faithful silver copy of a night scene, and it looks like one.
 
 ---
@@ -93,7 +93,7 @@ a sun at two hours.
 | **Origin → the walk** | Snowfield, pines in ranks, a log cabin at night, windows glowing, smoke, snow falling near and far | **A beach path across sand to a white villa** among palms with the sea behind them: white walls, dark slate hip roof, a deep veranda with square posts and a balustrade, capiz-shell windows, three steps down to the sand. Full day, house *unlit*. Footprints in the sand where the trodden path was; shells and coral stones where the weeds and rocks were. Falling snow becomes drifting **kalachuchi petals**. |
 | **Apps** (inside, over the table) | Hearth burning, the room's only light, three sheets of paper on the big table | The same table (rattan-edged pale wood), the same three sheets. The hearth cavity becomes an **arched opening onto a pool terrace**; the pool's light is the room's light source and its **caustic ripple** is the room's one animated thing, exactly where the flames were. |
 | **Tools** (the west window) | Frost crystals at the frame's corners, pines and snow outside | A **capiz-shell window** at the corners, sun glare where the frost's sheen was; outside, palms, the pool and the sea. |
-| **Tools floor / Building top** | Stone footbridge over water, reeds, boulders, fence, signpost, fog, two stands of pines, dune seam | A **wooden pier on stilts over shallows**, pandan clumps, pale **limestone boulders**, a **bamboo rail**, a weathered **beach signpost** (boards blank), sea mist, two **coconut palm pairs**, the dune seam as *sand*. |
+| **Tools floor / Games top** | Stone footbridge over water, reeds, boulders, fence, signpost, fog, two stands of pines, dune seam | A **wooden pier on stilts over shallows**, pandan clumps, pale **limestone boulders**, a **bamboo rail**, a weathered **beach signpost** (boards blank), sea mist, two **coconut palm pairs**, the dune seam as *sand*. |
 | **Faith** | Three smooth hills, the moon low behind the crest, the cross on it | **The same three hills, the same cross, the sun going down behind it.** The owner asked for this beat kept "very much like it", and it is: only the tokens move — the hills go green-to-dusk, the disc goes gold, the sky band warms. No art file. (Cebu is where the cross first stood in the Philippines, in 1521; the composition does not need to say so.) |
 | **The Makers / Outro** | Stone stair, garden arch with ivy, stone lantern, stepping stones | **Coral-stone steps** down to the sand, a **coral-stone gateway arch** with bougainvillea, a **capiz lantern** on a post, flat **stepping stones in sand**. |
 | **Cards, nav, cursor, footer, Store, About, account pages** | Tokens | Tokens. No art anywhere else on the site. |
@@ -176,14 +176,14 @@ as `.webp` only.
 | T4 | `.tools__rocks` | `props/boulder-cluster` | 1448×1086 | `clamp(200px,27vw,480px)`, right, `--art-near`; hidden ≤ 640px | −0.15 + pointer sway 12/7px | **Coral rocks** → `props/coral-rocks` — chunky pale limestone karst boulders, a little green in the cracks | B |
 | T5 | road grid, horizon line, spray, shore | CSS in `--border`, `--warm`, `--glow`, bands | — | — | 7s grid run | **Token.** Keep the grid; horizon line in sun gold | B |
 
-### Building (`src/components/Building.tsx`, `Building.css`)
+### Games (`src/components/Games.tsx`, `Games.css`)
 
 | # | Slot | Dark piece | Canvas | Paints at | Motion | Cebu piece → new file | Tier |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| B1 | `.building__post` | `props/wayfinding-post` | 1024×1536 | `clamp(150px,15vw,270px)`, left, crossing up into Tools, `--art-mid`; hidden ≤ 640px | −0.05 | **Beach signpost** → `props/beach-signpost` — weathered driftwood post with two or three **blank** boards | B |
-| B2 | `.building__fog`, `.building__mist` | `atmosphere/fog-veil` (drawn twice) | 2172×724 | full width, `--art-far` | +0.015 / −0.12 | **Sea mist** → reuse `atmosphere/sea-haze` (O2) unless it measures wrong under Building's masks; then `atmosphere/sea-mist` | B |
-| B3 | `.building__pines`, `.building__pines-far` | `props/pine-faceted-pair` (drawn twice) | 1024×1536 | right `clamp(220px,27vw,480px)` `--art-mid`; left far `clamp(120px,14vw,250px)` `--art-far`; hidden ≤ 640px | −0.1 / +0.03 | **Coconut pair** → `props/coconut-pair` — two palms, one taller, faceted fronds | B |
-| B4 | dune `Seam`, `.building__scan`, `.building__bank`, `.building__haze`, `.building__dusk` | SVG + CSS | — | — | seam +0.022 | **Token.** The dune reads as sand once `--seam-fill` is sand; keep the scan texture | B |
+| B1 | `.games__post` | `props/wayfinding-post` | 1024×1536 | `clamp(150px,15vw,270px)`, left, crossing up into Tools, `--art-mid`; hidden ≤ 640px | −0.05 | **Beach signpost** → `props/beach-signpost` — weathered driftwood post with two or three **blank** boards | B |
+| B2 | `.games__fog`, `.games__mist` | `atmosphere/fog-veil` (drawn twice) | 2172×724 | full width, `--art-far` | +0.015 / −0.12 | **Sea mist** → reuse `atmosphere/sea-haze` (O2) unless it measures wrong under Games' masks; then `atmosphere/sea-mist` | B |
+| B3 | `.games__pines`, `.games__pines-far` | `props/pine-faceted-pair` (drawn twice) | 1024×1536 | right `clamp(220px,27vw,480px)` `--art-mid`; left far `clamp(120px,14vw,250px)` `--art-far`; hidden ≤ 640px | −0.1 / +0.03 | **Coconut pair** → `props/coconut-pair` — two palms, one taller, faceted fronds | B |
+| B4 | dune `Seam`, `.games__scan`, `.games__bank`, `.games__haze`, `.games__dusk` | SVG + CSS | — | — | seam +0.022 | **Token.** The dune reads as sand once `--seam-fill` is sand; keep the scan texture | B |
 
 ### Faith (`src/components/Faith.tsx`, `faith/Summit.tsx`)
 
@@ -216,7 +216,7 @@ as `.webp` only.
 - **Store, About, Account, People, Developer** carry no art; they are tokens.
 
 **Count: 23 files.** Tier A (hero + Origin band, 12 pieces) is the whole
-first impression and should be made first; B (walk window, Tools, Building,
+first impression and should be made first; B (walk window, Tools, Games,
 7 pieces) next; C (Outro, 4 pieces) last. Faith needs none.
 
 ---
@@ -328,7 +328,7 @@ accent, sun-gold warm, and bands that go sky → sea → sand → dusk down the 
 | `--hero-dust` / `--hero-dust-gain` | ink / .85 | `rgb(255,250,235)` / 1 | sun-sparkle |
 | `--terrain-haze` / `--terrain-haze-rear` | `#3c485a` / `#98aec0` | `#5fbdd2` / `#b9e3ec` | sea haze near / far |
 | `--art-far` / `--art-mid` / `--art-near` | .36 / .44 / .52 | **.62 / .74 / .86** | the winter art was pale on pale; the Cebu art is colour on sky and can carry it |
-| `--band-origin` / `-apps` / `-tools` / `-building` / `-faith` | pale greys | `#cfeaf3` / `#f8f6f0` / `#dcefef` / `#f3ead9` / `#f6e7d3` | sky → paper → sea → sand → dusk |
+| `--band-origin` / `-apps` / `-tools` / `-games` / `-faith` | pale greys | `#cfeaf3` / `#f8f6f0` / `#dcefef` / `#f3ead9` / `#f6e7d3` | sky → paper → sea → sand → dusk |
 | `--summit-stop-0/1/2` | slate greys | `#2f5a3a` / `#3f7449` / `#5d8f5f` | Faith's hills |
 | `--lamp-core/glow/spill/pool` | warm 95/36/13/20% | all `transparent` | the lamp is off by day |
 | `--seam-fade` | .4 | .5 | |

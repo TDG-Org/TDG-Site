@@ -38,7 +38,7 @@ The home page runs 01 → 05 in one scroll, each chapter with a scene behind it 
 |  |  |
 |:--|:--|
 | <img src="docs/origin.webp" alt="The Origin chapter timeline over a snowbound cabin at night"> **01 · Our origin** — seven chapters on a timeline that fills as you walk past a cabin in the snow | <img src="docs/apps.webp" alt="The apps grid, cards tilting toward the cursor"> **02 · Apps** — cards that tilt toward your cursor and light the edge nearest it |
-| <img src="docs/tools.webp" alt="The tools and extensions row"> **03 · Tools & extensions** — the small things we actually use every day | <img src="docs/building.webp" alt="The Building Now feature, showing MARANATHA"> **04 · Building now** — what is on our screens right now, one feature and the queue behind it |
+| <img src="docs/tools.webp" alt="The tools and extensions row"> **03 · Tools & extensions** — the small things we actually use every day | <img src="docs/games.webp" alt="The Games section, showing MARANATHA"> **04 · Games** — the one game in playtest, and the queue behind it |
 
 <div align="center">
 

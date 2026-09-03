@@ -29,7 +29,7 @@ import './Tools.css'
  * the two pine variables and this section's `overflow-clip-margin`.
  *
  * **This section's FLOOR is a different question and it gets a different
- * answer.** The join into `#building` is real, it is the end of the walk, and
+ * answer.** The join into `#games` is real, it is the end of the walk, and
  * it is where the 3D washes out into the outside light: the bridge, the water,
  * the boulders and the neon band are what the reader steps out into. Every one
  * of them stays, and this pass adds the fence the owner asked for to them.
@@ -215,7 +215,7 @@ export function Tools() {
        opaque edge to edge, and this section paints OVER the walk's canvas —
        so its own band would be a lid on the last two beats of the shot. The
        backdrop for the whole walk is one gradient on `.walk`, and it ends on
-       --band-building at the floor, which is the join this section still has
+       --band-games at the floor, which is the join this section still has
        to make. Tools.css and Walk.css both carry the argument. */
     <section id="tools" className="section tools">
       {/* ── the end of the walk: stepping out of the cabin ──────────────────
@@ -225,7 +225,7 @@ export function Tools() {
           footbridge over water, a bench on the far bank, a near shore with a
           three-rail fence running out of frame, boulders and reeds at its
           waterline, and the retro-neon band beyond them, handing the page to
-          `#building`.
+          `#games`.
 
           That is the whole reason this floor survived the pass that deleted
           `#apps`' floor and both of this section's own boundary layers. It is
@@ -236,7 +236,7 @@ export function Tools() {
           **Until this pass that sentence was a claim rather than a fact.** The
           canvas never faded: the pin's last position is the bottom 100svh of
           the walk and this band is the bottom --tools-scene of it, so the
-          bridge, the boulders and `#building`'s own wayfinding post were being
+          bridge, the boulders and `#games`'s own wayfinding post were being
           painted over the cabin's ceiling and wall planes for the whole of the
           join. `.walk__stage`'s mask now ends on a transparent band exactly
           this deep — Walk.css carries the arithmetic — so the room is gone
@@ -260,7 +260,7 @@ export function Tools() {
 
           The wrapper is the section's `aria-hidden` / `pointer-events: none`
           box. It used to be what kept the boulders from hanging a whole rock
-          over `#building` through the section's clip MARGIN; the margin went
+          over `#games` through the section's clip MARGIN; the margin went
           with the crossing band that needed it, so the section is back to
           `.section`'s own `overflow: hidden` and this is a plain wrapper now.
           `.origin__clip` and `.apps__clip` are the same box either side. */}

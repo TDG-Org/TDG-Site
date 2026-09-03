@@ -111,7 +111,7 @@ one hiccup at boot cannot pin "we do not know" for a whole visit.
 | `useLive.ts` | `useLiveAccess` and `useDiscoveredApps`, plus the derivations under them. |
 
 Callers today: `components/Apps.tsx` (cards and discovered cards),
-`components/Tools.tsx`, `components/Building.tsx` (the MARANATHA panel, verb
+`components/Tools.tsx`, `components/Games.tsx` (the MARANATHA panel, verb
 `Play`), `components/AppPage.tsx` via `liveRepoForPage()` here in
 `useLive.ts`, which reads the RESOLVED cards so the Content tab's overrides
 count, and `store/sale.ts`, which asks `useLiveAccess` whether an app the

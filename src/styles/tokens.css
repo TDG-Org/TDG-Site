@@ -456,7 +456,7 @@
   --band-origin: #040c19;
   --band-apps: #08080c;
   --band-tools: #090b13;
-  --band-building: #0f0d0d;
+  --band-games: #0f0d0d;
   --band-faith: #0c0d15;
   --band-outro: var(--bg);
   --band-foot: var(--bg2);
@@ -564,7 +564,7 @@
      the Apps band's and the low end of a much wider 2.4-5.6.
 
      94% puts the FIVE seams this page actually draws — apps, tools,
-     building, faith, outro — at dL* 5.0-6.1 dark and 4.6-4.8 light: above
+     games, faith, outro — at dL* 5.0-6.1 dark and 4.6-4.8 light: above
      that anchor in both themes, because a seam is usually masked by
      --seam-fade below and so paints most of its band at part opacity, and
      nowhere near the dL* 7.7-10.6 that 90% gives, which would be five grey
@@ -576,7 +576,7 @@
      near-constant 3.6-4.6 off whatever band it is on and every seam clears
      every one of them. In light --surface is OPAQUE, so the distance is only
      how far the band happens to be from white — 2.4 on apps, 5.6 on tools —
-     and the light seams clear apps, building and the Outro while sitting
+     and the light seams clear apps, games and the Outro while sitting
      UNDER the card face on tools and faith. That is a property of an opaque
      light surface, not of the step, and 94% stands. It is spelled out
      because a number offered as a calibration has to be re-derivable from
@@ -592,8 +592,8 @@
      Re-measured for the five that are left, on the live page in both themes:
      resolve each band and its own color-mix(in srgb, band 94%, --text)
      through getComputedStyle, take L* of each, subtract. Dark — outro 4.95,
-     apps 5.14, tools 5.70, faith 6.06, building 6.07. Light — tools 4.60,
-     faith 4.63, building 4.72, outro 4.73, apps 4.76. Both ranges above are
+     apps 5.14, tools 5.70, faith 6.06, games 6.07. Light — tools 4.60,
+     faith 4.63, games 4.72, outro 4.73, apps 4.76. Both ranges above are
      unchanged: #origin's own were 5.72 and 4.62, inside each range and at
      neither end, so dropping it moved the population and not the numbers.
 
@@ -1056,7 +1056,7 @@
   --band-origin: #bfe6f4;
   --band-apps: #f7f8f4;
   --band-tools: #cfeff0;
-  --band-building: #f7ecd9;
+  --band-games: #f7ecd9;
   /* ── Cebu's Faith band is SKY ────────────────────────────────────────────
      #fbe6cf, a warm cream, is what the section's own shading (--faith-dusk in
      Faith.css) was mixing toward --warm on top of, and between them the whole

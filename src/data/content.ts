@@ -7,7 +7,7 @@ export const NAV_LINKS = [
   { href: '#origin', label: 'Origin' },
   { href: '#apps', label: 'Apps' },
   { href: '#tools', label: 'Tools' },
-  { href: '#building', label: 'Building' },
+  { href: '#games', label: 'Games' },
   { href: '#faith', label: 'Faith' },
   // The last two are ROUTES rather than section anchors, because each is its
   // own page, and every route carries a leading slash. The rule was learned
@@ -615,7 +615,7 @@ export const TOOLS: ToolCard[] = [
   },
 ]
 
-/** The Building-now feature: MARANATHA, the game. */
+/** The Games feature: MARANATHA, the game. */
 export const MARANATHA = {
   /** Its own page, same as every card under Apps and Tools. */
   page: 'maranatha',
@@ -645,7 +645,7 @@ export const MARANATHA = {
    * chips are 9px mono tags and every one of them is set that way — `LIVE`,
    * `IN DEV`, `EARLY BUILD` — so this is rendered verbatim, not title-cased.
    *
-   * It lives here rather than in `Building.tsx` because it is a word a visitor
+   * It lives here rather than in `Games.tsx` because it is a word a visitor
    * reads (rule 1), and because it and `status` below are about the same card:
    * two claims typed in two files drift, and this pair already had — the
    * component said `IN PLAYTEST` eleven lines above a `status` of `Coming soon`.
@@ -656,7 +656,7 @@ export const MARANATHA = {
    *
    * They used to be typed inside `chipsForPage()` in `appPages.ts`, which said
    * in as many words: "If that panel ever gains chips of its own, read them
-   * from there instead." This is that. The Building panel still prints `tag`
+   * from there instead." This is that. The Games panel still prints `tag`
    * and `status` in prose rather than a chip row, so these are the page's — and
    * each one restates something the facts row directly below it already says,
    * so there is no second claim to go stale.
@@ -676,8 +676,18 @@ export const MARANATHA = {
   } satisfies Shot,
 }
 
+/**
+ * The queue behind the one playable game, as pills under the Games panel.
+ *
+ * They are GAMES, or things you would play inside one. The section was called
+ * "Building now" until 2.51.0 and these three said "A shared design system",
+ * "More Bible tools" and "Utilities for students" — true of the workshop, and
+ * read under a heading that says Games they would each have been a promise of
+ * a game we are not making. `MARANATHA.count` counts them, so a fourth pill
+ * means editing that line too.
+ */
 export const NEXT_UP = [
-  'A shared design system',
-  'More Bible tools',
-  'Utilities for students',
+  'More Bible stories to walk',
+  "Noah's ark, with its story",
+  'A second game after this',
 ] as const

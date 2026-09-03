@@ -2432,8 +2432,8 @@ const MARANATHA_PAGE: AppPage = {
   slug: 'maranatha',
   index: '11',
   group: 'Game',
-  backHash: '#building',
-  backLabel: 'Building',
+  backHash: '#games',
+  backLabel: 'Games',
   title: 'MARANATHA',
   lede: 'MARANATHA is a Bible game you walk through. You move a character around a hand-drawn world, walk up to people and talk with them, and live the events as Scripture tells them, with the verse on screen and read aloud on every beat.',
   intro:

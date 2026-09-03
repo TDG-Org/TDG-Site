@@ -24,11 +24,11 @@ export function Faith() {
     <section ref={section} id="faith" className="section section--blend faith faith-summit-host">
       {/* ── the walk, beat six: the climb, and the summit at the top of it ──
           This is the one boundary on the walk where the land actually rises:
-          you leave the open ground of #building and start up. So it is drawn
+          you leave the open ground of #games and start up. So it is drawn
           as a PASS — two lands closing on a slot of sky — and it is the only
           join on the page built that way. The four others are a canopy at two
           depths (#apps), one clean waterline (#tools), a mist with no edge in
-          it at all (#building) and a shape that fades in from nothing (the
+          it at all (#games) and a shape that fades in from nothing (the
           Outro), so a reader never meets the same idea twice.
 
           `ridge` HANGS from the boundary: a low, many-faceted profile, the far
@@ -83,13 +83,13 @@ export function Faith() {
           A mask on the moving box is therefore a mask in the wrong place, and
           it was measured being wrong: the section's top edge sat at 35–42% of
           the box, which is where the old radial's own centre was, so the rays
-          arrived at the #building join at full strength and made the entire
+          arrived at the #games join at full strength and made the entire
           remaining step there. Ablated, hiding this layer took a join that
           measured +0.7 to +5.1 in dark, varying run to run with the breathe
           animation, to 0.00 at every one of fifteen columns.
 
           So the mask goes on a box that does not move and the drift stays on
-          the one that does. `.building__over` is the same shape one section up:
+          the one that does. `.games__over` is the same shape one section up:
           a static, masked band with drifting art inside it. */}
       <div className="faith__rays-veil" aria-hidden="true">
         <div ref={rays} className="faith__rays">

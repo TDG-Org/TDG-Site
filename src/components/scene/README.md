@@ -9,7 +9,7 @@ get onto this page.
 came first, on its own, so that the sections about to grow scenery would all
 reach for the same three components rather than each inventing an `<img>`
 wrapper with its own idea of what "decorative" means. They now do — `Hero`,
-`Origin`, `Apps`, `Tools`, `Building`, `Faith` and `Outro` all import from here,
+`Origin`, `Apps`, `Tools`, `Games`, `Faith` and `Outro` all import from here,
 and none of them builds its own. Keep it that way: a section that needs a piece
 of the art kit imports one of `ThemedArt.tsx`'s three exports, and does not
 write an `<img>` or a path of its own. That is what makes a change like the
@@ -40,10 +40,10 @@ the new `Walk.tsx`. Treat the table as a snapshot with a grep beside it.
 
 | Primitive | Drawn by |
 | --- | --- |
-| `ThemedArt` | `Building` ×5 (two stands of faceted pines, two fog veils, the wayfinding post) · `Origin` ×3 (far treeline, mist bank, pine row) · `Outro` ×3 (stone stair, garden arch, stepping stones) · `Tools` ×2 (footbridge, boulders) — **thirteen** |
+| `ThemedArt` | `Games` ×5 (two stands of faceted pines, two fog veils, the wayfinding post) · `Origin` ×3 (far treeline, mist bank, pine row) · `Outro` ×3 (stone stair, garden arch, stepping stones) · `Tools` ×2 (footbridge, boulders) — **thirteen** |
 | `ThemedHeroArt` | **Nobody.** Kept on purpose — see below. |
 | `StillArt` | `Hero` ×8 (two moon clouds, the rear, mid and main ridges, valley fog, tall pine, near branch) · `Origin` ×2 (snow bank, lamppost) · `Outro` (lantern post) · `Tools` ×2 (bushes and reeds, fence rail) · `Walk` (window frost) — **fourteen** |
-| `Seam` | `Building` · `Faith` ×2 — **three**, across two boundaries. One is `edge="bottom"` (Faith's rising range). The Outro no longer draws one; its stair and stepping stones are `ThemedArt` now. |
+| `Seam` | `Games` · `Faith` ×2 — **three**, across two boundaries. One is `edge="bottom"` (Faith's rising range). The Outro no longer draws one; its stair and stepping stones are `ThemedArt` now. |
 | `Stage` | `Hero` (the whole pinned valley) · `Walk` ×2 (`walk__stage`, the cabin that used to be `Origin`'s, and `walk__front`) |
 | `Moon` | `Hero` (on the horizon) · `faith/Summit.tsx` (behind the cross) |
 | `Snow` | `Walk` (the near flake layer, in front of the cabin) |
@@ -170,12 +170,12 @@ layer that lands at a few hundred CSS pixels; the WebP derivative is a ~93%
 cut across the whole kit. The home page draws **sixteen** of these across five
 sections — Faith draws none, it authors its own terrain — plus four more as
 app-card covers. Counted with `grep -rn '<ThemedArt\|<StillArt' src/
---include=*.tsx`: eleven `ThemedArt` (Building 5, Origin 2, Outro 2, Tools 2)
+--include=*.tsx`: eleven `ThemedArt` (Games 5, Origin 2, Outro 2, Tools 2)
 and five `StillArt` (Hero 3, Origin 2).
 
 It said thirteen across six sections until this pass, and the count moves for
 two different reasons that are worth telling apart. One is a piece being drawn
-a second time: `atmosphere/fog-veil` was, at `#building`'s boundary as well as
+a second time: `atmosphere/fog-veil` was, at `#games`'s boundary as well as
 on its floor, and `props/pine-faceted-pair` now is too, at two sizes and two
 opacities with the fog band between them — same file, same URL, same request,
 so the byte figures do not move and the layer count does. The other is
@@ -411,7 +411,7 @@ band as that band is from white, and the light seams on `#origin`, `#tools` and
 `#faith` sit UNDER it. That is a property of an opaque light surface, not of the
 step, and 94% stands either way.
 
-**Three boundaries carry one today** — `#building`, `#faith` and the Outro —
+**Three boundaries carry one today** — `#games`, `#faith` and the Outro —
 and that is three *joins* and **five** `<Seam>`s, because two of them carry two
 bands. `grep -rn '<Seam' src/ --include=*.tsx` is the population: `#faith`
 hangs a bank from above while a range climbs to meet it, and the Outro draws
@@ -450,8 +450,8 @@ same in every one:
 
 | join | dark | light |
 | --- | --- | --- |
-| `#tools` -> `#building` (`dune`) | +5.9 L\* at every column | -4.5 at every column |
-| `#building` -> `#faith` (`ridge`) | +6.2 to +10.6 | -6.4 to -8.8 |
+| `#tools` -> `#games` (`dune`) | +5.9 L\* at every column | -4.5 at every column |
+| `#games` -> `#faith` (`ridge`) | +6.2 to +10.6 | -6.4 to -8.8 |
 
 A step that is present at every column, with nothing varying on either side of
 it, is not a ragged join — it is a ruled line drawn across the viewport, which
@@ -464,7 +464,7 @@ Two things follow and neither is optional:
 - **A top-faded band needs no `--seam-lift`.** That token exists because a
   drift slides a solid top edge clear of the join; with `transparent` as the
   first stop there is no edge for the drift to expose, in either direction, at
-  any scroll position. `.building__seam-drift::before` and
+  any scroll position. `.games__seam-drift::before` and
   `.faith__seam-drift::before` are both gone, and the Outro's band never had
   one — it has argued this since it was written.
 - **The stops go against the SHAPE, not against round numbers.** Each of the
@@ -475,7 +475,7 @@ Two things follow and neither is optional:
 The same rule reaches past seams. `.faith__field` and `.faith__rays` are
 ambient gradients with no shape at all, and their radial masks did not reach
 zero at their section's edges either: ablated one at a time, they were the
-whole of what was left at the `#building` join once the seam was fixed. **Any
+whole of what was left at the `#games` join once the seam was fixed. **Any
 layer that spans a section has to be at zero alpha at both of its horizontal
 edges, and that is arithmetic on the mask's own radius rather than a look.**
 

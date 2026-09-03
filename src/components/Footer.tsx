@@ -76,7 +76,7 @@ export function Footer() {
                 <a href="#origin">Origin</a>
                 <a href="#apps">Apps</a>
                 <a href="#tools">Tools &amp; Extensions</a>
-                <a href="#building">Building Now</a>
+                <a href="#games">Games</a>
                 <a href="#faith">Faith</a>
               </div>
             </div>

@@ -72,7 +72,7 @@ that reason.
 
 ## Who reads it
 
-`components/Apps.tsx`, `components/Tools.tsx` and `components/Building.tsx` for
+`components/Apps.tsx`, `components/Tools.tsx` and `components/Games.tsx` for
 the three grids; `components/AppPage.tsx` for a product's own page and for the
 icon, chips and screenshot it borrows from that product's card;
 `components/Store.tsx` for the icon at the head of a shelf.

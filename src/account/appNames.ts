@@ -22,7 +22,7 @@ import { prettyId } from './format'
  * in the data file). This reads it through `src/content/resolve`, never from
  * `content.ts` directly, so a product renamed from `#/dev` is renamed here in
  * the same breath — rule 1's second half, and the reason `Apps.tsx`,
- * `Tools.tsx`, `Building.tsx`, `AppPage.tsx` and `Store.tsx` all go the same
+ * `Tools.tsx`, `Games.tsx`, `AppPage.tsx` and `Store.tsx` all go the same
  * way.
  *
  * ## An id with no card still gets a face

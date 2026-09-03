@@ -2,7 +2,7 @@
    Both are HAZE, and both belong to this section's FLOOR — the one edge of it
    that is still a boundary between two pictures. The render that produced them
    showed a bridge, a boulder and a neon grid all terminating on the same ruled
-   horizontal line at the `#building` join, with nothing between the depth
+   horizontal line at the `#games` join, with nothing between the depth
    planes and nothing across the boundary.
 
    --tools-spray-ink is the air over the water, laid between the bridge and the
@@ -31,7 +31,7 @@
 
    --tools-shore-ink is not a mix at all. It is the band on the OTHER side of
    this section's bottom edge, unchanged — which is what `.walk`'s own backdrop
-   gradient already resolves to at 100%, and what `#building` paints — so a
+   gradient already resolves to at 100%, and what `#games` paints — so a
    band that ends on it can have no step in it anywhere. It is aliased rather
    than written inline so the rule below reads as what it is. (Until this pass
    the sentence said "what `.section--blend`'s own gradient resolves to at
@@ -39,7 +39,7 @@
    did not move, it only changed owner. See below.)                          */
 :root {
   --tools-spray-ink: color-mix(in srgb, var(--band-tools) 91%, var(--text));
-  --tools-shore-ink: var(--band-building);
+  --tools-shore-ink: var(--band-games);
 }
 
 /* ── the section ───────────────────────────────────────────────────────────
@@ -55,9 +55,9 @@
    walk's stage painted later in tree order — so an opaque gradient here does
    not sit behind the cabin, it hides the last two beats of the shot
    completely. The backdrop for all three sections is one gradient on `.walk`,
-   underneath the canvas, and it ends on --band-building at the floor, which is
+   underneath the canvas, and it ends on --band-games at the floor, which is
    the value this section's own gradient ended on anyway. The join into
-   `#building` is therefore still a band meeting an identical band, and
+   `#games` is therefore still a band meeting an identical band, and
    --tools-shore-ink above is still the same colour it always was.
 
    `background-color: transparent` is stated rather than left to the default,
@@ -125,7 +125,7 @@
    reach the TOP of the viewport before the pin releases", which is a full
    viewport after the last card has left the screen — nobody is reading a card
    that is a screen above the fold, and a critic measured what it actually
-   bought: about 1026px between the bottom of the last card and `#building`'s
+   bought: about 1026px between the bottom of the last card and `#games`'s
    kicker with no copy, no cards and nothing happening in it. Re-measured off
    the tree before this edit it was 1018 (5630 to 6648). The wash was empty
    because nothing was washing.
@@ -145,10 +145,10 @@
    ramp is that clamp and nothing else.
 
    Measured at 1440x900 after the change: the section is 1560px where it was
-   1722, the run from the last card's bottom edge (page 5630) to `#building`'s
+   1722, the run from the last card's bottom edge (page 5630) to `#games`'s
    kicker (6486) is 856px where it was 1018, and every pixel of what is left is
    doing something — 180px of held window beat, 216px of the room dissolving,
-   331px of the landscape it dissolves into, and 129px of `#building`'s own
+   331px of the landscape it dissolves into, and 129px of `#games`'s own
    crossing band on top of that. The four add to the 856 exactly, which is the
    point: there is no slack left in it to take out.
 
@@ -226,7 +226,7 @@
      it is doing a second job: the artwork's near post stands at x 0.10 of its
      own frame, so the post lands at `0.10 x (100vw + 2 x bleed) − bleed`, which
      is off the left edge for any bleed over 0.125 x 100vw and on it for any
-     bleed under. At 3vw the post came down on top of `#building`'s wayfinding
+     bleed under. At 3vw the post came down on top of `#games`'s wayfinding
      post, which crosses up over this join — caught in the render at 1440x900
      as one confused stack of two flat-capped objects. At 14vw it is 18px past
      the frame at 1440 and the fence enters the picture as rails, which is also
@@ -302,7 +302,7 @@
 
    **The grid, the horizon and its glow stay.** They are soft-edged, they are at
    the band's floor where a horizon belongs, and they hand the retro motif on to
-   `.building__scan` one section down rather than starting and ending here. What
+   `.games__scan` one section down rather than starting and ending here. What
    went is the one layer whose whole construction was hard edges, in the one
    frame on the page where the reader has just walked out of a room and is
    looking at a river.
@@ -616,7 +616,7 @@
 
    **--seam-lift now has NO consumer at all, and this rule was the last one.**
    tokens.css records four `height: var(--seam-lift)` declarations as its
-   population; `#apps` stopped spending it a pass ago, and `#building`,
+   population; `#apps` stopped spending it a pass ago, and `#games`,
    `#faith` and the Outro each say in their own stylesheets that their bands
    no longer need it. `grep -rn 'height: var(--seam-lift)' src/` returns
    nothing since this edit — only the token's own declaration and the prose
@@ -657,7 +657,7 @@
    doing.** The ink's bottom is below the section's own edge, so it is cropped
    by the join — which is what the render showed as a ruled cut. Two things
    fixed it and both are below: `.tools__spray` washes the footings before they
-   get there, and `.tools__shore` takes whatever is left into #building's own
+   get there, and `.tools__shore` takes whatever is left into #games's own
    band. A prop cropped by a boundary is fine; a prop cropped by a boundary
    with nothing between them is the defect.
 
@@ -669,7 +669,7 @@
    -light are separate drawings. */
 /* ── and in light it is lowered into the shore band ────────────────────────
    `landscapes/beach-pier` is drawn standing in its own patch of water, and
-   `.building__mist` — the band that crosses up out of #building into this
+   `.games__mist` — the band that crosses up out of #games into this
    floor — is `landscapes/shallow-water` in light. Measured at 1600x900 with
    this beat centred: the pier's own patch runs y 155..270 and the turquoise
    starts at 275, so the frame had TWO waterlines with a jetty balanced between
@@ -1008,9 +1008,9 @@
    neon grid — and a crop is only a defect when there is nothing between the
    prop and the boundary. This is that something.
 
-   It is not a mix and it takes no step: --tools-shore-ink IS --band-building,
+   It is not a mix and it takes no step: --tools-shore-ink IS --band-games,
    which is exactly what `.walk`'s backdrop gradient resolves to at 100% and
-   what `#building` itself paints, so the band ends on the value it was going
+   what `#games` itself paints, so the band ends on the value it was going
    to end on anyway and there is nowhere for a step to appear. (It used to name
    this section's own `.section--blend` gradient. That class came off with
    CONTRACT W; the value did not move, only its owner.) What it buys is that every
@@ -1027,7 +1027,7 @@
    named the retro sun as the other thing kept. That disc is deleted; see the
    note where it was declared.)
 
-   #building's own mist crosses UP over this same join from the other side, so
+   #games's own mist crosses UP over this same join from the other side, so
    the two meet in the middle; neither is doing the whole job alone.        */
 .tools__shore {
   position: absolute;

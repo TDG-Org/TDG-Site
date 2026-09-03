@@ -51,10 +51,10 @@ const PARK_MARGIN = 400
  *
  * Two greps, because a call site is not a subscriber: `grep -rn 'useParallax<'
  * src/` gives twelve on the home page — Apps 3 (blob, seam, canopy), Faith 3
- * (blob, seam, climb), Building 2, Tools 2, Origin 1, Outro 1 — and skips
+ * (blob, seam, climb), Games 2, Tools 2, Origin 1, Outro 1 — and skips
  * `About.tsx`, `AppPage.tsx` and `Store.tsx`, which are other routes, and this
  * file's own declaration. `grep -rn '<ThemedArt' src/` gives eight more on the
- * home page — Building 3, Apps 2, Tools 2, Outro 1 — each of which is one more
+ * home page — Games 3, Apps 2, Tools 2, Outro 1 — each of which is one more
  * subscriber through `scene/ThemedArt.tsx`'s single `useParallax<` above.
  * Twelve plus eight.
  *

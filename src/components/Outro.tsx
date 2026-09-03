@@ -86,7 +86,7 @@ export function Outro() {
             **The arch cannot cross this boundary, and that was computed rather
             than left open.** A layer that belongs to both sections is the
             strongest way to hide a join — it is how the lamppost works five
-            sections up, and how #apps, #tools and #building each hide theirs
+            sections up, and how #apps, #tools and #games each hide theirs
             in this pass — and only an UPWARD crossing can work anywhere on
             this page, because each section paints over the one before it, so a
             layer sent DOWN out of its own section is covered by the section it
@@ -151,7 +151,7 @@ export function Outro() {
             it), and that alone takes today's numbers back inside the frame at
             every width. This box is what makes staying inside it a property of
             the BOX rather than of three clamps continuing to agree.
-            `.building__over` is the same element one section up, with the same
+            `.games__over` is the same element one section up, with the same
             two jobs: let a layer cross the join vertically, and keep it inside
             the frame horizontally. */}
         <div className="outro__stair-clip" aria-hidden="true">

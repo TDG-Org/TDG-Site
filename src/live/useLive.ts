@@ -41,7 +41,7 @@ export function useOrgRepos(): OrgReposState {
  * whose Website field points at a download anchor gets a Download button, so
  * "where the button goes" and "what the button says" are one decision, made
  * on GitHub, in the Website field. An explicit verb wins over the test —
- * the Building panel says `Play MARANATHA`, because it is a game.
+ * the Games panel says `Play MARANATHA`, because it is a game.
  */
 function accessLabel(href: string, title: string, verb?: string): string {
   const word = verb ?? (href.includes('#download') ? 'Download' : 'Open')

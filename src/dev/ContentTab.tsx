@@ -70,7 +70,7 @@ import { fmtRelative } from './format'
  *
  * ## Where a hidden card goes
  *
- * Off the grids — Apps, Tools, or the Building panel — and that is all. The
+ * Off the grids — Apps, Tools, or the Games panel — and that is all. The
  * product's own page stays exactly where it was, at its own link, because a
  * shared link that starts answering "nothing here" reads as a broken site
  * rather than as a decision. The switch says so in as many words, which is the
@@ -103,8 +103,8 @@ const GRID_OF: Record<ItemKind, { label: string; what: string; where: string }> 
   },
   game: {
     label: 'Game',
-    what: 'The feature panel in Building now.',
-    where: 'the Building panel',
+    what: 'The feature panel in Games.',
+    where: 'the Games panel',
   },
 }
 
@@ -780,7 +780,7 @@ function ItemEditor({ item, c }: { item: Item; c: ContentDraft }) {
               builtIn={builtInGame.heading}
               value={card.heading}
               onChange={(v) => set('heading', v)}
-              hint="The line across the top of the Building panel."
+              hint="The line across the top of the Games panel."
             />
             <TextOverride
               label="Copy"
@@ -1237,7 +1237,7 @@ function CoverEditor({
         label="What The Card Shows"
         hint={
           kind === 'game'
-            ? 'The Building panel has no drawn key art: it is a wide card and shows the real screenshot.'
+            ? 'The Games panel has no drawn key art: it is a wide card and shows the real screenshot.'
             : 'Key art beats a screenshot on a card, because a screenshot at 280px is a grey rectangle. The screenshot is what the product’s own page shows, and it stays useful even on a card that never draws it.'
         }
       >
@@ -1590,7 +1590,7 @@ function ButtonEditor({
         builtIn={builtInStatus}
         value={card.status}
         onChange={(v) => set('status', v)}
-        hint="The button in the Building panel, or the caption where there is no link."
+        hint="The button in the Games panel, or the caption where there is no link."
       />
       <TextOverride
         label="Where It Opens"

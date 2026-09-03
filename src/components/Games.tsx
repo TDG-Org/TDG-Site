@@ -10,13 +10,13 @@ import { asset } from '../lib/asset'
 import { appHash, rememberOrigin } from '../lib/route'
 import { Seam } from './scene/Seam'
 import { ThemedArt } from './scene/ThemedArt'
-import './Building.css'
+import './Games.css'
 
 function NextUpPill({ label, index }: { label: string; index: number }) {
   const reveal = useReveal<HTMLDivElement>('pop', index)
   return (
-    <div ref={reveal} className="building__pill">
-      <span className="building__pill-dot" data-alt={index % 2 === 1 || undefined} />
+    <div ref={reveal} className="games__pill">
+      <span className="games__pill-dot" data-alt={index % 2 === 1 || undefined} />
       {label}
     </div>
   )
@@ -41,13 +41,13 @@ function Feature({ game }: { game: SiteGame }) {
   const live = useLiveAccess(game.href ? undefined : MARANATHA.repo, game.title, 'Play')
 
   return (
-    <div ref={mergeRefs(reveal, tilt)} className="card building__feature">
+    <div ref={mergeRefs(reveal, tilt)} className="card games__feature">
       <span className="card__spot" aria-hidden="true" />
       <span className="card__edge" aria-hidden="true" />
 
       {/* The game gets its own page too, opened the same way every app
           card is opened. */}
-      <a className="card__cover" href={appHash(game.page)} onClick={() => rememberOrigin('Building')}>
+      <a className="card__cover" href={appHash(game.page)} onClick={() => rememberOrigin('Games')}>
         <span className="sr-only">Open the {game.heading} page</span>
       </a>
 
@@ -55,7 +55,7 @@ function Feature({ game }: { game: SiteGame }) {
           hole where a picture was: the panel is a wide card and an empty art
           box would read as an image that failed to load. */}
       {shot && (
-        <div className="building__art">
+        <div className="games__art">
           <picture>
             <source
               type="image/avif"
@@ -72,7 +72,7 @@ function Feature({ game }: { game: SiteGame }) {
                 .join(', ')}
             />
             <img
-              className="building__art-img"
+              className="games__art-img"
               src={asset(`shots/${shot.slug}-${shot.widths[0]}.webp`)}
               alt={shot.alt}
               width={shot.widths[0]}
@@ -84,26 +84,26 @@ function Feature({ game }: { game: SiteGame }) {
         </div>
       )}
 
-      <div className="building__body">
-        <div className="building__tags">
-          <span className="building__tag">GAME</span>
+      <div className="games__body">
+        <div className="games__tags">
+          <span className="games__tag">GAME</span>
           {/* `game.tag`, not a literal. This tag and the `status` on the button
               below it are two claims about one card, and while the tag was
               typed here they had already drifted: IN PLAYTEST over a status of
               `Coming soon`. Rule 1 — a word a visitor reads lives in data. */}
-          <span className="building__tag building__tag--live">
+          <span className="games__tag games__tag--live">
             <span aria-hidden="true">● </span>
             {game.tag}
           </span>
         </div>
-        <h3 className="building__title">
+        <h3 className="games__title">
           {game.heading}
-          <span className="building__title-arrow" aria-hidden="true">
+          <span className="games__title-arrow" aria-hidden="true">
             →
           </span>
         </h3>
-        <p className="building__copy">{game.copy}</p>
-        <div className="building__actions">
+        <p className="games__copy">{game.copy}</p>
+        <div className="games__actions">
           {/* Not a link until the demo is actually reachable, and two things
               can make it one: the Content tab giving the button a link (which
               keeps `status` as its words), or `src/live/` finding a deploy on
@@ -112,26 +112,26 @@ function Feature({ game }: { game: SiteGame }) {
               this panel's tag comment warns about). All three states are the
               same element in the same place, so the row does not move. */}
           {game.href ? (
-            <a className="building__play" href={game.href} target="_blank" rel="noopener">
+            <a className="games__play" href={game.href} target="_blank" rel="noopener">
               {game.status}
             </a>
           ) : live?.kind === 'live' ? (
-            <a className="building__play" href={live.href} target="_blank" rel="noopener">
+            <a className="games__play" href={live.href} target="_blank" rel="noopener">
               {live.label}
             </a>
           ) : (
-            <span className="building__play building__play--soon">
+            <span className="games__play games__play--soon">
               {live?.kind === 'down' ? DOWN_WORDING : game.status}
             </span>
           )}
-          <span className="building__note">{game.note}</span>
+          <span className="games__note">{game.note}</span>
         </div>
       </div>
     </div>
   )
 }
 
-export function Building() {
+export function Games() {
   /* ── the depth ladder ─────────────────────────────────────────────────────
      `useParallax` writes `centreOffset * -factor`, so a positive factor climbs
      more slowly than the page — distance — and a negative one moves against
@@ -173,17 +173,18 @@ export function Building() {
   const game = visibleGame(useSiteContent())
 
   return (
-    <section id="building" className="section section--flat building">
+    <section id="games" className="section section--flat games">
       {/* ── the walk, beat five: the far bank ───────────────────────────────
           You have just crossed the water in #tools; this is the ground on the
           other side, and this section is where the walk finally has somewhere
           to point. `props/wayfinding-post` had been in the kit since the
           beginning, drawn by nothing, described there as a signpost whose
           boards must stay blank — which is exactly what a section called
-          "Building now" wants standing in it. It is this section's one
-          structural anchor under guardrail 8 of the kit, which #building did
-          not have at all before: it had fog and a pine pair, and fog and
-          foliage are what the guardrail allows BESIDE an anchor.
+          "Games" wants standing in it: one road, most of it still ahead.
+          It is this section's one structural anchor under guardrail 8 of the
+          kit, which #games did not have at all before: it had fog and a pine
+          pair, and fog and foliage are what the guardrail allows BESIDE an
+          anchor.
 
           The faceted pair rather than #apps' trees, and they are not
           interchangeable. The pair is a whole small stand, which is what trees
@@ -199,27 +200,27 @@ export function Building() {
           foreground.
 
           None of this is kept off the pills by being drawn before `.shell`.
-          `.card` is a plate now (--card-bg) and `.building__pill` still paints
+          `.card` is a plate now (--card-bg) and `.games__pill` still paints
           `var(--surface)`, which is a 4.5% white wash in the dark theme — so a
           layer behind a pill is read straight through it. What keeps it off
           the copy is that every box lives inside this section's own floor;
-          Building.css does that arithmetic. */}
+          Games.css does that arithmetic. */}
       {/* Everything that must be cut at this section's own edges. The section
           is `overflow: clip` with a margin now, so the mist and the wayfinder
           below can rise out of the top of it into #tools' floor, and a clip
           margin opens every edge equally — so without this box the pines would
           hang two whole trees over #faith. `.origin__clip` is the same idea
           three sections up. */}
-      <div className="building__clip" aria-hidden="true">
+      <div className="games__clip" aria-hidden="true">
         {/* ── the light theme's sky, and why the dark theme draws it too ────
             First in, so everything below is read against it rather than
             through it. In LIGHT it is a shaded band across the section's sky
-            that comes back to --band-building before either edge; in DARK its
-            ink is `transparent` and it paints nothing at all. Building.css
+            that comes back to --band-games before either edge; in DARK its
+            ink is `transparent` and it paints nothing at all. Games.css
             carries the two measurements it was solved against — the band and
             the feature card were 2.5 L* apart in light, against 90 in dark —
             and the mask stops that keep both joins on the token. */}
-        <div className="building__dusk" />
+        <div className="games__dusk" />
 
         {/* ── the boundary: carried by atmosphere, not by an edge ───────────
             Fourth of the five joins on this page and the third distinct idea:
@@ -234,8 +235,8 @@ export function Building() {
             the water is the nearest thing in the section, which is why their
             factors have opposite signs and why the mist carries the largest
             one. */}
-        <div ref={seam} className="building__seam-drift">
-          <Seam shape="dune" edge="top" className="building__seam" />
+        <div ref={seam} className="games__seam-drift">
+          <Seam shape="dune" edge="top" className="games__seam" />
         </div>
 
         {/* The lit bank, the far stand standing on it, the fog between the two
@@ -252,7 +253,7 @@ export function Building() {
             standing on.
 
             It is an aspect change and not only a file change: the row is a 3:1
-            band, so Building.css gives both slots a light-theme box (a band
+            band, so Games.css gives both slots a light-theme box (a band
             across the floor) rather than trying to letterbox a 3:1 file into
             the 2:3 hole the pines left. The dark stands are untouched.
 
@@ -266,8 +267,8 @@ export function Building() {
             palms drawn small INSIDE a full-width canvas (Origin's far shore
             uses it for the same reason), so the far stand can be both smaller
             and edge to edge. */}
-        <div className="building__bank" />
-        <ThemedArt art="props/pine-faceted-pair" light="landscapes/far-palms" className="building__pines-far" factor={0.03} />
+        <div className="games__bank" />
+        <ThemedArt art="props/pine-faceted-pair" light="landscapes/far-palms" className="games__pines-far" factor={0.03} />
         {/* ── the floor, and it stopped being a smear of glare ────────────
             `atmosphere/sea-haze` was here in light. That file is a band of
             sunlight ON WATER, and this band is the sand between two stands of
@@ -280,29 +281,29 @@ export function Building() {
             shells in it, drawn for this width. The near stand's trunks go into
             it and the far one stands on it, which is the job the fog band was
             doing in the winter frame by being air between two depths. */}
-        <ThemedArt art="atmosphere/fog-veil" light="landscapes/beach-terrace" className="building__fog" factor={0.015} />
-        <ThemedArt art="props/pine-faceted-pair" light="props/palm-row-mid" className="building__pines" factor={-0.1} />
+        <ThemedArt art="atmosphere/fog-veil" light="landscapes/beach-terrace" className="games__fog" factor={0.015} />
+        <ThemedArt art="props/pine-faceted-pair" light="props/palm-row-mid" className="games__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────
             Last of the scenery, so it is in front of all of it: a band of this
-            section's OWN --band-building rising out of the floor, transparent
+            section's OWN --band-games rising out of the floor, transparent
             at the top and at exactly the band at the bottom edge.
 
             It is doing the depth job the fog band does one plane back — the
             near stand's feet recede into it, so the trees stand IN the section
             instead of on top of it — and it closes the boundary as a
             side-effect of being that. #faith's --tint-top is the same
-            --band-building token this fades to, so the last row of #building
+            --band-games token this fades to, so the last row of #games
             and the first row of #faith are one value by construction: there is
             nothing left at the join for a cut edge to be made of.
 
             That join is the one Faith measured at fifteen columns and could not
             close from its own side; Faith.css carries both readings and now
-            carries this one. Building.css has why it is a band rather than a
+            carries this one. Games.css has why it is a band rather than a
             mask on the fog alone. */}
-        <div className="building__haze" />
+        <div className="games__haze" />
 
-        <div className="texture building__scan" />
-        <div ref={blob} className="blob building__blob" />
+        <div className="texture games__scan" />
+        <div ref={blob} className="blob games__blob" />
       </div>
 
       {/* ── the far bank, standing in two sections ──────────────────────────
@@ -311,17 +312,17 @@ export function Building() {
           and the neon grid were all being cut off on one ruled line. A layer
           that belongs to both sections is the strongest join there is.
 
-          No z-index, unlike #apps' own crossing band: #building is later in
+          No z-index, unlike #apps' own crossing band: #games is later in
           the document than #tools and both sections are z-index auto, so this
           already paints over the floor it rises into.
 
           The post is drawn BEFORE the mist, so the mist is in front of it —
           you are looking at the far bank through the water you just crossed,
           and the post's base fades into it rather than ending anywhere. */}
-      <div className="building__over" aria-hidden="true">
-        <ThemedArt art="props/wayfinding-post" light="props/beach-signpost" className="building__post" factor={-0.05} />
+      <div className="games__over" aria-hidden="true">
+        <ThemedArt art="props/wayfinding-post" light="props/beach-signpost" className="games__post" factor={-0.05} />
         {/* ── and the crossing band is the SHALLOWS ───────────────────────
-            This is the layer that reaches up out of #building into #tools'
+            This is the layer that reaches up out of #games into #tools'
             floor, and #tools' floor is where the pier stands. It was the same
             glare plate, so the pier stood on a torn patch of its own water
             with a yellow streak behind it and nothing else — "a bunch of crap
@@ -332,28 +333,29 @@ export function Building() {
             reeds at its near edge, the coral rocks on the sand beyond, and the
             band carries the join up into the section above exactly as it did
             before. */}
-        <ThemedArt art="atmosphere/fog-veil" light="landscapes/shallow-water" className="building__mist" factor={-0.12} />
+        <ThemedArt art="atmosphere/fog-veil" light="landscapes/shallow-water" className="games__mist" factor={-0.12} />
       </div>
 
-      <div className="shell building__shell">
-        <div ref={head} className="building__head">
+      <div className="shell games__shell">
+        <div ref={head} className="games__head">
           <div>
             <div className="kicker">
               <span className="kicker__num">04</span>
               <span className="kicker__rule" />
-              <span className="kicker__label">Building now</span>
+              <span className="kicker__label">Games</span>
             </div>
-            <h2 className="h2 building__heading">Works in progress.</h2>
-            <p className="lede building__lede">
-              What's on our screens right now. One is nearly done, the rest are just getting going.
+            <h2 className="h2 games__heading">Games we're making.</h2>
+            <p className="lede games__lede">
+              Right now that means one, a Bible game that runs in a browser tab. The rest are
+              queued behind it.
             </p>
           </div>
-          {game && <span className="building__count">{game.count}</span>}
+          {game && <span className="games__count">{game.count}</span>}
         </div>
 
         {game && <Feature game={game} />}
 
-        <div className="building__pills">
+        <div className="games__pills">
           {NEXT_UP.map((label, i) => (
             <NextUpPill key={label} label={label} index={i} />
           ))}

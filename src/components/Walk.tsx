@@ -154,7 +154,7 @@ const FROST_FULL = 0.55
  * as a fraction of that run.
  *
  * It had no fall at all: the rise clamped at 1 and stayed, so the piece went on
- * painting over Tools' bridge, its fence and the whole join into `#building` —
+ * painting over Tools' bridge, its fence and the whole join into `#games` —
  * pale crystal shards in a night sky over a stone footbridge, which is where
  * the site owner saw them. 0.34 puts the fade entirely inside the last third of
  * the walk, after the card grid's last row has left the frame and while the
@@ -189,7 +189,7 @@ export type WalkProgress = {
  * reader walks across the snow through Origin's chapters, in through the
  * cabin door, turns left, settles looking DOWN at a big table while the
  * project cards are read, tilts up off it and pans to the west window while
- * the small tools are read, and the frame washes out into `#building`.
+ * the small tools are read, and the frame washes out into `#games`.
  * `internal/checklists/cabin-interior-spec.md` is the authority for the shot
  * and carries the site owner's own words and the floor plan.
  *
@@ -452,7 +452,7 @@ export function Walk({ children }: { children: ReactNode }) {
       /* ── and it FALLS again, which it did not before ───────────────────
          The ramp above only ever rose, so once the frost reached 1 it stayed
          there for the rest of the walk — over Tools' own landscape floor and
-         across the join into #building, where it read as pale angular shards
+         across the join into #games, where it read as pale angular shards
          hanging in the sky above a stone bridge. The frost belongs to the
          WINDOW, and the window is gone by then: the camera has pushed through
          it and the canvas is washing out.
@@ -566,7 +566,7 @@ export function Walk({ children }: { children: ReactNode }) {
 
             INSIDE the stage, which buys the same four things the snow gets
             from being here: the stage's mask, so the frost washes out into
-            `#building` on exactly the band the canvas does rather than
+            `#games` on exactly the band the canvas does rather than
             floating over Tools' landscape; the pin, so it is viewport-locked
             the way glass in front of your face is; `data-covered`, so it
             stops painting off screen; and `aria-hidden` + `pointer-events:

@@ -8,7 +8,7 @@ import { EMPTY_DOC, parseDoc, type SiteContentDoc } from './types'
  *
  * ## Why a module store and not a provider
  *
- * Four surfaces need it — the Apps grid, the Tools grid, the Building panel and
+ * Four surfaces need it — the Apps grid, the Tools grid, the Games panel and
  * whichever product page is open — and they are in three different lazy chunks.
  * A context would have to be mounted in `App.tsx` above all of them and
  * threaded through two `Suspense` boundaries to be read inside a chunk that has

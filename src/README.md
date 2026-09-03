@@ -27,7 +27,7 @@ One `useRoute()` call decides which of seven things is on screen:
 
 | Route | What renders |
 | --- | --- |
-| `home` | Hero, Origin, Apps, Tools, Building, Faith, Outro — the one-page scroll |
+| `home` | Hero, Origin, Apps, Tools, Games, Faith, Outro — the one-page scroll |
 | `#/about` | `About`, lazily |
 | `#/store` · `#/store/<app>` | `Store`: its index of app cards, or one app's own page of packs |
 | `#/account` | `AccountPage`, lazily — **not gated**: a signed-out reader is told to sign in, on the page they asked for |

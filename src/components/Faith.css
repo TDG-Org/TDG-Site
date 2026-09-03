@@ -24,7 +24,7 @@
    moon sum is written against both.
 
    **77% of the band and 23% of --text: L* 76.9, which is 1.64:1 against the
-   band.** That is deeper than #building's own dusk (87.2) and deliberately so,
+   band.** That is deeper than #games's own dusk (87.2) and deliberately so,
    and the reason is the moon rather than taste. The disc has to clear the sky
    around it by 1.6:1 and the pool alone cannot carry that: the pool is pinned
    vertically by the section's floor (see `.faith__moon-sky`) and cannot reach
@@ -73,7 +73,7 @@
    strength through the verse, full from the summit's sky down to the crest
    line, and gone again before the floor.
 
-       transparent  0%      the #building join, which carries no ink at all
+       transparent  0%      the #games join, which carries no ink at all
        transparent 12%      127px — below both bands at the boundary
        0.28        31%      328px, the first air above the verse
        0.5         57%      604px, level with the copy's last line
@@ -188,7 +188,7 @@
    the join, at every scroll position, in both themes.
 
    Measured — 1440x900, the join parked at viewport y = 400, one pixel either
-   side, fifteen columns across the width, after #building's own snow field had
+   side, fifteen columns across the width, after #games's own snow field had
    been closed from its side: dark +6.2 to +10.6, light -6.4 to -8.8, with the
    row ABOVE reading a constant 3.78 dark / 96.71 light at all fifteen. A step
    that is present at every column with nothing varying above it is not a
@@ -198,7 +198,7 @@
    — and with `transparent` as its first stop there is no edge left for the
    drift to expose in either direction, which is what makes the lift
    unnecessary rather than merely deleted. The Outro's seam has been built on
-   that argument since it was written; #building's `dune` and this `ridge` now
+   that argument since it was written; #games's `dune` and this `ridge` now
    share it, which is three of the page's five joins treated one way.
 
    The RISING band never spent it: it is `edge="bottom"`, so its mass is at the
@@ -412,7 +412,7 @@
 }
 
 /* ── the join at the top: three readings, and what each of them settled ────
-   The Building/Faith boundary has been measured three times. Every reading is
+   The Games/Faith boundary has been measured three times. Every reading is
    1440x900 with the boundary parked at viewport y = 400, the one-pixel step
    from y = 399 to y = 400, at fifteen columns across the width. Keeping all
    three is the point: two of them are the failure and its cause.
@@ -424,9 +424,9 @@
    happened to cross the line.
 
    That asymmetry was the diagnosis. The two bands meet on an identical value
-   by construction — base.css gives #faith a --tint-top of var(--band-building),
-   the same token #building paints its floor with — so the step could not be
-   the band. It was Building's lit snow field, a pale raster over a near-black
+   by construction — base.css gives #faith a --tint-top of var(--band-games),
+   the same token #games paints its floor with — so the step could not be
+   the band. It was Games' lit snow field, a pale raster over a near-black
    sky in dark and over a near-white one in light, cut off dead by its own
    section's bottom edge. In light there was barely a value change to cut; in
    dark there was a bright wedge ending on a line.
@@ -439,7 +439,7 @@
    +4.3, +8.9, +8.9, +10.3, +15, +9.3, +5.6, +5.3, +4.8, +8.5, +5.3, +5.3.
 
    Read the two rows together and the reason is in them. Before, the steps
-   change sign across the width, because Building's snow silhouette rises and
+   change sign across the width, because Games' snow silhouette rises and
    falls and the two sides differ by a different amount at every x — there is
    no constant to subtract. Afterwards every column is positive and all within
    a few units of each other, which is the definition of the defect: a veil
@@ -447,10 +447,10 @@
    varying join into a uniform bright line. It manufactured a ruled edge while
    removing a ragged one. It is gone, and nothing has replaced it here.
 
-   ## Three — closed from Building's side, and what that left
+   ## Three — closed from Games' side, and what that left
 
-   `.building__haze` now fades that section's floor into its own
-   `--band-building` before the boundary, which is the same token this section
+   `.games__haze` now fades that section's floor into its own
+   `--band-games` before the boundary, which is the same token this section
    opens on. Measured after it landed, the row ABOVE the join reads a constant
    3.78 in dark and 96.71 in light at all fifteen columns — the ragged edge is
    gone and there is nothing left varying on that side.
@@ -475,7 +475,7 @@
    radius and at the bottom 56/78 = 0.72, both inside the 0.86 stop. So the
    field painted straight up to the boundary and stopped there.
 
-   Measured at the #building join with everything else in place, ablating one
+   Measured at the #games join with everything else in place, ablating one
    layer at a time: the whole remaining step was this and `.faith__rays`. With
    both hidden the step was 0.00 at every one of fifteen columns; with only
    this hidden it fell from +3.2..+7.7 to +2.3..+5.7. Neither is a seam and
@@ -534,7 +534,7 @@
    mask used to live on `.faith__rays`, which `useHeroParallax` drags by 334 to
    437px while this section is on screen, so the mask was sliding relative to
    everything it was supposed to be positioned against and arrived at the
-   #building join at full strength.
+   #games join at full strength.
 
    Three radii were tried on the moving box before the box was split, and the
    reason none of them could work is worth keeping: `62%` put the section's top
@@ -560,7 +560,7 @@
    ## The box that does move
 
    Keeps the drift, the overhang and the compositor hint, and carries no mask
-   of its own. `.building__over` one section up is the same shape: a static,
+   of its own. `.games__over` one section up is the same shape: a static,
    masked band with drifting art inside it.                                  */
 .faith__rays-veil {
   position: absolute;

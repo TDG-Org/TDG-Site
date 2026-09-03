@@ -126,16 +126,16 @@
      So the bands move to the one box that is underneath the canvas, and what
      the page gains for it is the thing this whole pass is about: the walk is
      ONE continuous ramp with no internal boundary at all. The two joins that
-     are still real — into the hero above and into `#building` below — are
+     are still real — into the hero above and into `#games` below — are
      unchanged, because this gradient opens on `transparent` (so the hero's
      ridges carry on down behind it and fade rather than stopping) and closes
-     on `--band-building` (so `#building` still meets a band identical to its
+     on `--band-games` (so `#games` still meets a band identical to its
      own).
 
      Four bands and not two, and the middle two are mostly invisible on
      purpose: once the camera is inside the cabin the canvas fills the frame
      and nothing here can be seen. They are what a visitor with no WebGL gets,
-     and for them the page's own colour story — origin, apps, tools, building —
+     and for them the page's own colour story — origin, apps, tools, games —
      is worth more than a flat slab. Nothing steps: every stop is a hold and a
      ramp, and the shortest ramp in the list is 22% of the box.
 
@@ -155,7 +155,7 @@
   --tint-top: var(--band-origin);
   --tint-mid: var(--band-apps);
   --walk-tint-low: var(--band-tools);
-  --tint-bot: var(--band-building);
+  --tint-bot: var(--band-games);
   background-color: transparent;
   background-image: linear-gradient(
     180deg,
@@ -263,7 +263,7 @@
      same box. The overlap was therefore structural, not a tuning miss: measured
      at 1440x900 before this pass, the pin released at scroll 5619 and then
      scrolled away as a 900px rectangle with a hard bottom edge, and the bridge
-     (page 6339), the boulders (6404) and #building's own wayfinding post were
+     (page 6339), the boulders (6404) and #games's own wayfinding post were
      painted over the cabin's ceiling and wall planes for the whole of it. That
      is the worst continuity error the page had: a river crossing inside an
      interior shot.

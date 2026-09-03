@@ -40,7 +40,7 @@ in the same edit.
 | "Playable" green | `--live-fg` `--live-bg` `--live-border` |
 | Danger red | `--danger` `--danger-soft` `--danger-border` — destructive controls and bad standings; `src/dev/` is its only consumer today |
 | The flipping pair | `--invert-bg` / `--invert-fg` — a surface that swaps with the theme; the primary button is this |
-| The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-building` `--band-faith` `--band-outro` `--band-foot` |
+| The page's bands | `--band-hero` `--band-origin` `--band-apps` `--band-tools` `--band-games` `--band-faith` `--band-outro` `--band-foot` |
 | The scene layer | `--art-far` `--art-mid` `--art-near` `--seam-step` `--seam-step-2` `--seam-lift` `--seam-fade` `--terrain-haze` `--terrain-haze-rear` |
 | Fonts | `--font-serif` `--font-display` `--font-body` `--font-mono` |
 
@@ -116,7 +116,7 @@ section stylesheets, which is two sections separately deciding one thing.
 **`--seam-lift` is the odd one out: a length, `4vh`.** It is how much of its own
 ink a seam's drift wrapper backfills ABOVE its top edge, so that parallax cannot
 slide a `Seam` path's straight horizontal top edge out from behind the join and
-draw a line across the page. Three section stylesheets use it (`Building`,
+draw a line across the page. Three section stylesheets use it (`Games`,
 `Faith`, `Tools`); `tokens.css`
 carries why 4 and why a `vh` rather than a px, and `Apps.css` carries the
 artefact. Theme-independent, so it has no light twin — and unlike the tokens

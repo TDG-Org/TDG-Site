@@ -843,7 +843,7 @@ this console is one of its callers.
 The **Content** tab is one of the two places that change the public site rather
 than somebody's account (the other is Cloud, whose launch switch and price list
 are what the Store sells). It manages every product card the site draws — the
-seven under Apps, the three under Tools, and the game in Building now — and
+seven under Apps, the three under Tools, and the game in Games — and
 behind each of them, that product's own page.
 
 What it can change, per product:
