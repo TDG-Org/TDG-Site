@@ -2780,6 +2780,25 @@
    a cloud on its crown; the far one, mirrored and larger, goes up and left
    and reads as a second cloud in the sky rather than a veil over the disc.
    Both still ride the same drift wrappers, so the exit is unchanged. */
+/* ── the LOWER cloud is not drawn in light, and that is the instruction ────
+   "2 different kinds and color clouds in Home. I like the newer one I gave
+   you. The one under is the older and uglier/out of color one. Remove that."
+
+   The pass before this one read that as "stop drawing the cream one" and
+   pointed BOTH slots at `cumulus-wide`, which left two clouds in the sky and
+   answered a question nobody asked. The instruction is about the second cloud,
+   not about its file: the hero's light sky has ONE cloud, the upper one, and
+   `.hero__cloud--far` is it.
+
+   Light only. The winter sky is two torn wisps of `props/moon-cloud` crossing
+   the disc at two rates, which is a different picture and one the site owner
+   has not asked about; `display: none` here rather than a removal in Hero.tsx
+   keeps that whole composition, its two drift wrappers and its exit exactly as
+   they are. */
+[data-theme='light'] .hero__cloud-drift:not(.hero__cloud-drift--far) {
+  display: none;
+}
+
 [data-theme='light'] .hero__cloud {
   /* centred 0.56 disc-widths above the disc's centre: it kisses the sun's
      crown at rest and the sun rises into it on the exit, which is the

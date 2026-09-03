@@ -1316,8 +1316,11 @@
    that, and a fraction on top of it is the same mistake the hero's clouds
    carried until this pass. The far one keeps a step, and the step is distance
    rather than veiling — it is also smaller and higher. */
+/* The same instruction, and the site owner named this section as carrying the
+   same issue: one cloud in the light sky, the upper one. Dark keeps both
+   `props/moon-cloud` wisps, which is the picture it already had. */
 [data-theme='light'] .faith__cloud--near {
-  opacity: 1;
+  display: none;
 }
 [data-theme='light'] .faith__cloud--far {
   opacity: 0.82;
