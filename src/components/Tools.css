@@ -1030,12 +1030,20 @@
   display: none;
 }
 
-/* And the outcrop goes BACK rather than away: at --art-near it was the
-   brightest thing at the right edge of a frame whose subject is a jetty. The
-   far ink puts it behind the water it stands in. */
-[data-theme='light'] .tools__rocks {
-  opacity: var(--art-far);
-}
+/* ── and the outcrop takes its own ink back ────────────────────────────────
+   This carried `--art-far` (0.62) for one round, written when it was "the
+   brightest thing at the right edge of a frame whose subject is a jetty" —
+   true at the time, because the floor behind it was flat `--band-tools` and
+   anything opaque on flat cream is the brightest thing in the frame.
+
+   `.tools__sea` is behind it now, and 0.62 over turquoise is not a rock in
+   soft light: sampled, the plate is (216, 199, 166), a warm sandy coral, and
+   at 0.62 over the sea's blue it composites to a pale blue-white that reads as
+   ICE in a tropical scene. The wash was the theme's, not the art's.
+
+   Back to the base rule's `--art-near`, which is where a near-field object
+   standing in the shallows belongs, and it is no longer the brightest thing in
+   the frame because the frame now has a sea in it. */
 
 .tools__fence {
   /* `100vw` and not `100%`: a percentage inside the `bottom` calc below would
