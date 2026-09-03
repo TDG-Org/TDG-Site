@@ -653,18 +653,70 @@ export function Nav({
     return () => io.disconnect()
   }, [])
 
+  /*
+   * ── the read that was costing the whole page a style recalc a frame ───────
+   *
+   * This callback used to do two forced layouts on EVERY frame the loop was
+   * awake: `document.documentElement.scrollHeight`, and a
+   * `getBoundingClientRect()` on the `#top` sentinel. Both flush pending style
+   * and layout for the whole document, so during anything that keeps style
+   * dirty — a scroll with the parallax hooks writing, or the 600ms theme wave
+   * with a dozen registered properties interpolating — the page paid a full
+   * recalc 60 times a second for a two-pixel bar.
+   *
+   * Profiled in Chrome across one theme toggle (`Profiler.setSamplingInterval`
+   * 120us, 2578ms wall): this function was **18% of the entire profile and 57%
+   * of all non-idle time** — more than React, `stageWave`, `crossArt` and the
+   * cabin's palette put together, which came to eleven samples between them.
+   *
+   * Neither read is needed every frame:
+   *
+   * **The document's height does not change while you scroll it.** It changes
+   * when the viewport resizes, when a section reveals, and when the route
+   * swaps the page — so a `ResizeObserver` on the document element updates the
+   * cache when it actually moves, and `vh` arriving different does too.
+   *
+   * **`scrollY` is not a layout read.** `-#top.getBoundingClientRect().top` IS
+   * the window's scroll offset — the sentinel is the first thing in the
+   * document — and the sentinel is kept only as the fallback for the frame
+   * after a route swap, where the cache is stale by one frame and nothing is
+   * visibly wrong with that.
+   */
   useEffect(() => {
     const bar = progress.current
     if (!bar) return
-    let top: HTMLElement | null = null
     let painted = ''
-    return onFrame(({ vh }) => {
-      // Re-resolved when the cached node has left the document: switching to
-      // the Store replaces the page, and a detached element reports a rect of
-      // zeros for ever, which pins the bar at 0% with nothing to see.
-      if (!top || !top.isConnected) top = document.getElementById('top')
-      const max = document.documentElement.scrollHeight - vh || 1
-      const travelled = top ? Math.max(0, -top.getBoundingClientRect().top) : 0
+    let docH = document.documentElement.scrollHeight
+    let lastVh = 0
+    const ro = new ResizeObserver(() => {
+      docH = document.documentElement.scrollHeight
+    })
+    ro.observe(document.documentElement)
+    /* And `scrollY` is only read when the page has actually SCROLLED. Chrome
+       flushes pending style before returning it, so on a frame where the theme
+       wave has a dozen registered properties interpolating it is a full recalc
+       of the document — the one thing this callback must not do, and the whole
+       reason the two reads above were moved out of it. A passive `scroll`
+       listener raises the flag; with no scrolling the callback is arithmetic on
+       cached numbers and usually returns at the string compare. */
+    let moved = true
+    const onScroll = () => {
+      moved = true
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    let sy = window.scrollY
+    const stop = onFrame(({ vh }) => {
+      if (vh !== lastVh) {
+        lastVh = vh
+        docH = document.documentElement.scrollHeight
+        moved = true
+      }
+      if (moved) {
+        moved = false
+        sy = window.scrollY
+      }
+      const max = docH - vh || 1
+      const travelled = Math.max(0, sy)
       // One decimal, not two. `width` is the one layout-affecting write the
       // frame loop makes, and at two decimals the string changed on every
       // frame of every scroll, so every frame carried a layout and the next
@@ -679,6 +731,11 @@ export function Nav({
         bar.style.width = next
       }
     })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      ro.disconnect()
+      stop()
+    }
   }, [])
 
   // Height has to be measured to animate it; max-height:none will not tween.
