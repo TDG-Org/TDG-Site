@@ -353,6 +353,30 @@
   animation: roadRun 7s linear infinite;
   will-change: transform;
 }
+/* ── the neon road is a NIGHT motif, and light does not draw it ────────────
+   Swept at 1904x940 across this floor and the one below it, the whole run
+   reads as a few small objects scattered on an empty beige field. Four rounds
+   of moving those objects did not touch it, because the objects were never the
+   problem: the FLOOR was empty. This is what is behind them.
+
+   `.tools__road-grid` is a perspective grid in `--border` at 0.42, animated,
+   with `.tools__horizon` (a 1px `--warm` rule) and `.tools__horizon-glow`
+   (a blurred `--glow` disc) on its vanishing line. That is a synthwave road,
+   and it is a good one at midnight — it is the reason this section's dark
+   floor works. In daylight it is a grey graph-paper wash on cream, at an
+   opacity that makes it neither visible nor absent, and no arrangement of
+   props on top of a graph-paper wash was ever going to read as Cebu.
+
+   So the whole retro-road composition comes off in light and is replaced by
+   the thing a pier actually needs to be standing in: `.tools__sea` below.
+   Dark is untouched — all three rules keep their values and their animation,
+   and the grid there is still the floor it has always been. */
+[data-theme='light'] .tools__road-grid,
+[data-theme='light'] .tools__horizon,
+[data-theme='light'] .tools__horizon-glow {
+  display: none;
+}
+
 .tools__horizon {
   position: absolute;
   left: 10%;
@@ -1061,6 +1085,38 @@
 
    #games's own mist crosses UP over this same join from the other side, so
    the two meet in the middle; neither is doing the whole job alone.        */
+/* ── the sea, and why it is opaque and tall ────────────────────────────────
+   The one number that mattered here is `opacity`. Every other band in this kit
+   is atmosphere and takes `--art-far` (0.62) or `--art-near` (0.86), and a
+   floor at 0.62 over `--band-tools` is a tint rather than a surface — which is
+   how a 3053px painting of the sea can be on the page and the page still read
+   as empty cream. Water is an object. It gets 1.
+
+   Height reaches well above the road it replaces (which is 124px) because the
+   void being filled is the whole lower third of the band, and the top edge is
+   a long mask fade rather than a line: the sea has to arrive out of the haze
+   at the horizon, and any hard edge across a full-width band at this join is
+   the ruled line this section has already been reported for twice.
+
+   `bottom: -1px` and not 0: `.tools__shore` fades into `--band-games` over the
+   last 76px and a hairline of section band showing under the water is exactly
+   the kind of seam that reads as a mistake at 100% zoom. */
+.tools__sea {
+  display: none;
+}
+[data-theme='light'] .tools__sea {
+  display: block;
+  left: -2%;
+  width: 104%;
+  height: clamp(210px, 26vw, 460px);
+  bottom: -1px;
+  object-fit: cover;
+  object-position: 50% 72%;
+  opacity: 1;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 34%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 34%);
+}
+
 .tools__shore {
   position: absolute;
   left: 0;

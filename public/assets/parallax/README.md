@@ -172,12 +172,19 @@ supplied the same art as PNGs with real alpha, so the modes now are:
 | `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach. `skyline` mode, so its top edge is the dune's own ridge and the palm row behind it shows over the crest |
 | `props/window-frost` | `props/capiz-window` | The walk's front stage. The frost is a vignette by construction and this file is not — its ink covers the whole canvas with a cross cut through it — so `Walk.css` masks the middle out and keeps the panes at the edges, at 0.66 rather than the frost's 0.92 |
 | `landscapes/stone-footbridge` | `landscapes/beach-pier` | Tools' floor |
+| `atmosphere/mist-bank` | `landscapes/sea-band` | Tools' floor, **the water the pier goes out over**. Light only: dark's floor is `.tools__road`, a synthwave grid running to a lit horizon, and light does not draw that composition at all (`Tools.css`). Opaque — water is an object |
 | `props/bushes-reeds` | `props/pandan-clump` | Tools' floor |
 | `props/fence-rail` | `props/bamboo-rail` | Tools' floor |
 | `props/boulder-cluster` | `props/coral-rocks` | Tools' floor |
 | `props/wayfinding-post` | `props/beach-signpost` | Games, crossing up into Tools |
+| `atmosphere/fog-veil` | `landscapes/shallow-water` | The waterline, crossing up out of Games into Tools' floor — the join between the sea above and the sand below |
+| `atmosphere/fog-veil` | `landscapes/beach-terrace-plain` | Games' floor. The plate is `beach-terrace` cropped in the pipeline to its bottom 22%, the one band with no shell or pebble on it, so the crop can sit anywhere. Opaque, and `--band-games` is matched to it |
 | `props/pine-faceted-pair` (both stands) | `props/palm-row` | Games. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Games.css` gives light its own box — a band across the floor at each stand's own clearance |
-| `transitions/stone-stair` | `transitions/beach-steps` | Outro, drawn at 2172×724 like the dark file (the light-only aspect override stays for the winter pair) |
+| `transitions/stone-stair` | `transitions/beach-steps` | Outro's seam with Faith — **dark only**. In light the flight has no ground above or below it and reads as slabs floating in an empty sky, so `Outro.css` hides the clip; the join is carried by `landscapes/headland` instead |
+| `landscapes/far-range-soft` | `landscapes/headland` | Outro, the far shore, standing at `--outro-horizon` with its foot 34px under the lagoon's fading top edge |
+| `atmosphere/mist-bank` | `landscapes/sea-band` | Outro, **the lagoon**. Light only, opaque; the section's `padding-bottom` is derived from its top edge so the copy always clears the water |
+| `atmosphere/mist-bank` | `landscapes/shallow-water` | Outro, the foam at the waterline, straddling the sand's top edge |
+| `landscapes/snow-bank` | `landscapes/beach-terrace-plain` | Outro, the sand the arch and the lantern stand on |
 | `props/lantern-post` | `props/capiz-lantern` | Outro |
 | `props/garden-arch` | `props/coral-arch` | Outro |
 | `transitions/stepping-stones` | `transitions/sand-stones` | Outro |

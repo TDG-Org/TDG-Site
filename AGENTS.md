@@ -814,6 +814,70 @@ paints at a few hundred pixels" is exactly the assumption that produced this.
    state, an animation's feel, a colour judgement — is "needs verification", not
    "verified".
 
+### 7.3 · An empty band is the bug. Look at the FLOOR before you move a prop.
+
+The Cebu light theme was reported five times as "a bunch of crap just thrown
+together", at the same three beats, and four of those rounds were spent moving
+the props: the jetty up, the signpost across, the reeds bigger, the palm row
+lifted. None of it changed the reading, because the props were never what was
+wrong. **The floor was empty.**
+
+Every one of those beats has a dark floor that is doing real work — a fog
+gradient at #tools, an atmospheric band at #games, a lit stone terrace at
+#outro — and in each case light inherited the dark floor's *geometry* with a
+light *palette*, which is not a floor at all:
+
+- `.tools__road-grid` is a synthwave perspective grid, animated, in `--border`
+  at 0.42. At midnight it is the reason that section works. On cream it is grey
+  graph paper, and no arrangement of props on top of graph paper reads as Cebu.
+- `.games__fog` was a fog veil's numbers — `--art-far` (0.62) and a mask taking
+  its top 58% to nothing — applied to a sand plate. 160px of half-transparent
+  sand at the bottom of a 940px frame. The ground was on the page and could not
+  be seen.
+- `--band-games` was `#f7ecd9`, picked as "pale sand" before any sand was
+  drawn; the plate that got drawn on it samples 30 points warmer. Two sands,
+  one visible slab, reported as "the yellow floor image is randomly thrown in
+  there".
+
+So, in order, before touching a prop:
+
+1. **Screenshot the beat at the owner's viewport and ask what the props are
+   standing on.** If the answer is "a section band", that is the bug.
+2. **A floor is an object: `opacity: 1`, and no top-fade mask.** `--art-far`
+   and `--art-mid` are for air. A band at 0.62 over a section colour is a tint.
+3. **Match the band token to the plate.** Sample the `.png` row by row; the
+   band and the art have to be the same sand, or the art's box is a rectangle.
+4. **Height comes from the plate, not from the void.** A pipeline crop sits on
+   a transparent pad, so `beach-terrace-plain` is 3258×720 with paint in 238
+   rows — a 139px band at this page's width. Asking a box for 950 is a 4×
+   blow-up of art the owner has already said is being degraded. Fill the rest
+   with the matched band; put the texture where the eye lands.
+5. **A full-width band goes under the copy.** Measure the copy block first:
+   `.outro__makers` is 880px wide and centred and owns 168..422px of a 590px
+   section, so *any* full-width band between those two numbers is a band under
+   the copy. If the beat needs one there, the section's `padding` moves — this
+   one derives `padding-bottom` from `--outro-horizon` so the two cannot drift.
+6. **A night-only object is deleted in light, not recoloured.** The lamppost,
+   the neon road, the stair hanging in a daylight sky. Say so in the rule.
+
+### 7.4 · One write per file, or Vite serves you a half-applied stylesheet
+
+Edits here are applied with a small Python or Node script rather than by hand,
+because the comments are long. **That script must build the whole file in
+memory and write it ONCE.** A script that does one `open(path, 'w')` per edit
+races Vite's watcher: it latched a mid-sequence copy of `Outro.css`, cached the
+transform, and served a stylesheet with the first edit in it and the next two
+missing — through two full render-and-look rounds, which is exactly the state
+where you conclude your own CSS does not work and start changing the wrong
+thing.
+
+It does not announce itself. `git diff` is right, the file on disk is right,
+and the browser is wrong. Two ways to catch it:
+
+- `curl -s http://localhost:<port>/src/components/<file>.css | grep <a string
+  from the newest edit>`. The dev server is the ground truth, not the file.
+- `touch` the sources after any scripted edit and before rendering.
+
 ---
 
 ## 8 · A worked example

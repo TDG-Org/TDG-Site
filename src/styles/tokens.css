@@ -1056,7 +1056,22 @@
   --band-origin: #bfe6f4;
   --band-apps: #f7f8f4;
   --band-tools: #cfeff0;
-  --band-games: #f7ecd9;
+  /* ── this band is a BEACH, and it has to be the beach's own colour ──────
+     `#f7ecd9` was picked as "pale sand" before any sand was drawn on it, and
+     it is 247,236,217 — cream. `landscapes/beach-terrace-plain`, the plate
+     this section's floor is actually made of, samples 240,206,180 through its
+     painted rows with its lightest at 246,223,207. So the drawn sand was ~30
+     points warmer than the band it was drawn on, and the join between them
+     was a visible slab: the site owner's "the yellow floor image is randomly
+     thrown in there", reported at this beat and not fixed by any of the four
+     passes that moved the slab around instead of matching it.
+
+     245,221,199 sits inside the plate's own lightest row, so the textured band
+     at the floor now reads as the near part of one beach rather than as a
+     rectangle of different sand. It carries `--text` (#12303f) at 11.4:1 and
+     the section's cards keep their own `--card-bg` plates, so nothing that has
+     to be read got harder to read. */
+  --band-games: #f5ddc7;
   /* ── Cebu's Faith band is SKY ────────────────────────────────────────────
      #fbe6cf, a warm cream, is what the section's own shading (--faith-dusk in
      Faith.css) was mixing toward --warm on top of, and between them the whole

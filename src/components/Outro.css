@@ -98,6 +98,60 @@
   --outro-pool-ink: color-mix(in srgb, var(--outro-ground-ink) 76%, var(--warm));
 }
 
+/* These three live on the SECTION and not on the root beside the two above,
+   because `--outro-stone-w` reads `--outro-prop-cap` and that token is
+   declared on `.section.outro`. A `var()` that names a property the element
+   does not carry is invalid at computed-value time and the whole declaration
+   is dropped in silence — the same failure `.origin__clip` hit this pass with
+   `--origin-veil`, which took a render to find because nothing reports it. */
+[data-theme='light'] .section.outro {
+
+  /* ── the ground stops being the section ─────────────────────────────────
+     `--outro-ground-h` is 26vw, which is 420px of a 590px section: 71% of the
+     last beat on the page is floor. At midnight that is right — the dark
+     Makers is a stone terrace and the terrace IS the picture. In light the
+     same 71% is a flat tan field with an arch at one end and a line of stones
+     across it, which is the whole of "a bunch of randomness. Nonsense."
+
+     The site owner asked for a lagoon. A lagoon is mostly water, so the sand
+     becomes the near strip it would be on a real shore and `.outro__lagoon`
+     takes the space back. 250px against 420 leaves the arch, the lantern and
+     the stones standing on a beach that is still deep enough to stand on —
+     the arch's own ink is 210px tall and its foot needs about 90 of them. */
+  --outro-ground-h: clamp(120px, 12vw, 210px);
+
+  /* ── the lagoon, and the horizon it stops at ────────────────────────────
+     Measured at 1904x940 with the beat centred, in px above the section's own
+     bottom edge: `.outro__makers` — the whole copy block — runs 168..422 of a
+     590px section, and it is 880px wide and centred. So the section's art has
+     168px below the copy, 168px above it, and two gutters. Every band in this
+     beat is full-width, which means a band placed anywhere between 168 and 422
+     is a band placed UNDER the copy. The first attempt at this lagoon put 300px
+     of opaque ocean at 166..466 and the render is unarguable: the heading and
+     both lines of the lede sit on turquoise facets, in the one section whose
+     own stylesheet says nothing on this site puts copy over art.
+
+     The band did not need to move. The room did. `padding-bottom` is what
+     decides where the copy's last line sits, so it is derived from the horizon
+     rather than guessed at: the water's top edge plus a gap, which holds at
+     every width because both sides of the sum are the same clamps. The section
+     grows from 590px to about 920 at this width, and what it buys is the beat
+     the site owner asked for — an actual lagoon, with the copy over the pale
+     band above it and the hills, the water, the foam and the sand reading in
+     that order below. */
+  --outro-lagoon-h: clamp(150px, 14vw, 250px);
+  --outro-horizon: calc(var(--outro-ground-h) + var(--outro-lagoon-h) * 0.9);
+  padding-bottom: calc(var(--outro-horizon) + clamp(40px, 5vw, 90px));
+
+  /* And the stones get smaller and step INTO the water rather than across
+     the sand. 580px of coral boulders laid over a tan field in a receding
+     diagonal that ends in mid-air is the single thing in this beat that reads
+     as thrown in; the same path at 380px, with its far end in the shallows,
+     is a way out to the light — which is what the section is about. */
+  --outro-stone-w: min(clamp(180px, 22vw, 380px), var(--outro-prop-cap));
+  --outro-stone-bottom: clamp(28px, 5.4vw, 104px);
+}
+
 .section.outro {
   --outro-pad-x: clamp(18px, 4vw, 40px);
   /* ── where the arch is allowed to reach ─────────────────────────────────
@@ -566,12 +620,48 @@
    a lantern in the dark. `StillArt` needs a dark name to exist, so they have
    one and it is never painted. */
 .outro__far,
+.outro__lagoon,
 .outro__sand {
   display: none;
 }
 [data-theme='light'] .outro__far,
+[data-theme='light'] .outro__lagoon,
 [data-theme='light'] .outro__sand {
   display: block;
+}
+
+/* ── the lagoon ────────────────────────────────────────────────────────────
+   Opaque, because water is an object. Every atmosphere band in this kit takes
+   `--art-far` or `--art-mid`, and a sea at 0.62 over `--band-outro` is a tint
+   — which is exactly how this page ended up with several thousand pixels of
+   painted ocean on it that still read as empty cream.
+
+   Its top edge is a long fade and nothing else: the copy's last line sits just
+   above it and the one rule this section states outright is that nothing here
+   puts copy over art. 44% of the box is the fade, so the water is still
+   arriving where the copy ends and is only itself well below it. Its bottom
+   runs under `.outro__shore`'s foam and under the sand, so it has no lower
+   edge of its own to draw a line with. */
+[data-theme='light'] .outro__lagoon {
+  --lagoon-w: 116vw;
+  left: calc((100% - var(--lagoon-w)) / 2);
+  width: var(--lagoon-w);
+  height: var(--outro-lagoon-h);
+  /* A tenth of its own height below the sand's top edge, so `.outro__sand` —
+     drawn after it — takes the bottom of the water and there is no lower edge
+     to draw a line with. Its top IS `--outro-horizon`, which is what the
+     section's `padding-bottom` is measured from. */
+  bottom: calc(var(--outro-ground-h) - var(--outro-lagoon-h) * 0.1);
+  object-fit: cover;
+  object-position: 50% 64%;
+  opacity: 1;
+  /* 44% -> 20%. The long fade was written when this band's top was under the
+     copy and had to be gone before it; the section's `padding-bottom` now
+     clears it outright, so what the fade is for is the haze at the far edge of
+     the water, which is 50px rather than 110. Any longer and the hill above
+     stands on pale band instead of on sea. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 20%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 20%);
 }
 
 .outro__far {
@@ -594,13 +684,46 @@
      150px tall with its base 4px above the ground's own top edge, which is
      where the shore band's waterline sits — so the hill stands out of the water
      and the whole lagoon reads inside the 420px that are actually on screen. */
-  height: clamp(96px, 9vw, 150px);
+  /* ── and it stands at the HORIZON, not at the sand ──────────────────────
+     `--outro-ground-h + 4px` put the hill's base on the beach, which was right
+     while the beach ran all the way to the copy. With `.outro__lagoon` between
+     them the hill's base is under the water — and the lagoon is drawn after
+     this, so at that altitude the whole headland was simply painted over.
+
+     A far shore rises out of the water at the waterline. `--outro-horizon` is
+     that line, and 12px below it is the hill standing in the water rather than
+     floating a hair above it. Its top is 118px higher, which the section's
+     `padding-bottom` clears; what little reaches the copy is the last few
+     percent of a 46% mask fade at 0.62, which is nothing. */
+  height: clamp(80px, 7.5vw, 130px);
   object-fit: cover;
   object-position: 50% 22%;
-  bottom: calc(var(--outro-ground-h) + 4px);
+  /* ── ON the horizon, not 12px above it ──────────────────────────────────
+     `- 12px` was meant to sit the hill in the water and did the opposite. The
+     plate is `object-fit: cover` with no bottom mask, so its lower edge is a
+     hard horizontal cut across the full 118vw — and putting that cut 12px
+     ABOVE the lagoon's top edge left it standing on the pale band with the
+     water starting below it. Rendered at 1904x940 it is a ruled green line
+     across the whole page, which is the same defect this section's own
+     stylesheet has already recorded twice at other joins.
+
+     The hill's foot and the water's top are ONE line, because that is what a
+     horizon is: both are `--outro-horizon`. The mask now takes the last 12% of
+     the hill to nothing and the lagoon's own fade below it is short, so the
+     two dissolve into each other over about 60px of haze instead of meeting on
+     an edge — a far shore going into the water, rather than a cut.
+
+     Rendered, one line was not enough. Foot and waterline exactly level still
+     read as a rule across the page, because `sea-band`'s top rows are its
+     darkest navy and the eye reads any straight boundary between a pale green
+     and a saturated navy as drawn. So the foot goes 34px BELOW the waterline
+     and the water's own 50px fade passes over it: solid hill, hill under
+     shallow haze, water. Three tones instead of two, and no edge at any of
+     them. */
+  bottom: calc(var(--outro-horizon) - 34px);
   opacity: var(--art-far);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 46%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 46%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 46%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 46%, #000 88%, transparent 100%);
 }
 
 /* ── the sand the terrace is made of ───────────────────────────────────────
@@ -838,6 +961,26 @@
   overflow: clip;
   pointer-events: none;
 }
+/* ── the steps are not drawn in light, and the join does not need them ─────
+   `transitions/beach-steps` at this seam is a flight of pale coral steps in
+   the top-left corner, at `--art-far`, with nothing above them and nothing
+   below them: rendered at 1904x940 at three scroll positions across the join
+   they are a stack of slabs floating in an empty sky. That is the site
+   owner's "a bunch of randomness" as literally as this page states it.
+
+   The seam itself does not need a prop. #faith's own floor above and this
+   section's pale band are two close values of the same sky, and the piece that
+   actually carries the beat now is `.outro__far` — a green headland with palms
+   on it, standing in the lagoon a little further down. A transition piece
+   exists to stop a join reading as a cut; there is no cut here to stop.
+
+   Dark keeps the whole thing. `transitions/stone-stair` descends from #faith's
+   summit onto a terrace at midnight, which is a stair going somewhere, and the
+   mask above is four rounds of work on that seam. */
+[data-theme='light'] .outro__stair-clip {
+  display: none;
+}
+
 .outro__stair {
   top: var(--outro-stair-slack);
   right: calc(100% - var(--outro-stair-h) * var(--outro-stair-ar) + var(--outro-stair-out));

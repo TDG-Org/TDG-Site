@@ -204,6 +204,22 @@ export function Outro() {
               afterglow is already hanging in, and this gives it a body. Drawn
               straight after the ground and before every prop, so all four still
               stand in FRONT of it. */}
+          {/* ── the lagoon itself ────────────────────────────────────────
+              Between the headland and the waterline, which is where this
+              section's own floor used to reach and where the render showed a
+              flat tan field taking two thirds of the last beat on the page.
+
+              `landscapes/sea-band` is the Hero's ocean and #tools' floor, so
+              the water the page opens on is the water it closes on. Drawn
+              after the headland and before the foam: the hill stands out of
+              it, the foam breaks in front of it. Light only, for the same
+              reason `.outro__far` and `.outro__sand` are — the dark Makers is
+              a stone terrace at midnight and a lagoon is not in that picture. */}
+          <StillArt
+            art="atmosphere/mist-bank"
+            light="landscapes/sea-band"
+            className="outro__lagoon"
+          />
           <StillArt
             art="atmosphere/mist-bank"
             light="landscapes/shallow-water"

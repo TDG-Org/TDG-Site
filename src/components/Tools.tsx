@@ -281,6 +281,23 @@ export function Tools() {
         </div>
         <div ref={blob} className="blob tools__blob" />
 
+        {/* ── the water the pier goes out over ─────────────────────────────
+            In dark this floor is `.tools__road` — a synthwave grid running to
+            a lit horizon — and the footbridge crosses it. In light that grid
+            is a grey wash on cream and the beach pier above it had nothing
+            underneath it at all, which is most of what "a bunch of crap just
+            thrown together" is describing at this join.
+
+            `landscapes/sea-band` is the Hero's own ocean, so the water here is
+            the same water the page opens on. It reads down the page in the
+            order a shore actually does: open sea at this floor, the waterline
+            (`.games__mist`, crossing UP out of #games) at the very bottom of
+            it, and sand below that in #games. Light only; the dark name is a
+            piece already loaded by #outro, so declaring it costs no fetch.
+
+            Drawn first in the clip, before the pier, the reeds and the coral,
+            so all three stand in front of the water rather than beside it. */}
+        <StillArt art="atmosphere/mist-bank" light="landscapes/sea-band" className="tools__sea" />
         <ThemedArt art="landscapes/stone-footbridge" light="landscapes/beach-pier" className="tools__bridge" factor={-0.05} />
         {/* The haze BETWEEN the bridge and the boulders, and it is drawn
             between them in the DOM for exactly that reason: it washes the

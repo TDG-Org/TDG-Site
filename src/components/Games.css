@@ -1030,6 +1030,34 @@
      it (rendered with per-decile rules over the plate to find it). A floor
      that is only floor, so the crop can be anywhere. */
   object-position: 50% 60%;
+
+  /* ── and then it has to be VISIBLE, which is three more numbers ──────────
+     The plate was right and could not be seen. This band is the only ground
+     in the section and it was inheriting a fog veil's geometry: 380px tall at
+     `--art-far` (0.62), with a mask taking its top 58% to nothing. What
+     actually painted was 160px of half-transparent sand at the bottom of a
+     940px frame, so from the waterline down to the palms there were three to
+     four hundred pixels of flat `--band-games` with nothing on it — the empty
+     field the site owner has reported at this beat four times, and the reason
+     four rounds of moving the props on it changed nothing.
+
+     Fog is faint and fades in from the top. A floor is neither. Opaque, two
+     and a half times as tall so it runs from under the waterline to the
+     section's own bottom edge, and the mask cut to a 16% arrival so the sand
+     still comes out of the water instead of starting on a ruled line. The
+     cards above it carry their own `--card-bg` plates, so nothing that has to
+     be read is read against sand. */
+  /* Height is the plate's, not the void's. `beach-terrace-plain` is 3258x720
+     with paint only in its bottom 238 rows (the pipeline crop sits on a
+     transparent pad), so at this page's width its natural band is 139px and
+     every pixel of box beyond that is upscale. A first pass at 2.5x the floor
+     asked for 950px — a 4x blow-up of the one drawing the owner has already
+     said is being degraded. The band matched above is what fills the rest;
+     this is the texture at the near edge of it. */
+  height: var(--games-floor);
+  opacity: 1;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 24%);
 }
 
 /* Guardrail 7 of the kit, and the width has a reason: 640 is where this
