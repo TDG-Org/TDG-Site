@@ -242,7 +242,30 @@
      20 it is 288px at 1440, its strongest ink still lands 62px below the "more
      about us" link rather than level with it, and the whole path stands on
      something. */
-  --outro-ground-h: clamp(140px, 20vw, 300px);
+  /* ── 20vw -> 26vw, and the gradient below it became a FLOOR ─────────────
+     The site owner's reading of this beat was that the arch, the lantern, the
+     path and the stair are "seemingly randomly placed images", and none of the
+     four is in the wrong place: what is wrong is that there was nothing under
+     any of them. Measured at 1600x900, in pixels above the section's own
+     bottom edge — the coordinate every prop here is placed in:
+
+         ground band          0 .. 300     densest at 114
+         path of stones      48 .. 311
+         lantern             16 .. 205
+         arch              -100 .. 530
+         stair              356 .. 616
+
+     The band's own gradient was `transparent 0 -> ink 62% -> transparent`,
+     which is a soft BAR centred 114px up and gone again by 300 — so its
+     strongest line lay across the middle of the path rather than under it, the
+     path's far end stood 11px above where the band ended, and the stair
+     finished 56px above that in open air. Three objects, no floor, and the
+     kit's own note on this element ("what the arch and the stones stand ON")
+     describing something the gradient could not be.
+
+     26vw is 416px here, which puts the horizon above the far end of the path
+     (311) and above the lantern (205); the ramp below carries the rest. */
+  --outro-ground-h: clamp(190px, 26vw, 420px);
   /* ── the crossing ───────────────────────────────────────────────────────
      How far the air band reaches up into #faith, and how far it fades back
      down into this section. Proved against neighbouring clamps rather than a
@@ -481,7 +504,27 @@
       color-mix(in srgb, var(--outro-pool-ink) 20%, transparent) 54%,
       transparent 70%
     ),
-    linear-gradient(180deg, transparent 0%, var(--outro-ground-ink) 62%, transparent 100%);
+    /* ── a floor, not a bar ─────────────────────────────────────────────
+       `transparent 0 -> ink 62% -> transparent 100%` has exactly one row at
+       full ink and falls away above AND below it, which is a horizontal glow
+       and not a plane. A floor is nothing above the horizon, ground from there
+       down, and it only stops at the very bottom so it cannot draw a line
+       where the GitHub strip begins — which is the one constraint this element
+       has always had and the reason the last stop is still `transparent 100%`.
+
+       At 416px tall those stops are: nothing above 416px up, the horizon
+       fading in over the 108px down to 308, solid from 308 down to 50, and the
+       last 50px giving way to the strip. The path of stones (48..311) and the
+       lantern (16..205) are inside the solid part; the arch's plinth passes
+       through it and is bedded 100px below the frame, which is what makes it
+       the nearest of the three. */
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--outro-ground-ink) 26%,
+      var(--outro-ground-ink) 88%,
+      transparent 100%
+    );
 }
 
 /* ── the stair across the join ─────────────────────────────────────────────
@@ -792,7 +835,18 @@
     var(--outro-copy-inset) + var(--outro-arch-gap) +
       (var(--outro-arch-w) - var(--outro-lantern-w)) / 2
   );
-  bottom: clamp(6px, 1vw, 18px);
+  /* ── it stands BEYOND the gate, so its foot is higher than the gate's ───
+     The arch is bedded 100px below the section's floor and this was at 6-18px
+     above it, which on a ground plane is 116px NEARER the reader than the
+     thing it is supposed to be seen through. It read as hovering inside the
+     opening because it was: an object whose base is in front of the gate but
+     whose picture is inside it has no place to be standing.
+
+     0.22 of the ground band is 92px here — comfortably behind the arch's own
+     plinth, still inside the solid part of the floor (50..308), and its head
+     lands at 281px against the arch's opening, whose crown at this width is at
+     about 310. So the whole lantern is inside the gap it is seen through. */
+  bottom: calc(var(--outro-ground-h) * 0.22);
   width: var(--outro-lantern-w);
   /* 1000x1500 is the .webp the site loads, not the 1024x1536 PNG source, and
      both themes share it — unlike `transitions/stone-stair`, which does not.

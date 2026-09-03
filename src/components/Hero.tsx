@@ -951,8 +951,23 @@ export function Hero() {
             `translate` from the loop above and the 74s sideways drift is a
             compositor `transform`, and one element gets one writer of each.
             The wrapper takes the translate; the art takes the transform. */}
+        {/* ── and what crosses the bay by day ────────────────────────────
+            The Cebu piece in this slot was `landscapes/shore-foam` — a patch
+            of surf, hung at the fog's own altitude, which in a cloudless sky
+            over open water is nowhere: the site owner read it as "triangles
+            by the sun that move when you scroll", and they were right, it was
+            a torn white shard floating at the horizon with nothing to be the
+            edge of. Foam belongs at a waterline and this layer has none.
+
+            `props/bangka` instead. The one thing that genuinely crosses a bay
+            in the middle distance is a boat, this layer already has the two
+            properties a boat wants — it rides the basin's scroll rate and it
+            drifts sideways for 74s — and the sea plate behind it had a boat
+            painted INTO it until this pass, which is the half-hull the owner
+            found stuck behind the lamppost. One boat, on its own layer, that
+            moves. */}
         <div ref={weather} className="hero__weather">
-          <StillArt art="landscapes/valley-fog" light="landscapes/shore-foam" className="hero__weather-art" />
+          <StillArt art="landscapes/valley-fog" light="props/bangka" className="hero__weather-art" />
         </div>
 
         <div ref={ridge} className="hero__ridge-drift">

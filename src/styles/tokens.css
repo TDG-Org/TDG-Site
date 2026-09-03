@@ -801,7 +801,21 @@
   --flake-drift: 0.5;
   /* the hut: sawali and bamboo, nipa thatch, coconut palms, white sand and
      the sea, each on its own ramp from shadow to sun */
-  --scene-deep: #6b8794;
+  /* ── the base ramp is BAMBOO, and #6b8794 is why the hut read grey ───────
+     PIG_BASE is everything in the hut's world that is not leaf, wood, water,
+     thatch or sand — the posts, the deck, the steps, the rail. Its shadow end
+     was a sea-shadow slate, chosen (correctly, at the time) to get away from a
+     teal-shadowed room; against a sand-white sun end that ramp is a neutral
+     grey from one end to the other, and a grey nipa hut is what the site owner
+     reported: "the Hut's colors are wrong as well and are even grey. That does
+     not look like a hut."
+
+     #a4835f is split bamboo in shade. It is the same L* neighbourhood as the
+     slate it replaces (55.6 against 53.9, so nothing about the scene's
+     contrast moves) and it sits between --scene-wood-deep's #6e4a2b and
+     --scene-sand-deep's #dcc6a0, which is exactly where a bamboo post belongs
+     among the five classes it stands next to. */
+  --scene-deep: #a4835f;
   --scene-pale: #fbf7ee;
   --scene-leaf-deep: #1e6a44;
   --scene-leaf-pale: #9de88c;
@@ -934,7 +948,20 @@
   --band-apps: #f7f8f4;
   --band-tools: #cfeff0;
   --band-building: #f7ecd9;
-  --band-faith: #fbe6cf;
+  /* ── Cebu's Faith band is SKY ────────────────────────────────────────────
+     #fbe6cf, a warm cream, is what the section's own shading (--faith-dusk in
+     Faith.css) was mixing toward --warm on top of, and between them the whole
+     of #faith rendered as one flat orange. The site owner asked for a blue sky
+     with the sun and its glow kept, and both of those live in layers of their
+     own — `--summit-sky`, `Moon`'s bloom, `--summit-wash` — so the band is
+     free to be what it depicts.
+
+     #cfe6fa is L* 90.0 against the cream's 93.3, so it is 3.3 points DARKER
+     and every contrast ratio in this file's tables moves the safe way: the
+     text on it is --text, near-black, so a darker band raises the ratio. It
+     is the same family as --band-origin (#bfe6f4), which is this theme's other
+     sky, one step paler because #faith carries a verse across it. */
+  --band-faith: #cfe6fa;
 
   /* the scene layer, at the light end of the kit's ranges — see :root */
   --art-far: 0.62;
@@ -960,12 +987,31 @@
   --moon-mare: transparent;
   --moon-halo: rgba(255, 214, 120, 0.9);
 
-  /* The summit silhouette, lighter than dark's because this hillside is pale
-     and the cross has to be the darkest thing in the frame without being the
-     only black on a page that has none. See :root. */
-  --summit-stop-0: #0b2b3c;
-  --summit-stop-1: #143f52;
-  --summit-stop-2: #2b6e80;
+  /* ── the summit cross is WHITE by day, and that is a reversal ───────────
+     Dark's ramp and this one were both silhouettes — the comment here used to
+     say the cross "has to be the darkest thing in the frame", on the reading
+     that an object in front of a light source is always backlit. That is true
+     of a moon at midnight. It is not true of the Cebu summit, where the disc
+     is the SUN and the hillside in front of it is lit by it: the site owner's
+     note is "the cross should be fully white with the suns glow affecting it
+     and it's edges", and a white cross on a lit hill is what a cross on a
+     hill actually looks like at that hour.
+
+     The ramp runs top-left to bottom-right (CrossGlyph's gradient), so the
+     head is pure white in the open sky and the foot takes the gold that pools
+     around the disc behind it — the glow "affecting its edges" as a gradient
+     rather than as a filter, so it rides the theme wave with every other stop
+     on the page. `Summit.css` adds the outer bloom on the glyph itself.
+
+     It does not disappear into the disc it stands in front of, which is the
+     failure the old ramp was written against: --moon-disc is white but the
+     sun's own pool around it is --summit-sky, and the crossbar sits in the
+     top third of the path — the third in the OPEN SKY above the disc's crown
+     at this cross height, not inside it. Below that the stem crosses the
+     disc, and there the ramp is already gold against white. */
+  --summit-stop-0: #ffffff;
+  --summit-stop-1: #fff6e2;
+  --summit-stop-2: #ffdda4;
 
   /* Same lantern, less darkness to glow into. See :root: at dark's alphas
      these would read as a stain on a near-white sky rather than as light. */

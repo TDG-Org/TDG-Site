@@ -614,6 +614,56 @@
   opacity: var(--art-far);
 }
 
+/* ── Cebu: `props/palm-row`, and it is a BAND rather than a prop ────────────
+   The winter piece in both slots is a 2:3 pair of pines standing in a corner,
+   and the box above is built out of that shape: a `width` in the 200-480px
+   range, a `bottom` that subtracts 1.478 x that width because the file is
+   1500/1000 tall, and an `left`/`right` that tucks it against one edge.
+
+   The Cebu row is 2172x724. Feeding it to that box letterboxes it — a 3:1 file
+   inside a 2:3 hole is a strip of palms 1/4.5 the height of the element with
+   transparent air above and below, which is what "I can only see 2 of the
+   trees" was describing from the other side. So light gets its own geometry,
+   and it is the geometry a row wants: full width, both edges, foot on the
+   floor.
+
+   The two stands stay two stands. The far one is 62% of the near one's height
+   and sits `--building-far-pine-clear` higher up the bank, with
+   `.building__fog` between them, so size + altitude + haze still do the
+   distance exactly as the block above argues — the only thing that changed is
+   that each stand is now nine palms wide instead of two trees.
+
+   `width: 118%` with `left: -9%` rather than `100%`: the file's own ends are
+   whole palms, and a row that stops at the viewport edge reads as a prop that
+   ran out. Overhanging both sides by the same 9% is rule 6 — one number
+   applied in mirror image — and the section is `overflow: clip`, so nothing
+   here can reach `document.scrollWidth`. */
+[data-theme='light'] .building__pines,
+[data-theme='light'] .building__pines-far {
+  aspect-ratio: 2172 / 724;
+  right: auto;
+  width: var(--row-w);
+  left: calc((100% - var(--row-w)) / 2);
+  /* The winter rule puts the element's TOP — the crowns — at
+     `--building-floor - --building-*-pine-clear` above the section's bottom
+     edge, and lets the feet run off it; `bottom` there is that line minus the
+     box's own height, which for a 2:3 pine is `1.478 x width`. Same sentence,
+     3:1 box: the height is a third of the width.
+
+     `--row-w` is a vw length and not a percentage, and it has to be: a
+     percentage in `bottom` resolves against the container's HEIGHT, so the
+     translation would silently stop being the same expression. */
+  bottom: calc(var(--floor-line) - var(--row-w) / 3);
+}
+[data-theme='light'] .building__pines {
+  --row-w: 118vw;
+  --floor-line: calc(var(--building-floor) - var(--building-pine-clear));
+}
+[data-theme='light'] .building__pines-far {
+  --row-w: 92vw;
+  --floor-line: calc(var(--building-floor) - var(--building-far-pine-clear));
+}
+
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its
    top, and a straight cut across the page is worse than no fog at all. So both
    ends are dealt with rather than hoped about:

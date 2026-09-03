@@ -175,38 +175,44 @@ export function PointCloud() {
     }
     const DARK_OPACITY = 0.92
     /**
-     * ── why light's is nearly 1 and dark's is not ─────────────────────────
-     * It was 0.72, matching the reference's uOpacity, and the report was that
-     * the cross "does not read as a cross in the light theme". It does read —
-     * at 1440x900 the form is unmistakable in a screenshot — but it reads
-     * measurably thinner than the same cloud in dark, and the reason is the
-     * BLEND rather than the point count.
+     * ── the light cloud is LIT now, and that changed the blend with it ────
      *
-     * Dark composites additively (`acc[at] += v`), so two points landing on
-     * one pixel are worth twice one point and the crowded middle of a bar
-     * burns out to solid white. That bloom is most of what makes the dark
-     * cross read as a mass with a spine rather than as a fog of dots.
+     * It used to be `INK` — near-black specks composited source-over, because
+     * a dark speck on a pale sky is the only thing that can be seen if the
+     * speck is not allowed to glow. The site owner's verdict on the result was
+     * "the black on it that it currently has looks horrible", and they are
+     * right: the cross in the Cebu hero is the ONE object in the frame the
+     * page is actually about, and it was rendered as soot.
      *
-     * Light composites source-over (`prev + v(1 - prev)`), which is what a
-     * dark speck on a pale sky has to do — additive would only ever make it
-     * brighter, i.e. more like the sky. Under source-over a pixel can never
-     * be worth more than the alpha of the darkest point that touched it, so
-     * the whole form sat at whatever one point was worth: alphas[] runs
-     * 0.75-1.0 and the profile tapers to zero at each point's rim, so 0.72
-     * put a typical inked pixel at about a third of an alpha — ink 20 over a
-     * sky near 200 landing at 140, a grey speckle.
+     * So it is white-into-gold now (`TOP`/`FOOT` below), and the moment the
+     * ink is brighter than the sky the blend has to follow. Source-over caps a
+     * pixel at the alpha of the brightest point that touched it, so a bright
+     * cloud drawn that way is a haze that never builds; additive is what makes
+     * two points on one pixel worth twice one point, and the crowded middle of
+     * a bar burn out solid. That bloom IS the glow — no filter, no shadow,
+     * just the same accumulation dark has used since this file was written.
      *
-     * 0.95 gives a point's own core the density the additive blend gives dark
-     * for free, and overlaps then compound to opaque in two hits instead of
-     * four. Nothing else changes: the count is `pointBudget()` in BOTH themes
-     * and stays that way, because raising it in one theme would be paying a
-     * device's CPU to fix something the blend caused, and the profile still
-     * feathers every point's edge so the form keeps its soft rim.
+     * 1 rather than dark's 0.92, and it is the pale sky that asks for the
+     * extra: dark's white burns against L* 6, light's against L* 84, so the
+     * same accumulation buys far less separation here. `.hero__model` carries
+     * the other half — a radial of the section's own text ink behind the
+     * canvas (Hero.css) that takes the sky under the cross down about
+     * fourteen points of L*. Between the two the cross reads as a light
+     * source; with either one alone it reads as a smudge, which is measured
+     * rather than guessed: at 0.86 with no ground behind it the render showed
+     * a gold spray with no form in it at all.
      */
-    const LIGHT_OPACITY = 0.95
+    const LIGHT_OPACITY = 1
 
     const WHITE = packRGB(255, 255, 255)
-    const INK = packRGB(20, 20, 26)
+    /* ── the light theme's ramp, top of the canvas to the bottom ───────────
+       White at the head and warm gold at the foot, so the cloud carries the
+       same top-down gradient the wordmark's own `CrossGlyph` does and reads as
+       lit from the sky rather than tinted flat. Two packed colours and a lerp
+       per row — the inner loop indexes a row's colour once, so this costs one
+       table lookup per scanline and nothing per pixel. */
+    const TOP = { r: 255, g: 255, b: 255 }
+    const FOOT = { r: 255, g: 209, b: 122 }
 
     let index = 0
     let next = 0
@@ -540,14 +546,11 @@ export function PointCloud() {
             if (r2 > r * r) continue
             const v = PROFILE[(r2 * invR2 * LUT_N) | 0] * a
             const at = row + x
-            if (light) {
-              // source-over: each point lays over what is already there
-              const prev = acc[at]
-              acc[at] = prev + v * (1 - prev)
-            } else {
-              // additive, exactly like the reference's 'lighter' blend
-              acc[at] = acc[at] + v
-            }
+            // additive in BOTH themes now, exactly like the reference's
+            // 'lighter' blend. Light used to be source-over because its ink
+            // was darker than its sky; it is brighter than its sky now, and a
+            // bright cloud that cannot compound is a haze. See LIGHT_OPACITY.
+            acc[at] = acc[at] + v
           }
         }
       }
@@ -579,9 +582,22 @@ export function PointCloud() {
       // damage would otherwise sit there.
       if (!pushAll && (ux1 < ux0 || uy1 < uy0)) return applyFade
 
-      const rgb = light ? INK : WHITE
+      /* One colour per SCANLINE in light — white at the top of the canvas
+         easing to gold at the bottom — and one colour for the whole cloud in
+         dark. The lerp is hoisted out of the x loop, so the per-pixel cost is
+         identical to the single-constant version it replaces. */
+      const denom = H > 1 ? H - 1 : 1
       for (let y = uy0; y <= uy1; y++) {
         const row = y * W
+        let rgb = WHITE
+        if (light) {
+          const t = y / denom
+          rgb = packRGB(
+            (TOP.r + (FOOT.r - TOP.r) * t) | 0,
+            (TOP.g + (FOOT.g - TOP.g) * t) | 0,
+            (TOP.b + (FOOT.b - TOP.b) * t) | 0,
+          )
+        }
         for (let x = ux0; x <= ux1; x++) {
           const at = row + x
           const v = acc[at]

@@ -1,42 +1,35 @@
 {
   "far-island": {
-    "src": "far-island.jpg",
-    "mode": "key",
+    "src": "far-island-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "landscapes/far-island-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 46
-    },
     "fit": {
-      "width": 0.34,
+      "width": 0.24,
       "anchor": "bottom",
-      "dx": 0.33
+      "dx": 0.3
     }
   },
   "island-mid": {
-    "src": "far-island-2.jpg",
-    "mode": "key",
+    "src": "far-island-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "landscapes/island-mid-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
     "fit": {
-      "width": 0.36,
+      "width": 0.34,
       "anchor": "bottom",
-      "dx": -0.34
+      "dx": -0.12,
+      "flip": true
     }
   },
   "sea-band": {
-    "src": "sea-band-2.jpg",
+    "src": "sea-band-3.jpg",
     "mode": "plate",
     "canvas": [
       2172,
@@ -44,95 +37,296 @@
     ],
     "out": "landscapes/sea-band-light.png",
     "crop": [
-      0.082,
-      0.548,
+      0,
+      0.5347,
       1,
       1
     ],
     "feather": {
-      "top": 0.004
+      "top": 0
+    }
+  },
+  "sand-bank": {
+    "src": "sand-bank-2.jpg",
+    "mode": "skyline",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "landscapes/sand-bank-light.png",
+    "crop": [
+      0,
+      0.4,
+      1,
+      1
+    ],
+    "height": 0.86,
+    "skyline": {
+      "feather": 7,
+      "lift": 0.012
     }
   },
   "shore-foam": {
-    "src": "shore-foam-2.jpg",
-    "mode": "key",
+    "src": "shore-foam-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "landscapes/shore-foam-light.png",
-    "key": {
-      "lo": 3,
-      "hi": 34,
-      "blur": 0.8
-    },
     "fit": {
-      "width": 0.92,
-      "anchor": "centre"
+      "width": 0.94,
+      "anchor": "bottom",
+      "dy": -0.06
     }
   },
   "cumulus-near": {
-    "src": "cumulus-wisp-2.jpg",
-    "mode": "key",
+    "src": "cumulus-wisp-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "props/cumulus-near-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 52
-    },
     "fit": {
-      "width": 0.46,
+      "width": 0.44,
       "anchor": "centre"
     }
   },
   "cumulus-far": {
-    "src": "cumulus-wisp.jpg",
-    "mode": "key",
+    "src": "cumulus-wisp-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "props/cumulus-far-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 52
-    },
     "fit": {
-      "width": 0.46,
-      "anchor": "centre"
+      "width": 0.36,
+      "anchor": "centre",
+      "flip": true
+    }
+  },
+  "palm-row": {
+    "src": "palm-row-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "props/palm-row-light.png",
+    "fit": {
+      "height": 0.95,
+      "anchor": "bottom",
+      "extend": true
     }
   },
   "far-palms": {
-    "src": "far-palms.jpg",
-    "mode": "rowkey",
+    "src": "palm-row-transparent.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "landscapes/far-palms-light.png",
-    "key": {
-      "lo": 12,
-      "hi": 70,
-      "keep": [
-        [
-          0.775,
-          0.815
-        ]
-      ]
-    },
-    "crop": [
-      0,
-      0.52,
-      1,
-      0.815
+    "fit": {
+      "height": 0.26,
+      "anchor": "bottom",
+      "extend": true,
+      "flip": true
+    }
+  },
+  "bangka": {
+    "src": "bangka-left.jpg",
+    "mode": "chroma",
+    "canvas": [
+      2172,
+      724
     ],
+    "out": "props/bangka-light.png",
+    "fit": {
+      "width": 0.14,
+      "anchor": "bottom",
+      "dy": -0.24,
+      "dx": 0.06
+    },
+    "key": {
+      "lo": 60,
+      "hi": 150,
+      "erode": 2,
+      "spill": 80
+    }
+  },
+  "beach-steps": {
+    "src": "beach-steps-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "transitions/beach-steps-light.png",
+    "fit": {
+      "height": 0.9,
+      "anchor": "bottom",
+      "dx": -0.27
+    }
+  },
+  "coconut-palm-tall": {
+    "src": "coconut-palm-tall-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1024,
+      1536
+    ],
+    "out": "props/coconut-palm-tall-light.png",
+    "fit": {
+      "height": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "coconut-pair": {
+    "src": "coconut-pair-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1024,
+      1536
+    ],
+    "out": "props/coconut-pair-light.png",
+    "fit": {
+      "height": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "beach-signpost": {
+    "src": "beach-signpost-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1024,
+      1536
+    ],
+    "out": "props/beach-signpost-light.png",
+    "fit": {
+      "height": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "capiz-lantern": {
+    "src": "capiz-lantern-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1024,
+      1536
+    ],
+    "out": "props/capiz-lantern-light.png",
+    "fit": {
+      "height": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "coral-arch": {
+    "src": "coral-arch-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1024,
+      1536
+    ],
+    "out": "props/coral-arch-light.png",
+    "fit": {
+      "width": 0.94,
+      "anchor": "bottom"
+    }
+  },
+  "palm-frond": {
+    "src": "palm-frond-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1536,
+      1024
+    ],
+    "out": "props/palm-frond-light.png",
     "fit": {
       "width": 1,
-      "anchor": "bottom",
-      "extend": true
+      "anchor": "top"
+    }
+  },
+  "capiz-window": {
+    "src": "capiz-window-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1536,
+      1024
+    ],
+    "out": "props/capiz-window-light.png",
+    "fit": {
+      "width": 1,
+      "anchor": "centre"
+    }
+  },
+  "beach-pier": {
+    "src": "beach-pier-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1672,
+      941
+    ],
+    "out": "landscapes/beach-pier-light.png",
+    "fit": {
+      "width": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "pandan-clump": {
+    "src": "pandan-clump-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1672,
+      941
+    ],
+    "out": "props/pandan-clump-light.png",
+    "fit": {
+      "height": 0.98,
+      "anchor": "bottom"
+    }
+  },
+  "bamboo-rail": {
+    "src": "bamboo-rail-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1891,
+      831
+    ],
+    "out": "props/bamboo-rail-light.png",
+    "fit": {
+      "height": 0.95,
+      "anchor": "bottom"
+    }
+  },
+  "coral-rocks": {
+    "src": "coral-rocks-transparent.png",
+    "mode": "alpha",
+    "canvas": [
+      1448,
+      1086
+    ],
+    "out": "props/coral-rocks-light.png",
+    "fit": {
+      "width": 0.96,
+      "anchor": "bottom"
+    }
+  },
+  "sand-stones": {
+    "src": "sand-stones.jpg",
+    "mode": "ellipse",
+    "canvas": [
+      1672,
+      941
+    ],
+    "out": "transitions/sand-stones-light.png",
+    "window": {
+      "rx": 0.56,
+      "ry": 0.62,
+      "power": 1.6,
+      "inner": 0.22
     }
   },
   "sea-haze": {
@@ -160,284 +354,19 @@
       "inner": 0
     }
   },
-  "palm-row": {
-    "src": "palm-row-2.jpg",
-    "mode": "key",
-    "canvas": [
-      2172,
-      724
-    ],
-    "out": "props/palm-row-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom",
-      "extend": true
-    }
-  },
-  "sand-bank": {
-    "src": "shore-near-2.jpg",
+  "lagoon-matte": {
+    "src": "lagoon.jpg",
     "mode": "plate",
     "canvas": [
-      2172,
-      724
+      1168,
+      784
     ],
-    "out": "landscapes/sand-bank-light.png",
-    "crop": [
-      0,
-      0.32,
-      1,
-      0.66
-    ],
+    "out": "scene/lagoon-matte.png",
     "feather": {
-      "top": 0
-    },
-    "height": 0.56
-  },
-  "coconut-palm-tall": {
-    "src": "coconut-palm-tall.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "props/coconut-palm-tall-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "palm-frond": {
-    "src": "palm-frond.jpg",
-    "mode": "key",
-    "canvas": [
-      1536,
-      1024
-    ],
-    "out": "props/palm-frond-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "width": 1,
-      "anchor": "top"
-    }
-  },
-  "lamppost-cebu": {
-    "src": "lamppost-cebu.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "hero/lamppost-cebu-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 50
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "capiz-window": {
-    "src": "capiz-window.jpg",
-    "mode": "key",
-    "canvas": [
-      1536,
-      1024
-    ],
-    "out": "props/capiz-window-light.png",
-    "key": {
-      "lo": 14,
-      "hi": 64,
-      "blur": 0.4,
-      "bg": [
-        249,
-        232,
-        204
-      ]
-    },
-    "fit": {
-      "width": 1,
-      "anchor": "top"
-    }
-  },
-  "beach-pier": {
-    "src": "beach-pier.jpg",
-    "mode": "key",
-    "canvas": [
-      1672,
-      941
-    ],
-    "out": "landscapes/beach-pier-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.96,
-      "anchor": "bottom"
-    }
-  },
-  "pandan-clump": {
-    "src": "pandan-clump.jpg",
-    "mode": "key",
-    "canvas": [
-      1672,
-      941
-    ],
-    "out": "props/pandan-clump-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "bamboo-rail": {
-    "src": "bamboo-rail.jpg",
-    "mode": "key",
-    "canvas": [
-      1891,
-      831
-    ],
-    "out": "props/bamboo-rail-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.95,
-      "anchor": "bottom"
-    }
-  },
-  "coral-rocks": {
-    "src": "coral-rocks.jpg",
-    "mode": "key",
-    "canvas": [
-      1448,
-      1086
-    ],
-    "out": "props/coral-rocks-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "width": 0.96,
-      "anchor": "bottom"
-    }
-  },
-  "beach-signpost": {
-    "src": "beach-signpost.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "props/beach-signpost-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 50
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "coconut-pair": {
-    "src": "coconut-pair.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "props/coconut-pair-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "beach-steps": {
-    "src": "beach-steps.jpg",
-    "mode": "key",
-    "canvas": [
-      2172,
-      724
-    ],
-    "out": "transitions/beach-steps-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 46
-    },
-    "fit": {
-      "height": 0.92,
-      "anchor": "bottom",
-      "dx": -0.27
-    }
-  },
-  "capiz-lantern": {
-    "src": "capiz-lantern.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "props/capiz-lantern-light.png",
-    "key": {
-      "lo": 6,
-      "hi": 50
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "coral-arch": {
-    "src": "coral-arch.jpg",
-    "mode": "key",
-    "canvas": [
-      1024,
-      1536
-    ],
-    "out": "props/coral-arch-light.png",
-    "key": {
-      "lo": 8,
-      "hi": 60
-    },
-    "fit": {
-      "height": 0.98,
-      "anchor": "bottom"
-    }
-  },
-  "sand-stones": {
-    "src": "sand-stones.jpg",
-    "mode": "ellipse",
-    "canvas": [
-      1672,
-      941
-    ],
-    "out": "transitions/sand-stones-light.png",
-    "window": {
-      "rx": 0.56,
-      "ry": 0.62,
-      "power": 1.6,
-      "inner": 0.22
+      "top": 0.52,
+      "bottom": 0.24,
+      "left": 0.3,
+      "right": 0.3
     }
   }
 }

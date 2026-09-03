@@ -477,10 +477,18 @@
   --summit-ink-near: color-mix(in srgb, var(--band-faith) 67%, var(--text));
   --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 78%, var(--text));
   --summit-wash: color-mix(in srgb, var(--moon-disc) 52%, transparent);
-  /* Cebu: the pool of sky behind the disc is the sunset's own colour, not a
+  /* Cebu: the pool of sky behind the disc is the sun's own colour, not a
      deepening toward the ink — a grey ellipse behind a gold sun read as a
-     storm cloud. */
-  --summit-sky: color-mix(in srgb, var(--band-faith) 52%, var(--warm));
+     storm cloud.
+
+     The weighting flipped when --band-faith went from a warm cream to a sky
+     blue (tokens.css): 52% of a BLUE band plus --warm is a muddy olive, and
+     the site owner's one condition on this section was that the sun and its
+     glow stay exactly as they are. So the mix is stated from --warm's side —
+     72% of the sun's own colour, a quarter of the sky — which lands within
+     two points of L* of what the old expression produced against the old
+     band, and is unmistakably gold rather than a mixture. */
+  --summit-sky: color-mix(in srgb, var(--warm) 72%, var(--band-faith));
 }
 
 /* ── the scene's own box ──────────────────────────────────────────────────
@@ -1195,4 +1203,69 @@
   --moon-disc: #ffd56e;
   --moon-halo: rgba(255, 176, 84, 0.88);
   --moon-mare: transparent;
+}
+
+
+/* ── the two clouds in the summit's sky ────────────────────────────────────
+   Summit.tsx draws them first, so every other layer here is in front of them
+   and neither can ever cross the disc — which is the condition the site owner
+   set on this section ("the sun and it's glow needs to stay"). A cumulus over
+   the sun takes the bloom with it.
+
+   Both sit in the GUTTERS. `.faith__content` is a centred column, so the
+   width outside it is the only place a cloud can be without being a thing the
+   reader has to look past to read a verse: measured at 1600x900 the copy runs
+   x 450..1150, and the far cloud's ink lands at 140..405 and the near one's at
+   1203..1485. They are placed by `top` as a percentage of the section rather
+   than against the crest, because they belong to the sky and not to the hill —
+   nothing about them should move when --summit-crest does.
+
+   The ink fractions the arithmetic uses are the shipped files': `cumulus-far`
+   is inked x 0.32..0.68 and y 0.31..0.69 of its 3:1 canvas, `cumulus-near`
+   x 0.28..0.72 and y 0.27..0.73. */
+.faith__cloud {
+  position: absolute;
+  height: auto;
+  aspect-ratio: 2172 / 724;
+  /* Dark gets `props/moon-cloud`, a torn wisp, and it is drawn at the far
+     ink because a night sky wants air rather than objects in it. */
+  opacity: var(--art-far);
+}
+.faith__cloud--far {
+  width: 46%;
+  left: -6%;
+  top: 8%;
+}
+.faith__cloud--near {
+  width: 40%;
+  right: -4%;
+  top: 26%;
+}
+/* A whole cumulus is an opaque object with a shaded underside; the file paints
+   that, and a fraction on top of it is the same mistake the hero's clouds
+   carried until this pass. The far one keeps a step, and the step is distance
+   rather than veiling — it is also smaller and higher. */
+[data-theme='light'] .faith__cloud--near {
+  opacity: 1;
+}
+[data-theme='light'] .faith__cloud--far {
+  opacity: 0.82;
+}
+
+/* ── the glow on the cross's own edges ─────────────────────────────────────
+   The white ramp (--summit-stop-* in tokens.css) is the cross being LIT; this
+   is the light spilling past it. Two drop-shadows at no offset and two radii,
+   for the same reason `.origin__lamp` has two haloes: one falloff wide enough
+   to reach is too weak at the rim to read as a source.
+
+   `drop-shadow` and not `box-shadow`, because the glyph is a path inside an
+   svg and a box shadow would outline the rectangle. It is on the <svg> rather
+   than on the wrapper so the wrapper's own geometry — which every clearance
+   sum in this file is written against — is untouched.
+
+   Light only. In dark the disc behind it is the moon and the cross is a
+   silhouette; a glow on a silhouette is a contradiction. */
+[data-theme='light'] .faith__summit-cross svg {
+  filter: drop-shadow(0 0 calc(var(--summit-cross-h) * 0.06) var(--summit-sky))
+    drop-shadow(0 0 calc(var(--summit-cross-h) * 0.19) var(--summit-wash));
 }

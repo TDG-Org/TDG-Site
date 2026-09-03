@@ -603,7 +603,23 @@ export function Origin() {
           move. */}
       <div ref={lamp} className="origin__lamp-drift" aria-hidden="true">
         <span className="origin__lamp-pool" />
-        <StillArt art="hero/lamppost-left" light="hero/lamppost-cebu" className="origin__lamp" />
+        {/* ── and by day it is not a lamppost at all ─────────────────────
+            `hero/lamppost-cebu` used to be the light piece here: the same
+            street lantern in a warmer palette, glass and all. A lit lantern
+            standing on a beach at midday is the whole of what the site owner
+            objected to — "that is a Dark mode thing and it's the day time in
+            Light mode" — and no amount of recolouring fixes an object that
+            does not belong to the hour. The file is deleted, not hidden.
+
+            `props/coconut-pair` takes the slot, and it fits it rather than
+            merely filling it: same 1024x1536 canvas, same trunk-at-the-bottom
+            silhouette planted at `--lamp-plant`, so every measurement in
+            Origin.css about where the foot lands and how far the ink stays
+            off the reading column still describes the thing on screen. The
+            `--lamp-*` glow tokens are already `transparent` in light
+            (tokens.css), so the pool, the halo and the breath cost nothing
+            here — there is no light to draw at noon. */}
+        <StillArt art="hero/lamppost-left" light="props/coconut-pair" className="origin__lamp" />
         {/* Two haloes, not one. The owner asked for "a 2nd layer bigger glow
             for the light pole, but more faint/transparent" — which is what a
             lantern in cold air actually does: a tight bright halo on the glass

@@ -45,9 +45,20 @@
 }
 
 :root[data-theme='light'] {
-  /* Cebu: the band is the late-afternoon sky the sun goes down in, so it
-     warms toward --warm rather than greying toward the ink. */
-  --faith-dusk: color-mix(in srgb, var(--band-faith) 72%, var(--warm));
+  /* ── Cebu: this is SKY, and sky is blue ──────────────────────────────────
+     It was `--band-faith 72% + --warm`, on the reading that the band is a
+     late afternoon the sun goes down in. Rendered, that is a flat orange wash
+     over the whole section from the verse to the crest — the site owner's
+     note is "the sky should be blue with clouds and not light orange" — and
+     the two halves of it are separable: the WARMTH belongs to the sun, which
+     has its own pool (`--summit-sky`) and its own bloom, and the SKY behind
+     both of them is blue at any hour of a Cebu afternoon.
+
+     So this deepens toward `--terrain-haze`, the cool blue the light theme
+     already paints its own distance in, and the sun keeps every warm layer it
+     had. --band-faith itself went blue in tokens.css in the same edit; this
+     is the shading on top of it, and the two are read together. */
+  --faith-dusk: color-mix(in srgb, var(--band-faith) 58%, var(--terrain-haze));
 }
 
 /* ── the shaded sky ────────────────────────────────────────────────────────

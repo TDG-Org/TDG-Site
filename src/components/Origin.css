@@ -431,8 +431,16 @@
   pointer-events: none;
 }
 [data-theme='light'] .origin__tops {
-  /* Cebu: landscapes/far-palms, ink from row 352 of 724 */
-  --tops-head: 0.1621;
+  /* Cebu: landscapes/far-palms — a DISTANT line of palm crowns, ink from row
+     536 of 724, so 0.7403 / 3.
+
+     It was drawn at half the canvas height and read as a second near row
+     rather than as a far shore: two mirror-extended rows of the same palms at
+     nearly the same size, one behind the other, is a wall and not a distance.
+     The file is regenerated at 0.26 of the canvas (`scripts/cebu-art.json`),
+     which is the same job `landscapes/far-treeline` does in winter — small
+     tops on the horizon that the near row is read against. */
+  --tops-head: 0.2468;
 }
 .origin__tops-art {
   left: 50%;
@@ -520,6 +528,23 @@
   aspect-ratio: 2172 / 724;
   top: calc(var(--mist-band) - var(--mist-lift) - var(--mist-eye) * var(--mist-w));
   opacity: var(--art-far);
+}
+
+/* ── the haze is AIR here, not a scrim ─────────────────────────────────────
+   `atmosphere/mist-bank` is a torn fog bank whose own alpha does the shaping,
+   so --art-far is the right ink for it. `atmosphere/sea-haze` is not that
+   piece: it is a full-frame luminance plate with an elliptical window, so at
+   0.62 it lays 60% of a warm-white wash over the WHOLE band at once — every
+   palm behind it, the sand, the shore. That is what turned this beat milky
+   ("the bottom trees are faded with something overlapping them that I can't
+   identify"), and the thing that could not be identified is that it has no
+   silhouette to be identified BY.
+
+   0.3 keeps what the plate is actually for — the glare coming off the water
+   into the palms, which is what a beach at noon looks like — and stops it
+   being a sheet of tracing paper over the section. */
+[data-theme='light'] .origin__mist-art {
+  opacity: 0.3;
 }
 
 /* ── the treeline that crosses the boundary ────────────────────────────────
@@ -659,10 +684,32 @@
   width: var(--tl-row-w);
   aspect-ratio: 2172 / 724;
   height: auto;
-  top: calc(0.42 * var(--tl-rise));
+  top: calc(0.42 * var(--tl-rise) - var(--row-lift, 0px));
   opacity: var(--art-near);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 6%);
   mask-image: linear-gradient(180deg, transparent 0, #000 6%);
+}
+
+/* ── Cebu: props/palm-row stands taller out of its own ground ──────────────
+   A pine's crown is the top two thirds of its silhouette and a palm's is the
+   top third, so at the same planting depth the winter row shows a band of
+   conifer above the drift and the Cebu row shows a fringe. Measured at
+   1600x900 before this rule: the sand's crest lands at document y 1068 and
+   the row's ink began at 1017, so fifty-one pixels of palm stood above the
+   sand it is planted in.
+
+   0.045 of the row's own width is 92px there, which triples that. It is a lift
+   and not a resize, so the trunks go the same distance further into the bank
+   and the row's foot is no nearer the bottom of the band's mask.
+
+   The ceiling on it is the band, not taste: `.origin__treeline` is
+   `overflow: clip` and its top edge is 1.42 x --tl-rise above the section's
+   boundary, which at this viewport is 268px against the 0.42 x --tl-rise
+   (79px) the row starts at — so a lift past ~0.09 of the width would clip the
+   crowns flat. Half of the available room, and the mask above the band
+   dissolves what is left. */
+[data-theme='light'] .origin__pines {
+  --row-lift: calc(0.045 * var(--tl-row-w));
 }
 
 /* ── the ground at the boundary ───────────────────────────────────
@@ -795,9 +842,23 @@
   will-change: translate;
 }
 [data-theme='light'] .origin__ground {
-  /* Cebu: landscapes/sand-bank — the beach, its shallows feathering out above
-     the foam line; ink from row 352 of 724 */
-  --snow-head: 0.1621;
+  /* ── Cebu: landscapes/sand-bank, and it is a DRIFT now, not a plate ─────
+     The first version cropped `sand-bank-2.jpg` below its own horizon and laid
+     the rectangle across the section. A rectangle has a straight top edge, so
+     it buried the palm row behind it at every column at once and read as a
+     sheet of tracing paper over the whole beat — which is what the site owner
+     saw as "the bottom trees are faded with something overlapping them that I
+     can't identify". It could not be identified because it had no silhouette
+     to be identified by.
+
+     `scripts/cebu-art.py` grew a `skyline` mode for it: the plate's alpha now
+     follows the dune's OWN ridge against the sky, column by column, the way
+     `landscapes/snow-bank` is a drift with a crest rather than a band. The
+     head is where that crest becomes solid — measured on the shipped file as
+     the first row at which half the columns are alpha >= 200, row 230 of 724,
+     so 0.3177 / 3 — and not the alpha bbox (row 138), which is the top of the
+     feather and would float the whole bank 40px high. */
+  --snow-head: 0.1059;
 }
 @media (min-width: 1366px) {
   /* Both halves of "the snow follows the foot", and they are one edit: the

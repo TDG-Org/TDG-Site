@@ -793,11 +793,33 @@
   opacity: 0.92;
 }
 
-/* The Cebu piece in this slot, props/capiz-window, is a dark wood lattice
-   rather than pale crystal, and at the frost's 0.92 it read as a frame on
-   the cards. Lower, it is glass with a lattice in it. */
+/* ── the Cebu piece in this slot is a FRAME, and it needs to be framed ─────
+   `props/window-frost` is a vignette: pale crystal that thickens toward the
+   edges of its own file and thins to nothing in the middle, so `object-fit:
+   cover` over the whole section gives frost at the borders and a clear centre
+   — which is what glass between the reader and the shot looks like.
+
+   `props/capiz-window` is not that shape. It is a shell-pane lattice with a
+   CROSS cut through it, and its ink covers the whole canvas: the four corners
+   are solid window. Covered over a 1590 x 1700 section the file's own middle
+   62% is what survives the crop, so the section rendered as a wall of window
+   frames with the cards behind it — every card sat behind a pane, and the
+   walk's own scene could not be seen at all.
+
+   The mask is what gives it the vignette the other file has drawn in. An
+   ellipse wider than it is tall, clear to 44% of the radius and full by 80%,
+   leaves the panes at the frame's edges and the corners — where the eye reads
+   "you are looking through a window" — and takes the lattice off the reading
+   column entirely. The cross is still in the file and still lands in the open
+   middle; it is simply no longer the only part of it you can see past.
+
+   0.66 rather than the dark theme's 0.92 for the reason the old note here
+   gave, which still holds: dark wood on a pale band is a much louder mark
+   than pale crystal on a dark one. */
 [data-theme='light'] .walk__frost-art {
-  opacity: 0.74;
+  opacity: 0.66;
+  -webkit-mask-image: radial-gradient(128% 96% at 50% 50%, transparent 0 44%, #000 80%);
+  mask-image: radial-gradient(128% 96% at 50% 50%, transparent 0 44%, #000 80%);
 }
 
 @media (prefers-reduced-motion: reduce) {

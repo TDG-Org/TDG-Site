@@ -4,6 +4,7 @@ import { usePointer } from '../../hooks/usePointer'
 import type { SectionProgress } from '../../hooks/useSectionProgress'
 import { CrossGlyph } from '../CrossGlyph'
 import { Moon } from '../scene/Moon'
+import { StillArt } from '../scene/ThemedArt'
 import './Summit.css'
 
 /**
@@ -453,6 +454,28 @@ export function Summit({ progress }: { progress: SectionProgress }): JSX.Element
 
   return (
     <div ref={root} className="faith__summit" aria-hidden="true">
+      {/* ── two clouds in the sky over the summit ───────────────────────────
+          Drawn FIRST, so everything below is in front of them: they are the
+          farthest thing in this frame, further even than the disc, which is
+          why a cloud may never cross the sun here. The site owner asked for
+          "the sky should be blue with clouds", and for the sun and its glow
+          to be untouched — a cumulus over the disc would take the glow with
+          it, so both sit off to one side and high, where a cloud is anyway.
+
+          `props/cumulus-*` in light and `props/moon-cloud` in dark: the same
+          two slots the hero pairs, so this costs no new art and both files are
+          already in the browser by the time this section is reached. */}
+      <StillArt
+        art="props/moon-cloud"
+        light="props/cumulus-far"
+        className="faith__cloud faith__cloud--far"
+      />
+      <StillArt
+        art="props/moon-cloud"
+        light="props/cumulus-near"
+        className="faith__cloud faith__cloud--near"
+      />
+
       {/* Farthest first. The moon is behind every ridge — it has to be, or
           the crest cannot tuck its lower edge behind the hill — and in front
           of nothing but the section's own gradient field. */}

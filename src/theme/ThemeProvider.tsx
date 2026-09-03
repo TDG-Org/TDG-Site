@@ -169,7 +169,47 @@ function crossArt(): { arm: () => void; clear: () => void } {
   // rect back in between forces a recalc per element at the one moment the
   // main thread is least free.
   const boxes = arts.map((el) => el.getBoundingClientRect())
-  const inks = arts.map((el) => getComputedStyle(el).opacity)
+  /*
+   * ── the six lengths that make the skyline stop JUMPING ────────────────────
+   *
+   * The ghost is a clone in the same document, so the instant `data-theme`
+   * flips it is laid out by the NEW theme's rules — and in the Cebu pair the
+   * two themes are not the same GEOMETRY. `.hero__rear`, `.hero__mid` and
+   * `.hero__ridge` are placed from `--terrain-w`, `--art-rise` and
+   * `--art-head`, and all three differ per theme because a sea horizon and a
+   * mountain skyline stand at different heights. So the outgoing picture
+   * snapped to the incoming picture's position on frame one and then
+   * cross-faded there: the site owner's report is a "weird visual where the
+   * mountains jump up", with a screenshot of the mid-wave frame showing it.
+   *
+   * The fade was never the problem. The fix is that the outgoing art must
+   * stay WHERE IT WAS and fade out there, while the incoming art fades in
+   * where it belongs — which is a cross-dissolve between two compositions
+   * rather than one composition being yanked. Freezing these six resolved
+   * lengths on the ghost does exactly that: custom properties can change
+   * underneath it and none of them is read any more.
+   *
+   * `bottom` alone is not enough. `left` and `width` are built from
+   * `--terrain-w` too, so a ghost pinned only vertically slides sideways and
+   * changes size instead.
+   *
+   * It costs nothing extra to measure: this is the same `getComputedStyle`
+   * call that was already being made for `opacity`, read six more times, and
+   * it is inside the read pass that is deliberately separated from the writes
+   * below.
+   */
+  const frozen = arts.map((el) => {
+    const cs = getComputedStyle(el)
+    return {
+      opacity: cs.opacity,
+      left: cs.left,
+      top: cs.top,
+      right: cs.right,
+      bottom: cs.bottom,
+      width: cs.width,
+      height: cs.height,
+    }
+  })
 
   const pairs: { art: HTMLImageElement; ghost: HTMLImageElement }[] = []
   for (let i = 0; i < arts.length; i++) {
@@ -181,7 +221,19 @@ function crossArt(): { arm: () => void; clear: () => void } {
     const art = arts[i]
     const ghost = art.cloneNode(false) as HTMLImageElement
     ghost.setAttribute('data-theme-ghost', '')
-    ghost.style.opacity = inks[i]
+    const f = frozen[i]
+    ghost.style.opacity = f.opacity
+    /* Pinned in place, in the DOM position it was cloned into — NOT
+       `position: fixed`. Several of these live inside a wrapper with its own
+       `overflow: clip` (`.origin__tops`, `.origin__mist`, `.origin__ground`,
+       `.outro__stair-clip`), and a ghost taken out of the flow would paint the
+       part of itself those boxes exist to cut off. */
+    ghost.style.left = f.left
+    ghost.style.top = f.top
+    ghost.style.right = f.right
+    ghost.style.bottom = f.bottom
+    ghost.style.width = f.width
+    ghost.style.height = f.height
     ghost.classList.add('scene__art--crossing')
     ghost.style.setProperty('--cross', '1')
     art.classList.add('scene__art--crossing')

@@ -242,10 +242,23 @@ export function Building() {
             depths, and the near stand in front of all three. Order is depth,
             and the fog in the middle of it is the point: a haze band between
             two planes does more for distance than a third prop would. */}
+        {/* ── and what the two stands are in Cebu ────────────────────────
+            `props/coconut-pair` was here, in both slots: a 2:3 prop the width
+            of a pine pair, tucked into a corner. At the widths this section is
+            actually read at that put two palm fronds in the bottom-left and
+            left the rest of a 380px floor empty — the site owner's report was
+            exactly that, "I can only see 2 of the trees", and asked for
+            `palm-row` in their place so the stand fills the bank it is
+            standing on.
+
+            It is an aspect change and not only a file change: the row is a 3:1
+            band, so Building.css gives both slots a light-theme box (a band
+            across the floor) rather than trying to letterbox a 3:1 file into
+            the 2:3 hole the pines left. The dark stands are untouched. */}
         <div className="building__bank" />
-        <ThemedArt art="props/pine-faceted-pair" light="props/coconut-pair" className="building__pines-far" factor={0.03} />
+        <ThemedArt art="props/pine-faceted-pair" light="props/palm-row" className="building__pines-far" factor={0.03} />
         <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__fog" factor={0.015} />
-        <ThemedArt art="props/pine-faceted-pair" light="props/coconut-pair" className="building__pines" factor={-0.1} />
+        <ThemedArt art="props/pine-faceted-pair" light="props/palm-row" className="building__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────
             Last of the scenery, so it is in front of all of it: a band of this
             section's OWN --band-building rising out of the floor, transparent

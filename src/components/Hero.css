@@ -1148,10 +1148,17 @@
 [data-theme='light'] .hero__rear-drift {
   /* Cebu: landscapes/far-island. An island stands ON the water, so its box is
      pinned to the sea's horizon (--horizon, from the stage) and the head is
-     the file's own foot: the waterline at 0.998 of the file lands exactly on
-     the sea's top edge and the hill rises from there. */
+     the file's own foot.
+
+     The cut-out's ink now ends exactly on its canvas's bottom row (the fit is
+     `anchor: bottom` with no offset, and `scripts/cebu-art.py` trims to the
+     alpha bbox first), so a head of 0 would land the island's waterline on
+     --horizon to the pixel. 0.006 rather than 0 puts it ~12px UNDER the line
+     at 1600x900: an island whose shore is exactly level with the horizon reads
+     as sitting on the sea rather than in it, and the sea plate is drawn after
+     this one and takes those twelve pixels. */
   --art-rise: var(--horizon);
-  --art-head: 0.0014;
+  --art-head: 0.006;
   --art-foot-hi: 0.0018;
   --art-foot-lo: 0.0014;
 }
@@ -1161,9 +1168,11 @@
    at 0.593 of the file; a shared 0.2688 would float it 0.13 widths above
    --art-rise, so it gets its own. */
 [data-theme='light'] .hero__mid-drift {
-  /* the same rule as the rear island: foot on the horizon */
+  /* the same rule as the rear island: foot on the horizon, bedded the same
+     ~12px under it (this box's --terrain-w is 2144 at 1600x900 against the
+     rear's 1984, so the coefficient is 0.005 for the same length) */
   --art-rise: var(--horizon);
-  --art-head: 0.0009;
+  --art-head: 0.005;
 }
 
 /* ── the third range, and what it is standing in for ───────────────────────
@@ -1612,10 +1621,38 @@
   animation: heroWeather 74s ease-in-out infinite;
   transform: translate3d(-4.2%, 0, 0);
 }
+/* ── Cebu: props/bangka, and this slot stopped being weather ───────────────
+   `landscapes/shore-foam` was here, at the fog's own altitude, and the site
+   owner read it exactly as it rendered: "this other element by the sun / the
+   end of the ocean that moves when the user scrolls, and it looks so random,
+   like triangles". It was. Foam is a thing that happens at a WATERLINE, and
+   this layer's altitude is the fog bank's — 0.8 of the near range's rise,
+   which over open water is the empty air just under the horizon. There was
+   nothing for it to be the edge of, so it read as loose white shards.
+
+   An outrigger is what actually crosses a bay at that distance, and this
+   layer already has both properties a boat wants: it rides the basin's scroll
+   rate, and it drifts +/-4.2% sideways over 74 seconds.
+
+   ## the geometry is stated from --horizon rather than from --art-rise x 0.8
+
+   The winter expression above places the fog's TOP (`--fog-top` is 1 minus
+   the file's own ink-top fraction) at 0.8 of the near range's rise. A boat is
+   placed by its WATERLINE instead, so this restates `bottom` from the ink's
+   BOTTOM — 0.761 of the file, so 1 - 0.761 = 0.239 of the box sits below it —
+   and lands that waterline at 0.52 x --horizon above the frame's floor: on
+   the water, half way between the horizon the sea plate starts at and the
+   bottom of the frame, which is the middle distance a hull that size belongs
+   in. The ink is 0.14 of the file wide, so at 96vw the hull paints about 215
+   CSS px at 1600 — a boat, not a barge.
+
+   Opacity is --hero-sink alone. `--hero-weather-veil` is 0.78 because fog is
+   translucent by definition; a wooden hull in full sun is not, and the veil
+   was the second thing making this layer look like a smudge. */
 [data-theme='light'] .hero__weather-art {
-  /* Cebu: landscapes/shore-foam. Torn shards reach the top row; the foam's
-     mass starts at ~0.17 of the file, which is the edge that reads. */
-  --fog-top: 0.83;
+  --weather-w: max(96vw, calc(var(--horizon) * 5.2));
+  bottom: calc(var(--horizon) * 0.52 - 0.239 * var(--weather-w) / 3);
+  opacity: var(--hero-sink, 1);
 }
 @keyframes heroWeather {
   0%,
@@ -2702,10 +2739,118 @@
      crown at rest and the sun rises into it on the exit, which is the
      crossing the winter wisp was placed for */
   bottom: calc(var(--moon-cy) + var(--moon-w) * 0.56 - var(--cloud-w) * 0.1667);
-  opacity: calc(var(--hero-cloud-veil) * 0.8);
+  /* ── 0.8 -> 1, and the veil comes off with it ───────────────────────────
+     A cumulus at noon is an opaque white object with a shaded underside, and
+     the artwork paints it that way. It was being drawn at 0.92 x 0.8 = 0.74 —
+     `--hero-cloud-veil` is a fraction written for a TORN WISP, whose whole
+     job is to be see-through — on top of art that the old white keyer had
+     already reduced to about a twentieth of an alpha. The site owner's
+     reading of the pair was "the clouds are almost transparent", and both
+     halves are fixed here: the art is the owner's own cut-out now, and the
+     multiplier is gone. */
+  opacity: 1;
 }
 [data-theme='light'] .hero__cloud--far {
   left: calc(var(--moon-x) - var(--moon-w) * 0.62);
   bottom: calc(var(--moon-cy) + var(--moon-w) * 0.98 - var(--cloud-w) * 0.1667);
-  opacity: calc(var(--hero-cloud-veil) * 0.55);
+  /* The far one keeps a step, because that step is DISTANCE and not veiling:
+     it is smaller, higher and paler than the near one, which is the same
+     three-part ladder the ranges use. 0.86 rather than 0.55. */
+  opacity: 0.86;
+}
+
+/* ── the two islands are OBJECTS, not haze ─────────────────────────────────
+   `.hero__rear-drift` / `.hero__mid-drift` / `.hero__ridge-drift` share
+   `opacity: --art-far x --hero-sink` further up this file, and in the winter
+   frame that is the whole trick: three mountain ranges at 0.36 stack into
+   aerial perspective, and the rear one showing THROUGH the near one is the
+   depth cue.
+
+   Cebu has no such stack. It has two islands standing on one sea, and an
+   island you can see the sea through is not far away, it is a ghost. At
+   light's --art-far of 0.62 over a bright sky the far island measured almost
+   gone — "I can barely see the far-island in Home; it looks way too faded,
+   which fading it was also unnecessary".
+
+   0.94 and 0.97, not 1.00, so the two are still a ladder and the further one
+   is still the paler: the distance now comes from SIZE and from the haze the
+   sea's own glare puts between them, which is what distance is over water.
+   The near range keeps its own rule below — the sea is opaque and always
+   was. */
+[data-theme='light'] .hero__rear-drift {
+  opacity: calc(0.94 * var(--hero-sink, 1));
+}
+[data-theme='light'] .hero__mid-drift {
+  opacity: calc(0.97 * var(--hero-sink, 1));
+}
+
+/* The rear range's haze band dissolves a CUT: the winter file's alpha ends
+   along a nearly horizontal line partway up the frame and the band is what
+   stops that reading as an edge (see `.hero__rear-haze`). The island's alpha
+   ends at its own waterline, drawn by the illustrator, standing on a sea that
+   is painted over it. There is no cut here to hide, and a band of pale blue
+   laid across an island's foot is just the island being faded out again. */
+[data-theme='light'] .hero__rear-haze {
+  display: none;
+}
+
+/* ── the palm moves off the model ──────────────────────────────────────────
+   The point cloud is `right: 2%` and 660px wide at 1600, so its cross paints
+   between x 1165 and 1310; the palm's box at `-0.34 x --pine-w` starts at
+   1217 and its crown's own ink at 1248. They overlapped by about 60px of the
+   cross's right arm, which is what "the tree is literally covering
+   hero__model" is — and the arm is the part of a cross that makes it one.
+
+   Measured off the shipped alpha (`props/coconut-palm-tall-light.png`, rows
+   binned at 1/24): the crown runs to 0.54 of the box's height and spans
+   x 0.053..0.947 of its width; below 0.54 there is only trunk, at x
+   0.54..0.90. So the two levers are the box's right offset and its size, and
+   `right` is the one that costs nothing — pushing it out by 0.16 of the box
+   width moves the crown's leading fronds from 1248 to 1341, clear of the
+   cross's arm by 31px, and the extra width puts the same amount of palm back
+   in the frame that the shift took out.
+
+   The lift is the site owner's other half ("put it up a lot more so the
+   leaves are out of the way"): -0.06 of the box height raises the whole crown
+   by 60px at 1600x900, so the fronds that are still in the model's column are
+   above its shoulder rather than across it. The trunk runs off the right edge
+   in both placements — that has always been true of this piece here. */
+[data-theme='light'] .hero__pine {
+  --pine-w: min(44vw, 620px);
+  right: calc(-0.5 * var(--pine-w));
+  bottom: min(52px, calc(8svh - 0.15 * var(--pine-w) * 1.5 + 0.09 * var(--pine-w)));
+}
+
+/* ── and the sky the cross is read against ─────────────────────────────────
+   `hero/PointCloud.tsx` paints white-into-gold in light now instead of near
+   black, and a bright cloud on a bright sky is the same problem the black one
+   had with the sign flipped: #ffd17a and this section's pale sky are within
+   two points of L* of each other, so a gold speck on it is invisible however
+   much alpha it carries.
+
+   So this is not a bloom, it is a DEPTH: one radial of the section's own text
+   ink, at a fifth of an alpha, sitting behind the canvas over exactly the
+   radius the cloud occupies. It takes the sky under the cross from L* 84 to
+   about 70 and nothing anywhere else, which is the whole of what makes a
+   white point read as a light source rather than as a pale smudge — and it
+   reads as air thickening behind the cross, which is what the frame wants
+   there anyway.
+
+   `closest-side` on a box inset from a 660px square, so the falloff is over
+   ~230px and there is no radius at which it could show an edge. It is a
+   `::before` on `.hero__model` and not paint inside the canvas, because the
+   canvas is `putImageData` and anything drawn into it would have to be
+   cleared and redrawn every frame; this is one gradient, composited once. */
+[data-theme='light'] .hero__model::before {
+  content: '';
+  position: absolute;
+  inset: 4% 12%;
+  border-radius: 50%;
+  background-image: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--text) 21%, transparent) 0%,
+    color-mix(in srgb, var(--text) 13%, transparent) 46%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
