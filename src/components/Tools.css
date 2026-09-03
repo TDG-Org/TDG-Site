@@ -667,6 +667,26 @@
    quietest thing in the section because the seam above it was; that seam is
    deleted with the boundary it sat on.) Nothing recolours a pixel; -dark and
    -light are separate drawings. */
+/* ── and in light it is lowered into the shore band ────────────────────────
+   `landscapes/beach-pier` is drawn standing in its own patch of water, and
+   `.building__mist` — the band that crosses up out of #building into this
+   floor — is `landscapes/shallow-water` in light. Measured at 1600x900 with
+   this beat centred: the pier's own patch runs y 155..270 and the turquoise
+   starts at 275, so the frame had TWO waterlines with a jetty balanced between
+   them, which is most of "a bunch of crap just thrown together" at this seam.
+
+   0.045 of the pier's own width is 56px here, which is the drop that puts its
+   legs into the band without putting the jetty in it: 0.11 was tried first and
+   rendered as a drowned pier with two post tops above the water. Written as a
+   fraction of the same width every other term in this `bottom` uses, so it
+   holds at the clamp's two ends as well as in the middle. */
+[data-theme='light'] .tools__bridge {
+  bottom: calc(
+    var(--tools-scene) - var(--tools-bridge-clear) - var(--tools-bridge-w) * 0.4134 -
+      var(--tools-bridge-w) * 0.045
+  );
+}
+
 .tools__bridge {
   left: clamp(-72px, -4vw, -12px);
   width: var(--tools-bridge-w);

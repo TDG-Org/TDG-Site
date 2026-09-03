@@ -700,6 +700,20 @@
    than a third of its clearance above it, so the far crowns show through the
    near row's gaps and nowhere else. Both feet are inside `.building__haze`,
    which is the band that takes a row of trunks into the ground. */
+/* ── `palm-row-mid`, and the reason is a rendered frame ────────────────────
+   `props/palm-row` is nine palms across its canvas, so at the 104vw this band
+   needs to span the page each crown paints about 190px wide — and once the row
+   was lifted far enough to show its trunks (which is what the site owner asked
+   for) that is a WALL of palms filling the lower half of the section, not a
+   row behind a card. Rendered at 1600x900 it was the loudest thing on the page
+   and the reply was "you actually made it look far worse than it was before".
+
+   A 3:1 band locks height to width, so the palms cannot be made smaller by
+   shrinking the element — that only makes the band narrower and shows its
+   ends. They have to be smaller IN THE FILE: `props/palm-row-mid` is the same
+   drawing fitted at 0.62 of the canvas height and mirror-extended, so the band
+   carries roughly twice as many palms at a bit over half the size and still
+   reaches both edges. Same width here, same lift, a row instead of a wall. */
 [data-theme='light'] .building__pines {
   --row-w: 104vw;
   /* ── lifted, because a palm without a trunk is a bush ───────────────────

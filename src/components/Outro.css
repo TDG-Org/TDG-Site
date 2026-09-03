@@ -614,7 +614,13 @@
      that scatter. */
   height: var(--outro-ground-h);
   object-fit: cover;
-  object-position: 50% 24%;
+  /* 24% -> 6%. `beach-terrace` scatters a conch, a scallop and two pebbles
+     through the middle of its plate at the scale of a 2172px canvas, and at
+     24% the conch still landed under the copy at 180px across — one object big
+     enough to be a subject, in the one place this beat has no room for a
+     subject. The plate's top band is plain sand: the same facets, none of the
+     props. */
+  object-position: 50% 6%;
   bottom: 0;
   opacity: var(--art-mid);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 88%, transparent 100%);

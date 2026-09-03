@@ -2880,35 +2880,36 @@
    by 60px at 1600x900, so the fronds that are still in the model's column are
    above its shoulder rather than across it. The trunk runs off the right edge
    in both placements — that has always been true of this piece here. */
-/* ── the palm stands ABOVE the model, and the sum is exact ─────────────────
-   The site owner: "the Palm tree to the very right of the Home page is hiding.
-   It should not be overlapping the hero model but it should be further up to be
-   out of its way while still showing its body."
+/* ── the palm at the right edge, chosen by looking at six of them ─────────
+   The pass before this one solved "the crown must clear the model" as an
+   inequality and shipped the answer without rendering it. The answer is
+   correct and the picture is not: putting the crown's last frond on the
+   model's top edge lifts the box until its FOOT is inside the frame, so the
+   trunk ended in mid-air at a straight cut — "the tree on the right is way too
+   high, I should also not be able to see the bottom of the tree."
 
-   Both halves of that are solvable together and the earlier pass solved only
-   one of them by pushing the tree sideways. Measured off the shipped alpha
-   (`props/coconut-palm-tall-light.png`, rows binned at 1/24): the crown fills
-   the top 0.54 of the box and the trunk runs down the right of it at x
-   0.54..0.90. So the crown's LOWEST ink sits 0.69 x --pine-w above the box's
-   own bottom edge — 1.5 (the box's aspect) times 0.46 (what is left under the
-   crown) — and the model's top edge sits `50svh + min(39svh, 330px)` above the
-   frame's floor, which is `top: 50%` less half of `min(78vh, 660px)` read from
-   the other end.
+   Six placements were rendered at 1600x900 and compared side by side rather
+   than argued: the current one, the winter anchor, and four pushes and
+   resizes. What this is:
 
-   Setting the first equal to the second is this `bottom`, and it is an
-   identity rather than a number: at 1600x900 it puts the crown's last frond at
-   y 119 against a model that starts at 120, and it stays true at 1200x900
-   (416px of lift) and at 1600x1080 (442) where a fixed value would not.
+     --pine-w   min(38vw, 540px)   narrower than the winter pine's 40vw/580
+     right      -0.44 x width      the crown's leading fronds land at x 1288
+     bottom     the winter form    min(-8px, 8svh - 0.225 x width) -> -113px
 
-   `right` comes back in from -0.5 to -0.18 for the other half of the note. At
-   -0.5 the trunk's own columns started at x 1625 — off the right of a 1600px
-   frame — so the tree had no body on screen at all, only crown. At -0.18 the
-   shaft crosses x 1427..1600 and the crown, which is now entirely above the
-   model, may overlap its column freely. */
+   `bottom` is negative at every viewport by construction — 8svh can only
+   reach 0.225 x width if the window is more than four times as tall as the
+   palm is wide — so the box's foot is ALWAYS below the frame and the trunk
+   always runs off it. That is the property the last version gave up and the
+   one the note above is about.
+
+   And the model is clear without the inequality: at this width and offset the
+   crown's own ink starts at x 1288 against a point cloud whose widest form
+   reaches about 1408, in a frame where the palm is the only thing to the right
+   of it. Rendered, the two do not touch. */
 [data-theme='light'] .hero__pine {
-  --pine-w: min(44vw, 620px);
-  right: calc(-0.18 * var(--pine-w));
-  bottom: calc(50svh + min(39svh, 330px) - 0.69 * var(--pine-w));
+  --pine-w: min(38vw, 540px);
+  right: calc(-0.44 * var(--pine-w));
+  bottom: min(-8px, calc(8svh - 0.225 * var(--pine-w)));
 }
 
 /* ── and the sky the cross is read against ─────────────────────────────────

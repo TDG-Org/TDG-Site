@@ -3,8 +3,8 @@
     "src": "far-island.png",
     "mode": "alpha",
     "canvas": [
-      2172,
-      724
+      3258,
+      1086
     ],
     "out": "landscapes/far-island-light.png",
     "fit": {
@@ -17,8 +17,8 @@
     "src": "far-island.png",
     "mode": "alpha",
     "canvas": [
-      2172,
-      724
+      3258,
+      1086
     ],
     "out": "landscapes/island-mid-light.png",
     "fit": {
@@ -97,8 +97,8 @@
     "src": "palm-row.png",
     "mode": "alpha",
     "canvas": [
-      2172,
-      724
+      3258,
+      1086
     ],
     "out": "props/palm-row-light.png",
     "fit": {
@@ -146,8 +146,8 @@
     "src": "beach-steps.png",
     "mode": "alpha",
     "canvas": [
-      2172,
-      724
+      3258,
+      1086
     ],
     "out": "transitions/beach-steps-light.png",
     "fit": {
@@ -160,8 +160,8 @@
     "src": "coconut-palm-tall.png",
     "mode": "alpha",
     "canvas": [
-      1024,
-      1536
+      2048,
+      3072
     ],
     "out": "props/coconut-palm-tall-light.png",
     "fit": {
@@ -173,8 +173,8 @@
     "src": "coconut-pair.png",
     "mode": "alpha",
     "canvas": [
-      1024,
-      1536
+      2048,
+      3072
     ],
     "out": "props/coconut-pair-light.png",
     "fit": {
@@ -186,8 +186,8 @@
     "src": "beach-signpost.png",
     "mode": "alpha",
     "canvas": [
-      1024,
-      1536
+      2048,
+      3072
     ],
     "out": "props/beach-signpost-light.png",
     "fit": {
@@ -199,8 +199,8 @@
     "src": "capiz-lantern.png",
     "mode": "alpha",
     "canvas": [
-      1024,
-      1536
+      2048,
+      3072
     ],
     "out": "props/capiz-lantern-light.png",
     "fit": {
@@ -212,8 +212,8 @@
     "src": "coral-arch.png",
     "mode": "alpha",
     "canvas": [
-      1024,
-      1536
+      2048,
+      3072
     ],
     "out": "props/coral-arch-light.png",
     "fit": {
@@ -225,8 +225,8 @@
     "src": "palm-frond.png",
     "mode": "alpha",
     "canvas": [
-      1536,
-      1024
+      3072,
+      2048
     ],
     "out": "props/palm-frond-light.png",
     "fit": {
@@ -238,8 +238,8 @@
     "src": "capiz-window.png",
     "mode": "alpha",
     "canvas": [
-      1536,
-      1024
+      3072,
+      2048
     ],
     "out": "props/capiz-window-light.png",
     "fit": {
@@ -251,8 +251,8 @@
     "src": "beach-pier.png",
     "mode": "alpha",
     "canvas": [
-      1672,
-      941
+      3344,
+      1882
     ],
     "out": "landscapes/beach-pier-light.png",
     "fit": {
@@ -264,8 +264,8 @@
     "src": "pandan-clump.png",
     "mode": "alpha",
     "canvas": [
-      1672,
-      941
+      3344,
+      1882
     ],
     "out": "props/pandan-clump-light.png",
     "fit": {
@@ -277,8 +277,8 @@
     "src": "bamboo-rail.png",
     "mode": "alpha",
     "canvas": [
-      1891,
-      831
+      3782,
+      1662
     ],
     "out": "props/bamboo-rail-light.png",
     "fit": {
@@ -290,8 +290,8 @@
     "src": "coral-rocks.png",
     "mode": "alpha",
     "canvas": [
-      1448,
-      1086
+      2896,
+      2172
     ],
     "out": "props/coral-rocks-light.png",
     "fit": {
@@ -329,8 +329,8 @@
     "src": "far-island.png",
     "mode": "alpha",
     "canvas": [
-      1168,
-      784
+      2336,
+      1568
     ],
     "out": "scene/lagoon-matte.png",
     "fit": {
@@ -343,8 +343,8 @@
     "src": "shore-foam.png",
     "mode": "alpha",
     "canvas": [
-      2172,
-      724
+      3258,
+      1086
     ],
     "out": "landscapes/shore-foam-light.png",
     "fit": {
@@ -390,6 +390,20 @@
     "fit": {
       "width": 1,
       "anchor": "bottom"
+    }
+  },
+  "palm-row-mid": {
+    "src": "palm-row.png",
+    "mode": "alpha",
+    "canvas": [
+      3258,
+      1086
+    ],
+    "out": "props/palm-row-mid-light.png",
+    "fit": {
+      "height": 0.62,
+      "anchor": "bottom",
+      "extend": true
     }
   }
 }
