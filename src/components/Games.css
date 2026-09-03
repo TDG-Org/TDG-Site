@@ -568,7 +568,7 @@
    is unchanged and that is the stop the boundary contract is written on — and
    what it buries now is the bottom of the trunks rather than all of them. */
 [data-theme='light'] .games__haze {
-  height: calc(var(--games-haze-h) * 0.62);
+  height: calc(var(--games-haze-h) * 0.4);
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -714,8 +714,21 @@
    drawing fitted at 0.62 of the canvas height and mirror-extended, so the band
    carries roughly twice as many palms at a bit over half the size and still
    reaches both edges. Same width here, same lift, a row instead of a wall. */
+/* ── the trunks, and the numbers that were hiding them ─────────────────────
+   Measured at 1904x940 with the section's floor centred, in viewport y: the
+   row's ink ran 386..772, the section's own bottom edge cut it at 663, and
+   `.games__haze` covered 559..663. So of 277 visible pixels of palm, 164 were
+   crown and 104 of the remaining 113 were behind the haze — nine pixels of
+   trunk. "I can barely see their trunks" was not an impression, it was that.
+
+   Three numbers move together. The row grows to 120vw so its ink is 445px
+   rather than 409; `--floor-line` lifts it so the ink starts just under the
+   cards (430px above the section's bottom edge) and its feet run off below;
+   and the haze comes down to 0.40 of its own height, which is 67px, so it
+   buries the last of the trunk instead of all of it. Rendered after: 185px of
+   clear trunk between the crown and the haze. */
 [data-theme='light'] .games__pines {
-  --row-w: 104vw;
+  --row-w: 120vw;
   /* ── lifted, because a palm without a trunk is a bush ───────────────────
      `--games-floor` put the row's crowns on the floor line, and a coconut
      crown is the top third of the drawing — so what stood above the ground was
@@ -726,7 +739,7 @@
      raises the whole row by 154px at this width and shows the shafts. Nothing
      about the crop changes: the box is the same size and its feet still run off
      the bottom of the section by construction. */
-  --floor-line: calc(var(--games-floor) + var(--games-pine-clear));
+  --floor-line: calc(var(--games-floor) + var(--games-pine-clear) * 2.15);
 }
 [data-theme='light'] .games__pines-far {
   /* Same width as the near row and the same edges, so neither box can be seen.
@@ -1003,7 +1016,20 @@
    nobody put there on purpose. `object-position` takes the band from the
    plate's top eighth; the facets are the same, the props are not in it. */
 [data-theme='light'] .games__fog {
-  object-position: 50% 9%;
+  /* ── the plate has no props in it any more, and that is the fix ──────────
+     `beach-terrace` scatters a conch, a scallop and three pebbles through the
+     middle of its 2172x724 plate. `object-fit: cover` cannot isolate a clean
+     band out of that: the box here is 380px tall against a plate that `cover`
+     scales to 660, so the visible slice is 58% of the file and every crop
+     position that keeps sand in frame also catches at least one of them. Two
+     passes of moving `object-position` moved WHICH prop turned up, not
+     whether one did — the purple pebble was still there at 85%.
+
+     `landscapes/beach-terrace-plain` is the same drawing cropped in the
+     pipeline to its bottom 22%, which is the only band with nothing lying on
+     it (rendered with per-decile rules over the plate to find it). A floor
+     that is only floor, so the crop can be anywhere. */
+  object-position: 50% 60%;
 }
 
 /* Guardrail 7 of the kit, and the width has a reason: 640 is where this

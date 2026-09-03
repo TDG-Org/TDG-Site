@@ -980,7 +980,39 @@
    bench is hazed, and before the boulders, so the rocks pass in front of it.
    `--art-near`: it is the near plane's ink, it is a dark faceted mass in dark
    exactly as the boulders are, and in light it is the same pale silver the
-   bench and the bridge are drawn in.                                        */
+   bench and the bridge are drawn in.                                        *//* ── the rail is not drawn in light, and that IS the redesign ──────────────
+   Measured at 1904x940 with this floor centred, every prop's box in viewport y:
+
+       tools__bridge   91..789     the jetty
+       tools__rocks   171..531     the coral outcrop, x 1470..1950
+       tools__fence   243..568     the bamboo rail,  x 1249..1989
+       tools__reeds   301..515     the pandan clump
+       games__post    349..754     the signpost, crossing up from #games
+
+   Five objects inside one 470px band, and the rail and the outcrop share the
+   same corner of the frame — the rail's box covers the rocks' entirely. In
+   dark that reads, because every one of them is a near-black silhouette on a
+   near-black ground and the fog takes the far ones out; in light they are all
+   fully lit at 0.74-0.86 and the band is a pile. That is the site owner's
+   "a bunch of crap (images) just thrown together and literally make no sense".
+
+   The kit's own guardrail 8 is one structural anchor plus low foliage or
+   floor. In light that is the jetty (anchor), the reeds at its waterline
+   (foliage), the shallow-water band (floor) and the signpost, which belongs to
+   the section above and is what carries the join. The rail is the fifth thing
+   and the one with no place of its own, so light does not draw it. Dark keeps
+   the whole set — it was never the problem there. */
+[data-theme='light'] .tools__fence {
+  display: none;
+}
+
+/* And the outcrop goes BACK rather than away: at --art-near it was the
+   brightest thing at the right edge of a frame whose subject is a jetty. The
+   far ink puts it behind the water it stands in. */
+[data-theme='light'] .tools__rocks {
+  opacity: var(--art-far);
+}
+
 .tools__fence {
   /* `100vw` and not `100%`: a percentage inside the `bottom` calc below would
      resolve against the containing block's HEIGHT, which is the section, and

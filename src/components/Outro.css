@@ -584,10 +584,20 @@
      ruled line across the sky. A short box with `cover` takes the crest out of
      the plate instead, and the mask dissolves what is left of the top so the
      hill arrives out of the haze the way a far shore does. */
-  height: clamp(120px, 17vw, 280px);
+  /* ── short, and sitting ON the waterline ─────────────────────────────────
+     Measured at 1904x940 at the scroll where the makers note is centred: this
+     box ran viewport -301..-21, entirely above the frame, so the headland the
+     whole beat was rebuilt around was only ever visible when the copy was not.
+     The section is 590px tall and the note takes 254 of them; there is room for
+     a strip of hill, a waterline and sand, and not for three full bands.
+
+     150px tall with its base 4px above the ground's own top edge, which is
+     where the shore band's waterline sits — so the hill stands out of the water
+     and the whole lagoon reads inside the 420px that are actually on screen. */
+  height: clamp(96px, 9vw, 150px);
   object-fit: cover;
-  object-position: 50% 16%;
-  bottom: calc(var(--outro-ground-h) + clamp(120px, 17vw, 280px) * 0.14);
+  object-position: 50% 22%;
+  bottom: calc(var(--outro-ground-h) + 4px);
   opacity: var(--art-far);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 46%);
   mask-image: linear-gradient(180deg, transparent 0, #000 46%);
@@ -620,7 +630,10 @@
      enough to be a subject, in the one place this beat has no room for a
      subject. The plate's top band is plain sand: the same facets, none of the
      props. */
-  object-position: 50% 6%;
+  /* `landscapes/beach-terrace-plain` — the plate cropped in the pipeline to the
+     one band with nothing lying on it. See `.games__fog` for why the crop could
+     not be done here. */
+  object-position: 50% 60%;
   bottom: 0;
   opacity: var(--art-mid);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 88%, transparent 100%);

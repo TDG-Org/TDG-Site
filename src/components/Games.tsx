@@ -281,7 +281,7 @@ export function Games() {
             shells in it, drawn for this width. The near stand's trunks go into
             it and the far one stands on it, which is the job the fog band was
             doing in the winter frame by being air between two depths. */}
-        <ThemedArt art="atmosphere/fog-veil" light="landscapes/beach-terrace" className="games__fog" factor={0.015} />
+        <ThemedArt art="atmosphere/fog-veil" light="landscapes/beach-terrace-plain" className="games__fog" factor={0.015} />
         <ThemedArt art="props/pine-faceted-pair" light="props/palm-row-mid" className="games__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────
             Last of the scenery, so it is in front of all of it: a band of this

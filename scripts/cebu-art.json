@@ -405,5 +405,24 @@
       "anchor": "bottom",
       "extend": true
     }
+  },
+  "beach-terrace-plain": {
+    "src": "beach-terrace.png",
+    "mode": "alpha",
+    "canvas": [
+      3258,
+      720
+    ],
+    "out": "landscapes/beach-terrace-plain-light.png",
+    "crop": [
+      0,
+      0.78,
+      1,
+      1
+    ],
+    "fit": {
+      "width": 1,
+      "anchor": "bottom"
+    }
   }
 }

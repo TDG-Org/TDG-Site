@@ -220,7 +220,7 @@ export function Outro() {
               the same night. */}
           <StillArt
             art="landscapes/snow-bank"
-            light="landscapes/beach-terrace"
+            light="landscapes/beach-terrace-plain"
             className="outro__sand"
           />
           {/* ── the light beyond the gate ─────────────────────────────────

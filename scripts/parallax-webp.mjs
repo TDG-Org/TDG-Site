@@ -90,6 +90,7 @@ const PAINTED = {
   'props/palm-row': 2458,
   'props/pine-row': 2458,
   'landscapes/beach-terrace': 2458,
+  'landscapes/beach-terrace-plain': 2458,
   'landscapes/island-mid': 2573,
   'landscapes/mountain-ridge-mid': 2573,
   'landscapes/sea-band': 2803,
