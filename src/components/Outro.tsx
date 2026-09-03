@@ -170,6 +170,27 @@ export function Outro() {
               several hundred pixels of flat black beside a single arch. Air is
               only air when something is happening in it. */}
           <div className="outro__ground" />
+          {/* ── the far side of the water ───────────────────────────────────
+              The beat had a floor, a waterline and four props on it, and
+              nothing at all beyond them: past the shore was the section's own
+              band, so the eye read the whole thing as objects on a gradient
+              rather than as a place. `landscapes/headland` closes it — the
+              green headland across the lagoon, palms along its crest, drawn
+              edge to edge — and with it the four things in front finally have
+              a distance to be in front of.
+
+              `landscapes/far-range-soft` in dark, which is the kit's own soft
+              far range and has been in the repo unused since it shipped. It is
+              the same job at midnight: something beyond the terrace for the
+              afterglow to be hanging over.
+
+              Drawn first of everything in the clip, so every other layer in
+              this section is in front of it. */}
+          <StillArt
+            art="landscapes/far-range-soft"
+            light="landscapes/headland"
+            className="outro__far"
+          />
           {/* ── the line the ground ENDS at ─────────────────────────────────
               The floor below is a soft plane with no far edge, so in light it
               ran into the section's own band and the beat had a beach and no
@@ -185,8 +206,22 @@ export function Outro() {
               stand in FRONT of it. */}
           <StillArt
             art="atmosphere/mist-bank"
-            light="landscapes/shore-foam"
+            light="landscapes/shallow-water"
             className="outro__shore"
+          />
+          {/* And the sand itself is drawn rather than mixed. `.outro__ground`
+              below is a gradient doing two jobs — the contrast the copy needs
+              and the floor the props stand on — and it is very good at the
+              first and can only ever be a colour at the second. This is the
+              second job: `landscapes/beach-terrace`, sand with shells in it, at
+              the ground band's own height, so the terrace has a surface.
+              `landscapes/snow-bank` in dark, which is the drift #origin plants
+              its lamppost in, one section's walk away and the right ground for
+              the same night. */}
+          <StillArt
+            art="landscapes/snow-bank"
+            light="landscapes/beach-terrace"
+            className="outro__sand"
           />
           {/* ── the light beyond the gate ─────────────────────────────────
               `props/lantern-post`, drawn BEFORE the arch so the arch's stone

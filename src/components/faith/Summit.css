@@ -774,12 +774,32 @@
     closest-side,
     color-mix(in srgb, var(--summit-sky) 62%, #ffffff) 0%,
     var(--summit-sky) 16%,
-    color-mix(in srgb, var(--summit-sky) 62%, transparent) 33%,
-    color-mix(in srgb, var(--summit-sky) 32%, transparent) 51%,
-    color-mix(in srgb, var(--summit-sky) 13%, transparent) 70%,
-    color-mix(in srgb, var(--summit-sky) 4%, transparent) 85%,
+    color-mix(in srgb, var(--summit-halo) 64%, transparent) 32%,
+    color-mix(in srgb, var(--summit-halo) 34%, transparent) 50%,
+    color-mix(in srgb, var(--summit-halo) 15%, transparent) 68%,
+    color-mix(in srgb, var(--summit-halo) 6%, transparent) 84%,
     transparent 100%
   );
+}
+
+/* ── why the outer half is a different colour from the inner half ──────────
+   The falloff was right and the HUE was not. Every stop past the disc was the
+   sun's own gold, and gold is the complement of a sky blue: at 0.13 of alpha
+   over #cfe6fa an orange is still unmistakably orange, so the halo ended on a
+   visible ring wherever the ramp finally ran out. The site owner's reading of
+   it was "the sun's glow needs to be real. It looks horrible right now."
+
+   Light does not stay saturated as it spreads — it whitens. `--summit-halo` is
+   the same warmth taken most of the way to white, so the outer four stops
+   LIGHTEN the sky rather than tinting it, and there is no hue left to draw an
+   edge with. The inner two stops keep the full gold, because that is the part
+   that is actually the sun.
+
+   Dark keeps its own: the moon's halo over a midnight sky is a cool white
+   already, so `--summit-sky` and this are within a point of each other there
+   and the same ramp reads as one colour. */
+.faith-summit-host {
+  --summit-halo: color-mix(in srgb, var(--summit-sky) 34%, #ffffff);
 }
 /* `position: relative` is load-bearing and it is the second half of the sky
    pool below. CSS paints POSITIONED descendants after in-flow block content,

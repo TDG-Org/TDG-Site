@@ -556,6 +556,29 @@
   pointer-events: none;
 }
 
+/* ── and in light it takes the feet, not the legs ──────────────────────────
+   This band is aerial perspective for a stand of PINES, whose trunks are a
+   dark stripe at the very bottom of the drawing; a ramp that is already at half
+   the band by 56% of its own height is the right shape for that. A row of
+   palms is mostly trunk, so the same ramp swallowed the whole shaft and left
+   nine crowns floating over sand.
+
+   Same band, half as tall and the ramp pushed to its last third: it still
+   closes the join with #faith at the section's own bottom edge — the last stop
+   is unchanged and that is the stop the boundary contract is written on — and
+   what it buries now is the bottom of the trunks rather than all of them. */
+[data-theme='light'] .building__haze {
+  height: calc(var(--building-haze-h) * 0.62);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--band-building) 10%, transparent) 42%,
+    color-mix(in srgb, var(--band-building) 44%, transparent) 72%,
+    color-mix(in srgb, var(--band-building) 80%, transparent) 90%,
+    var(--band-building) 100%
+  );
+}
+
 /* ── the two stands of pines ───────────────────────────────────────────────
    The faceted pair, not pine-grove: the grove is the painterly variation and
    it now has a place two sections up, at #apps' treeline, where a near mass is
@@ -679,7 +702,17 @@
    which is the band that takes a row of trunks into the ground. */
 [data-theme='light'] .building__pines {
   --row-w: 104vw;
-  --floor-line: var(--building-floor);
+  /* ── lifted, because a palm without a trunk is a bush ───────────────────
+     `--building-floor` put the row's crowns on the floor line, and a coconut
+     crown is the top third of the drawing — so what stood above the ground was
+     nine crowns and about forty pixels of stem: "I can barely see their
+     trunks."
+
+     A clearance ABOVE the floor line, the same one the far row already takes,
+     raises the whole row by 154px at this width and shows the shafts. Nothing
+     about the crop changes: the box is the same size and its feet still run off
+     the bottom of the section by construction. */
+  --floor-line: calc(var(--building-floor) + var(--building-pine-clear));
 }
 [data-theme='light'] .building__pines-far {
   /* Same width as the near row and the same edges, so neither box can be seen.
@@ -923,6 +956,26 @@
   opacity: var(--art-far);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 42%, transparent 100%);
+}
+
+/* `landscapes/shallow-water` is an OBJECT, not air. --art-far is the fog
+   band's ink and at 0.62 the turquoise came out as a pale blue smear that read
+   as neither water nor haze; the piece is drawn with its own light in it and
+   wants to be seen. The mask still takes both long edges to nothing, so it has
+   no straight edge anywhere and still crosses the join. */
+[data-theme='light'] .building__mist {
+  opacity: var(--art-near);
+  object-position: 50% 48%;
+}
+
+/* The terrace is a FLOOR here, so what this band wants out of the plate is the
+   plain sand at the top of it. `beach-terrace` scatters a conch, a scallop and
+   two pebbles through its middle, drawn at the scale of a 2172px canvas — and
+   a 180px conch lying between the trunks of a palm grove is one more object
+   nobody put there on purpose. `object-position` takes the band from the
+   plate's top eighth; the facets are the same, the props are not in it. */
+[data-theme='light'] .building__fog {
+  object-position: 50% 9%;
 }
 
 /* Guardrail 7 of the kit, and the width has a reason: 640 is where this

@@ -340,6 +340,60 @@
   pointer-events: none;
 }
 
+/* ── and in light the canvas arrives out of the sand ───────────────────────
+   `overflow: clip` gives this box a hard top edge, and what is on the two
+   sides of that edge decides whether anybody can see it. In dark the drift
+   above is a pale crest on a near-black section and the cabin's own sky under
+   it is near-black too, so the boundary is two blacks meeting: the site owner
+   called that transition "way cleaner and smooth" and it is, because there is
+   nothing there.
+
+   In light the drift is cream and the cabin's sky is a bright blue, so the
+   same edge is a ruled line straight across the frame with a beach above it
+   and a different beach below. That is most of what "it looks super crazy and
+   like it was spammed with images" is: not the number of pictures, but that
+   two of them meet on a cut.
+
+   `--origin-veil` is how far into this section the hero is still visible
+   (CONTRACT D), which is exactly the distance over which the canvas should be
+   arriving, so the ramp is written from the same token every other layer on
+   this boundary uses. Nothing about the box moves; the top 0.7 of the veil
+   simply is not painted. */
+/* ── the ruled line across the seam, and what was actually drawing it ──────
+   Measured rather than reasoned about. At 1600x900, scrolled to the boundary,
+   the column at x 1450 steps from rgb(200,199,164) at y 572 to rgb(126,199,242)
+   at y 576 — sand to sky in four pixels, all the way across the frame. That is
+   not any of the five pictures the site owner counted. It is
+   `.origin__ground`'s own `overflow: clip`: the band is 612px tall and ends at
+   576, the sand inside it runs to 842 and its own dissolve is only 65% of the
+   way through at that point, so the clip cut a two-thirds-opaque drift on a
+   straight edge.
+
+   The band's height is load-bearing (it is what stops a drift wider than the
+   viewport reaching the section's clip margin and putting a scrollbar on the
+   page), so the fix is a fade rather than a size: the last quarter of the band
+   goes to nothing, which finishes the dissolve the sand had already started.
+
+   Light only, because the cut has always been there and in dark it is a
+   near-black drift ending on a near-black section — the same edge, with
+   nothing on either side of it to see. */
+[data-theme='light'] .origin__ground {
+  -webkit-mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0 74%, transparent 100%);
+}
+
+[data-theme='light'] .origin__clip {
+  /* 26svh, and NOT `calc(var(--origin-veil) * 0.7)`, which is what this was
+     written as first and why it did nothing: `--origin-veil` is declared on
+     `.walk` (Walk.css) and this box is not inside it, so the calc had no value,
+     the whole declaration was invalid at computed-value time, and the mask
+     silently did not exist. A length that resolves here is worth more than a
+     token that reads well. 26svh is 234px at this viewport, which is the same
+     order as the veil it was reaching for. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26svh);
+  mask-image: linear-gradient(180deg, transparent 0, #000 26svh);
+}
+
 /* ── the grid, intersected with the dissolve ───────────────────────────────
    `.texture` is `inset: 0`, so this box is the section's box and its radial
    mask has ink from the first row of pixels down — which under CONTRACT D is
@@ -560,6 +614,27 @@
   opacity: var(--art-far);
 }
 
+/* ── the seam is ONE ground, the way the winter one is ─────────────────────
+   The site owner put the two boundaries side by side: dark "looks way cleaner
+   and the transition is smooth", light "looks super crazy and like it was
+   spammed with images for fun. There is different tree images stacked."
+
+   Both themes draw the same five things at the same depths. The difference is
+   that the winter drift is an OPAQUE white shape on a near-black scene, so it
+   buries everything behind it and the beat reads as two layers; the sand bank
+   was drawn at --art-mid, so at 0.74 over a bright sky the hero's sea, its
+   boat, the far shore, the near palms and the cabin's own trees all showed
+   THROUGH the ground and through each other at once.
+
+   Ground is not translucent. This is the one layer in the section that is
+   allowed to be opaque, and making it so is what turns five stacked pictures
+   back into a foreground and a background. --art-mid still governs the drift
+   in dark, where the scene behind it is dark enough that 0.74 already reads
+   as solid. */
+[data-theme='light'] .origin__snow {
+  opacity: 1;
+}
+
 /* ── the haze is AIR here, not a scrim ─────────────────────────────────────
    `atmosphere/mist-bank` is a torn fog bank whose own alpha does the shaping,
    so --art-far is the right ink for it. `atmosphere/sea-haze` is not that
@@ -573,8 +648,13 @@
    0.3 keeps what the plate is actually for — the glare coming off the water
    into the palms, which is what a beach at noon looks like — and stops it
    being a sheet of tracing paper over the section. */
-[data-theme='light'] .origin__mist-art {
-  opacity: 0.3;
+/* And in light it is not drawn at all. 0.3 of a full-frame glare plate is
+   still a sixth layer in the stack the seam note above is about, and the one
+   thing it was buying — air between the far shore and the near row — is bought
+   better by the ground in front of them being opaque. Dark keeps its fog bank,
+   which is a torn shape with edges rather than a wash. */
+[data-theme='light'] .origin__mist {
+  display: none;
 }
 
 /* ── the treeline that crosses the boundary ────────────────────────────────

@@ -268,7 +268,19 @@ export function Building() {
             and edge to edge. */}
         <div className="building__bank" />
         <ThemedArt art="props/pine-faceted-pair" light="landscapes/far-palms" className="building__pines-far" factor={0.03} />
-        <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__fog" factor={0.015} />
+        {/* ── the floor, and it stopped being a smear of glare ────────────
+            `atmosphere/sea-haze` was here in light. That file is a band of
+            sunlight ON WATER, and this band is the sand between two stands of
+            palms, so what it painted was a yellow streak lying across a beach
+            with nothing to be the glare of — the site owner's "the yellow
+            floor image is randomly thrown in there. As you can tell, that
+            needs a whole redesign cause what?"
+
+            `landscapes/beach-terrace` is the ground itself: sand with a few
+            shells in it, drawn for this width. The near stand's trunks go into
+            it and the far one stands on it, which is the job the fog band was
+            doing in the winter frame by being air between two depths. */}
+        <ThemedArt art="atmosphere/fog-veil" light="landscapes/beach-terrace" className="building__fog" factor={0.015} />
         <ThemedArt art="props/pine-faceted-pair" light="props/palm-row" className="building__pines" factor={-0.1} />
         {/* ── the ground haze, and the fix for the ruled line at #faith ─────
             Last of the scenery, so it is in front of all of it: a band of this
@@ -308,7 +320,19 @@ export function Building() {
           and the post's base fades into it rather than ending anywhere. */}
       <div className="building__over" aria-hidden="true">
         <ThemedArt art="props/wayfinding-post" light="props/beach-signpost" className="building__post" factor={-0.05} />
-        <ThemedArt art="atmosphere/fog-veil" light="atmosphere/sea-haze" className="building__mist" factor={-0.12} />
+        {/* ── and the crossing band is the SHALLOWS ───────────────────────
+            This is the layer that reaches up out of #building into #tools'
+            floor, and #tools' floor is where the pier stands. It was the same
+            glare plate, so the pier stood on a torn patch of its own water
+            with a yellow streak behind it and nothing else — "a bunch of crap
+            (images) just thrown together and literally make no sense".
+
+            `landscapes/shallow-water` is a real waterline: turquoise with a
+            foam line across it, edge to edge. The pier now stands IN it, the
+            reeds at its near edge, the coral rocks on the sand beyond, and the
+            band carries the join up into the section above exactly as it did
+            before. */}
+        <ThemedArt art="atmosphere/fog-veil" light="landscapes/shallow-water" className="building__mist" factor={-0.12} />
       </div>
 
       <div className="shell building__shell">

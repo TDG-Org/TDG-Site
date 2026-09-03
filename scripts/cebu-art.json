@@ -67,7 +67,7 @@
     }
   },
   "cumulus-near": {
-    "src": "cumulus-wisp.png",
+    "src": "cumulus-wide.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -75,8 +75,9 @@
     ],
     "out": "props/cumulus-near-light.png",
     "fit": {
-      "width": 0.44,
-      "anchor": "centre"
+      "width": 0.34,
+      "anchor": "centre",
+      "flip": true
     }
   },
   "cumulus-far": {
@@ -350,6 +351,45 @@
       "height": 0.9,
       "anchor": "bottom",
       "extend": true
+    }
+  },
+  "headland": {
+    "src": "headland.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "landscapes/headland-light.png",
+    "fit": {
+      "width": 1,
+      "anchor": "bottom"
+    }
+  },
+  "shallow-water": {
+    "src": "shallow-water.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "landscapes/shallow-water-light.png",
+    "fit": {
+      "width": 1,
+      "anchor": "centre"
+    }
+  },
+  "beach-terrace": {
+    "src": "beach-terrace.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "landscapes/beach-terrace-light.png",
+    "fit": {
+      "width": 1,
+      "anchor": "bottom"
     }
   }
 }

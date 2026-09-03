@@ -549,6 +549,78 @@
     );
 }
 
+/* ── the far side of the lagoon ────────────────────────────────────────────
+   A band standing ON the water's own far edge, so the three planes of this
+   beat read in order: headland, shallows, sand. Its foot sits a little above
+   the shore band's waterline — a far shore's base is HIGHER on screen than a
+   near one's, which is the whole of the perspective here — and its own art
+   fills its box, so the box is the placement.
+
+   `--art-far`, and it is the only layer in the section at that ink: everything
+   else here is something you could walk to. */
+/* ── and both new bands are LIGHT ONLY ─────────────────────────────────────
+   The dark Makers is a stone terrace at midnight and the site owner has signed
+   it off; a headland and a beach are not in that picture, and the dark twins
+   these two would otherwise draw (`far-range-soft`, `snow-bank`) put a pale
+   range and a pale drift into the one beat on the page whose whole reading is
+   a lantern in the dark. `StillArt` needs a dark name to exist, so they have
+   one and it is never painted. */
+.outro__far,
+.outro__sand {
+  display: none;
+}
+[data-theme='light'] .outro__far,
+[data-theme='light'] .outro__sand {
+  display: block;
+}
+
+.outro__far {
+  --far-w: 118vw;
+  left: calc((100% - var(--far-w)) / 2);
+  width: var(--far-w);
+  /* A CROP, for the same reason the sand below is one: the headland's own box
+     at this width is 629px tall against a 590px section, so laying the whole
+     plate in would put its crown past `.outro__clip`'s top edge and cut it on a
+     ruled line across the sky. A short box with `cover` takes the crest out of
+     the plate instead, and the mask dissolves what is left of the top so the
+     hill arrives out of the haze the way a far shore does. */
+  height: clamp(120px, 17vw, 280px);
+  object-fit: cover;
+  object-position: 50% 16%;
+  bottom: calc(var(--outro-ground-h) + clamp(120px, 17vw, 280px) * 0.14);
+  opacity: var(--art-far);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 46%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 46%);
+}
+
+/* ── the sand the terrace is made of ───────────────────────────────────────
+   The ground band below is a gradient and stays one: it is what the copy's
+   contrast is solved against and what closes the join with the strip. This is
+   the surface on top of it — the same height as the band, bottom-aligned with
+   it, so the two are one floor — and it is masked to nothing at its own top
+   edge so the sand arrives out of the water rather than starting on a line.
+
+   `--art-mid` in light. Ground is not a background and not a foreground.  */
+.outro__sand {
+  --sand-w: 128vw;
+  left: calc((100% - var(--sand-w)) / 2);
+  width: var(--sand-w);
+  /* A CROP of the plate rather than the whole of it. The file's shells are
+     drawn at the scale of a 2172px canvas, so at full height the conch lands in
+     the middle of the copy at 180px across — one object big enough to be a
+     subject, in the one place this beat has no room for a subject. Cover, at a
+     box the ground band's own height, takes a band out of the plate instead:
+     the same sand, the same facets, the shells reduced to the two small ones
+     that scatter. */
+  height: var(--outro-ground-h);
+  object-fit: cover;
+  object-position: 50% 24%;
+  bottom: 0;
+  opacity: var(--art-mid);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 26%, #000 88%, transparent 100%);
+}
+
 /* ── the shore the ground stops at ─────────────────────────────────────────
    `.outro__ground` is a plane with no far edge — it fades in over its own top
    26% and there is nothing to say where it ENDS. In dark that is right: a
@@ -603,8 +675,10 @@
   height: clamp(84px, 11vw, 176px);
   bottom: calc(var(--outro-ground-h) - clamp(84px, 11vw, 176px) * 0.52);
   object-fit: cover;
-  object-position: 50% 42%;
-  opacity: var(--art-far);
+  object-position: 50% 46%;
+  opacity: var(--art-mid);
+  /* water, not fog — see the block above; dark keeps `--art-far` from
+     `.outro__shore`, where the mist bank is air and must stay air */
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 62%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 62%, transparent 100%);
 }

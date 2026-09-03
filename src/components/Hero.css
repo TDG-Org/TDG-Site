@@ -2861,10 +2861,35 @@
    by 60px at 1600x900, so the fronds that are still in the model's column are
    above its shoulder rather than across it. The trunk runs off the right edge
    in both placements — that has always been true of this piece here. */
+/* ── the palm stands ABOVE the model, and the sum is exact ─────────────────
+   The site owner: "the Palm tree to the very right of the Home page is hiding.
+   It should not be overlapping the hero model but it should be further up to be
+   out of its way while still showing its body."
+
+   Both halves of that are solvable together and the earlier pass solved only
+   one of them by pushing the tree sideways. Measured off the shipped alpha
+   (`props/coconut-palm-tall-light.png`, rows binned at 1/24): the crown fills
+   the top 0.54 of the box and the trunk runs down the right of it at x
+   0.54..0.90. So the crown's LOWEST ink sits 0.69 x --pine-w above the box's
+   own bottom edge — 1.5 (the box's aspect) times 0.46 (what is left under the
+   crown) — and the model's top edge sits `50svh + min(39svh, 330px)` above the
+   frame's floor, which is `top: 50%` less half of `min(78vh, 660px)` read from
+   the other end.
+
+   Setting the first equal to the second is this `bottom`, and it is an
+   identity rather than a number: at 1600x900 it puts the crown's last frond at
+   y 119 against a model that starts at 120, and it stays true at 1200x900
+   (416px of lift) and at 1600x1080 (442) where a fixed value would not.
+
+   `right` comes back in from -0.5 to -0.18 for the other half of the note. At
+   -0.5 the trunk's own columns started at x 1625 — off the right of a 1600px
+   frame — so the tree had no body on screen at all, only crown. At -0.18 the
+   shaft crosses x 1427..1600 and the crown, which is now entirely above the
+   model, may overlap its column freely. */
 [data-theme='light'] .hero__pine {
   --pine-w: min(44vw, 620px);
-  right: calc(-0.5 * var(--pine-w));
-  bottom: min(52px, calc(8svh - 0.15 * var(--pine-w) * 1.5 + 0.09 * var(--pine-w)));
+  right: calc(-0.18 * var(--pine-w));
+  bottom: calc(50svh + min(39svh, 330px) - 0.69 * var(--pine-w));
 }
 
 /* ── and the sky the cross is read against ─────────────────────────────────
