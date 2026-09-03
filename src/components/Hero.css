@@ -2906,6 +2906,37 @@
    crown's own ink starts at x 1288 against a point cloud whose widest form
    reaches about 1408, in a frame where the palm is the only thing to the right
    of it. Rendered, the two do not touch. */
+/* ── the model moves, because the palm cannot ──────────────────────────────
+   Two passes were spent moving the TREE and both of them had to give up
+   something: pushed far enough right to clear the model it is a sliver of
+   crown with no trunk, and lifted far enough it shows its cut-off foot. The
+   arithmetic says why. The crown fills the top 0.54 of a 2:3 box, so its
+   lowest ink sits 0.69 x --pine-w above the box's bottom edge; for that to
+   clear the model's top AND the box's foot to stay under the frame at the same
+   time, --pine-w has to be at least `(100svh - modelTop) / 0.69` — 1159px at
+   1904x940. A palm that wide is the whole frame.
+
+   So the palm keeps the placement that reads as a whole tree and the MODEL
+   steps left out of its way. It is the layer with room to give: the hero's
+   copy ends at about 40% of the frame and everything between there and the
+   palm is open sky.
+
+   `right` is the palm's own crown line plus air: the crown's leading ink sits
+   `0.507 x --pine-w` in from the right edge (0.947 of the box's width, less
+   the 0.44 the box hangs off the frame), and 5.4vw on top of that is the gap.
+   Written from `min(38vw, 540px)` — the palm's own width expression — so the
+   two cannot drift apart; if `--pine-w` changes, change it in both places.
+
+   `width` comes down 660 -> 560 for the narrow end. At 1600 the 660 box put
+   the point cloud over the lede: rendered at 1904, 1600 and 1280, this is the
+   pair that clears the palm AND the copy at all three. Height is untouched —
+   `PointCloud` projects off `halfH`, so narrowing the box crops transparent
+   margin and does not resize the form. */
+[data-theme='light'] .hero__model {
+  right: calc(0.507 * min(38vw, 540px) + 5.4vw);
+  width: min(44vw, 560px);
+}
+
 [data-theme='light'] .hero__pine {
   --pine-w: min(38vw, 540px);
   right: calc(-0.44 * var(--pine-w));
