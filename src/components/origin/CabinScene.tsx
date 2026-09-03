@@ -4635,10 +4635,41 @@ function buildWorld(tier: Quality, hut = false): Solid {
 
   // ── trees ────────────────────────────────────────────────────────────────
   const treeSeed = rng(0xc4b1)
+  /*
+   * ── nothing is planted in the pool, and two things were ────────────────────
+   *
+   * `TREES` and `TRUNKS` are one table for both worlds, and they were written
+   * for the winter scene, which has no pool. The hut's world adds one
+   * (`poolside`, x 5.0..8.8, z -0.6..-4.4 inside a 0.36 coping) and two entries
+   * land in it: TREES[4] at (8.2, -4.6) sits on the south coping and TRUNKS[1]
+   * at (7, -1.5) stands in the middle of the water. The site owner saw the
+   * second: "one of the trees to the right of the hut are in a pond."
+   *
+   * Pushed out rather than moved in the table, because the table is shared: a
+   * coordinate edited there would move a pine in a scene nobody has complained
+   * about. This runs only when `hut` is true, and it pushes along whichever
+   * axis is the shorter way out, so a tree keeps as much of its composed
+   * position as the water allows.
+   */
+  const POOL = { x0: 4.64, x1: 9.16, z0: -4.76, z1: -0.24, pad: 0.75 }
+  const clearPool = (tx: number, tz: number): [number, number] => {
+    const x0 = POOL.x0 - POOL.pad
+    const x1 = POOL.x1 + POOL.pad
+    const z0 = POOL.z0 - POOL.pad
+    const z1 = POOL.z1 + POOL.pad
+    if (tx < x0 || tx > x1 || tz < z0 || tz > z1) return [tx, tz]
+    const out = [tx - x0, x1 - tx, tz - z0, z1 - tz]
+    const least = Math.min(out[0], out[1], out[2], out[3])
+    if (least === out[0]) return [x0, tz]
+    if (least === out[1]) return [x1, tz]
+    if (least === out[2]) return [tx, z0]
+    return [tx, z1]
+  }
   const plant = (tx: number, tz: number, ts: number, rk: number) => {
     const r = RANKS[rk]
     if (hut) {
-      palm(s, tx, tz, PLANT_Y, ts, treeSeed() * Math.PI * 2, r.tone, r.tall)
+      const [px, pz] = clearPool(tx, tz)
+      palm(s, px, pz, PLANT_Y, ts, treeSeed() * Math.PI * 2, r.tone, r.tall)
       return
     }
     conifer(
@@ -5881,48 +5912,182 @@ function stilts(s: Solid) {
   s.pigment = PIG_BASE
 }
 
-/** A coconut palm: a leaning trunk in stepped segments, a crown of drooping
- *  fronds, three nuts. Same footprint and height budget as the pine it
- *  replaces, so the tree table and the shadows cast on the sand still hold. */
+/**
+ * A tapered limb between two arbitrary points: a prism whose two ends have
+ * different radii and whose axis can point anywhere.
+ *
+ * `post` cannot do this. It builds a prism with ONE cross-section, extruded
+ * straight up — so a trunk made of seven posts at seven heights is seven
+ * vertical cylinders offset sideways, and the offsets show as a staircase with
+ * a step at every joint. The site owner's report is exactly that: "it looks
+ * like it's being stacked directly up and none of the trunk parts are bent."
+ *
+ * Here the ring at each end is built in the plane perpendicular to the axis, so
+ * consecutive limbs share an edge and the trunk reads as one curved shaft.
+ * Three sides, like `post`, because the whole scene is faceted and a rounder
+ * trunk would be the only smooth thing in it.
+ */
+function limb(s: Solid, a: V, b: V, r0: number, r1: number, base: number, rot: number, sides = 3) {
+  const ax = b[0] - a[0]
+  const ay = b[1] - a[1]
+  const az = b[2] - a[2]
+  const len = Math.hypot(ax, ay, az) || 1
+  const ux = ax / len
+  const uy = ay / len
+  const uz = az / len
+  // any vector not parallel to the axis, crossed twice for an orthonormal pair
+  const hx = Math.abs(uy) < 0.9 ? 0 : 1
+  let px = uy * (hx ? 0 : 1) - uz * 0
+  let py = uz * hx - ux * (hx ? 0 : 1)
+  let pz = ux * 0 - uy * hx
+  const pl = Math.hypot(px, py, pz) || 1
+  px /= pl
+  py /= pl
+  pz /= pl
+  const qx = uy * pz - uz * py
+  const qy = uz * px - ux * pz
+  const qz = ux * py - uy * px
+  const A: V[] = []
+  const B: V[] = []
+  for (let i = 0; i < sides; i++) {
+    const t = rot + (i / sides) * Math.PI * 2
+    const c = Math.cos(t)
+    const sn = Math.sin(t)
+    A.push([a[0] + (px * c + qx * sn) * r0, a[1] + (py * c + qy * sn) * r0, a[2] + (pz * c + qz * sn) * r0])
+    B.push([b[0] + (px * c + qx * sn) * r1, b[1] + (py * c + qy * sn) * r1, b[2] + (pz * c + qz * sn) * r1])
+  }
+  for (let i = 0; i < sides; i++) {
+    const j = (i + 1) % sides
+    const nx = (A[i][0] + A[j][0]) / 2 - a[0]
+    const ny = (A[i][1] + A[j][1]) / 2 - a[1]
+    const nz = (A[i][2] + A[j][2]) / 2 - a[2]
+    quad(s, A[i], A[j], B[j], B[i], base, [nx, ny, nz])
+  }
+}
+
+/**
+ * A coconut palm.
+ *
+ * ── what was here, and why it read as an umbrella ──────────────────────────
+ * The crown was eight FLAT TRIANGLE PAIRS, every one of them starting at a
+ * single point at the top of the trunk and running straight out to a tip. Eight
+ * flat spokes radiating from one hub, all at the same droop, is a parasol —
+ * which is what the site owner called it: "the leaves on the trees look very
+ * off, very silly. They look like low-poly umbrellas."
+ *
+ * A frond is not a spoke. Three things make it one, and all three are here:
+ *
+ *   **It is a CURVE, not a line.** The midrib leaves the crown pointing UP,
+ *   carries on out, and falls away under its own weight — `rise` then `droop`,
+ *   sampled over `SPANS` so the fall is visible along the blade rather than
+ *   being a single angle chosen at the base.
+ *
+ *   **It has a WIDTH that goes somewhere.** Narrow at the petiole, widest a
+ *   third of the way out, closed to nothing at the tip. `sin(pi * t^0.7)` is
+ *   that shape in one expression.
+ *
+ *   **It is FOLDED along its midrib.** The two halves drop below the rib by a
+ *   fraction of the local width, so the blade catches light on one side and
+ *   shadow on the other and has a spine you can see. A flat quad cannot.
+ *
+ * The fronds are also not all at one angle: `TILT` spreads their base
+ * elevation from nearly upright to nearly horizontal, and length and tone vary
+ * per frond, so the crown has an inside and an outside.
+ *
+ * ── and the trunk bends ────────────────────────────────────────────────────
+ * Nine samples down a curve with both a lean and a slight S in it, joined by
+ * `limb` — which builds each ring perpendicular to the LOCAL axis, so the
+ * segments share their edges instead of stepping past each other.
+ *
+ * ── cost ───────────────────────────────────────────────────────────────────
+ * 8 limbs x 3 sides x 2 = 48 triangles of trunk, and 9 fronds x 4 spans x 2
+ * halves x 2 = 144 of crown, against the 58 the parasol cost. It is built once
+ * per world and uploaded once; nothing here is per frame.
+ */
 function palm(s: Solid, x: number, z: number, y0: number, scale: number, rot: number, tone: number, tall: number) {
   const h = tall * scale * 0.92
-  const lean = 0.18 * h
-  const lx = Math.cos(rot) * lean
-  const lz = Math.sin(rot) * lean
-  // one rotation for every segment, so the three faces line up down the
-  // trunk and the lean reads as a curve rather than a stair
-  const SEGS = 7
+  const lean = 0.2 * h
+  const dirx = Math.cos(rot)
+  const dirz = Math.sin(rot)
+
+  /** The trunk's centre line: lean out quadratically, with a slight S back. */
+  const spine = (t: number): V => {
+    const bend = t * t * 0.86 + t * 0.14
+    const s2 = Math.sin(t * Math.PI) * 0.06
+    return [
+      x + dirx * lean * bend - dirz * lean * s2,
+      y0 + h * t,
+      z + dirz * lean * bend + dirx * lean * s2,
+    ]
+  }
+
   s.pigment = PIG_WOOD
-  for (let i = 0; i < SEGS; i++) {
-    const k = i / SEGS
-    const r = (0.14 - 0.06 * k) * scale
-    post(s, x + lx * k * k, y0 + h * k, z + lz * k * k, r, h / SEGS + 0.03, T_TRUNK + 0.12, rot)
+  const SEG = 8
+  for (let i = 0; i < SEG; i++) {
+    const t0 = i / SEG
+    const t1 = (i + 1) / SEG
+    const r0 = (0.155 - 0.098 * t0) * scale
+    const r1 = (0.155 - 0.098 * t1) * scale
+    /* A coconut trunk is pale grey-tan, not mahogany: T_TRUNK is 0.1, which is
+       the winter pine's bark and sits at the dark end of the wood ramp. +0.3
+       puts the shaft in the middle of it and the taper adds a little light
+       toward the crown. */
+    limb(s, spine(t0), spine(t1), r0, r1, T_TRUNK + 0.3 + 0.12 * t0, rot + t0 * 0.5)
   }
-  const cx = x + lx
-  const cy = y0 + h
-  const cz = z + lz
+
+  const C = spine(1)
+  const cx = C[0]
+  const cy = C[1]
+  const cz = C[2]
+
   s.pigment = PIG_LEAF
-  const N = 8
+  // twelve, not nine: nine leaves gaps you can see the sky through from the
+  // side, and a coconut crown is a full sphere of fronds seen from any angle.
+  const N = 12
+  const SPANS = 4
   for (let i = 0; i < N; i++) {
-    const a = rot * 0.3 + (i / N) * Math.PI * 2 + (i % 2) * 0.12
-    const L = (1.55 + 0.22 * ((i * 7) % 3)) * scale
-    const droop = 0.62 * L
-    const tip: V = [cx + Math.cos(a) * L, cy + 0.2 * scale - droop, cz + Math.sin(a) * L]
-    const mx = cx + Math.cos(a) * L * 0.48
-    const mz = cz + Math.sin(a) * L * 0.48
-    const my = cy + 0.34 * scale - droop * 0.2
-    const w = 0.3 * scale
-    const px = -Math.sin(a) * w
-    const pz = Math.cos(a) * w
-    const t = tone * (0.8 + 0.3 * ((i % 3) / 2))
-    const outN: V = [Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35]
-    tri(s, [cx, cy + 0.1 * scale, cz], [mx + px, my, mz + pz], tip, t, outN)
-    tri(s, [cx, cy + 0.1 * scale, cz], tip, [mx - px, my, mz - pz], t * 0.92, outN)
+    // golden-angle spacing so nine fronds never line up into a star
+    const a = rot * 0.4 + i * 2.399963
+    const ca = Math.cos(a)
+    const sa = Math.sin(a)
+    const L = (1.3 + 0.45 * (((i * 5) % 4) / 3)) * scale
+    // base elevation: some fronds stand up, some are already falling
+    // base elevation spread wider than before so a few stand almost upright
+    const rise = (0.24 + 0.52 * (((i * 3) % 5) / 4)) * L
+    const droop = (1.02 + 0.5 * ((i % 3) / 2)) * L
+    const W = (0.17 + 0.05 * ((i % 2) ? 1 : 0)) * scale
+    const lit = tone * (0.82 + 0.34 * (((i * 7) % 5) / 4))
+
+    const rib = (t: number): V => [
+      cx + ca * L * t,
+      cy + 0.14 * scale + rise * t - droop * t * t,
+      cz + sa * L * t,
+    ]
+    const wide = (t: number) => W * Math.sin(Math.PI * Math.pow(t, 0.7))
+
+    let m0 = rib(0)
+    let w0 = wide(0)
+    for (let k = 0; k < SPANS; k++) {
+      const t1 = (k + 1) / SPANS
+      const m1 = rib(t1)
+      const w1 = wide(t1)
+      // the fold: each half drops below the rib by 45% of the local width
+      const l0: V = [m0[0] - sa * w0, m0[1] - w0 * 0.45, m0[2] + ca * w0]
+      const l1: V = [m1[0] - sa * w1, m1[1] - w1 * 0.45, m1[2] + ca * w1]
+      const r0v: V = [m0[0] + sa * w0, m0[1] - w0 * 0.45, m0[2] - ca * w0]
+      const r1v: V = [m1[0] + sa * w1, m1[1] - w1 * 0.45, m1[2] - ca * w1]
+      const shade = lit * (1 - 0.14 * (k / SPANS))
+      quad(s, m0, l0, l1, m1, shade, [-sa * 0.4, 1, ca * 0.4])
+      quad(s, m0, m1, r1v, r0v, shade * 0.88, [sa * 0.4, 1, -ca * 0.4])
+      m0 = m1
+      w0 = w1
+    }
   }
+
   s.pigment = PIG_WOOD
   for (let i = 0; i < 3; i++) {
     const a = rot + i * 2.1
-    stone(s, cx + Math.cos(a) * 0.15 * scale, cz + Math.sin(a) * 0.15 * scale, cy - 0.14 * scale, 0.09 * scale, 0.13 * scale, T_TREE, a)
+    stone(s, cx + Math.cos(a) * 0.15 * scale, cz + Math.sin(a) * 0.15 * scale, cy - 0.12 * scale, 0.09 * scale, 0.13 * scale, T_TREE, a)
   }
   s.pigment = PIG_BASE
 }

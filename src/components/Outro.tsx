@@ -170,6 +170,24 @@ export function Outro() {
               several hundred pixels of flat black beside a single arch. Air is
               only air when something is happening in it. */}
           <div className="outro__ground" />
+          {/* ── the line the ground ENDS at ─────────────────────────────────
+              The floor below is a soft plane with no far edge, so in light it
+              ran into the section's own band and the beat had a beach and no
+              shore. `landscapes/shore-foam` is the waterline: it straddles the
+              ground band's top edge, so the sand has something to stop at and
+              the pale band above it reads as water rather than as the section
+              running out of ideas.
+
+              `atmosphere/mist-bank` in dark, because a foam line at midnight on
+              a stone terrace is not a thing — what is there is the air the
+              afterglow is already hanging in, and this gives it a body. Drawn
+              straight after the ground and before every prop, so all four still
+              stand in FRONT of it. */}
+          <StillArt
+            art="atmosphere/mist-bank"
+            light="landscapes/shore-foam"
+            className="outro__shore"
+          />
           {/* ── the light beyond the gate ─────────────────────────────────
               `props/lantern-post`, drawn BEFORE the arch so the arch's stone
               is in front of it and the gap between its two columns is what you

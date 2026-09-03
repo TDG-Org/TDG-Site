@@ -910,32 +910,42 @@
   --flake-drift: 0.5;
   /* the hut: sawali and bamboo, nipa thatch, coconut palms, white sand and
      the sea, each on its own ramp from shadow to sun */
-  /* ── the base ramp is BAMBOO, and #6b8794 is why the hut read grey ───────
+  /* ── the base ramp is BAMBOO, at bamboo's own value ──────────────────────
      PIG_BASE is everything in the hut's world that is not leaf, wood, water,
-     thatch or sand — the posts, the deck, the steps, the rail. Its shadow end
-     was a sea-shadow slate, chosen (correctly, at the time) to get away from a
-     teal-shadowed room; against a sand-white sun end that ramp is a neutral
-     grey from one end to the other, and a grey nipa hut is what the site owner
-     reported: "the Hut's colors are wrong as well and are even grey. That does
-     not look like a hut."
+     thatch or sand — the posts, the deck, the steps, the rail.
 
-     #a4835f is split bamboo in shade. It is the same L* neighbourhood as the
-     slate it replaces (55.6 against 53.9, so nothing about the scene's
-     contrast moves) and it sits between --scene-wood-deep's #6e4a2b and
-     --scene-sand-deep's #dcc6a0, which is exactly where a bamboo post belongs
-     among the five classes it stands next to. */
-  --scene-deep: #a4835f;
-  --scene-pale: #fbf7ee;
+     It was a sea-shadow slate (#6b8794) and read as grey; it went to a bamboo
+     shadow (#a4835f) and the site owner's second look was "the grey colors
+     that were changed are still too light and do not fit in with the rest of
+     the hut." Both notes are about the same thing and the SHADOW was only half
+     of it: `--scene-pale` was #fbf7ee, a near-white, so the LIT face of every
+     post and board resolved to paper whatever its shadow was. A ramp from a
+     warm shadow to white is a white object with a warm edge.
+
+     Both ends are split bamboo now — #7d5b39 in shade to #cda870 in sun. That
+     is L* 41.4 to 71.5 where the pair before it ran 55.6 to 97.4: the same
+     30-point span, moved bodily down and warmed, so the modelling is exactly as
+     strong and nothing in it is near white any more. It sits between
+     --scene-wood-deep's #6e4a2b (the beams, darker) and --scene-sand-deep's
+     #dcc6a0 (the ground, paler), which is where a bamboo post belongs among the
+     five classes standing next to it. */
+  --scene-deep: #7d5b39;
+  --scene-pale: #cda870;
   --scene-leaf-deep: #1e6a44;
   --scene-leaf-pale: #9de88c;
   --scene-wood-deep: #6e4a2b;
   --scene-wood-pale: #efcf97;
   --scene-water-deep: #0c6d8c;
   --scene-water-pale: #a8f2f0;
-  --scene-thatch-deep: #7d5a2a;
-  --scene-thatch-pale: #f0cd82;
-  --scene-sand-deep: #dcc6a0;
-  --scene-sand-pale: #fffaf0;
+  --scene-thatch-deep: #6b4c22;
+  /* #f0cd82 -> #e0b264: the roof is the largest surface in the shot and its lit
+     face was within eight L* of the sand it stands over, so the hut had no
+     silhouette against its own ground. */
+  --scene-thatch-pale: #e0b264;
+  --scene-sand-deep: #cfb489;
+  /* #fffaf0 is paper. Sand in full sun is not paper, and a ground that resolves
+     to 99 L* is what makes everything standing on it look like a cut-out. */
+  --scene-sand-pale: #f6ead2;
   /* the veil's three stops in the light ink, heavier at the top and the mid
      than dark's — :root carries why they are three and why the lone
      --nav-scrolled that used to sit here is not the shape to re-add */

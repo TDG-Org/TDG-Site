@@ -471,10 +471,29 @@
    none. That claim was true of the value it was written for and is not true
    any more; this line is the correction rather than an oversight, and
    --summit-shadow follows it because it is mixed FROM it.                   */
+/* ── the hill is GROUND, and it was being mixed out of the sky ──────────────
+   All three ridge inks are `color-mix(--band-faith, --text)`, which was right
+   while --band-faith was a warm cream: mixing ink into the band gives you the
+   band in shadow, and a hillside at dusk is the band in shadow. --band-faith
+   is a sky blue now (tokens.css), so the same expression gives a blue-grey
+   hill under a blue sky and the horizon disappears — "the Cross is on a
+   mountain/hill but the hill has no correct colors."
+
+   Ground does not come from the sky. These are three greens off one headland:
+   a hazy sage at the back, a mid green at the crest the cross stands on, and a
+   deeper shaded green in front, each already carrying its own light so nothing
+   here needs a second mix. They are stated per theme like every other pigment
+   on this page, and dark's — which are the band with ink in it, correctly,
+   because at midnight a hill IS the sky in shadow — are untouched.
+
+   L* 78.6 / 68.4 / 56.9, a step of about ten between planes, which is the same
+   ladder the winter ridges walk and is what keeps three overlapping silhouettes
+   readable as three. --summit-shadow follows --summit-ink-crest because it is
+   mixed from it, so the cross's cast shadow lands on the crest's own green. */
 [data-theme='light'] .faith-summit-host {
-  --summit-ink-far: color-mix(in srgb, var(--band-faith) 81%, var(--text));
-  --summit-ink-crest: color-mix(in srgb, var(--band-faith) 74%, var(--text));
-  --summit-ink-near: color-mix(in srgb, var(--band-faith) 67%, var(--text));
+  --summit-ink-far: #a9c7a6;
+  --summit-ink-crest: #86ae84;
+  --summit-ink-near: #628f63;
   --summit-shadow: color-mix(in srgb, var(--summit-ink-crest) 78%, var(--text));
   --summit-wash: color-mix(in srgb, var(--moon-disc) 52%, transparent);
   /* Cebu: the pool of sky behind the disc is the sun's own colour, not a
@@ -726,9 +745,41 @@
   height: calc(var(--summit-cross-h) * 3.3);
   margin-top: calc(var(--summit-cross-h) * -1.65 - var(--summit-cross-h) * 0.58);
   margin-left: calc(var(--summit-cross-h) * -4.6);
-  background-color: var(--summit-sky);
-  -webkit-mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
-  mask-image: radial-gradient(closest-side, #000 54%, transparent 84%);
+  /* ── a FALLOFF, and it is why this stopped reading as a painted oval ─────
+     This was `background-color: var(--summit-sky)` under a mask that held the
+     inner 54% of the radius at FULL and then fell to nothing by 84%. Over the
+     old cream band that was invisible; over the Cebu sky it is a flat orange
+     ellipse 1139px wide with a soft rim — which is what the site owner saw:
+     "Look at the Sun and it's glow. You see how off it looks?... It should
+     look like a real glow."
+
+     A real glow has no flat part at all. Light falls off continuously from the
+     source, so the stops here are a curve rather than a plateau: near-white at
+     the core where the air is blown out, the sun's own colour by 16%, and then
+     four stops of decay that halve roughly every fifth of the radius. Sampled
+     along the pool's midline at 1440, the alpha now runs 1.00, 0.62, 0.32,
+     0.14, 0.05, 0 where it ran 1.00, 1.00, 1.00, 0.71, 0.24, 0 — the same
+     reach, none of the plateau.
+
+     `background-image` and no mask. The mask WAS the falloff, and a mask is a
+     second layer's worth of compositing to do what stops do for free; more to
+     the point, the colour has to change across the radius (white at the core,
+     warm outside) and a mask cannot do that at all.
+
+     The box is unchanged. Its height is pinned by the floor sum recorded
+     above — the pool must not reach the section's own bottom edge at the
+     moon's worst downward drift — and its width by the ring that appears if
+     the fade finishes inside the frame. Neither moved. */
+  background-image: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--summit-sky) 62%, #ffffff) 0%,
+    var(--summit-sky) 16%,
+    color-mix(in srgb, var(--summit-sky) 62%, transparent) 33%,
+    color-mix(in srgb, var(--summit-sky) 32%, transparent) 51%,
+    color-mix(in srgb, var(--summit-sky) 13%, transparent) 70%,
+    color-mix(in srgb, var(--summit-sky) 4%, transparent) 85%,
+    transparent 100%
+  );
 }
 /* `position: relative` is load-bearing and it is the second half of the sky
    pool below. CSS paints POSITIONED descendants after in-flow block content,

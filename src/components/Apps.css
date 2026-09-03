@@ -226,6 +226,9 @@
   --plate-up: 96px;
   --plate-down: 110px;
 }
+[data-theme='light'] .apps__head-plate {
+  --plate-ink: color-mix(in srgb, var(--card-bg) 32%, transparent);
+}
 .apps__head {
   display: flex;
   align-items: flex-end;

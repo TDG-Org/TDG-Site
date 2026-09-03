@@ -325,18 +325,17 @@
     }
   },
   "lagoon-matte": {
-    "src": "lagoon.jpg",
-    "mode": "plate",
+    "src": "far-island.png",
+    "mode": "alpha",
     "canvas": [
       1168,
       784
     ],
     "out": "scene/lagoon-matte.png",
-    "feather": {
-      "top": 0.52,
-      "bottom": 0.24,
-      "left": 0.3,
-      "right": 0.3
+    "fit": {
+      "width": 1,
+      "anchor": "centre",
+      "dy": 0.16
     }
   },
   "shore-foam": {

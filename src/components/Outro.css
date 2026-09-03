@@ -71,9 +71,31 @@
    contrast rather than against the floor, and the floor moving 4 L* does not
    touch that. Rendered before and after at 1440x900 they are the same objects
    on a floor that is now a floor.                                           */
+/* ── and in Cebu the floor is SAND, not the band with ink in it ────────────
+   The block above solved the light theme for a RATIO against --band-outro, and
+   that arithmetic still holds; what it could not know is that the ground would
+   stop being a winter terrace. Mixing --text into a near-white band gives a
+   pale GREY floor, and a pale grey floor under a coral arch, a coral stair and
+   a coral path is four warm objects standing on nothing — which is what the
+   site owner read as "a bunch of random crap like the stairs and paths images
+   leading no where". Every one of the four is already inside the ground band
+   (measured at 1600x900, in px above the section's own bottom edge: the band
+   is 0..416, the stair's ink ends at 388, the path runs 55..318, the lantern
+   stands at 92 and the arch is bedded at -78). They were not floating. There
+   was simply nothing under them that a reader could see.
+
+   So the ink is sand: 70% of --scene-sand-deep, the same token the hut's beach
+   is drawn from, over 30% of the band. L* 81.5 against the band's 97.5 is
+   1.53:1 where the grey was 1.40 — a fifth more separation, and a hue that
+   says which surface it is. The pool keeps its rule (a step further from the
+   band than the floor) and takes it toward --warm instead of toward --text,
+   because what makes that patch is the afterglow landing on it.
+
+   Dark is untouched. A terrace at midnight IS the band in shadow, and the
+   paragraph above is the measurement for it. */
 :root[data-theme='light'] {
-  --outro-ground-ink: color-mix(in srgb, var(--band-outro) 84%, var(--text));
-  --outro-pool-ink: color-mix(in srgb, var(--band-outro) 78%, var(--text));
+  --outro-ground-ink: color-mix(in srgb, var(--band-outro) 30%, var(--scene-sand-deep));
+  --outro-pool-ink: color-mix(in srgb, var(--outro-ground-ink) 76%, var(--warm));
 }
 
 .section.outro {
@@ -525,6 +547,66 @@
       var(--outro-ground-ink) 88%,
       transparent 100%
     );
+}
+
+/* ── the shore the ground stops at ─────────────────────────────────────────
+   `.outro__ground` is a plane with no far edge — it fades in over its own top
+   26% and there is nothing to say where it ENDS. In dark that is right: a
+   terrace at night recedes into air. In light it left a beach running into a
+   pale band with no line between them, so the sand had no horizon and the four
+   props on it had nothing to be standing in front of.
+
+   The band straddles the ground's own top edge. `landscapes/shore-foam`'s ink
+   fills 0.104..0.997 of its 3:1 file, so its middle — the waterline — sits
+   0.45 of the box's height above its bottom; putting the box's bottom
+   `0.15 x --shore-w` below `--outro-ground-h` lands that waterline exactly on
+   the horizon. One expression, and it holds at every width because both terms
+   are in the same unit.
+
+   112vw and not 100: the file is mirror-extended to its own canvas, so an
+   overhang on both sides costs nothing and stops the foam ending in a straight
+   edge at the frame. The section is `overflow: clip`, so nothing here can
+   reach `document.scrollWidth`.
+
+   `--art-mid` and not `--art-near`: water at the far end of a beach is not the
+   nearest thing in the frame, and the path of stones in front of it is. */
+.outro__shore {
+  --shore-w: 112vw;
+  left: calc((100% - var(--shore-w)) / 2);
+  width: var(--shore-w);
+  height: auto;
+  aspect-ratio: 2172 / 724;
+  bottom: calc(var(--outro-ground-h) - var(--shore-w) * 0.15);
+  opacity: var(--art-mid);
+}
+
+/* ── and light gets a SLICE of its file, not the whole file ────────────────
+   The two pieces in this slot are not the same kind of picture and the box
+   cannot be. `atmosphere/mist-bank` is air: it has no edges, its own alpha
+   fades on all four sides, and at 112vw x a third of that it is exactly the
+   soft bank the dark terrace wants behind it.
+
+   `landscapes/shore-foam` is an OBJECT — breaking water, drawn edge to edge and
+   opaque through the middle — so the same box put a 597px wall of turquoise
+   shards across the section and straight over the copy. Rendered, it was the
+   loudest thing in the beat and read as exactly the "random crap" this section
+   was sent back for.
+
+   So light takes a short band and `object-fit: cover` crops the file to it:
+   0.12vw of height against the mist's 0.37, positioned at 42% of the file so
+   the crop is the foam line itself rather than the water below it or the sky
+   above. The mask takes both long edges to nothing, because a waterline with a
+   straight edge is a stripe. --art-far, not --art-mid: this is the far end of a
+   beach and the path of stones in front of it is the near end. */
+[data-theme='light'] .outro__shore {
+  aspect-ratio: auto;
+  height: clamp(84px, 11vw, 176px);
+  bottom: calc(var(--outro-ground-h) - clamp(84px, 11vw, 176px) * 0.52);
+  object-fit: cover;
+  object-position: 50% 42%;
+  opacity: var(--art-far);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 34%, #000 62%, transparent 100%);
 }
 
 /* ── the stair across the join ─────────────────────────────────────────────

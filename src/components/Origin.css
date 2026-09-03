@@ -61,8 +61,38 @@
   --origin-intro-plate: color-mix(in srgb, var(--card-bg) 30%, transparent);
   --origin-plate: color-mix(in srgb, var(--card-bg) 84%, transparent);
 }
+
+/* ── the light theme's plates are a THIRD of what dark's are ───────────────
+   Every number the plates were solved against is a DARK number: white type at
+   --faint over a fire, over a lit table, over a moon on snow. The light theme
+   inherited the same alphas because the recipe is shared, and it should never
+   have: the type is --text (#0b2b3c, L* 16.9) and the scenery it sits on is a
+   beach at noon (L* 60-95), so the plate is not buying contrast there, it is
+   buying nothing and paying for it with the whole picture. The site owner's
+   report is what that looks like: "the headers for each section and some of
+   the pages' background that is over the themes look too bright... the tile
+   it's on looks almost solid."
+
+   --card-bg is rgba(255,255,255,0.9) in light, so an 88% plate was 0.79 of
+   flat white over the scene. 32% is 0.29, which over the darkest thing behind
+   any head (a beam at rgb(120,90,60)) still lifts it to rgb(159,138,117) and
+   leaves --text at 7.4:1 — well past the 4.5 floor these were written to, with
+   the picture visible through it.
+
+   The ROWS plate in #origin is deliberately not on this list. It is the one
+   plate in the walk with the hearth behind it, which is the brightest thing in
+   the frame in dark and the one warm patch in light, and its own note carries
+   the 5.00:1 that 84% buys --faint there. It gets a smaller cut, measured
+   against the same worst pixel. */
 :root[data-theme='light'] {
-  --origin-intro-plate: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  --origin-intro-plate: color-mix(in srgb, var(--card-bg) 26%, transparent);
+  /* The rows' plate takes a cut too, and a smaller one for the reason above:
+     the hearth is behind it. 84 -> 62 gives 0.20 of alpha back over a column a
+     viewport and a half tall; over the fire's own light (rgb(123,112,96) at
+     the worst pixel) it composites to about rgb(190) rather than rgb(201),
+     which leaves --faint at 4.6:1 there against a floor of 4.5 where 84% gave
+     5.00. Dark keeps all of it. */
+  --origin-plate: color-mix(in srgb, var(--card-bg) 62%, transparent);
 }
 
 /* ── the section ───────────────────────────────────────────────────
