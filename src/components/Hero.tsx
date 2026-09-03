@@ -1033,7 +1033,11 @@ export function Hero() {
 
               {/* the cross glyph is the "T", so the heading's only text is "DG".
                   Name it explicitly or the page's h1 reads as "DG" */}
-              <h1 className="hero__wordmark" aria-label="TDG">
+              {/* One object to the eye, three elements to the DOM. `data-wave-group`
+                  makes `stageWave` measure this box once and let the cross and the
+                  letters inherit the same delay, so the mark crosses as a mark.
+                  ThemeProvider.tsx carries the measurement that asked for it. */}
+              <h1 className="hero__wordmark" aria-label="TDG" data-wave-group>
                 <span className="hero__cross">
                   <CrossGlyph variant="hero" />
                 </span>

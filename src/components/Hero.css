@@ -2076,7 +2076,15 @@
   height: calc(var(--air-w) * var(--air-ratio));
   bottom: calc(var(--moon-cy) - var(--air-w) * var(--air-ratio) * (0.5 - var(--air-lift)));
   transform: translateX(-50%);
-  background-image: var(--hero-bloom);
+  --bloom-0: var(--hero-bloom-0);
+  --bloom-1: var(--hero-bloom-1);
+  background-image: radial-gradient(
+    closest-side,
+    var(--bloom-0),
+    var(--bloom-1) 46%,
+    transparent 74%
+  );
+  transition: var(--t-grad);
   border-radius: 50%;
   /* `filter: opacity()` and not `opacity`, because `raybreathe` animates THAT
      and would overwrite it every frame — the same trade `.hero__bloom` makes
@@ -2197,7 +2205,10 @@
   transform: translateX(-50%);
   will-change: translate;
   border-radius: 50%;
-  background: var(--hero-bloom);
+  --bloom-0: var(--hero-bloom-0);
+  --bloom-1: var(--hero-bloom-1);
+  background: radial-gradient(closest-side, var(--bloom-0), var(--bloom-1) 46%, transparent 74%);
+  transition: var(--t-grad);
   -webkit-mask-image: radial-gradient(closest-side, transparent 30%, #000 58%, #000 100%);
   mask-image: radial-gradient(closest-side, transparent 30%, #000 58%, #000 100%);
   filter: blur(30px) opacity(var(--hero-bloom-gain));
@@ -2219,7 +2230,15 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--hero-vignette);
+  --vignette-ink: var(--hero-vignette-ink);
+  --vignette-at-0: var(--hero-vignette-at-0);
+  --vignette-at-1: var(--hero-vignette-at-1);
+  background: radial-gradient(
+    128% 108% at 62% 22%,
+    transparent var(--vignette-at-0),
+    var(--vignette-ink) var(--vignette-at-1)
+  );
+  transition: var(--t-grad);
 }
 
 /* ── point cloud ───────────────────────────────────────────────────────── */
@@ -2332,7 +2351,9 @@
 .hero__eyebrow-rule {
   width: 38px;
   height: 1px;
-  background: var(--hero-edge);
+  --edge-ink: var(--hero-edge-ink);
+  background: linear-gradient(90deg, transparent, var(--edge-ink));
+  transition: var(--t-grad);
 }
 .hero__eyebrow {
   font: 500 10.5px/1 var(--font-mono);
@@ -2384,10 +2405,35 @@
    .hero__shaft-core just above, which has had one for exactly this reason —
    so in the light theme a near-white band crossed dark type every eleven
    seconds. Dark is unchanged to within 0.008 of alpha. */
+/* ── the wordmark's letters, and the one thing that was NOT animating ──────
+   `--hero-dg` was a whole `linear-gradient()` in one token, so on a toggle the
+   letters HARD CUT from one palette to the other in a single frame while the
+   cross beside them crossed over 600ms on `stop-color`. That is exactly what
+   the site owner reported as "the TDG logo light to dark/dark to light change
+   is not synced" — one half of a two-glyph mark was animating and the other
+   half was not.
+
+   Four registered stops (tokens.css) and the gradient written here. The two
+   themes stated their middle stops at 30%/74% and 32%/78%; the difference is
+   under two per cent of a 186px glyph, so they are one pair of positions now
+   (31% and 76%) rather than two more registered percentages to keep in step.
+   `--t-grad` puts the four on the same 0.6s and the same --wave-delay as the
+   cross, so the two halves of the mark move together. */
 .hero__dg {
+  --dg-0: var(--hero-dg-0);
+  --dg-1: var(--hero-dg-1);
+  --dg-2: var(--hero-dg-2);
+  --dg-3: var(--hero-dg-3);
+  transition: var(--t-grad);
   background-image:
     linear-gradient(100deg, transparent 40%, var(--hero-glint) 50%, transparent 60%),
-    var(--hero-dg);
+    linear-gradient(
+      162deg,
+      var(--dg-0) 0%,
+      var(--dg-1) 31%,
+      var(--dg-2) 76%,
+      var(--dg-3) 100%
+    );
   background-size: 400% 100%, 100% 100%;
   background-repeat: no-repeat, no-repeat;
   background-position:
@@ -2593,7 +2639,7 @@
       var(--hero-strip-border) 86%,
       transparent 100%
     ),
-    var(--hero-strip-bg);
+    linear-gradient(180deg, transparent, var(--strip-ink));
   background-repeat: no-repeat, no-repeat;
   background-size:
     100% 1px,

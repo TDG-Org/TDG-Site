@@ -1290,6 +1290,13 @@
      against a glass half-width of 0.0715 W, so it covers the pane and falls
      off just outside it rather than lighting the ironwork. */
   .origin__lamp-core {
+    /* The registered property takes the palette token here, on the one element
+       that paints it, and crosses on the same list the art does. tokens.css
+       carries why: read straight from `--lamp-core-ink` the gradient would
+       re-resolve in a single frame and the light would arrive before the pole
+       it belongs to. */
+    --lamp-core: var(--lamp-core-ink);
+    transition: var(--t-grad);
     background-image: radial-gradient(7.5% 5% at 50% 19%, var(--lamp-core), transparent 100%);
   }
 
@@ -1306,6 +1313,8 @@
      0.13 is that with a margin. A wider bloom is only buyable by shrinking the
      pole, which is the thing the site owner asked to be made bigger. */
   .origin__lamp-glow {
+    --lamp-glow: var(--lamp-glow-ink);
+    transition: var(--t-grad);
     background-image: radial-gradient(
       13% 8.667% at 50% 19%,
       var(--lamp-glow),
@@ -1347,6 +1356,8 @@
        13% x 8.667%. That puts this one at 1.96x the tight one's radius instead
        of 3x. Still unmistakably the bigger of the two, and it is the only size
        that fits inside its own frame. */
+    --lamp-spill: var(--lamp-spill-ink);
+    transition: var(--t-grad);
     background-image: radial-gradient(
       25.5% 17% at 50% 19%,
       var(--lamp-spill),
@@ -1371,6 +1382,8 @@
     top: var(--lamp-plant);
     transform: translateY(-50%);
     pointer-events: none;
+    --lamp-pool: var(--lamp-pool-ink);
+    transition: var(--t-grad);
     background-image: radial-gradient(closest-side, var(--lamp-pool), transparent 100%);
     -webkit-mask-image: linear-gradient(90deg, #000 0 57%, transparent 68%);
     mask-image: linear-gradient(90deg, #000 0 57%, transparent 68%);

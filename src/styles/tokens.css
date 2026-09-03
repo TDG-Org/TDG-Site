@@ -83,6 +83,106 @@
   initial-value: transparent;
 }
 
+/* -- everything else that was a whole gradient in a token -----------------
+   The sky's note above is the whole argument and these are the rest of the
+   page it applies to. A `background-image` is not on any transition list in
+   this file and cannot be put on one -- no browser interpolates one -- so a
+   token holding a gradient HARD CUTS on the toggle while the wave carries
+   everything around it. Seven of them did, and the site owner named the one
+   that shows most: "the TDG logo light to dark/dark to light change is not
+   synced and looks off." It was not out of sync. It was not animating at all,
+   next to a cross beside it that was.
+
+   Same fix, same shape: the STOPS are the tokens, the gradient is written once
+   in the file that paints it, and the consuming rule assigns the unregistered
+   per-theme palette token to a registered property it can interpolate.
+
+     --dg-0..3        the wordmark's four stops, hero and footer
+     --bloom-0..1     the light around the disc
+     --vignette-ink   the hero's corner darkening, with its two stop positions
+     --strip-ink      the bottom strip's wash
+     --edge-ink       the eyebrow rule
+     --lamp-*         the lantern's four lights, argued where they are declared
+
+   `--hero-shaft` and `--hero-shaft-2` were on this list and are simply gone:
+   nothing has read either since the light shafts were rebuilt, so a snap
+   nobody can see was still two tokens per theme to keep honest. */
+@property --dg-0 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --dg-1 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --dg-2 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --dg-3 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --bloom-0 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --bloom-1 {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --vignette-ink {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --vignette-at-0 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+@property --vignette-at-1 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+@property --strip-ink {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --edge-ink {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --lamp-core {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --lamp-glow {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --lamp-spill {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+@property --lamp-pool {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
 :root {
   --bg: #07070a;
   --bg2: #0b0b10;
@@ -234,24 +334,10 @@
      because the layer is now one gradient written once and this is the end of
      the fade it crosses to. */
   --hero-dusk-ink: transparent;
-  --hero-shaft: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(214, 232, 255, 0.013) 14%,
-    rgba(214, 232, 255, 0.07) 37%,
-    rgba(214, 232, 255, 0.13) 50%,
-    rgba(214, 232, 255, 0.07) 63%,
-    rgba(214, 232, 255, 0.013) 86%,
-    transparent 100%
-  );
-  --hero-shaft-2: linear-gradient(100deg, transparent, rgba(214, 232, 255, 0.036) 50%, transparent);
-  --hero-bloom: radial-gradient(
-    closest-side,
-    rgba(214, 232, 255, 0.2),
-    rgba(214, 232, 255, 0.046) 46%,
-    transparent 74%
-  );
-  --hero-edge: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6));
+  /* the two stops of the light around the disc; Hero.css writes the gradient */
+  --hero-bloom-0: rgba(214, 232, 255, 0.2);
+  --hero-bloom-1: rgba(214, 232, 255, 0.046);
+  --hero-edge-ink: rgba(255, 255, 255, 0.6);
   --hero-eyebrow: rgba(255, 255, 255, 0.72);
   --hero-tag: rgba(255, 255, 255, 0.68);
   /* nudged off the reference values: 0.44 dark / 0.50 light measured 4.28 and
@@ -259,10 +345,21 @@
   --hero-meta: rgba(255, 255, 255, 0.47);
   --hero-rule: rgba(255, 255, 255, 0.16);
   --hero-strip-border: rgba(255, 255, 255, 0.09);
-  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(3, 3, 4, 0.6));
+  --hero-strip-ink: rgba(3, 3, 4, 0.6);
   --hero-grain-opacity: 0.5;
-  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 42%, rgba(0, 0, 0, 0.5) 88%);
-  --hero-dg: linear-gradient(162deg, #ffffff 0%, #f6f6f8 30%, #a8a8b4 74%, #74747f 100%);
+  --hero-vignette-ink: rgba(0, 0, 0, 0.5);
+  /* where the ink starts and ends, as a fraction of the vignette's own radius.
+     Light starts later and ends later, and a stop that jumped while its colour
+     crossed would put a ring through the middle of the fade -- the same reason
+     --sky-at-1 and --sky-at-2 are registered. */
+  --hero-vignette-at-0: 42%;
+  --hero-vignette-at-1: 88%;
+  /* the wordmark's four stops. It was one gradient in one token, so it snapped
+     on every toggle beside a cross that crossed; see the @property block. */
+  --hero-dg-0: #ffffff;
+  --hero-dg-1: #f6f6f8;
+  --hero-dg-2: #a8a8b4;
+  --hero-dg-3: #74747f;
   --hero-cta-bg: #ffffff;
   --hero-cta-fg: #08080c;
   --hero-cta-shadow: 0 18px 46px -18px rgba(255, 255, 255, 0.42);
@@ -733,10 +830,22 @@
      Light theme keeps the lamp lit but quieter. A lantern at dusk still glows;
      it just has less darkness to glow into, and the same alphas over a
      near-white sky would read as a stain rather than as light. */
-  --lamp-core: rgba(255, 216, 154, 0.95);
-  --lamp-glow: rgba(255, 198, 122, 0.44);
-  --lamp-spill: rgba(255, 188, 108, 0.16);
-  --lamp-pool: rgba(255, 192, 116, 0.22);
+  /* -- `-ink`, because these are PALETTE tokens now ----------------------
+     Every one of the four is read inside a `radial-gradient()`, and an
+     unregistered custom property inside a gradient does not interpolate: the
+     gradient re-resolves in one frame the moment the token changes. So the
+     lantern's whole light snapped on at the START of the toggle while the pole
+     it belongs to cross-faded over 600ms behind it -- "the Lamppost in Dark
+     mode has a glow from it, and it appears before the lamp is actually there.
+     It also disappears first before the lamp when switching to Light mode."
+
+     Origin.css assigns each of these to the registered `--lamp-*` on the one
+     element that paints it, and transitions it over the same 0.6s and the same
+     --wave-delay the art's own cross-fade rides. */
+  --lamp-core-ink: rgba(255, 216, 154, 0.95);
+  --lamp-glow-ink: rgba(255, 198, 122, 0.44);
+  --lamp-spill-ink: rgba(255, 188, 108, 0.16);
+  --lamp-pool-ink: rgba(255, 192, 116, 0.22);
 
   /* ── the plate a card is drawn on ───────────────────────────────────────
      --surface is rgba(255,255,255,0.045) in dark: a 4.5% white lift, which is
@@ -894,33 +1003,23 @@
      would be a second grey on a page whose light palette has one. Hero.css
      holds the seven alphas and the readings that sized them. */
   --hero-dusk-ink: transparent;
-  --hero-shaft: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(20, 20, 26, 0.014) 14%,
-    rgba(20, 20, 26, 0.05) 37%,
-    rgba(20, 20, 26, 0.075) 50%,
-    rgba(20, 20, 26, 0.05) 63%,
-    rgba(20, 20, 26, 0.014) 86%,
-    transparent 100%
-  );
-  --hero-shaft-2: linear-gradient(100deg, transparent, rgba(20, 20, 26, 0.03) 50%, transparent);
-  --hero-bloom: radial-gradient(
-    closest-side,
-    rgba(255, 241, 196, 0.95),
-    rgba(255, 222, 148, 0.45) 46%,
-    transparent 74%
-  );
-  --hero-edge: linear-gradient(90deg, transparent, rgba(11, 43, 60, 0.55));
+  --hero-bloom-0: rgba(255, 241, 196, 0.95);
+  --hero-bloom-1: rgba(255, 222, 148, 0.45);
+  --hero-edge-ink: rgba(11, 43, 60, 0.55);
   --hero-eyebrow: rgba(11, 43, 60, 0.72);
   --hero-tag: rgba(11, 43, 60, 0.72);
   --hero-meta: rgba(11, 43, 60, 0.68);
   --hero-rule: rgba(11, 43, 60, 0.2);
   --hero-strip-border: rgba(11, 43, 60, 0.14);
-  --hero-strip-bg: linear-gradient(180deg, transparent, rgba(223, 243, 251, 0.78));
+  --hero-strip-ink: rgba(223, 243, 251, 0.78);
   --hero-grain-opacity: 0.2;
-  --hero-vignette: radial-gradient(128% 108% at 62% 22%, transparent 50%, rgba(8, 60, 90, 0.12) 92%);
-  --hero-dg: linear-gradient(162deg, #0b2b3c 0%, #124457 32%, #1d8c9c 78%, #5cc4cf 100%);
+  --hero-vignette-ink: rgba(8, 60, 90, 0.12);
+  --hero-vignette-at-0: 50%;
+  --hero-vignette-at-1: 92%;
+  --hero-dg-0: #0b2b3c;
+  --hero-dg-1: #124457;
+  --hero-dg-2: #1d8c9c;
+  --hero-dg-3: #5cc4cf;
   --hero-cta-bg: #0b2b3c;
   --hero-cta-fg: #f6f8f5;
   --hero-cta-shadow: 0 18px 46px -20px rgba(11, 43, 60, 0.5);
@@ -1015,10 +1114,10 @@
 
   /* Same lantern, less darkness to glow into. See :root: at dark's alphas
      these would read as a stain on a near-white sky rather than as light. */
-  --lamp-core: transparent;
-  --lamp-glow: transparent;
-  --lamp-spill: transparent;
-  --lamp-pool: transparent;
+  --lamp-core-ink: transparent;
+  --lamp-glow-ink: transparent;
+  --lamp-spill-ink: transparent;
+  --lamp-pool-ink: transparent;
 
   /* The plate, at this theme's ground. --surface is already #ffffff here, so
      what this buys in light is the opposite of what it buys in dark: a card
@@ -1035,10 +1134,16 @@
 *,
 *::before,
 *::after {
+  /* ONE duration for every property on the wave, and that is the point.
+     `color`, `border-color` and `fill` ran 0.55s against `background-color`'s
+     and the art cross-fade's 0.6s, so every piece of text and every glyph
+     landed 50ms before the surface behind it -- small, but it is 50ms of a
+     600ms move and it reads as the text arriving first. Anything that should
+     look simultaneous now IS. */
   --t-theme:
-    background-color 0.6s ease var(--wave-delay, 0ms), color 0.55s ease var(--wave-delay, 0ms),
-    border-color 0.55s ease var(--wave-delay, 0ms), box-shadow 0.6s ease var(--wave-delay, 0ms),
-    fill 0.55s ease var(--wave-delay, 0ms);
+    background-color 0.6s ease var(--wave-delay, 0ms), color 0.6s ease var(--wave-delay, 0ms),
+    border-color 0.6s ease var(--wave-delay, 0ms), box-shadow 0.6s ease var(--wave-delay, 0ms),
+    fill 0.6s ease var(--wave-delay, 0ms);
   --t-tint:
     --tint-top 0.6s ease var(--wave-delay, 0ms), --tint-mid 0.6s ease var(--wave-delay, 0ms),
     --tint-bot 0.6s ease var(--wave-delay, 0ms);
@@ -1047,6 +1152,19 @@
      wave. `components/scene/Scene.css` says why it is a filter and why it is
      added a layout AFTER the value it interpolates from. */
   --t-art: filter 0.6s ease var(--wave-delay, 0ms);
+  /* The stops the page rebuilt out of the gradient tokens above. One list, so
+     the wordmark, the bloom, the vignette, the strip and the lantern all cross
+     on exactly the schedule the scenery does. */
+  --t-grad:
+    --dg-0 0.6s ease var(--wave-delay, 0ms), --dg-1 0.6s ease var(--wave-delay, 0ms),
+    --dg-2 0.6s ease var(--wave-delay, 0ms), --dg-3 0.6s ease var(--wave-delay, 0ms),
+    --bloom-0 0.6s ease var(--wave-delay, 0ms), --bloom-1 0.6s ease var(--wave-delay, 0ms),
+    --vignette-ink 0.6s ease var(--wave-delay, 0ms),
+    --vignette-at-0 0.6s ease var(--wave-delay, 0ms),
+    --vignette-at-1 0.6s ease var(--wave-delay, 0ms),
+    --strip-ink 0.6s ease var(--wave-delay, 0ms), --edge-ink 0.6s ease var(--wave-delay, 0ms),
+    --lamp-core 0.6s ease var(--wave-delay, 0ms), --lamp-glow 0.6s ease var(--wave-delay, 0ms),
+    --lamp-spill 0.6s ease var(--wave-delay, 0ms), --lamp-pool 0.6s ease var(--wave-delay, 0ms);
   /* The hero sky's four stops, its two stop positions and the haze over them.
      One consumer, `.hero__sky`, and it is named here beside the others so the
      page's "this crosses on the wave" lists read in one place. */

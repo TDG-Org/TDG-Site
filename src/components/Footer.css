@@ -65,8 +65,22 @@
   height: 100%;
   display: block;
 }
+/* The same four stops the hero's letters take, for the same reason: this was a
+   gradient token and it cut where everything around it waved. Hero.css carries
+   the argument. */
 .footer__wordmark-dg {
-  background-image: var(--hero-dg);
+  --dg-0: var(--hero-dg-0);
+  --dg-1: var(--hero-dg-1);
+  --dg-2: var(--hero-dg-2);
+  --dg-3: var(--hero-dg-3);
+  transition: var(--t-grad);
+  background-image: linear-gradient(
+    162deg,
+    var(--dg-0) 0%,
+    var(--dg-1) 31%,
+    var(--dg-2) 76%,
+    var(--dg-3) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

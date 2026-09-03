@@ -75,6 +75,30 @@ function stageWave(origin: { x: number; y: number }): () => void {
   // element and blocked the main thread through the start of the wave.
   const delays: number[] = []
   for (const el of elements) {
+    /*
+     * ── a mark is ONE object, and the wave passes OVER objects ──────────────
+     *
+     * The wordmark is a `CrossGlyph` beside two letters, 340px wide at
+     * 1600x900, and the two halves are separate elements — so the wave gave
+     * them separate delays from their separate distances to the toggle and the
+     * cross crossed about 70ms after the letters. Measured, mid-wave: the
+     * letters' first stop was already at rgb(29,58,74) on the frame the cross
+     * was still at its light rgb(11,43,60), and it stayed a step behind for
+     * the whole fade. That is the wave doing exactly what it is for, and it is
+     * still wrong here — a logo whose two glyphs change at visibly different
+     * moments is what the site owner reported as "the TDG logo light to
+     * dark/dark to light change is not synced and looks off".
+     *
+     * `data-wave-group` marks a subtree that must move as one. Its own delay
+     * is measured and written; everything inside it is skipped, so it INHERITS
+     * that one value — `--wave-delay` is an inherited custom property and this
+     * costs nothing but the `closest` call. Anything that is one object to the
+     * eye and several elements to the DOM belongs in one.
+     */
+    if (el.parentElement?.closest('[data-wave-group]')) {
+      delays.push(-1)
+      continue
+    }
     const r = el.getBoundingClientRect()
     if (!r.width && !r.height) {
       delays.push(-1)
@@ -208,6 +232,26 @@ function crossArt(): { arm: () => void; clear: () => void } {
       bottom: cs.bottom,
       width: cs.width,
       height: cs.height,
+      /*
+       * ── and the one that made the boat TELEPORT ───────────────────────────
+       *
+       * `cloneNode(false)` copies the element's attributes, so it copies the
+       * class — and a class carrying a CSS `animation` starts that animation
+       * from scratch on the clone. `.hero__weather-art` rides `heroWeather`, a
+       * 74-second sideways drift whose 0% frame is `translate3d(-4.2%, 0, 0)`,
+       * so a ghost cloned 40 seconds into that cycle appeared at the START of
+       * it: the outrigger jumped up to 8.4% of a 1536px layer — about 130px —
+       * in the frame the toggle was pressed, and then faded out from there.
+       * The site owner's report is exactly that: "the boat teleports to a
+       * different location before the theme is fully transitioned to Dark and
+       * the boat goes away."
+       *
+       * The matrix the animation had resolved to at clone time, pinned inline,
+       * plus `animation: none` so nothing restarts it. A ghost is meant to be
+       * the outgoing picture standing still for 600ms; this is the last of the
+       * three things (position, size, motion) that has to be true for that.
+       */
+      transform: cs.transform,
     }
   })
 
@@ -234,6 +278,8 @@ function crossArt(): { arm: () => void; clear: () => void } {
     ghost.style.bottom = f.bottom
     ghost.style.width = f.width
     ghost.style.height = f.height
+    ghost.style.transform = f.transform === 'none' ? 'none' : f.transform
+    ghost.style.animation = 'none'
     ghost.classList.add('scene__art--crossing')
     ghost.style.setProperty('--cross', '1')
     art.classList.add('scene__art--crossing')

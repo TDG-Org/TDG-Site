@@ -34,7 +34,7 @@ export function Footer() {
                 the visible glyphs are a cross and the letters D and G: read out
                 literally a screen reader would announce "DG" and nothing about
                 the T. The label says TDG once and the pieces say nothing. */}
-            <div className="footer__wordmark" aria-label="TDG" role="img">
+            <div className="footer__wordmark" aria-label="TDG" role="img" data-wave-group>
               <span className="footer__wordmark-cross" aria-hidden="true">
                 <CrossGlyph variant="hero" />
               </span>

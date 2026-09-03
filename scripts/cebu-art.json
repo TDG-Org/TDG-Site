@@ -1,6 +1,6 @@
 {
   "far-island": {
-    "src": "far-island-transparent.png",
+    "src": "far-island.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -8,13 +8,13 @@
     ],
     "out": "landscapes/far-island-light.png",
     "fit": {
-      "width": 0.24,
+      "width": 0.26,
       "anchor": "bottom",
       "dx": 0.3
     }
   },
   "island-mid": {
-    "src": "far-island-transparent.png",
+    "src": "far-island.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -22,7 +22,7 @@
     ],
     "out": "landscapes/island-mid-light.png",
     "fit": {
-      "width": 0.34,
+      "width": 0.36,
       "anchor": "bottom",
       "dx": -0.12,
       "flip": true
@@ -67,7 +67,7 @@
     }
   },
   "cumulus-near": {
-    "src": "cumulus-wisp-transparent.png",
+    "src": "cumulus-wisp.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -80,7 +80,7 @@
     }
   },
   "cumulus-far": {
-    "src": "cumulus-wisp-transparent.png",
+    "src": "cumulus-wide.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -88,13 +88,12 @@
     ],
     "out": "props/cumulus-far-light.png",
     "fit": {
-      "width": 0.36,
-      "anchor": "centre",
-      "flip": true
+      "width": 0.4,
+      "anchor": "centre"
     }
   },
   "palm-row": {
-    "src": "palm-row-transparent.png",
+    "src": "palm-row.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -102,13 +101,13 @@
     ],
     "out": "props/palm-row-light.png",
     "fit": {
-      "height": 0.95,
+      "height": 0.98,
       "anchor": "bottom",
       "extend": true
     }
   },
   "far-palms": {
-    "src": "palm-row-transparent.png",
+    "src": "distant-palm-shore.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -116,10 +115,9 @@
     ],
     "out": "landscapes/far-palms-light.png",
     "fit": {
-      "height": 0.26,
+      "width": 1,
       "anchor": "bottom",
-      "extend": true,
-      "flip": true
+      "extend": true
     }
   },
   "bangka": {
@@ -144,7 +142,7 @@
     }
   },
   "beach-steps": {
-    "src": "beach-steps-transparent.png",
+    "src": "beach-steps.png",
     "mode": "alpha",
     "canvas": [
       2172,
@@ -158,7 +156,7 @@
     }
   },
   "coconut-palm-tall": {
-    "src": "coconut-palm-tall-transparent.png",
+    "src": "coconut-palm-tall.png",
     "mode": "alpha",
     "canvas": [
       1024,
@@ -171,7 +169,7 @@
     }
   },
   "coconut-pair": {
-    "src": "coconut-pair-transparent.png",
+    "src": "coconut-pair.png",
     "mode": "alpha",
     "canvas": [
       1024,
@@ -184,7 +182,7 @@
     }
   },
   "beach-signpost": {
-    "src": "beach-signpost-transparent.png",
+    "src": "beach-signpost.png",
     "mode": "alpha",
     "canvas": [
       1024,
@@ -197,7 +195,7 @@
     }
   },
   "capiz-lantern": {
-    "src": "capiz-lantern-transparent.png",
+    "src": "capiz-lantern.png",
     "mode": "alpha",
     "canvas": [
       1024,
@@ -210,7 +208,7 @@
     }
   },
   "coral-arch": {
-    "src": "coral-arch-transparent.png",
+    "src": "coral-arch.png",
     "mode": "alpha",
     "canvas": [
       1024,
@@ -223,7 +221,7 @@
     }
   },
   "palm-frond": {
-    "src": "palm-frond-transparent.png",
+    "src": "palm-frond.png",
     "mode": "alpha",
     "canvas": [
       1536,
@@ -236,7 +234,7 @@
     }
   },
   "capiz-window": {
-    "src": "capiz-window-transparent.png",
+    "src": "capiz-window.png",
     "mode": "alpha",
     "canvas": [
       1536,
@@ -249,7 +247,7 @@
     }
   },
   "beach-pier": {
-    "src": "beach-pier-transparent.png",
+    "src": "beach-pier.png",
     "mode": "alpha",
     "canvas": [
       1672,
@@ -262,7 +260,7 @@
     }
   },
   "pandan-clump": {
-    "src": "pandan-clump-transparent.png",
+    "src": "pandan-clump.png",
     "mode": "alpha",
     "canvas": [
       1672,
@@ -275,7 +273,7 @@
     }
   },
   "bamboo-rail": {
-    "src": "bamboo-rail-transparent.png",
+    "src": "bamboo-rail.png",
     "mode": "alpha",
     "canvas": [
       1891,
@@ -288,7 +286,7 @@
     }
   },
   "coral-rocks": {
-    "src": "coral-rocks-transparent.png",
+    "src": "coral-rocks.png",
     "mode": "alpha",
     "canvas": [
       1448,
@@ -301,43 +299,29 @@
     }
   },
   "sand-stones": {
-    "src": "sand-stones.jpg",
-    "mode": "ellipse",
+    "src": "stepping-stone-path.png",
+    "mode": "alpha",
     "canvas": [
       1672,
       941
     ],
     "out": "transitions/sand-stones-light.png",
-    "window": {
-      "rx": 0.56,
-      "ry": 0.62,
-      "power": 1.6,
-      "inner": 0.22
+    "fit": {
+      "height": 0.94,
+      "anchor": "centre"
     }
   },
   "sea-haze": {
-    "src": "sea-haze.jpg",
-    "mode": "luma",
+    "src": "sun-glare-over-water.png",
+    "mode": "alpha",
     "canvas": [
       2172,
       724
     ],
     "out": "atmosphere/sea-haze-light.png",
-    "crop": [
-      0,
-      0.12,
-      1,
-      0.88
-    ],
-    "luma": {
-      "lo": 205,
-      "hi": 255
-    },
-    "window": {
-      "rx": 0.5,
-      "ry": 0.5,
-      "power": 2.2,
-      "inner": 0
+    "fit": {
+      "width": 1,
+      "anchor": "centre"
     }
   },
   "lagoon-matte": {
@@ -353,6 +337,20 @@
       "bottom": 0.24,
       "left": 0.3,
       "right": 0.3
+    }
+  },
+  "shore-foam": {
+    "src": "shore-foam.png",
+    "mode": "alpha",
+    "canvas": [
+      2172,
+      724
+    ],
+    "out": "landscapes/shore-foam-light.png",
+    "fit": {
+      "height": 0.9,
+      "anchor": "bottom",
+      "extend": true
     }
   }
 }
