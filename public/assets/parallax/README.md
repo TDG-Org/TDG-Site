@@ -59,20 +59,48 @@ The exact command that produced the ones already here, so this is reproducible
 rather than folklore:
 
 ```bash
-ffmpeg -y -i in.png -vf "scale='if(gt(iw,1000),1000,iw)':-1:flags=lanczos" \
-  -c:v libwebp -lossless 0 -q:v 84 -compression_level 6 out.webp
+node scripts/parallax-webp.mjs         # only what changed
+node scripts/parallax-webp.mjs --all   # force a re-encode
 ```
 
-- **`1000` for most folders, `1600` for `landscapes/` and `atmosphere/`.**  Those
-  two span the full page width; everything else paints at a few hundred CSS
-  pixels at most and 1000 is already generous for a retina reader.
+**The two caps that used to be here are gone and must not come back.** They
+were 1000px for `props/` and 1600px for `landscapes/` and `atmosphere/`, at
+`-q:v 84`, and they were written for the winter kit, whose source art is 1024px
+wide. The Cebu cut-outs are 3072. Measured in Chrome at 1920x1080 by walking the
+document and taking each file's widest rendered box, `props/palm-row` paints at
+2458 CSS px, `landscapes/sand-bank` at 3053 and `props/capiz-window` at 1910 —
+4916, 6106 and 3820 device pixels on a 2x screen, against files encoded at 1000,
+1600 and 1000. The site owner reported it as art that was not the quality he
+sent, and he was right.
+
+The cap is per FILE now, and it is `2 x the widest box that file is ever painted
+in`, clamped to what the PNG holds, at `-q:v 92`. The table lives in the
+script's header; **a piece that moves or resizes needs its entry re-measured**,
+and an unmeasured file takes a deliberately generous default. The old command is
+still what runs underneath, one file at a time:
+
+```bash
+ffmpeg -y -i in.png -vf "scale='if(gt(iw,CAP),CAP,iw)':-1:flags=lanczos" \
+  -c:v libwebp -lossless 0 -q:v 92 -compression_level 6 out.webp
+```
+
+- **The cap comes from a MEASUREMENT, never from a folder name.**  "Everything
+  outside `landscapes/` paints at a few hundred CSS pixels at most" is what the
+  old rule assumed and it is false: `props/palm-row` and `props/capiz-window`
+  both span the page.  Render the site, read `getBoundingClientRect().width` on
+  every `img.scene__art` while walking the whole document, and take the maximum.
+- **The slot CANVAS is the other cap, and it is in `scripts/cebu-art.json`.**  A
+  3072px cut-out written to a 1024px canvas has already lost two thirds of
+  itself before it reaches this step.
 - **`-c:v libwebp` is what keeps the alpha channel.**  The encoded files are
   `yuva420p` — verify with `ffprobe -show_entries stream=pix_fmt`.  This is why
   a screenshot-to-JPEG step, or any encoder without an alpha path, destroys this
   art: every cutout here is a silhouette floating on transparency, and flattening
   it onto a background gives you a rectangle with a visible box around it.
-- **`q:v 84`** was compared against the source at full size and the difference
-  was not findable.  Do not push it lower to save a few more kilobytes; the fine
+- **`q:v 92`**, where it was 84.  The four points are worth about 15% of the
+  bytes on this art and they are the difference on a large flat facet, which is
+  what almost every piece in this kit is made of.  84 was compared against the
+  source at full size and the difference was not findable at the time —  Do not push it lower to save a few more kilobytes; the fine
   edges in this kit — the pine fringe along the mountain ridge, the speckle at
   the top of the fog veil — are what goes first.
 - The `if(gt(iw,...))` guard means the filter only ever downscales.  Feed it

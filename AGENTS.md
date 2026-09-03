@@ -703,6 +703,97 @@ questions. Otherwise: don't run it, don't touch it, don't ask "should I."
 There are no tests. That is not permission to skip verification; it means the
 verification is manual and you have to actually do it.
 
+### 7.0 · LOOK AT IT. Every time. Before you say it is done.
+
+**This is the rule that has been broken most, and every one of the site
+owner's angriest reports is the same failure: a change was reasoned about,
+committed, and reported, and nobody rendered it.** Not once — repeatedly, in
+the same week, across the palm placement, the cloud removal, the Building row
+and the theme seam.
+
+The three ways it goes wrong, all of them observed on this repo:
+
+- **A correct calculation, a wrong picture.** The hero palm's crown was
+  positioned by setting its lowest ink equal to the model's top edge. The
+  arithmetic was right and the frame it produced had a tree with its cut-off
+  bottom end floating in mid-air, because the same lift that clears the model
+  raises the box's FOOT into the viewport. One screenshot would have caught it
+  in a second. It shipped.
+- **Answering the question you thought was asked.** "The one under is the older
+  and uglier one, remove that" was read as "stop drawing that FILE", so both
+  cloud slots were pointed at the good drawing and the sky still had two
+  clouds. Rendering it and comparing against the owner's screenshot would have
+  shown two clouds where the note says one.
+- **Fixing one beat and breaking its neighbour.** Lifting the Building palm row
+  to show its trunks made a nine-palm row fill the lower half of the section.
+  The lift was right; nobody looked at what it did to the scale.
+
+So, on this repo, "done" for anything visual means:
+
+1. **Render the beat you changed, and OPEN THE IMAGE.** Not the code, not the
+   computed style — the picture. `scripts/`-adjacent tooling and the headless
+   route in §7.1 exist so this costs a couple of minutes.
+2. **Render the beats on either side of it.** Sections here share bands, masks
+   and crossing layers; a change to one is a change to its two neighbours.
+3. **Render BOTH themes.** Light and dark are different pictures with the same
+   markup (rule 12). A light-only fix still has to be checked in dark, because
+   most of them are written as `[data-theme='light']` overrides on a shared
+   element and it is easy to change the base rule by mistake.
+4. **When there is a judgement to make, render the CANDIDATES and compare.**
+   Placement, scale and crop are not derivable. Put three to six variants on
+   one sheet, look at them together, and pick. `cdp-variants.mjs`-style
+   harnesses are cheap; guessing is not.
+5. **Compare against the owner's screenshot** when there is one. They marked
+   the exact thing that is wrong; the render either shows it fixed or it does
+   not.
+6. **If you have not looked at it, say so in the report.** "Needs verification"
+   is an acceptable answer. "Done" without a render is not.
+
+### 7.1 · How to render it here
+
+The Browser pane cannot screenshot this site once it is scrolled — a hidden
+tab stops rastering, and it freezes `requestAnimationFrame` and CSS animation
+clocks with it. The route that works is headless Chrome over raw CDP:
+
+- Launch `chrome.exe --headless=new --remote-debugging-port=N
+  --use-angle=swiftshader --enable-unsafe-swiftshader --user-data-dir=<ABSOLUTE
+  path>`, take the page target from `/json/list`, `Emulation
+  .setDeviceMetricsOverride`, navigate, walk the whole document once so the
+  lazy art and the lazy chunks arrive, then per beat `scrollTo({behavior:
+  'instant'})`, wait ~2s for the lerps to settle, and `Page.captureScreenshot`.
+- **Seed the theme before any page script runs**, with
+  `Page.addScriptToEvaluateOnNewDocument` writing `localStorage.tdg-theme`:
+  `index.html` reads it in a blocking head script, so a write after load does
+  not take.
+- **One theme per Chrome process.** Running dark and then light in the same
+  process returns a dead renderer.
+- Do not time anything in headless — SwiftShader makes every 3D frame a
+  multi-second task. Use the Browser pane's JS with a `PerformanceObserver`
+  for timing, and headless for pictures.
+
+### 7.2 · Art comes in at the size it is PAINTED at
+
+The site owner supplies cut-outs at 3072px. Two separate caps used to throw
+most of that away, and both were in this repo rather than in the art:
+
+- **The slot canvas** in `scripts/cebu-art.json`. A 3072px palm written to a
+  1024px canvas has already lost two thirds of itself before anything is
+  encoded.
+- **The `.webp` encode.** The old recipe in the kit's README capped `props/` at
+  1000px and `landscapes/` at 1600 — numbers written for the winter kit, whose
+  sources are 1024px.
+
+`scripts/parallax-webp.mjs` is the encoder now and its cap is per FILE:
+`2 x the widest box that file is ever painted in`, measured in a real browser
+at 1920x1080, clamped to what the PNG holds. **When you add or re-place a
+piece, measure its painted width and put it in that file's table.** The
+measurement is one expression over `img.scene__art` (see the script's header),
+and an unmeasured file falls back to a deliberately generous default rather
+than to a small one.
+
+Never lower a cap to save bytes without measuring the painted size first. "It
+paints at a few hundred pixels" is exactly the assumption that produced this.
+
 1. **`npm run typecheck` silent, `npm run build` green.** Non-negotiable.
 2. **Drive the real path in a browser.** Run the dev server, open the route you
    changed, and exercise the thing — click it, tab to it, press Escape.
