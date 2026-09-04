@@ -159,6 +159,10 @@ const FROST_FULL = 0.55
  * the site owner saw them. 0.34 puts the fade entirely inside the last third of
  * the walk, after the card grid's last row has left the frame and while the
  * canvas is already washing out, so the two disappear together.
+ *
+ * The reduced-motion branch had the same hole and does not use this number to
+ * close it — a reader at rest is not moving through a fade, so its bound is the
+ * pin's own release. See the tick.
  */
 const FROST_FALL = 0.34
 
@@ -441,6 +445,26 @@ export function Walk({ children }: { children: ReactNode }) {
       // frozen mid-move one, and neither knows anything about the other beyond
       // the two marks this file already hands down.
       //
+      // **The snap has an upper bound for the same reason the ramp has a
+      // fall**, and it did not until the Cebu window was made legible. `1` for
+      // everything above the midpoint meant the layer was still on at the join
+      // into `#games`: rendered in dark at scroll 5893 with
+      // `prefers-reduced-motion: reduce`, pale crystal shards stand over the
+      // Games terrace and its neon band — the exact frame FROST_FALL was
+      // written to take out of the animated path, reached by the branch that
+      // never got it. In light it was there too and nobody could see it,
+      // because the window was being masked away to a 2.5-level whisper; the
+      // moment it was drawn at its own strength it was two panes of shell
+      // hanging over the beach.
+      //
+      // The bound is `p < 1` and NOT FROST_FALL's mark, which is the ramp's
+      // and belongs to a reader who is moving. `p` is `clamp01`ed above, so 1
+      // is exactly the pin's release: at rest the window is drawn for as long
+      // as the stage is pinned, and the shot is over when the walk lets go.
+      // Borrowing the fade's start instead would have cut it at scroll 5168
+      // against a card grid that begins at 5319 — the layer gone before the
+      // thing it frames arrives. Measured at 1920x1000 with the preference on.
+      //
       // `tools > 0` is the guard and it is not defensive noise: `markOf`
       // returns 0 for a section it cannot find, and every expression below
       // measures BACKWARD from that mark — so a `Walk` rendered without a
@@ -465,7 +489,7 @@ export function Walk({ children }: { children: ReactNode }) {
         tools <= 0
           ? '0'
           : mi === 0
-            ? p >= (apps + tools) / 2
+            ? p >= (apps + tools) / 2 && p < 1
               ? '1'
               : '0'
             : (

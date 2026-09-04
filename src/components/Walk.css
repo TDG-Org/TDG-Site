@@ -793,33 +793,89 @@
   opacity: 0.92;
 }
 
-/* ── the Cebu piece in this slot is a FRAME, and it needs to be framed ─────
-   `props/window-frost` is a vignette: pale crystal that thickens toward the
-   edges of its own file and thins to nothing in the middle, so `object-fit:
-   cover` over the whole section gives frost at the borders and a clear centre
-   — which is what glass between the reader and the shot looks like.
+/* ── the Cebu piece in this slot is a WINDOW, and it was being un-drawn ────
+   `props/window-frost` is a bloom: pale crystal that thickens toward the four
+   corners of its own file and thins to nothing in the middle, so `object-fit:
+   cover` gives frost at the borders and a clear centre — which is what glass
+   between the reader and the shot looks like.
 
-   `props/capiz-window` is not that shape. It is a shell-pane lattice with a
-   CROSS cut through it, and its ink covers the whole canvas: the four corners
-   are solid window. Covered over a 1590 x 1700 section the file's own middle
-   62% is what survives the crop, so the section rendered as a wall of window
-   frames with the cards behind it — every card sat behind a pane, and the
-   walk's own scene could not be seen at all.
+   **`props/capiz-window-light` is the SAME shape, and the note that used to
+   sit here said it was not.** Measured off the file rather than described —
+   drawn into a canvas and swept for alpha — it is 3072x2048 with ink from
+   x 0 to 0.307 and from 0.690 to 1 and NOTHING in the middle 38.3%; the left
+   column runs unbroken from y 0 to 0.996 and the right one from 0 to 0.367
+   and 0.598 to 0.996. Rows in its top and bottom fifths are 61% covered and
+   the middle band 13%. That is two jambs, a head and a sill with the opening
+   drawn in: a window, in exactly the sense the frost is glass.
 
-   The mask is what gives it the vignette the other file has drawn in. An
-   ellipse wider than it is tall, clear to 44% of the radius and full by 80%,
-   leaves the panes at the frame's edges and the corners — where the eye reads
-   "you are looking through a window" — and takes the lattice off the reading
-   column entirely. The cross is still in the file and still lands in the open
-   middle; it is simply no longer the only part of it you can see past.
+   So the ellipse that used to be added on top of it was a second vignette
+   over a drawing that already had one, and it was solved against a 1590x1700
+   box this page does not render at any desktop width. At 1920x1000 that mask
+   is `transparent` at the mid-height of BOTH side edges — the rows the jambs
+   occupy, at 0.391 of an ellipse whose clear stop is 0.44 — and reaches only
+   alpha 0.586 at the frame's own corner. Ablated on the rendered page at
+   scroll 5393, where the ramp has this layer at its peak, the whole thing
+   moved 16.9% of the frame's pixels by >=2 levels for a mean |delta| of 2.57
+   on a frame whose median is 222. A window that is not there.
 
-   0.66 rather than the dark theme's 0.92 for the reason the old note here
-   gave, which still holds: dark wood on a pale band is a much louder mark
-   than pale crystal on a dark one. */
+   The report it produced — "large blurred brown planks filling the whole band
+   with three white cards floating on them, and I cannot tell what I am looking
+   at" — is that absence. The planks are the hut's own posts, and by this beat
+   the camera has pushed so far through the west opening that its head beam and
+   both jambs are off frame: at scroll 4993 the 3D still draws the opening and
+   the band reads instantly, and 400px later there is nothing left in it to
+   name. This layer is what the shot hands the frame over to, and it was
+   handing over nothing.
+
+   ── the size is the drawing's own jamb against the page's gutter ──────────
+   Not a scale factor and not a mask: the drawing is placed at the width where
+   its own opening is the reading column. Centred, a jamb's inner edge sits at
+   `0.5W - 0.193 x Aw`; `.shell` is capped at 1180px, so the page's gutter is
+   `0.5W - 590`. Those are equal at Aw = 590 / 0.193 = **3057px**, and equal at
+   EVERY width the cap is in force, because the two move with the viewport at
+   the same rate. Measured on the page at 1920x1000: the box lands at x -568,
+   the left jamb's inner edge at 370 against a shell that starts at 370, and
+   the right jamb at 1541 against a shell that ends at 1550 — 9px in, because
+   the drawing's own margins are 0.307 and 0.310 rather than a matched pair.
+
+   `200vw` takes over below ~1550px, where the gutter has closed and the
+   viewport is the constraint instead: two viewports of drawing keeps a fifth
+   of the frame as jamb on each side, so the window still reads at 1440, 1280
+   and 1024 rather than thinning to a 50px sliver. `100vw` is the floor for an
+   ultrawide monitor, where a 3057px drawing would stop before the screen edge
+   and the window would appear to float.
+
+   What it costs the copy, by the same ablation, sampling every text node's own
+   line boxes in `#tools` (this rule forced to `display: none`, the same frame
+   measured twice) at three scroll positions each: at 1920, 1440 and 1280 all
+   42 boxes are unchanged to 0.01 — the ink lands only in columns 0-3 and 13-15
+   of sixteen, and the card grid's own columns read 0.0 to 0.3. At 390 the
+   panes reach a card's outer padding and two boxes move: `.tools__title`
+   11.97 -> 10.89 and `.tools__cta--link` 14.55 -> 14.36, both far above the
+   4.5 floor, and that overlap is the "cover some of the cards when scrolling,
+   to make things more poppy and fun" the owner asked this layer for.
+
+   0.78 rather than the dark theme's 0.92 for the reason the old note gave,
+   which still holds: dark wood on a pale band is a much louder mark than pale
+   crystal on a dark one. It is not 0.66 any more because 0.66 was chosen for a
+   layer that had already been masked out of the frame.
+
+   `overflow: clip` on the wrapper because at desktop widths the drawing is now
+   larger than the pin in both axes — 3057 x 2038 in a 1920 x 1000 box — and
+   `.walk` clips with a 130svh MARGIN, which would otherwise let a corner paint
+   outside the pinned box at either end of the run. On the light rule so dark's
+   compositing is untouched — verified by reading the computed `overflow`,
+   `transform`, `mask-image` and `opacity` off the dark page. */
+[data-theme='light'] .walk__frost {
+  overflow: clip;
+}
 [data-theme='light'] .walk__frost-art {
-  opacity: 0.66;
-  -webkit-mask-image: radial-gradient(128% 96% at 50% 50%, transparent 0 44%, #000 80%);
-  mask-image: radial-gradient(128% 96% at 50% 50%, transparent 0 44%, #000 80%);
+  --capiz-w: max(100vw, min(3057px, 200vw));
+  --capiz-h: calc(var(--capiz-w) * 2 / 3);
+  inset: calc((100% - var(--capiz-h)) / 2) auto auto calc((100% - var(--capiz-w)) / 2);
+  width: var(--capiz-w);
+  height: var(--capiz-h);
+  opacity: 0.78;
 }
 
 @media (prefers-reduced-motion: reduce) {

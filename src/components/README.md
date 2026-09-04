@@ -98,6 +98,18 @@ touch anything in this half of the page:
   hidden`.** Either one breaks something silently — the first re-orders the
   lamppost against the hero's wordmark, the second stops the pin sticking at
   all. Walk.css states both where they can be broken.
+- **The window in front of the cards is what the shot hands over to.** A second
+  `Stage` after the sections, at `z-index: 3`, holds one drawing: frost on the
+  glass in dark, a capiz shell window in light. It is not decoration — by the
+  `#tools` beat the camera has pushed through the hut's own opening and its
+  head beam and jambs are off frame, so this layer is the only thing left
+  saying what you are looking through. **Its size is derived, never picked**:
+  the drawing's jamb is 0.307 of its own canvas and `.shell` is capped at
+  1180px, so 590 / 0.193 = 3057px is the width at which the jambs land in the
+  page's own gutters — and they land there at every width the cap is in force,
+  because both edges move with the viewport at the same rate. Walk.css carries
+  the alpha sweep that measured the drawing and the ablation that says what the
+  layer costs the copy (nothing, at 1280 and up).
 
 ### `hero/` and `origin/`
 
