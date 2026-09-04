@@ -70,11 +70,11 @@ the store, the placement maths and the seven hosts.
 
 ## How a placement is stored, and why in those units
 
-`x` and `y` are percentages of the element's **offset parent**; `w` is `vw`.
-Both are in `types.ts` with the argument, and the short version is that a draft
-made on a 1904px window has to mean the same thing on a 1280px one. A pixel
-offset does not; a percentage of the box the layer is actually positioned
-inside does.
+`x` and `y` are percentages of the element's **offset parent**; `w` is `vw` and
+`h`, when it is written at all, is `vh`. All of it is in `types.ts` with the
+argument, and the short version is that a draft made on a 1904px window has to
+mean the same thing on a 1280px one. A pixel offset does not; a percentage of
+the box the layer is actually positioned inside does.
 
 Only the fields that were touched are written. An absent field is not a zero —
 it is "the stylesheet still decides", which is what keeps a dragged piece's
@@ -83,6 +83,66 @@ mask, `object-position` and clamps intact.
 `apply.ts` writes `left`/`top` **and** `right: auto`/`bottom: auto` together,
 because most of these rules anchor from the far edge and a box with `left`,
 `right` and `width` all resolved silently ignores one of them.
+
+### Everything is measured off the LAYOUT box, never the rect
+
+This is the single most important line in the folder and it is worth stating
+here as well as in `apply.ts`, because getting it wrong does not look like a
+maths error — it looks like the art teleporting.
+
+`getBoundingClientRect()` reports a box AFTER transforms. `left` positions a
+box BEFORE them. **Nine of the seventeen pieces on the home page carry a CSS
+`transform`** — the `left: 50%` + `translateX(-50%)` centring recipe, plus the
+mirrored ones — so measuring with the rect and writing back as `left` applied
+each of those transforms twice, and the piece leapt by exactly its own
+translate the instant it was touched. That was the site owner's *"when I move
+the hero__ridge, it snaps to a spot"*, and `hero__ridge` was only the loudest
+of nine:
+
+    hero__ridge  -1389.9px   origin__snow  -1526.7px   origin__lamp  -1351.7px
+    hero__mid    -1275.8px   origin__pines -1218.6px   hero__rear    -1180.6px
+    origin__tops -1123.4px   hero__cloud    -799.5px   hero__weather   -47.1px
+
+`offsetLeft` / `offsetTop` / `offsetWidth` are the layout numbers, before every
+transform and before the standalone `translate` the motion hooks write, and
+`clientWidth` of the offset parent is the box a percentage actually resolves
+against. Use those. There is a round-trip audit in the scratchpad note below
+that catches a regression here in about two minutes.
+
+**How to check it:** for every `.scene__art`, measure with `measurePlacement`,
+write the result straight back as inline style, and re-measure. Nothing may
+move. Before the fix, 9 of 17 moved by hundreds of pixels; after it, 44 of 46
+rows across both themes and five scroll beats move by 0.0px and two move by
+under a pixel (integer rounding in `offsetTop`, which only ever affects the
+first grab of an untouched piece).
+
+---
+
+## Resizing, and what the ratio lock actually locks
+
+Eight grips, one per edge and corner, plus a rotate knob on a stalk above the
+top edge. The opposite edge is the anchor: growing from the west grip moves
+`left` by exactly what the width gained; the east grip does not touch `left` at
+all. That offset is derived from the FINAL size rather than from the pointer
+delta, so it is still right after the ratio lock has overridden one of the two
+axes.
+
+The pointer delta is projected onto the piece's own axes before any of that, so
+a rotated piece grows along the edge whose grip you are holding rather than
+along the screen. At 0deg the projection is the identity, which is every piece
+until somebody rotates one.
+
+**Ratio locked** drives from one axis — horizontal wherever there is a
+horizontal edge, because `w` is the number the draft stores — and derives the
+other. It then writes only `w` if the stylesheet is deriving the height from an
+`aspect-ratio`, and both if it is not (the band plates state a height and crop
+with `object-fit`; leaving their height alone would make the box refuse to
+follow the grip). **Unlocked** writes both, independently, and the Height field
+appears in the panel beside Width.
+
+Verified by driving real mouse events at every grip in both ratio states in
+both themes — 32 cases, anchored edge holding to within 0.3px and the dragged
+edge landing within 0.3px of the pointer.
 
 ---
 
@@ -129,5 +189,30 @@ edit survives a reload. **Clear** empties both.
   entry inside a section.
 - **Letting the hover hit-test write the click-cycle counter.** Every first
   click then selected the layer BEHIND the one under the cursor.
+- **Cycling the selection on every `pointerdown`.** Correct-looking until there
+  are two layers under the cursor: select a palm, press on it to drag it, and
+  the press re-picks and hands you the sand behind it — measured on `#games`,
+  where dragging the selected `games__pines` moved `games__fog` and the palm
+  row did not shift by a pixel. Pressing keeps the current selection when it is
+  one of the things under the cursor; only a CLICK, pressed and released
+  without moving, steps behind.
+- **Measuring with `getBoundingClientRect()`.** See the round-trip section
+  above. This is the one that will be re-introduced by somebody tidying up.
+- **Drawing the selection outline on the rect.** A rotated element's rect is
+  its axis-aligned bounding box, so the outline became a box the piece rattled
+  around inside with its grips nowhere near the edges they resize. The outline
+  is built from the layout size and the rect's CENTRE — which a rotation about
+  the default origin leaves exactly where it was — and then turned by the same
+  angle.
+- **Deriving that angle from the computed `transform` matrix.** Nine pieces
+  carry one and every one of them is a translate or a mirror;
+  `matrix(-1, 0, 0, 1, ...)` decomposes to 180deg of rotation, which is true of
+  the maths and false of the picture. Only the standalone `rotate` property is
+  read.
+- **A dock pinned `top: 12px; bottom: 12px`.** A column of chrome down the
+  whole right edge whatever is in it. It is `max-height: min(74svh, 660px)`
+  with the body scrolling, it can be anchored to either edge, it can be dragged
+  anywhere by its header, and Reset returns it to its anchor.
 
-All five were found by rendering it, which is `AGENTS.md` §7.0.0.
+All of them were found by rendering it or by driving it, which is
+`AGENTS.md` §7.0.0.

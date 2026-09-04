@@ -15,10 +15,20 @@
 .sceneed {
   position: fixed;
   top: 12px;
-  right: 12px;
-  bottom: 12px;
   z-index: 9000;
   width: 344px;
+  /* -- not the whole window --------------------------------------------
+     It used to be `top: 12px; bottom: 12px`, which is a column of chrome down
+     the entire right-hand edge whatever is in it — a Piece tab with six
+     fields left four hundred pixels of empty panel over the page you were
+     trying to look at. A max-height with the body scrolling inside means the
+     panel is as tall as its contents and never taller than most of the
+     window, so there is always page above it and below it.
+
+     `min()` of a fraction and a cap: the fraction keeps it off the bottom of
+     a short laptop screen, the cap stops it becoming a two-thousand-pixel
+     ribbon on a tall monitor. */
+  max-height: min(74svh, 660px);
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-hover);
@@ -31,9 +41,33 @@
   overflow: hidden;
 }
 
+/* The anchor. `translate` carries the free-drag offset from here, which is why
+   the two are separate properties and separate fields in the state: an anchor
+   is a rule and an offset is a nudge, and Reset only has to clear the nudge. */
+.sceneed--right {
+  right: 12px;
+  left: auto;
+}
+
+.sceneed--left {
+  left: 12px;
+  right: auto;
+}
+
 .sceneed--collapsed {
   width: auto;
-  bottom: auto;
+  max-height: none;
+}
+
+/* Grab anywhere on the bar that is not a button. */
+.sceneed__head {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.sceneed__head:active {
+  cursor: grabbing;
 }
 
 /* ── head ──────────────────────────────────────────────────────────────── */
@@ -75,6 +109,19 @@
   background: var(--surface-hover);
   border-color: var(--border-hover);
   color: var(--text);
+}
+
+/* The side this panel is anchored to reads off the header without hovering
+   anything — the pressed one is filled, exactly like the theme pill below. */
+.sceneed__fold.is-on {
+  background: var(--invert-bg);
+  border-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+.sceneed__fold--warn {
+  color: var(--warm);
+  border-color: color-mix(in srgb, var(--warm) 46%, transparent);
 }
 
 .sceneed__fold:focus-visible,
@@ -458,6 +505,15 @@
   color: var(--text);
 }
 
+/* The row whose piece is lit on the page. Same warm ink as the hover outline
+   out there, so the two read as one thing rather than as two highlights that
+   happen to be on at the same time. */
+.sceneed__layer.is-lit {
+  background: color-mix(in srgb, var(--warm) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warm) 52%, transparent);
+  color: var(--text);
+}
+
 .sceneed__layer.is-hidden .sceneed__layer-name {
   text-decoration: line-through;
 }
@@ -555,7 +611,19 @@
   left: 0;
   display: none;
   pointer-events: none;
-  border: 1px dashed var(--edge-mid);
+  /* Both boxes are turned by the piece's own rotation from the frame loop, so
+     the origin has to be the centre — the geometry hands over a centred box
+     and lets the browser do the turn. */
+  transform-origin: 50% 50%;
+}
+
+/* Under the cursor, or under the row you are pointing at in the Layers list.
+   Deliberately a different LANGUAGE to the selection, not a different shade:
+   dashed and warm against solid and accent, so at a glance the two never have
+   to be told apart by colour alone. */
+.sceneed__hover {
+  border: 1px dashed var(--warm);
+  background: color-mix(in srgb, var(--warm) 8%, transparent);
 }
 
 .sceneed__sel {
@@ -563,28 +631,100 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 60%, transparent);
 }
 
-/* The one thing on the sheet that answers a pointer, so a drag that starts on
-   it resizes instead of re-picking whatever is underneath. */
-.sceneed__handle {
+/* The name of whatever the two boxes are pointing at, so "which one is this"
+   never needs a trip to the panel. Axis-aligned at the bounding box's corner
+   rather than inside the rotated frame, so it stays readable at any angle. */
+.sceneed__tag {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  pointer-events: none;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- the grips ---------------------------------------------------------
+   Eight of them, because "resize from the corner" is a promise the one
+   bottom-right square could not keep: every other edge of a piece was
+   un-draggable, and the only way to grow a layer upward was to resize it
+   downward and then drag it back.
+
+   They are the only things on the sheet that answer a pointer, so a drag that
+   starts on one resizes instead of re-picking whatever is underneath — and
+   they sit INSIDE the rotated box, so they turn with the piece and each one
+   still holds the edge it is named after. */
+.sceneed__grip {
   position: absolute;
-  right: -5px;
-  bottom: -5px;
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
   border: 1px solid var(--bg);
   border-radius: 2px;
   background: var(--accent);
   pointer-events: auto;
-  cursor: nwse-resize;
+}
+
+.sceneed__grip--nw { top: 0; left: 0; }
+.sceneed__grip--n { top: 0; left: 50%; }
+.sceneed__grip--ne { top: 0; left: 100%; }
+.sceneed__grip--e { top: 50%; left: 100%; }
+.sceneed__grip--se { top: 100%; left: 100%; }
+.sceneed__grip--s { top: 100%; left: 50%; }
+.sceneed__grip--sw { top: 100%; left: 0; }
+.sceneed__grip--w { top: 50%; left: 0; }
+
+/* The rotate knob, above the top edge on a stalk, which is where two decades
+   of drawing tools have taught everyone to look for it. Round rather than
+   square so it never reads as a ninth resize grip. */
+.sceneed__rotate {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border: 1px solid var(--bg);
+  border-radius: 50%;
+  background: var(--warm);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.sceneed__rotate::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 1px;
+  height: 15px;
+  background: var(--accent);
+}
+
+.sceneed__rotate:active {
+  cursor: grabbing;
 }
 
 @media (max-width: 900px) {
   /* The dock is a desktop tool — it needs the page beside it, and there is no
      page left beside it on a phone. It still opens, so a placement can be
-     checked at a narrow width; it just stops trying to be a side panel. */
-  .sceneed {
+     checked at a narrow width; it just stops trying to be a side panel, and
+     the anchor and the drag offset both stand down with it. */
+  .sceneed,
+  .sceneed--left,
+  .sceneed--right {
     left: 12px;
+    right: 12px;
     width: auto;
+    translate: none !important;
   }
 }
 

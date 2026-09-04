@@ -1,7 +1,7 @@
 {
   "name": "tdg-brothers-site",
   "private": true,
-  "version": "2.55.1",
+  "version": "2.56.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
