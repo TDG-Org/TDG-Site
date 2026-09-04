@@ -1134,6 +1134,48 @@
   background: linear-gradient(180deg, transparent 0%, var(--tools-shore-ink) 100%);
 }
 
+/* ── the light floor is CLEARED. Every prop at this join comes off ─────────
+   The site owner's screenshot of the band directly above #games' heading,
+   with the instruction stated once and without qualification: "remove the
+   post, the water thing, the ice thing, the rock, the dock, all that nonsense
+   that you threw together. Just remove it."
+
+   Named against what is actually drawn there, measured at 1920x1000 with the
+   join centred (viewport y):
+
+     tools__sea      53..513   `sea-band` — the "ice thing". A faceted ocean
+                               plate read as a range of blue-white peaks at
+                               this altitude, because nothing in the frame
+                               said which way was up.
+     tools__bridge  164..861   `beach-pier` — the "dock".
+     tools__reeds   371..585   `pandan-clump` — the green clump.
+     tools__rocks   248..608   `coral-rocks` — the "rock".
+     tools__spray   264..512   the haze that existed only to sit BETWEEN the
+                               pier and the boulders. With both gone it is a
+                               grey wash over nothing.
+
+   #games' half of the same pile — the signpost and the shallow-water band
+   that crosses up into this floor — comes off in Games.css, in the block that
+   names this one.
+
+   Three passes have now answered a "this is a pile" report by rearranging the
+   pile or by adding a plate underneath it to explain it. This one does what
+   was asked. What is left at this floor in light is the section's own band
+   running into `--band-games` through `.tools__shore` — the transition, which
+   was never part of the complaint.
+
+   DARK IS UNTOUCHED. The footbridge over the synthwave grid is that theme's
+   beat and has never been reported; every rule above keeps its values there.
+   Rule 12: a light-only change is written as a `[data-theme='light']`
+   override and the base rule is left alone. */
+[data-theme='light'] .tools__sea,
+[data-theme='light'] .tools__bridge,
+[data-theme='light'] .tools__reeds,
+[data-theme='light'] .tools__rocks-sway,
+[data-theme='light'] .tools__spray {
+  display: none;
+}
+
 /* ── narrow ──────────────────────────────────────────────────
    Below this the scene band is much shorter and the boulders stop being a
    second layer and start being a lid on the bridge: measured at 375px they

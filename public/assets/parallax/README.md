@@ -163,7 +163,7 @@ supplied the same art as PNGs with real alpha, so the modes now are:
 | `landscapes/mountain-ridge` | `landscapes/sea-band` | Hero, **the sea** — its top row is the horizon the sun sits on, drawn opaque |
 | `landscapes/valley-fog` | `props/bangka` | Hero, the outrigger crossing the bay on the drifting layer |
 | `props/moon-cloud` (near / far) | `props/cumulus-near` / `props/cumulus-far` | Hero, one cloud on the sun's crown, one high and left |
-| `props/tall-pine` | `props/coconut-palm-tall` | Hero, right edge |
+| `props/tall-pine` | `props/coconut-palm-tall` | Hero, right edge. In light it hangs from the TOP of the frame (`top: clamp(100px, 15svh, 160px)`, `Hero.css`) with its crown in the corner and its trunk running off the right edge — the owner drew that placement on a screenshot in red. Dark keeps `bottom` and stands the pine out of the frame's floor |
 | `props/near-branch` | `props/palm-frond` | Hero, top-left bough |
 | `hero/lamppost-left` | `props/coconut-pair` | Origin, the left-edge anchor planted in the sand bank (a lit lantern at midday belonged to the other theme; `hero/lamppost-cebu` is deleted, not hidden) |
 | `landscapes/far-treeline` | `landscapes/far-palms` | Origin's far shore |
@@ -171,23 +171,23 @@ supplied the same art as PNGs with real alpha, so the modes now are:
 | `props/pine-row` | `props/palm-row` | Origin's near palms |
 | `landscapes/snow-bank` | `landscapes/sand-bank` | Origin's beach. `skyline` mode, so its top edge is the dune's own ridge and the palm row behind it shows over the crest |
 | `props/window-frost` | `props/capiz-window` | The walk's front stage. The frost is a vignette by construction and this file is not — its ink covers the whole canvas with a cross cut through it — so `Walk.css` masks the middle out and keeps the panes at the edges, at 0.66 rather than the frost's 0.92 |
-| `landscapes/stone-footbridge` | `landscapes/beach-pier` | Tools' floor |
-| `atmosphere/mist-bank` | `landscapes/sea-band` | Tools' floor, **the water the pier goes out over**. Light only: dark's floor is `.tools__road`, a synthwave grid running to a lit horizon, and light does not draw that composition at all (`Tools.css`). Opaque — water is an object |
-| `props/bushes-reeds` | `props/pandan-clump` | Tools' floor |
-| `props/fence-rail` | `props/bamboo-rail` | Tools' floor |
-| `props/boulder-cluster` | `props/coral-rocks` | Tools' floor |
-| `props/wayfinding-post` | `props/beach-signpost` | Games, crossing up into Tools |
-| `atmosphere/fog-veil` | `landscapes/shallow-water` | The waterline, crossing up out of Games into Tools' floor — the join between the sea above and the sand below |
+| `landscapes/stone-footbridge` | `landscapes/beach-pier` | Tools' floor. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `atmosphere/mist-bank` | `landscapes/sea-band` | Tools' floor, the water the pier went out over. It was light-only (dark's floor is `.tools__road`, a synthwave grid running to a lit horizon), so with light cleared this slot draws **nothing in either theme**. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `props/bushes-reeds` | `props/pandan-clump` | Tools' floor. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `props/fence-rail` | `props/bamboo-rail` | Tools' floor — **dark only** since the pass before the clearance; light had five things at one floor and the rail was the fifth |
+| `props/boulder-cluster` | `props/coral-rocks` | Tools' floor. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `props/wayfinding-post` | `props/beach-signpost` | Games, crossing up into Tools. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `atmosphere/fog-veil` | `landscapes/shallow-water` | The waterline, crossing up out of Games into Tools' floor. **Not drawn in light** — see *The 2026-09-03 clearance* below. The join is now carried by `.games__seam` and `.tools__shore` alone — a shape and a gradient |
 | `atmosphere/fog-veil` | `landscapes/beach-terrace-plain` | Games' floor. The plate is `beach-terrace` cropped in the pipeline to its bottom 22%, the one band with no shell or pebble on it, so the crop can sit anywhere. Opaque, and `--band-games` is matched to it |
-| `props/pine-faceted-pair` (both stands) | `props/palm-row` | Games. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Games.css` gives light its own box — a band across the floor at each stand's own clearance |
-| `transitions/stone-stair` | `transitions/beach-steps` | Outro's seam with Faith — **dark only**. In light the flight has no ground above or below it and reads as slabs floating in an empty sky, so `Outro.css` hides the clip; the join is carried by `landscapes/headland` instead |
-| `landscapes/far-range-soft` | `landscapes/headland` | Outro, the far shore, standing at `--outro-horizon` with its foot 34px under the lagoon's fading top edge |
-| `atmosphere/mist-bank` | `landscapes/sea-band` | Outro, **the lagoon**. Light only, opaque; the section's `padding-bottom` is derived from its top edge so the copy always clears the water |
-| `atmosphere/mist-bank` | `landscapes/shallow-water` | Outro, the foam at the waterline, straddling the sand's top edge |
-| `landscapes/snow-bank` | `landscapes/beach-terrace-plain` | Outro, the sand the arch and the lantern stand on |
-| `props/lantern-post` | `props/capiz-lantern` | Outro |
-| `props/garden-arch` | `props/coral-arch` | Outro |
-| `transitions/stepping-stones` | `transitions/sand-stones` | Outro |
+| `props/pine-faceted-pair` (both stands) | `props/palm-row-mid` (near stand only) | Games. An aspect change as well as a file change: a 3:1 row does not fit the 2:3 hole a pine pair leaves, so `Games.css` gives light its own box — a band across the floor at the stand's own clearance. The FAR stand (`landscapes/far-palms`) is **not drawn in light** — see below — and the near row's bottom now carries a percentage mask so it dissolves into `.games__haze` instead of being cut on the section's edge |
+| `transitions/stone-stair` | `transitions/beach-steps` | Outro's seam with Faith — **dark only**. In light the flight has no ground above or below it and reads as slabs floating in an empty sky, so `Outro.css` hides the clip; the join is carried by the two sections' shared band |
+| `landscapes/far-range-soft` | `landscapes/headland` | Outro, the far shore. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `atmosphere/mist-bank` | `landscapes/sea-band` | Outro, the lagoon. Was light-only, so this slot now draws **nothing in either theme**. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `atmosphere/mist-bank` | `landscapes/shallow-water` | Outro, the foam at the waterline. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `landscapes/snow-bank` | `landscapes/beach-terrace-plain` | Outro, the sand — now the only art left in the light Makers beat, and the floor the copy and the GitHub card stand on |
+| `props/lantern-post` | `props/capiz-lantern` | Outro. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `props/garden-arch` | `props/coral-arch` | Outro. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
+| `transitions/stepping-stones` | `transitions/sand-stones` | Outro. **Not drawn in light** — see *The 2026-09-03 clearance* below. |
 | — | `props/cumulus-near` / `-far` again | Faith, two clouds in the summit's gutters — never over the disc |
 | — | `scene/lagoon-matte` | Not a slot: the painted lagoon `origin/CabinScene.tsx` stands far behind the hut, the one raster in the 3D scene. Feathered on all four edges now, because a quad with a hard rim showed its corners in the sky |
 
@@ -401,3 +401,32 @@ for is the section that may not have it — see below.
   you: every request into `assets/parallax/` should be a `.webp`, and none
   should 404.  A `.png` request means a component wrote the extension itself;
   a 404 means art was added without its `.webp`.
+
+## The 2026-09-03 clearance
+
+**Twelve Cebu slots above say "not drawn in light", the far palms row is a
+thirteenth, and they all come off the same report.** The owner sent four screenshots — the band above #games'
+heading, the palm row, the Makers beat, and the hero — and one instruction:
+*"remove those objects that do not make sense … all that nonsense that you
+threw together. Just remove it."* Named in his own words: the post, the water
+thing, the ice thing, the rock, the dock; the faded background palms; and at
+the Makers, "a stone path, light stand, a portal entrance thing, water, ice, a
+mountain".
+
+Every one of those layers was added by a pass answering "this beat is empty"
+with another prop, and three passes running had answered "this is a pile" by
+rearranging the pile or by sliding a plate under it to explain it. The
+clearance ends that loop. What each light beat keeps is its band, its floor
+and its shaped seams — a gradient and a silhouette are not props and were
+never what was reported.
+
+Two of the readings are worth keeping because the file names hid them. A
+top-down water plate stood on end in a band with no horizon in it does not read
+as water: `landscapes/sea-band` at #tools and `landscapes/shallow-water` at
+#outro were both reported as **ice**. The name says what a piece is; only a
+render says what it looks like. See `AGENTS.md` §7.0.0.
+
+**Nothing is deleted and nothing is recoloured.** Every piece here is still in
+the kit, still fetched by nothing it is not drawn in, and every removal is a
+`[data-theme='light']` override on the element — dark draws the whole set
+exactly as it did, which is the theme none of this was ever reported in.

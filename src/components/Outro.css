@@ -624,8 +624,12 @@
 .outro__sand {
   display: none;
 }
-[data-theme='light'] .outro__far,
-[data-theme='light'] .outro__lagoon,
+/* ── and in light only the SAND is drawn ───────────────────────────────────
+   `.outro__far` and `.outro__lagoon` were declared here beside it and both
+   come off; see the block at the end of this file, which names every layer
+   the site owner asked to have removed from this beat and why. The floor
+   stays: a section with copy over it needs a ground, and the ground was never
+   what was reported. */
 [data-theme='light'] .outro__sand {
   display: block;
 }
@@ -1483,4 +1487,51 @@
 }
 .outro__gh-cta:hover {
   background-color: var(--accent-soft);
+}
+
+/* ── the light Makers beat is CLEARED ──────────────────────────────────────
+   The site owner's screenshot of this section, marked, with the instruction
+   stated in one sentence: "There is a stone path, light stand, a portal
+   entrance thing, water, ice, a mountain, literally a bunch of crap randomly
+   thrown together. Remove All of this crap."
+
+   Named against what is actually drawn, measured at 1920x1000 with the beat
+   centred (viewport y):
+
+     outro__stones   `sand-stones`      x 1265..1645, y 627..841 — "a stone
+                                        path". A row of pink flat stones lying
+                                        across the shallows, leading to a gate.
+     outro__lantern  `capiz-lantern`    x  372..498, y 701..890 — "light stand".
+     outro__arch     `coral-arch`       x  225..645, y 428..1058 — "a portal
+                                        entrance thing".
+     outro__lagoon   `sea-band`         y 501..751 — "water".
+     outro__shore    `shallow-water`    y 642..818 — "ice". The same faceted
+                                        turquoise plate that read as a range of
+                                        peaks at #tools, for the same reason:
+                                        a top-down water plate stood on end in
+                                        a band with no horizon in it.
+     outro__far      `headland`         y 405..535 — "a mountain".
+
+   Six layers, one section, and every one of them was added by a pass
+   answering "this beat is empty" with another prop. That is the loop this
+   block ends. What is left is what the beat needs and nothing else: the
+   section's own band, `.outro__afterglow`, `.outro__ground`'s pool of light
+   under the copy, and `.outro__sand` — one floor for the copy and the GitHub
+   card to stand on.
+
+   `.outro__clip` and `.outro__stair-clip` stay as they are; both are boxes
+   rather than art, `.outro__stair-clip` is already `display: none` in light,
+   and neither draws anything on its own.
+
+   DARK IS UNTOUCHED, and the whole reason these are written as
+   `[data-theme='light']` overrides rather than deletions: at midnight this is
+   a stone terrace with a garden arch, a lantern beyond it and a stair down
+   from #faith's summit, and none of it has ever been reported. Rule 12. */
+[data-theme='light'] .outro__far,
+[data-theme='light'] .outro__lagoon,
+[data-theme='light'] .outro__shore,
+[data-theme='light'] .outro__lantern,
+[data-theme='light'] .outro__arch,
+[data-theme='light'] .outro__stones {
+  display: none;
 }

@@ -2970,10 +2970,69 @@
 
    The model is NOT part of this. It has no light override at all; see the
    block above for why. */
+/* ── and it hangs from the TOP of the frame, because that is where the
+      owner drew it ──────────────────────────────────────────────────────────
+   The instruction came as a screenshot with a palm drawn on it in red — crown
+   splayed in the top right corner, a trunk stroke running down and off the
+   right edge — and one sentence: "Where the red is that I marked, the tree
+   under it should be in that position. You messed this up too many times
+   before so I literally drew it out for you."
+
+   Read off that screenshot against its own landmarks (the CTA row and the
+   hero strip give the scale, 0.705, and the window's own left edge the
+   origin): the mark runs page x 1657..1969, y 138..570, and the palm it is
+   drawn above was at y 541..961. So it is the same tree, the same corner,
+   about 400px higher — and the trunk stroke crosses the frame's right edge at
+   about y 454 rather than stopping inside it.
+
+   ## The size is NOT part of this, and the reason is measured
+
+   The mark is about 310px wide against this box's 280 and it would be easy to
+   read that as "and bigger". It is not, because of what is behind it. The
+   point cloud's ink envelope, sampled straight off `.hero__model-canvas` with
+   `getImageData` over SIXTY frames of the morph (cross, boat, controller,
+   arch) at 1904x940, is x 1294..1762, y 255..675 — 17px wider on the right
+   than the six-frame diff the last pass used.
+
+   The palm's crown ink starts at `viewport - 0.497 x --pine-w`, so it clears
+   1762 only while `--pine-w` is at most about 286px. Rendered at 420, 480 and
+   540 to check the reading rather than the inequality: at 540 the fronds are
+   plainly across the cross's right arm, and at 480 they are over the trail in
+   half the morph phases. `min(17vw, 280px)` is the size that fits, it is the
+   size the last pass shipped and measured, and it is the size the mark is
+   drawn around at hand-drawing accuracy. So `--pine-w` and `right` do not
+   move. Only the vertical anchor does — which is what "the TREE moves" has
+   meant on this beat for three passes now.
+
+   ## `top` rather than `bottom`
+
+   `bottom: min(-8px, ...)` anchored the box's FOOT below the frame so the
+   trunk ran off it. Raising the crown to the top of the frame is the same
+   guarantee stated from the other end: `top` puts the crown where it is
+   drawn, and the trunk clears the frame SIDEWAYS instead of downward, because
+   this plate's trunk leans right as it descends — x 0.549 of the box at its
+   top and 0.658..0.895 at its bottom edge. At 280px and `-0.435` the trunk's
+   left edge is at 1906 in a 1904 frame the moment the trunk starts, so every
+   pixel of it below the coconuts is already off the right edge. There is no
+   cut foot to see, which is the failure this beat has shipped twice ("the
+   tree on the right is way too high, I should also not be able to see the
+   bottom of the tree") and the one thing that had to be proved by rendering
+   rather than argued.
+
+   `clamp(100px, 15svh, 160px)`: 15svh is 141px at 940 and 143 at 953, which
+   is where the mark puts it; the floor keeps the crown clear of the 90px nav
+   at short viewports and the cap stops it drifting down a tall one. Below
+   1099px `.hero__pine-drift` is `display: none` already, so this whole rule
+   is a wide-screen rule and nothing here reaches a phone.
+
+   Dark is untouched: the winter pine keeps `bottom` and stands out of the
+   bottom of the frame, which is that theme's composition and has never been
+   reported. */
 [data-theme='light'] .hero__pine {
   --pine-w: min(17vw, 280px);
   right: calc(-0.435 * var(--pine-w));
-  bottom: min(-8px, calc(8svh - 0.225 * var(--pine-w)));
+  bottom: auto;
+  top: clamp(100px, 15svh, 160px);
 }
 
 /* ── and the sky the cross is read against ─────────────────────────────────

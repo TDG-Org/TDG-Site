@@ -740,6 +740,52 @@
      about the crop changes: the box is the same size and its feet still run off
      the bottom of the section by construction. */
   --floor-line: calc(var(--games-floor) + var(--games-pine-clear) * 2.15);
+  /* ── and the row ENDS instead of being cut ────────────────────────────
+     The second half of the same report: "scrolling down from that, you can
+     see the bottom of the images all flat. It should transition properly."
+
+     Measured at 1920x1000 with the section's floor centred: the box runs
+     y -133..635 and `.games__clip` cuts it at 633 — 99.7% of its own height.
+     So the crop lands on the plate's own bottom row, which is opaque sand and
+     low bushes edge to edge, and what the page draws is a ruled horizontal
+     line across the full width with a picture above it and #faith's sky
+     below.
+
+     `.games__haze` was the answer to this and cannot be: it is 67px of
+     `--band-games` and the thing it has to dissolve is 2304px of full-colour
+     plate. A band in front of a hard edge softens the last 67px of it; the
+     edge is still an edge.
+
+     The fix is on the layer that has the edge. The mask is in PERCENTAGES of
+     the box, so it holds at every width the row scales through, and it is
+     shaped around what is actually in the plate at each depth:
+
+       0..72%    untouched — crowns, coconuts and the whole clear run of trunk
+       72..88%   the ramp starts through the lower trunks
+       88..100%  the low bushes at the feet go to nothing
+
+     `.games__haze` still sits in front of the last 67px, so the two do the
+     same job at two strengths and neither has to do it alone. Nothing about
+     the row's size or altitude moves: `--row-w` and `--floor-line` are the
+     numbers the "I can barely see their trunks" pass solved and they are
+     untouched.
+
+     Light only. Dark's stand is two 2:3 pines whose feet run off a section
+     edge a whole viewport further down, and it has never been reported. */
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 72%,
+    rgba(0, 0, 0, 0.55) 88%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 72%,
+    rgba(0, 0, 0, 0.55) 88%,
+    transparent 100%
+  );
 }
 [data-theme='light'] .games__pines-far {
   /* Same width as the near row and the same edges, so neither box can be seen.
@@ -750,6 +796,25 @@
   --row-w: 104vw;
   --ink-frac: 0.26;
   --floor-line: calc(var(--games-floor) + var(--games-far-pine-clear) * 0.55);
+  /* ── and then it is not drawn at all ──────────────────────────────────
+     The site owner's screenshot of this beat, marked and stated plainly:
+     "there are trees in front and in the background that look further out
+     and are faded. Remove those. Keep the trees in front."
+
+     That is this layer. `landscapes/far-palms` at 0.62 is a row of small pale
+     palms strung across the whole width behind the near row, and at 1920x1000
+     its ink lands at y 610..666 — a thin band of half-visible crowns with no
+     ground of its own, seen through the gaps of a row that already reads as a
+     row. It was placed to give the near stand a distance to be in front of;
+     what it actually gives it is a second horizon.
+
+     The near row keeps everything: `--row-w`, `--floor-line` and
+     `.games__fog` between the two planes are all untouched, so nothing about
+     the layer the owner asked to KEEP moves by removing this one.
+
+     Dark is untouched — `props/pine-faceted-pair` twice at two depths is that
+     theme's stand and it has never been reported. */
+  display: none;
 }
 
 /* The veil has a hard, straight bottom edge and a faint cyan speckle along its
@@ -1007,6 +1072,33 @@
      are untouched, because dark's fog bank is solved against them. */
   top: calc(var(--games-cross) - var(--games-mist-rise) - 8vw);
   height: calc(var(--games-mist-h) * 1.7);
+}
+
+/* ── and in light both crossing layers come off entirely ───────────────────
+   The other half of the clearance Tools.css makes at this join; read that
+   block for the report it answers. The site owner's list was "the post, the
+   water thing, the ice thing, the rock, the dock" and two of the five live
+   here, in `.games__over`, because they are drawn up out of #games into
+   #tools' floor:
+
+     games__post  `beach-signpost`, at 1920x1000 x 77..347, y 421..826 — "the
+                  post". A wayfinder pointing at nothing, planted in a floor
+                  that is being cleared.
+     games__mist  `shallow-water`, y 275..493 — "the water thing". A turquoise
+                  band whose whole job was to be the shore the pier went out
+                  from. The pier is gone; the shore has nothing to be the
+                  shore of.
+
+   With both off, `.games__over` still exists and still crosses the join — it
+   is a positioned box with nothing in it — and the boundary is carried by
+   `.games__seam` and `.tools__shore`, which are shapes and gradients rather
+   than props and were never part of the complaint.
+
+   Dark is untouched: the wayfinding post and the fog bank are that theme's
+   join and it has never been reported. */
+[data-theme='light'] .games__post,
+[data-theme='light'] .games__mist {
+  display: none;
 }
 
 /* The terrace is a FLOOR here, so what this band wants out of the plate is the

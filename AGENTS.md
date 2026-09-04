@@ -711,6 +711,41 @@ committed, and reported, and nobody rendered it.** Not once — repeatedly, in
 the same week, across the palm placement, the cloud removal, the Games row
 and the theme seam.
 
+#### 7.0.0 · Never speculate about something you can open
+
+The owner reports this beat-by-beat, with screenshots, and on 2026-09-03 he
+wrote the rule out himself: *"Do not speculate for any of them; literally look
+at this. Do not break this rule. Literally, look. Do not fight this."*
+
+So, before you touch anything he has shown you:
+
+- **Open the image and work out what is in it FROM the image.** Not from the
+  class names, not from a file's comment, not from what a previous session's
+  note says is drawn there. Those are what a prop is *called*; the report is
+  about what it *looks like*, and the two have already disagreed twice on this
+  repo — `sea-band` read as "the ice thing" at #tools and `shallow-water` read
+  as "ice" again at #outro, because a top-down water plate stood on end in a
+  band with no horizon in it is a range of blue-white peaks.
+- **Enumerate the frame before you decide.** Scroll a headless page to the
+  beat and list every art layer with its real bounds and its real file — the
+  `getBoundingClientRect` + `currentSrc` sweep in §7.1 does it in one call.
+  Then map each item in the owner's sentence onto one of those rows and say
+  which. Removing the four layers you guessed at and leaving the fifth is the
+  same failure in a smaller coat.
+- **A marked-up screenshot is a SPEC.** Read the mark against its own
+  landmarks — the window edges, the CTA row, the hero strip, the nav — solve
+  for the scale and the origin, and state the page coordinates you got. Treat
+  its position as binding and its exact size as approximate; a hand-drawn
+  crown 310px wide over a 280px palm is "put the tree here", not "and make it
+  bigger". The hero palm's own block in `Hero.css` carries a worked example.
+- **Measure the thing you have to clear, do not quote it.** The point cloud's
+  ink envelope was quoted at x 1150..1745 from a six-frame diff and is
+  x 1294..1762, y 255..675 when sampled off `.hero__model-canvas` with
+  `getImageData` over sixty frames of the morph. Anything that morphs, drifts
+  or animates needs samples, not one frame.
+- **If you did not look, say so in one line.** "Needs verification" is an
+  acceptable answer here. A confident guess is not.
+
 The three ways it goes wrong, all of them observed on this repo:
 
 - **A correct calculation, a wrong picture.** The hero palm's crown was
