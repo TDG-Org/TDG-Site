@@ -51,7 +51,7 @@ protection is RLS on the server.
 | `src/content/` | The runtime overlay over `src/data/`: what `#/dev` has changed about our product cards, merged over the copy the repo ships. | [`src/content/README.md`](src/content/README.md) |
 | `src/lib/` | Routing, the animation loop, sections state, Supabase client, asset paths. | [`src/lib/README.md`](src/lib/README.md) |
 | `src/live/` | What is deployed right now, asked of GitHub at runtime: cards upgrade their status to a real link, and `tdg-app`-tagged org repos get derived cards. | [`src/live/README.md`](src/live/README.md) |
-| `src/hooks/` | The five motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
+| `src/hooks/` | The six motion hooks every card and section uses. | [`src/hooks/README.md`](src/hooks/README.md) |
 | `src/auth/` | Sign-in, the profile, session revocation, and what a refusal says. | [`src/auth/README.md`](src/auth/README.md) |
 | `src/account/` | The account page at `#/account`: what the account is, what it counts, and who may see each part of it. | [`src/account/README.md`](src/account/README.md) |
 | `src/people/` | Somebody else's account, at `#/user/<handle>`: who they are, where you stand with them, and what a block looks like when it is said out loud. | [`src/people/README.md`](src/people/README.md) |
@@ -62,6 +62,7 @@ protection is RLS on the server.
 | `src/cloud/` | TDG Cloud, built and dormant: the Store's plan shelf, the Account fold, and the console's launch/economics tab, all reading TDG Core's `tdg_cloud_config`. | [`src/cloud/README.md`](src/cloud/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
 | `src/dev/` | The internal Developer console at `#/dev`. | [`src/dev/README.md`](src/dev/README.md) |
+| `src/scene/` | The Scene Editor: a dock that moves, retimes and adds the parallax art, per theme, and the JSON draft it writes. **A draft is never the shipped default** — read the README before touching it. | [`src/scene/README.md`](src/scene/README.md) |
 | `supabase/` | The edge function and the SQL migrations. Not part of the bundle. | [`supabase/README.md`](supabase/README.md) |
 
 **A folder's README is authoritative for that folder.** Read it before editing

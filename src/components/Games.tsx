@@ -10,6 +10,7 @@ import { asset } from '../lib/asset'
 import { appHash, rememberOrigin } from '../lib/route'
 import { Seam } from './scene/Seam'
 import { ThemedArt } from './scene/ThemedArt'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Games.css'
 
 function NextUpPill({ label, index }: { label: string; index: number }) {
@@ -361,6 +362,11 @@ export function Games() {
           ))}
         </div>
       </div>
+      {/* Where a piece the Scene Editor ADDED to this section is drawn.
+          It renders null for everybody — see src/scene/SceneExtras.tsx — and
+          it is inside the section rather than over the page so an added piece
+          takes its percentages from the same box the shipped pieces do. */}
+      <SceneExtras section="games" />
     </section>
   )
 }

@@ -3,6 +3,7 @@ import { useReveal } from '../hooks/useReveal'
 import { GITHUB_ORG } from '../data/content'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
 import { StillArt, ThemedArt } from './scene/ThemedArt'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Outro.css'
 
 /** The makers note and the GitHub card that close the page before the footer. */
@@ -326,6 +327,11 @@ export function Outro() {
             </span>
           </a>
         </div>
+        {/* Where a piece the Scene Editor ADDED to this section is drawn.
+            It renders null for everybody — see src/scene/SceneExtras.tsx — and
+            it is inside the section rather than over the page so an added piece
+            takes its percentages from the same box the shipped pieces do. */}
+        <SceneExtras section="outro" />
       </section>
 
       <section className="outro__gh-section">

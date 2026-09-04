@@ -10,6 +10,7 @@ import { useSiteContent } from '../content/store'
 import { DOWN_WORDING, useDiscoveredApps, useLiveAccess } from '../live/useLive'
 import type { DiscoveredApp } from '../live/types'
 import { appHash, rememberOrigin } from '../lib/route'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Apps.css'
 
 /*
@@ -321,6 +322,11 @@ export function Apps() {
           </div>
         </div>
       </div>
+      {/* Where a piece the Scene Editor ADDED to this section is drawn.
+          It renders null for everybody — see src/scene/SceneExtras.tsx — and
+          it is inside the section rather than over the page so an added piece
+          takes its percentages from the same box the shipped pieces do. */}
+      <SceneExtras section="apps" />
     </section>
   )
 }

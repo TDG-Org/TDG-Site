@@ -1,0 +1,615 @@
+/* ── the Scene Editor's chrome ─────────────────────────────────────────────
+   Loaded only by the editor chunk, which only a signed-in admin who switched
+   the editor on ever downloads. Everything below takes the site's own tokens
+   — `--surface`, `--border`, `--text`, `--accent`, `--danger`, the four fonts
+   — so the dock reads as part of TDG in both themes rather than as a tool
+   somebody bolted on, and every control is custom-styled rather than left as a
+   browser default (AGENTS.md rule 5). The one deliberate exception is
+   `input[type=number]`, whose stepper arrows are drawn by the UA in a shadow
+   root no stylesheet can reach; they are hidden instead, and the keyboard and
+   the scroll wheel still step the value.
+
+   `z-index` here is above everything the page has, and the pick sheet sits one
+   below the dock so a drag that ends over the panel does not select the panel. */
+
+.sceneed {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9000;
+  width: 344px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  color: var(--text);
+  font: 400 13px/1.5 var(--font-body);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.sceneed--collapsed {
+  width: auto;
+  bottom: auto;
+}
+
+/* ── head ──────────────────────────────────────────────────────────────── */
+
+.sceneed__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sceneed__title {
+  flex: 1;
+  font: 700 13px var(--font-display);
+  letter-spacing: 0.01em;
+}
+
+.sceneed__fold,
+.sceneed__x {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 13px var(--font-mono);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.sceneed__fold:hover,
+.sceneed__x:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.sceneed__fold:focus-visible,
+.sceneed__x:focus-visible,
+.sceneed__tab:focus-visible,
+.sceneed__btn:focus-visible,
+.sceneed__chip:focus-visible,
+.sceneed__toggle:focus-visible,
+.sceneed__tile:focus-visible,
+.sceneed__layer:focus-visible,
+.sceneed__theme:focus-visible,
+.sceneed__search:focus-visible,
+.sceneed__num input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── the bar: which theme, and the two modes ───────────────────────────── */
+
+.sceneed__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.sceneed__theme {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sceneed__theme-half {
+  padding: 4px 9px;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  transition: background 0.2s, color 0.2s;
+}
+
+.sceneed__theme-half.is-on {
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+.sceneed__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sceneed__toggle.is-on {
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.sceneed__toggle-track {
+  width: 22px;
+  height: 12px;
+  border-radius: 7px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background 0.2s;
+}
+
+.sceneed__toggle.is-on .sceneed__toggle-track {
+  background: var(--accent);
+}
+
+.sceneed__toggle-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: translate 0.2s;
+}
+
+.sceneed__toggle.is-on .sceneed__toggle-knob {
+  translate: 10px 0;
+}
+
+/* ── tabs ──────────────────────────────────────────────────────────────── */
+
+.sceneed__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.sceneed__tab {
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--faint);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sceneed__tab:hover {
+  color: var(--text);
+}
+
+.sceneed__tab.is-on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* ── body ──────────────────────────────────────────────────────────────── */
+
+.sceneed__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 12px 16px;
+}
+
+/* The site's own scrollbar recipe, restated here because this panel is its
+   own scroll container and a default one is exactly the unstyled native
+   control rule 5 is about. */
+.sceneed__body::-webkit-scrollbar {
+  width: 9px;
+}
+.sceneed__body::-webkit-scrollbar-thumb {
+  background: var(--sb);
+  border-radius: 5px;
+}
+.sceneed__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sceneed__body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sb) transparent;
+}
+
+.sceneed__empty p,
+.sceneed__note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.sceneed__note code {
+  font: 500 11.5px var(--font-mono);
+  color: var(--text);
+}
+
+.sceneed__id {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sceneed__id-name {
+  font: 700 13px var(--font-display);
+  word-break: break-word;
+}
+
+.sceneed__id-meta,
+.sceneed__id-file {
+  font: 500 10.5px var(--font-mono);
+  color: var(--faint);
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+
+.sceneed__field {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.sceneed__label {
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.sceneed__motions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sceneed__chip {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 11px var(--font-body);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.sceneed__chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.sceneed__chip.is-on {
+  background: var(--invert-bg);
+  border-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+.sceneed__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sceneed__num {
+  display: grid;
+  gap: 4px;
+}
+
+.sceneed__num input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font: 500 12px var(--font-mono);
+  /* The UA stepper lives in a shadow root; hiding it is the only way to keep
+     this control looking like the rest of the panel. Arrow keys and the wheel
+     still step, so nothing is lost but the two grey triangles. */
+  appearance: textfield;
+}
+
+.sceneed__num input::-webkit-outer-spin-button,
+.sceneed__num input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.sceneed__num input:hover {
+  border-color: var(--border-hover);
+}
+
+.sceneed__row {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+/* ── library ───────────────────────────────────────────────────────────── */
+
+.sceneed__search {
+  width: 100%;
+  padding: 7px 9px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text);
+  font: 400 12.5px var(--font-body);
+}
+
+.sceneed__search::placeholder {
+  color: var(--faint);
+}
+
+.sceneed__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.sceneed__tile {
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: grab;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.sceneed__tile:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.sceneed__tile:active {
+  cursor: grabbing;
+}
+
+.sceneed__tile img {
+  width: 100%;
+  height: 46px;
+  object-fit: contain;
+  /* The kit is drawn for two very different grounds, and a cutout for the
+     opposite theme can be near-invisible on this panel. A neutral chequer
+     behind every thumbnail means a pale piece and a dark piece are both
+     legible in the same grid. */
+  background: repeating-conic-gradient(var(--surface-hover) 0% 25%, transparent 0% 50%) 50% / 12px 12px;
+}
+
+.sceneed__tile span {
+  font: 500 9.5px var(--font-mono);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneed__tile.is-missing {
+  opacity: 0.45;
+}
+
+/* ── layers ────────────────────────────────────────────────────────────── */
+
+.sceneed__layer-group {
+  margin-bottom: 12px;
+}
+
+.sceneed__layer-group h3 {
+  margin: 0 0 4px;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.sceneed__layer {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11.5px var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sceneed__layer:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.sceneed__layer.is-on {
+  background: var(--accent-soft);
+  border-color: var(--border-hover);
+  color: var(--text);
+}
+
+.sceneed__layer.is-hidden .sceneed__layer-name {
+  text-decoration: line-through;
+}
+
+.sceneed__layer-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneed__layer-kind {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── foot ──────────────────────────────────────────────────────────────── */
+
+.sceneed__foot {
+  border-top: 1px solid var(--border);
+  padding: 8px 10px 10px;
+  background: var(--surface);
+}
+
+.sceneed__status {
+  margin: 0 0 8px;
+  min-height: 2.6em;
+  font: 400 11.5px/1.35 var(--font-body);
+  color: var(--muted);
+}
+
+.sceneed__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.sceneed__btn {
+  flex: 1;
+  padding: 7px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: 600 11.5px var(--font-body);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.sceneed__btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.sceneed__btn--danger {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.sceneed__btn--danger:hover {
+  background: var(--danger-soft);
+}
+
+.sceneed__btn--go {
+  background: var(--invert-bg);
+  border-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+.sceneed__btn--go:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.sceneed__btn--go.is-dirty {
+  box-shadow: 0 0 0 2px var(--glow);
+}
+
+/* ── the pick sheet and its two outlines ───────────────────────────────── */
+
+.sceneed__pick {
+  position: fixed;
+  inset: 0;
+  z-index: 8990;
+  cursor: crosshair;
+  /* No background at all: the page has to be legible through it, and a sheet
+     with a colour is a sheet that changes what you are placing art against. */
+}
+
+.sceneed__hover,
+.sceneed__sel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  pointer-events: none;
+  border: 1px dashed var(--edge-mid);
+}
+
+.sceneed__sel {
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+/* The one thing on the sheet that answers a pointer, so a drag that starts on
+   it resizes instead of re-picking whatever is underneath. */
+.sceneed__handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--bg);
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: auto;
+  cursor: nwse-resize;
+}
+
+@media (max-width: 900px) {
+  /* The dock is a desktop tool — it needs the page beside it, and there is no
+     page left beside it on a phone. It still opens, so a placement can be
+     checked at a narrow width; it just stops trying to be a side panel. */
+  .sceneed {
+    left: 12px;
+    width: auto;
+  }
+}
+
+/* The face for a slot this theme's stylesheet does not draw. It is the one
+   state in the panel that is not "here is a thing, change it" — it is "here is
+   a thing that is not here" — so it gets a box of its own rather than a
+   disabled field somebody has to interpret. */
+.sceneed__offnote {
+  padding: 9px 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background: var(--accent-soft);
+}
+
+.sceneed__offnote p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sceneed__offnote strong {
+  color: var(--text);
+}
+
+.sceneed__layer.is-off .sceneed__layer-name {
+  opacity: 0.5;
+}

@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { mergeRefs } from '../lib/mergeRefs'
-import { onFrame } from '../lib/motion'
 import { useParallax } from '../hooks/useParallax'
-import { usePointer } from '../hooks/usePointer'
+import { useSway } from '../hooks/useSway'
 import { useReveal } from '../hooks/useReveal'
 import { useTilt } from '../hooks/useTilt'
 import { type ToolCard } from '../data/content'
@@ -12,6 +11,7 @@ import { DOWN_WORDING, useLiveAccess } from '../live/useLive'
 import { appHash, rememberOrigin } from '../lib/route'
 import { AppIcon } from './AppIcon'
 import { StillArt, ThemedArt } from './scene/ThemedArt'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Tools.css'
 
 /*
@@ -39,70 +39,16 @@ import './Tools.css'
 const SWAY_X = 12
 const SWAY_Y = 7
 
-/**
- * Mouse parallax for the one layer on this page that is close enough to earn
- * it: the boulders in the bottom corner of this section.
+/*
+ * The hook itself now lives in `hooks/useSway.ts` — the Scene Editor is its
+ * second caller, and a hook two files need is a hook in the hooks folder. The
+ * reasoning that was written here (one `translate` writer per element, no lerp
+ * of its own, and why it checks its own rect) moved with it.
  *
- * ## Why this is a wrapper and not another factor on the art itself
- *
- * `useParallax` owns `element.style.translate` outright — it writes the whole
- * value every frame from its own lerp and never reads what anything else left
- * there. Adding a second writer to the same element is the exact bug
- * `scene/ThemedArt.tsx`'s header describes: two writes race inside one frame
- * and the layer stutters between two positions. So the scroll drift stays on
- * the `<img>` and the pointer sway goes on a box wrapped around it, one
- * writer per element. The wrapper is the art's own box rather than the whole
- * section, so the compositor layer it promotes is a few hundred pixels square
- * and not a viewport.
- *
- * ## Why there is no lerp and no `hold()` here
- *
- * `usePointer` already damps, and it already holds the loop while its own lerp
- * converges and snaps when it lands. What is written here is a pure function
- * of two numbers that are correct on the frame they are read — the same shape
- * as `useHeroParallax`, which needs no smoothing of its own for the same
- * reason. A second lerp on top would add lag and a second reason for the loop
- * never to park.
- *
- * ## Why it checks its own rect
- *
- * `useOffscreenPause` stamps `data-live` on a section and `base.css` turns
- * that into `animation-play-state: paused`, but an `onFrame` subscriber never
- * sees an attribute — `hooks/README.md` is explicit that anything driven from
- * JS has to check for itself. Off screen this neither writes nor holds. There
- * is no stale-state problem on the way back in: with no lerp behind it, the
- * first frame inside the viewport computes and paints the correct offset
- * before the browser paints anything.
- *
- * At `mi === 0` both terms are zero — `usePointer` already returns 0,0 under
- * reduced motion, and the multiply here makes that visible at the call site
- * rather than a fact you have to go and look up — so the layer rests exactly
- * where it composed. That is the identity the art kit asks for, not a hidden
- * layer.
+ * The wrapper below stays a wrapper for the reason that header still gives:
+ * the boulders' `<img>` is already drifting under `useParallax`, so the sway
+ * goes on a box around it rather than on the same element.
  */
-function useSway<T extends HTMLElement>(x: number, y: number) {
-  const ref = useRef<T | null>(null)
-  const pointer = usePointer()
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let painted = ''
-
-    return onFrame(({ vh, mi }) => {
-      const r = el.getBoundingClientRect()
-      if (r.bottom <= 0 || r.top >= vh) return
-      const next = `${(pointer.x * x * mi).toFixed(2)}px ${(pointer.y * y * mi).toFixed(2)}px`
-      if (next === painted) return
-      painted = next
-      return () => {
-        el.style.translate = next
-      }
-    })
-  }, [pointer, x, y])
-
-  return ref
-}
 
 function ToolTile({ tool, index }: { tool: ToolCard; index: number }) {
   const reveal = useReveal<HTMLElement>('slideL', index)
@@ -379,6 +325,11 @@ export function Tools() {
           ))}
         </div>
       </div>
+      {/* Where a piece the Scene Editor ADDED to this section is drawn.
+          It renders null for everybody — see src/scene/SceneExtras.tsx — and
+          it is inside the section rather than over the page so an added piece
+          takes its percentages from the same box the shipped pieces do. */}
+      <SceneExtras section="tools" />
     </section>
   )
 }

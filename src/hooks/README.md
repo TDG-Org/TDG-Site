@@ -16,6 +16,7 @@ per second on a page nobody is even scrolling.
 | `useParallax(factor)` | Drifts a decorative layer against its own distance from centre. **Stops painting 400px outside the viewport.** |
 | `useHeroParallax(factor)` | Drifts a layer with the **hero's** displacement instead of its own. Same file as `useParallax`, and the two must never share an element. |
 | `usePointer()` | Damped pointer position, −1..1 per axis. **Returns without rendering.** One listener for the whole page. |
+| `useSway(x, y)` | Slides a layer with the cursor. Reads `usePointer` and writes `translate`, so it may never share an element with either parallax hook. Lived privately in `Tools.tsx` until `scene/` needed it. |
 | `useSectionProgress()` | 0 as a section's top reaches the viewport bottom, 1 as its bottom reaches the top. **Returns without rendering.** |
 | `useOffscreenPause()` | Parks decorative animation in sections nobody can see. |
 
@@ -326,7 +327,8 @@ it, because this section has already been wrong once.
 | --- | --- | --- |
 | `components/Hero.tsx` | `usePointer` | The tall pine (26 × 11 px) and the moon (7 × 3). The ridges and the sky answer the mouse with nothing at all, which is what makes the pine read as near. |
 | `components/Origin.tsx` | `usePointer` | The lamppost, **on the x axis only** — a foot that bobs off the snow loses the illusion the whole arrangement exists to build. |
-| `components/Tools.tsx` | `usePointer` | Its private `useSway` helper, on the boulder cluster's wrapper. |
+| `components/Tools.tsx` | `useSway` | The boulder cluster's wrapper. |
+| `scene/ThemedArt.tsx` | `useSway` | Any slot a Scene Editor draft sets to `motion: 'sway'`, on the `<img>` itself — which is safe there because the resolver builds ONE component per slot, so nothing else is writing that element's `translate`. |
 | `components/faith/Summit.tsx` | `usePointer` | The moon and the far ridge, by a few pixels. The cross takes no pointer response, deliberately. |
 | `components/Faith.tsx` | `useSectionProgress` | Read on the section and handed straight down to `faith/Summit.tsx` as the frozen accessor, where the moon, the far ridge and the crest lag the page by 30 / 26 / 13 px across the whole of `p`. |
 
@@ -339,9 +341,9 @@ tick, so one element with both is the same race `useHeroParallax` and
 `useParallax` have — see **Never put both on one element** above. The wrapper
 takes the pointer; the child takes the scroll.
 
-**`Tools.tsx` carries its own fifteen-line `useSway`**, the last copy standing:
-`Apps.tsx` had the twin until its parallax layers went. The trigger for moving
-it here is unchanged — a second section that wants one is when it stops being
-worth keeping private and belongs beside `usePointer`. `faith/Summit.tsx` is
-not that second — it drives three layers from one tick with scroll and pointer
-terms mixed, which is not what `useSway` does — so the count stands at one.
+**`useSway` was `Tools.tsx`'s private fifteen-line helper and is now a hook in
+this folder.** This paragraph used to say the trigger for moving it was "a
+second section that wants one"; `scene/ThemedArt.tsx` is that second caller, so
+it moved, unchanged apart from the file it is in. `faith/Summit.tsx` is still
+not a caller and should not become one — it drives three layers from one tick
+with scroll and pointer terms mixed, which is not what `useSway` does.

@@ -3,6 +3,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useSectionProgress } from '../hooks/useSectionProgress'
 import { Summit } from './faith/Summit'
 import { Seam } from './scene/Seam'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Faith.css'
 
 export function Faith() {
@@ -145,6 +146,11 @@ export function Faith() {
           reason we kept the name.
         </p>
       </div>
+      {/* Where a piece the Scene Editor ADDED to this section is drawn.
+          It renders null for everybody — see src/scene/SceneExtras.tsx — and
+          it is inside the section rather than over the page so an added piece
+          takes its percentages from the same box the shipped pieces do. */}
+      <SceneExtras section="faith" />
     </section>
   )
 }

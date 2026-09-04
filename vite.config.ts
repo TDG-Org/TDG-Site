@@ -1,6 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { version as siteVersion } from './package.json'
+/* The Scene Editor's dev-only Save endpoint. It lives in `scripts/` and is
+   plain `.mjs` for one reason: it needs `node:fs`, this config is compiled by
+   `npm run typecheck` under the app's own tsconfig, and that tsconfig has no
+   `@types/node` — nor should it grow one for four lines of file writing, when
+   AGENTS.md §5 is a page about not adding packages. A `.d.ts` beside the
+   script gives the import its type. See the script for what the endpoint does
+   and why it can never reach a build. */
+import { sceneDraftPlugin } from './scripts/scene-draft-plugin.mjs'
 
 /* GitHub Pages serves a project site from https://<org>.github.io/<repo>/, so a
    production build has to be rooted at /TDG-Site/. Dev stays at /, and `vite
@@ -8,7 +16,7 @@ import { version as siteVersion } from './package.json'
 
    See src/lib/asset.ts for runtime srcSet rewriting via BASE_URL. */
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [react(), sceneDraftPlugin()],
   base: mode === 'production' ? '/TDG-Site/' : '/',
   /* package.json is this repo's only version carrier (AGENTS.md §6), so it is
      read from there and never restated: a second place to write the number is a
@@ -39,9 +47,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         /* Lazy chunks are named by hash alone rather than by their source file.
 
-           There are seven dynamic imports: the Developer console, AppPage,
-           About, the account page, a profile, the hero's PointCloud and the
-           walk's CabinScene. The Developer console is the one
+           There are eight dynamic imports: the Developer console, the Scene
+           Editor, AppPage, About, the account page, a profile, the hero's
+           PointCloud and the walk's CabinScene. The Developer console is the one
            this rule was written for — Vite's default would publish it as
            `DevConsole-<hash>.js`, a file name in the deployed asset list that
            announces a page most visitors should never think about. (Tidiness,
@@ -52,7 +60,7 @@ export default defineConfig(({ mode }) => ({
            The rule is not narrowed to that one chunk, because it cannot be
            without naming it here — and a build config that has to be edited
            every time a page becomes lazy is a build config somebody forgets.
-           So all seven go out anonymous. The hash is enough to cache-bust,
+           So all eight go out anonymous. The hash is enough to cache-bust,
            which is all a chunk name is for. */
         chunkFileNames: 'assets/[hash].js',
         /* Same reasoning for the stylesheet a chunk pulls in: Rollup names it

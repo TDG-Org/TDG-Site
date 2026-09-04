@@ -1,0 +1,372 @@
+{
+  "generated": "scripts/art-manifest.mjs",
+  "count": 61,
+  "slots": [
+    {
+      "name": "atmosphere/fog-veil",
+      "group": "atmosphere",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "atmosphere/mist-bank",
+      "group": "atmosphere",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "atmosphere/sea-haze",
+      "group": "atmosphere",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "faith/hillside-cross",
+      "group": "faith",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "hero/lamppost-left",
+      "group": "hero",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/beach-pier",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/beach-terrace",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/beach-terrace-plain",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/far-island",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/far-palms",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/far-range-soft",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/far-treeline",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/headland",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/island-mid",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/mountain-ridge",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/mountain-ridge-mid",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/mountain-ridge-rear",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/sand-bank",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/sea-band",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/shallow-water",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/shore-foam",
+      "group": "landscapes",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "landscapes/snow-bank",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/stone-footbridge",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "landscapes/valley-fog",
+      "group": "landscapes",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/bamboo-rail",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/bangka",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/beach-signpost",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/boulder-cluster",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/bushes-reeds",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/canopy-tree",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/capiz-lantern",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/capiz-window",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/coconut-pair",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/coconut-palm-tall",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/coral-arch",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/coral-rocks",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/cumulus-far",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/cumulus-near",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/fence-rail",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/garden-arch",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/gate-post-pair",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/lantern-post",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/moon-cloud",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/near-branch",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/palm-frond",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/palm-row",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/palm-row-mid",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/pandan-clump",
+      "group": "props",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "props/park-bench",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/pine-faceted-pair",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/pine-grove",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/pine-pair",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/pine-row",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/reed-clump-tall",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/tall-pine",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/wayfinding-post",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "props/window-frost",
+      "group": "props",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "transitions/beach-steps",
+      "group": "transitions",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "transitions/sand-stones",
+      "group": "transitions",
+      "dark": false,
+      "light": true
+    },
+    {
+      "name": "transitions/stepping-stones",
+      "group": "transitions",
+      "dark": true,
+      "light": true
+    },
+    {
+      "name": "transitions/stone-stair",
+      "group": "transitions",
+      "dark": true,
+      "light": true
+    }
+  ]
+}

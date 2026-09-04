@@ -8,6 +8,7 @@ import { useAccountStats } from '../account/useAccount'
 import { fmtCount, fmtDay } from '../account/format'
 import { useRoute, ABOUT_HASH, ACCOUNT_HASH, STORE_HASH, DEV_HASH, type Route } from '../lib/route'
 import { setDevMode, useDevMode } from '../dev/devMode'
+import { setSceneMode, useSceneMode } from '../scene/sceneMode'
 import './Nav.css'
 
 /**
@@ -357,6 +358,7 @@ function AccountMenu({
 }) {
   const { user, profile, setup, recovery, signOut, isAdmin } = useAuth()
   const devMode = useDevMode()
+  const sceneMode = useSceneMode()
   const ref = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
@@ -489,6 +491,25 @@ function AccountMenu({
             onClick={() => setDevMode(!devMode)}
           >
             <span className="nav__devmode-label">Developer Tab</span>
+            <span className="nav__devmode-track" aria-hidden="true">
+              <span className="nav__devmode-knob" />
+            </span>
+          </button>
+        )}
+        {/* The Scene Editor, beside the tab switch because it is the same kind
+            of thing: a per-device preference about this browser, gated on the
+            same `isAdmin`. It is the only way in and the only way out — the
+            editor's own ✕ flips this same switch — so it can never be turned
+            on from somewhere you cannot turn it off. See src/scene/README.md. */}
+        {isAdmin && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={sceneMode}
+            className="nav__devmode"
+            onClick={() => setSceneMode(!sceneMode)}
+          >
+            <span className="nav__devmode-label">Scene Editor</span>
             <span className="nav__devmode-track" aria-hidden="true">
               <span className="nav__devmode-knob" />
             </span>

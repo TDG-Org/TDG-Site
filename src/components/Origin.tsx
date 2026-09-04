@@ -8,6 +8,7 @@ import { useTilt } from '../hooks/useTilt'
 import { StillArt, ThemedArt } from './scene/ThemedArt'
 import { ABOUT_HASH, rememberOrigin } from '../lib/route'
 import { CHAPTERS, type Chapter } from '../data/content'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Origin.css'
 
 /*
@@ -728,6 +729,11 @@ export function Origin() {
           </div>
         </div>
       </div>
+      {/* Where a piece the Scene Editor ADDED to this section is drawn.
+          It renders null for everybody — see src/scene/SceneExtras.tsx — and
+          it is inside the section rather than over the page so an added piece
+          takes its percentages from the same box the shipped pieces do. */}
+      <SceneExtras section="origin" />
     </section>
   )
 }

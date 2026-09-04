@@ -18,6 +18,7 @@ import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 import { arriveAt, useRoute } from './lib/route'
+import { setSceneMode, useSceneMode } from './scene/sceneMode'
 import { landOnAnchor, scrollToAnchor, sectionIdFromHash } from './lib/anchors'
 
 /**
@@ -69,6 +70,18 @@ const AccountPage = lazy(() => import('./account/AccountPage'))
  */
 const ProfilePage = lazy(() => import('./people/ProfilePage'))
 
+/**
+ * The Scene Editor: a dock over the home page that moves, retimes and adds the
+ * parallax art, one theme at a time.
+ *
+ * Lazy for the same reason the Developer console is, and with the same two
+ * conditions in front of it: a signed-in admin AND a per-device switch that is
+ * off by default (src/scene/sceneMode.ts). Nobody else downloads a byte of it,
+ * and with it unloaded `src/scene/store.ts` holds nothing, so every piece of
+ * art renders exactly what its stylesheet says. See src/scene/README.md.
+ */
+const SceneEditor = lazy(() => import('./scene/editor/SceneEditor'))
+
 export default function App() {
   useOffscreenPause()
   const { oauthError, recovery, setup, isAdmin } = useAuth()
@@ -93,6 +106,20 @@ export default function App() {
    * and the answer a stranger should get is the one an unknown anchor gets.
    */
   const showDev = route.kind === 'dev' && isAdmin
+
+  /* The editor is for the home page's scene, so it mounts only there — every
+     `<ThemedArt>` on this site is in one of the seven home sections, and a
+     pick sheet over the Store would be a sheet over a page with nothing to
+     pick. `useSceneMode` is a device preference; `isAdmin` is the permission. */
+  const sceneMode = useSceneMode()
+  const onHome =
+    !showDev &&
+    route.kind !== 'store' &&
+    route.kind !== 'app' &&
+    route.kind !== 'about' &&
+    route.kind !== 'account' &&
+    route.kind !== 'profile'
+  const sceneEditor = isAdmin && sceneMode && onHome
 
   /*
    * A provider redirect (e.g. GitHub/Google) or a clicked password-reset
@@ -369,6 +396,13 @@ export default function App() {
         onOpenAuth={() => setAuthOpen(true)}
         app={feedbackApp}
       />
+      {sceneEditor && (
+        <ErrorBoundary key="scene-editor">
+          <Suspense fallback={null}>
+            <SceneEditor onClose={() => setSceneMode(false)} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
       {/* Renders nothing until a developer's reply is actually waiting. */}
       <ReplyInbox />
     </div>

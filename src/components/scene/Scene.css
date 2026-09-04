@@ -84,3 +84,31 @@
     display: none !important;
   }
 }
+
+/* ── the Scene Editor's own two classes ────────────────────────────────────
+   Both exist for pieces a DRAFT added; the shipped page never renders either,
+   because `scene/SceneExtras.tsx` returns null unless the editor is on and the
+   draft has something anchored in that section. See src/scene/README.md.
+
+   `.scene__extras` is a box the size of its section's art container and
+   nothing else: no paint, no pointer surface, and — this is the load-bearing
+   part — `position: absolute`, so it IS the containing block its children take
+   their percentages from. A host that was `position: static` would let an
+   added piece resolve `left: 40%` against whatever positioned ancestor
+   happened to be next up the tree, which is a different box in every section,
+   and a draft made on one would be nonsense on another.
+
+   `.scene__extra` gives an added piece the one thing a shipped piece gets from
+   its own rule and a new one has nobody to give it: a size. Everything else
+   about where it sits arrives as inline style from `scene/apply.ts`, and the
+   width here is only what it has before the first drag writes one. */
+.scene__extras {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.scene__extra {
+  width: 18vw;
+  height: auto;
+}

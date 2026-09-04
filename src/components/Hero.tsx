@@ -8,6 +8,7 @@ import { Stage } from './scene/Stage'
 import { StillArt } from './scene/ThemedArt'
 import { Starfield } from './hero/Starfield'
 import { Tagline } from './hero/Tagline'
+import { SceneExtras } from '../scene/SceneExtras'
 import './Hero.css'
 
 /* The model and its twelve form definitions are the largest thing on the page
@@ -994,6 +995,11 @@ export function Hero() {
 
         <div className="hero__grain" />
         <div className="hero__vignette" />
+        {/* Where a piece the Scene Editor ADDED to this section is drawn.
+            It renders null for everybody — see src/scene/SceneExtras.tsx — and
+            it is inside the section rather than over the page so an added piece
+            takes its percentages from the same box the shipped pieces do. */}
+        <SceneExtras section="hero" />
       </Stage>
 
       {/* ── the 130svh whose floor is the seam ──────────────────────────────

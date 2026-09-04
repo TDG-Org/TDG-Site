@@ -17,7 +17,7 @@ write an `<img>` or a path of its own. That is what makes a change like the
 
 | | |
 | --- | --- |
-| `ThemedArt.tsx` | `ThemedArt` · `ThemedHeroArt` · `StillArt` — one piece of the art kit, in the right artwork for the theme. |
+| `ThemedArt.tsx` | `ThemedArt` · `ThemedHeroArt` · `StillArt` — one piece of the art kit, in the right artwork for the theme. Since the Scene Editor they RESOLVE rather than render: each reads its slot's draft override once and returns one of four builders (`buildArt`, also exported). With no draft loaded — which is everybody — each returns exactly what it returned before. See [`src/scene/README.md`](../../scene/README.md). |
 | `Scene.css` | The one base class all three share. |
 | `Seam.tsx` | `Seam` — a flat silhouette band on one edge of a section. |
 | `Seam.css` | Where a seam sits and how tall it is. |
