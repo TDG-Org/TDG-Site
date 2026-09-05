@@ -2405,3 +2405,62 @@
     animation: none;
   }
 }
+
+/* ══ placed in the Scene Editor, 2026-09-05 ═══════════════════════════════
+   Every rule below is a placement the site owner set by hand in the Scene
+   Editor and then asked to be made the default. They are baked from
+   `public/scene/draft.json`, which is emptied in the same commit — a draft is
+   working state and the shipped page is CSS.
+
+   The units are the editor's own and they are the reason it stores them that
+   way: `left`/`top` are percentages of the box the piece is positioned inside
+   (its offset parent's padding box, which is what a percentage offset already
+   resolves against) and `width` is `vw`. So the numbers transfer with no
+   arithmetic at all, and what shipped is exactly the frame he was looking at.
+
+   **`right: auto` / `bottom: auto` are load-bearing.** Almost every rule these
+   supersede anchors from the far edge, and an absolutely positioned box with
+   `left`, `right` and `width` all resolved silently drops one of them. Clearing
+   the far edge in the same breath is what makes `left`/`top` mean what they say.
+
+   Each piece's own `transform` is untouched, because the editor measured the
+   LAYOUT box and these set the layout box; the transform composes on top of
+   both, identically. `src/scene/README.md` has the long version.
+
+   LIGHT ONLY. Dark keeps every derivation above, to the pixel. */
+
+/* The three near layers of the beach, restacked and re-placed. The `z-index`
+   values are the order the owner dragged them into in the editor's Layers
+   list, and they are a contiguous run from the back: mist 1, lamp 2, sand 3,
+   palms 4. All three of the pieces also take the cursor now rather than the
+   scroll — `lightMotion` at their call sites in Origin.tsx. */
+[data-theme='light'] .origin__mist-art {
+  z-index: 1;
+}
+
+[data-theme='light'] .origin__lamp {
+  left: -10.209%;
+  right: auto;
+  top: 9.324%;
+  bottom: auto;
+  width: 35.521vw;
+  z-index: 2;
+}
+
+[data-theme='light'] .origin__snow {
+  left: 50.051%;
+  right: auto;
+  top: 15.552%;
+  bottom: auto;
+  width: 125.572vw;
+  z-index: 3;
+}
+
+[data-theme='light'] .origin__pines {
+  left: 49.11%;
+  right: auto;
+  top: -4.348%;
+  bottom: auto;
+  width: 118.017vw;
+  z-index: 4;
+}

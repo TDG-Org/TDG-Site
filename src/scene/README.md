@@ -213,6 +213,43 @@ a piece behind the copy AND moves it to the bottom of the list.
 
 ---
 
+## Turning a draft into the default — the worked example
+
+It happened for the first time on 2026-09-05 and the shape is worth keeping,
+because the second stage is a person's job and this is what the job is.
+
+The draft held eleven slot overrides and one added piece, light only. Baking it:
+
+- **Geometry became CSS with no arithmetic.** `x`/`y` are percentages of the
+  box the piece is positioned inside and `width` is `vw`, which is exactly what
+  a CSS rule takes, so the numbers transfer verbatim. Each rule writes
+  `right: auto` / `bottom: auto` alongside, because almost every rule it
+  supersedes anchors from the far edge. Each piece's own `transform` is left
+  alone: the editor measured the layout box and these set the layout box.
+- **`z` became `z-index`**, as the contiguous run the Layers list produced.
+- **`hidden` became `display: none`** in a `[data-theme='light']` rule.
+- **`motion` could NOT become a component swap**, and that is the one thing
+  that needed new code. A draft's motion is per THEME; a component is chosen
+  once for both. So `ThemedArt`/`StillArt`/`ThemedHeroArt` gained an optional
+  `lightMotion` prop — the same shape as `light`, for the same reason — and
+  dark keeps the motion it always had.
+- **The added piece became a real call site**: a `<StillArt>` in `Faith.tsx`
+  with its own class, `display: none` in dark because its dark twin is never
+  painted, exactly the recipe `.outro__far` used.
+
+**The bake is verified by comparing geometry, not by eye.** Capture every
+`.scene__art`'s `offsetLeft/Top/Width/Height`, display, z-index, rotate,
+opacity and motion class at five scroll beats with the draft applied; bake;
+empty the draft; capture again; diff. Everything must match within a pixel. It
+did, and the one thing that did not was worth catching: the added piece had
+been given `opacity: var(--art-far)` on the way in, which would have shipped it
+paler than the frame the owner approved.
+
+Then `public/scene/draft.json` is emptied in the same commit. A draft that
+survives its own bake is a draft that will be applied twice.
+
+---
+
 ## Saving
 
 | Where | What happens |

@@ -469,6 +469,7 @@ export function Summit({ progress }: { progress: SectionProgress }): JSX.Element
         art="props/moon-cloud"
         light="props/cumulus-far"
         className="faith__cloud faith__cloud--far"
+        lightMotion="sway"
       />
       <StillArt
         art="props/moon-cloud"

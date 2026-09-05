@@ -903,7 +903,15 @@ export function Hero() {
             so the near one passes in front of it; both are behind the ranges,
             which is what keeps them sky rather than fog. */}
         <div ref={cloud2} className="hero__cloud-drift hero__cloud-drift--far">
-          <StillArt art="props/moon-cloud" light="props/cumulus-far" className="hero__cloud hero__cloud--far" />
+          {/* `lightMotion`: in Cebu this cloud rides the hero's own
+              displacement instead of holding still — placed in the Scene
+              Editor and baked. The winter cloud is untouched. */}
+          <StillArt
+            art="props/moon-cloud"
+            light="props/cumulus-far"
+            className="hero__cloud hero__cloud--far"
+            lightMotion="hero"
+          />
         </div>
         <div ref={cloud} className="hero__cloud-drift">
           <StillArt art="props/moon-cloud" light="props/cumulus-near" className="hero__cloud" />

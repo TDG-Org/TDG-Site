@@ -1510,3 +1510,39 @@ a.games__play {
     display: none !important;
   }
 }
+
+/* ══ placed in the Scene Editor, 2026-09-05 ═══════════════════════════════
+   Every rule below is a placement the site owner set by hand in the Scene
+   Editor and then asked to be made the default. They are baked from
+   `public/scene/draft.json`, which is emptied in the same commit — a draft is
+   working state and the shipped page is CSS.
+
+   The units are the editor's own and they are the reason it stores them that
+   way: `left`/`top` are percentages of the box the piece is positioned inside
+   (its offset parent's padding box, which is what a percentage offset already
+   resolves against) and `width` is `vw`. So the numbers transfer with no
+   arithmetic at all, and what shipped is exactly the frame he was looking at.
+
+   **`right: auto` / `bottom: auto` are load-bearing.** Almost every rule these
+   supersede anchors from the far edge, and an absolutely positioned box with
+   `left`, `right` and `width` all resolved silently drops one of them. Clearing
+   the far edge in the same breath is what makes `left`/`top` mean what they say.
+
+   Each piece's own `transform` is untouched, because the editor measured the
+   LAYOUT box and these set the layout box; the transform composes on top of
+   both, identically. `src/scene/README.md` has the long version.
+
+   LIGHT ONLY. Dark keeps every derivation above, to the pixel. */
+
+/* The sand floor, moved down and given a height of its own. The height is
+   stated because this plate crops with `object-fit` rather than deriving its
+   box from an `aspect-ratio`, so it does not follow a width the way the palm
+   row does. */
+[data-theme='light'] .games__fog {
+  left: -2.674%;
+  right: auto;
+  top: 69.581%;
+  bottom: auto;
+  width: 104.799vw;
+  height: 40.741vh;
+}

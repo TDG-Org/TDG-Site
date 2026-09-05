@@ -1535,3 +1535,14 @@
 [data-theme='light'] .outro__stones {
   display: none;
 }
+
+/* ── and the sand comes off too ────────────────────────────────────────────
+   Placed in the Scene Editor on 2026-09-05 and baked from the draft. The
+   September 3rd clearance left `.outro__sand` as the one piece of art in the
+   light Makers beat; the owner has now taken that as well, so what is left is
+   the section's own band, `.outro__afterglow` and `.outro__ground`'s pool of
+   light under the copy. Dark is untouched — this rule is light-only and the
+   base rule above still hides it there for its own reason. */
+[data-theme='light'] .outro__sand {
+  display: none;
+}

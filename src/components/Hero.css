@@ -3086,3 +3086,58 @@
 [data-theme='light'] .hero__weather {
   z-index: 1;
 }
+
+/* ══ placed in the Scene Editor, 2026-09-05 ═══════════════════════════════
+   Every rule below is a placement the site owner set by hand in the Scene
+   Editor and then asked to be made the default. They are baked from
+   `public/scene/draft.json`, which is emptied in the same commit — a draft is
+   working state and the shipped page is CSS.
+
+   The units are the editor's own and they are the reason it stores them that
+   way: `left`/`top` are percentages of the box the piece is positioned inside
+   (its offset parent's padding box, which is what a percentage offset already
+   resolves against) and `width` is `vw`. So the numbers transfer with no
+   arithmetic at all, and what shipped is exactly the frame he was looking at.
+
+   **`right: auto` / `bottom: auto` are load-bearing.** Almost every rule these
+   supersede anchors from the far edge, and an absolutely positioned box with
+   `left`, `right` and `width` all resolved silently drops one of them. Clearing
+   the far edge in the same breath is what makes `left`/`top` mean what they say.
+
+   Each piece's own `transform` is untouched, because the editor measured the
+   LAYOUT box and these set the layout box; the transform composes on top of
+   both, identically. `src/scene/README.md` has the long version.
+
+   LIGHT ONLY. Dark keeps every derivation above, to the pixel. */
+
+/* The palm, moved and turned a little off vertical — the red-mark placement
+   from 2026-09-03 adjusted by hand. `right`/`bottom` go, and with them the
+   `--pine-w` clamp: a hand placement is a number, not a solved inequality. */
+[data-theme='light'] .hero__pine {
+  left: 87.791%;
+  right: auto;
+  top: 6.052%;
+  bottom: auto;
+  width: 20.412vw;
+  rotate: -3.9deg;
+}
+
+/* The far cloud. It also stops being still and starts riding the hero's own
+   displacement — see `lightMotion` at its call site in Hero.tsx. */
+[data-theme='light'] .hero__cloud--far {
+  left: 32.931%;
+  right: auto;
+  top: -2.857%;
+  bottom: auto;
+  width: 70.625vw;
+}
+
+/* The sea. Its `transform: translateX(-50%)` stays and still centres it on
+   this `left`; only the layout box moved. */
+[data-theme='light'] .hero__ridge {
+  left: 35.393%;
+  right: auto;
+  top: 68.148%;
+  bottom: auto;
+  width: 145.99vw;
+}

@@ -511,7 +511,17 @@ export function Origin() {
             of the timeline below and has been since this section was written.
             One class name, two meanings, is a stylesheet that breaks on a
             selector nobody looked twice at. */}
-        <ThemedArt art="props/pine-row" light="props/palm-row" className="origin__pines" factor={NEAR_ROW_FACTOR} />
+        {/* `lightMotion="sway"`: the palm row is the near field of a beach
+            and takes the cursor in Cebu, where the pine row across a valley
+            takes the scroll. Placed in the Scene Editor and baked; the winter
+            row keeps `NEAR_ROW_FACTOR` exactly. */}
+        <ThemedArt
+          art="props/pine-row"
+          light="props/palm-row"
+          className="origin__pines"
+          factor={NEAR_ROW_FACTOR}
+          lightMotion="sway"
+        />
       </div>
 
       {/* ── the ground, and it crosses the boundary ───────────────────
@@ -543,7 +553,7 @@ export function Origin() {
           inside it, so the clip travels with the thing it is clipping and the
           drift's own bottom edge cannot slide out from under it. */}
       <div ref={ground} className="origin__ground" aria-hidden="true">
-        <StillArt art="landscapes/snow-bank" light="landscapes/sand-bank" className="origin__snow" />
+        <StillArt art="landscapes/snow-bank" light="landscapes/sand-bank" className="origin__snow" lightMotion="sway" />
       </div>
 
       {/* ── the lamppost ─────────────────────────────────────
@@ -620,7 +630,7 @@ export function Origin() {
             `--lamp-*` glow tokens are already `transparent` in light
             (tokens.css), so the pool, the halo and the breath cost nothing
             here — there is no light to draw at noon. */}
-        <StillArt art="hero/lamppost-left" light="props/coconut-pair" className="origin__lamp" />
+        <StillArt art="hero/lamppost-left" light="props/coconut-pair" className="origin__lamp" lightMotion="sway" />
         {/* Two haloes, not one. The owner asked for "a 2nd layer bigger glow
             for the light pole, but more faint/transparent" — which is what a
             lantern in cold air actually does: a tight bright halo on the glass

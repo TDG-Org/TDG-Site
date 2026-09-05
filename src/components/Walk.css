@@ -942,3 +942,19 @@
     display: none !important;
   }
 }
+
+/* ── the capiz window comes off in light ───────────────────────────────────
+   Placed in the Scene Editor on 2026-09-05 and baked from the draft.
+
+   This is the layer that made the Tools band read as brown planks: a
+   full-viewport `props/capiz-window` at 0.66 over the 3D hut interior, filling
+   the whole band whatever was behind it. Taking it off is the owner's call and
+   it is the one he made with the thing on screen in front of him.
+
+   Light only, and deliberately: in the winter theme `props/window-frost` is a
+   vignette by construction — a frame at the edges with the middle masked out —
+   and it is the reason the walk reads as being seen from inside. That is
+   untouched. */
+[data-theme='light'] .walk__frost-art {
+  display: none;
+}

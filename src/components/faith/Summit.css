@@ -1343,3 +1343,36 @@
   filter: drop-shadow(0 0 calc(var(--summit-cross-h) * 0.06) var(--summit-sky))
     drop-shadow(0 0 calc(var(--summit-cross-h) * 0.19) var(--summit-wash));
 }
+
+/* ══ placed in the Scene Editor, 2026-09-05 ═══════════════════════════════
+   Every rule below is a placement the site owner set by hand in the Scene
+   Editor and then asked to be made the default. They are baked from
+   `public/scene/draft.json`, which is emptied in the same commit — a draft is
+   working state and the shipped page is CSS.
+
+   The units are the editor's own and they are the reason it stores them that
+   way: `left`/`top` are percentages of the box the piece is positioned inside
+   (its offset parent's padding box, which is what a percentage offset already
+   resolves against) and `width` is `vw`. So the numbers transfer with no
+   arithmetic at all, and what shipped is exactly the frame he was looking at.
+
+   **`right: auto` / `bottom: auto` are load-bearing.** Almost every rule these
+   supersede anchors from the far edge, and an absolutely positioned box with
+   `left`, `right` and `width` all resolved silently drops one of them. Clearing
+   the far edge in the same breath is what makes `left`/`top` mean what they say.
+
+   Each piece's own `transform` is untouched, because the editor measured the
+   LAYOUT box and these set the layout box; the transform composes on top of
+   both, identically. `src/scene/README.md` has the long version.
+
+   LIGHT ONLY. Dark keeps every derivation above, to the pixel. */
+
+/* The far cloud, moved and put on the cursor — `lightMotion` at its call site
+   in faith/Summit.tsx. */
+[data-theme='light'] .faith__cloud--far {
+  left: -5.916%;
+  right: auto;
+  top: 17.666%;
+  bottom: auto;
+  width: 45.781vw;
+}

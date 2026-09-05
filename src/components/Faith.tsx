@@ -3,6 +3,7 @@ import { useReveal } from '../hooks/useReveal'
 import { useSectionProgress } from '../hooks/useSectionProgress'
 import { Summit } from './faith/Summit'
 import { Seam } from './scene/Seam'
+import { StillArt } from './scene/ThemedArt'
 import { SceneExtras } from '../scene/SceneExtras'
 import './Faith.css'
 
@@ -146,6 +147,28 @@ export function Faith() {
           reason we kept the name.
         </p>
       </div>
+      {/* ── the headland across the water ──────────────────────────────────
+          Added in the Scene Editor on 2026-09-05 and baked from the draft: the
+          owner dragged `landscapes/headland` out of the library into the foot
+          of this section, which is where it now stands.
+
+          It is the piece that used to be `.outro__far` — the green headland
+          with palms along its crest — and it was taken off the Makers beat in
+          the September 3rd clearance. This is it finding a place rather than
+          being deleted, which is what the kit's README asks for.
+
+          `landscapes/far-range-soft` is the dark name and it is never painted:
+          `StillArt` needs one to exist, and Faith.css hides this slot outright
+          in dark, exactly the way `.outro__far` did. A green hill across a
+          lagoon is not in the midnight picture.
+
+          Before `<SceneExtras>` and after the copy, so it takes the section as
+          its containing block — the same box the editor measured it in. */}
+      <StillArt
+        art="landscapes/far-range-soft"
+        light="landscapes/headland"
+        className="faith__headland"
+      />
       {/* Where a piece the Scene Editor ADDED to this section is drawn.
           It renders null for everybody — see src/scene/SceneExtras.tsx — and
           it is inside the section rather than over the page so an added piece

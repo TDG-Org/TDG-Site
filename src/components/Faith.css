@@ -702,3 +702,36 @@
    for. Both bands here are `<svg class="scene__seam">` inside wrappers that
    now paint nothing of their own, and Seam.css's own print block already drops
    every `.scene__seam`, so there is nothing left for a rule here to catch. */
+
+/* ── the headland, added in the Scene Editor on 2026-09-05 ─────────────────
+   Dragged out of the library into the foot of this section and baked from
+   `public/scene/draft.json`. See Faith.tsx for what it is and why its dark
+   name is never painted.
+
+   `display: none` first and `block` only in light, which is the same shape
+   `.outro__far` used for the same piece: the dark theme has no lagoon for a
+   green hill to be across. The geometry is the editor's own units — `left` and
+   `top` as percentages of this section, `width` in `vw` — so what ships is the
+   frame the owner was looking at.
+
+   No `z-index`: it is the last art in the section's DOM and the copy above it
+   is earlier, so it paints in front of the band and behind nothing that
+   matters. That is where it was when he placed it. */
+.faith__headland {
+  display: none;
+}
+
+[data-theme='light'] .faith__headland {
+  display: block;
+  left: -11.769%;
+  right: auto;
+  top: 82.0%;
+  bottom: auto;
+  width: 68.677vw;
+  height: auto;
+  /* No `--art-far`, and that is deliberate rather than an omission. The owner
+     placed this at full strength and approved that frame; dropping it to the
+     kit's far-plane token would ship something paler than the thing he looked
+     at. If it wants veiling later, the Scene Editor's Opacity field is where
+     that decision gets made and seen. */
+}

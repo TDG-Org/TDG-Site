@@ -198,7 +198,20 @@ export function buildArt(motion: Motion, props: BuildProps): JSX.Element {
   }
 }
 
-/** Everything a wrapper has to work out before it can pick a builder. */
+/**
+ * A slot may answer the page differently in the two themes.
+ *
+ * The same idea as `light` one paragraph up, and it exists for the same
+ * reason: the Cebu theme is a different PICTURE, and a picture can want a
+ * different kind of motion as well as a different drawing. A palm row at the
+ * front of a beach reads as near-field and wants the cursor; the pine row it
+ * replaced is across a valley and wants the scroll.
+ *
+ * `lightMotion` is what the site owner set in the Scene Editor and what this
+ * bakes in. Naming it here rather than swapping the component keeps DARK
+ * exactly as it was — rule 12 — which swapping the component could not,
+ * because a component is chosen once for both themes.
+ */
 function resolve(
   o: SlotOverride | undefined,
   fallbackMotion: Motion,
@@ -233,15 +246,19 @@ export function ThemedArt({
   light,
   className,
   factor,
+  lightMotion,
 }: {
   art: ArtName
   light?: ArtName
   className: string
   factor: number
+  /** What this slot does in the LIGHT theme, when that differs. */
+  lightMotion?: Motion
 }): JSX.Element | null {
   const { theme } = useTheme()
   const o = useSlotOverride(className, theme)
-  const r = resolve(o, 'drift', { art, light, className, factor })
+  const fallback = theme === 'light' && lightMotion ? lightMotion : 'drift'
+  const r = resolve(o, fallback, { art, light, className, factor })
   return r && buildArt(r.motion, r.props)
 }
 
@@ -273,15 +290,18 @@ export function ThemedHeroArt({
   light,
   className,
   factor,
+  lightMotion,
 }: {
   art: ArtName
   light?: ArtName
   className: string
   factor: number
+  lightMotion?: Motion
 }): JSX.Element | null {
   const { theme } = useTheme()
   const o = useSlotOverride(className, theme)
-  const r = resolve(o, 'hero', { art, light, className, factor })
+  const fallback = theme === 'light' && lightMotion ? lightMotion : 'hero'
+  const r = resolve(o, fallback, { art, light, className, factor })
   return r && buildArt(r.motion, r.props)
 }
 
@@ -292,15 +312,21 @@ export function StillArt({
   art,
   light,
   className,
+  lightMotion,
 }: {
   art: ArtName
   light?: ArtName
   className: string
+  /** What this slot does in the LIGHT theme, when that differs. `hero` and
+   *  `drift` both take the 0.06 below as their amount. */
+  lightMotion?: Motion
 }): JSX.Element | null {
   const { theme } = useTheme()
   const o = useSlotOverride(className, theme)
-  /* factor 0.06 is the kit's usual gentle drift, and it is only ever reached
-     if a draft turns this slot INTO a drifting one without naming an amount. */
-  const r = resolve(o, 'still', { art, light, className, factor: 0.06 })
+  const fallback = theme === 'light' && lightMotion ? lightMotion : 'still'
+  /* factor 0.06 is the kit's usual gentle drift, and it is reached when a
+     draft — or a `lightMotion` baked from one — turns this slot into a
+     drifting one without naming an amount. */
+  const r = resolve(o, fallback, { art, light, className, factor: 0.06 })
   return r && buildArt(r.motion, r.props)
 }
