@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type PointerEvent as ReactPointerEvent } from 'react'
 import { asset } from '../../lib/asset'
-import { motionIntensity, onFrame, setMotionIntensity } from '../../lib/motion'
+import { onFrame, setMotionIntensity } from '../../lib/motion'
 import { useTheme } from '../../theme/ThemeProvider'
 import { measureHeightVh, measurePlacement, pxToPlacement, pxToVh, pxToVw } from '../apply'
 import {
@@ -71,7 +71,15 @@ const MOTIONS: { id: Motion; label: string; hint: string }[] = [
   { id: 'hero', label: 'Hero Ride', hint: 'Sinks with the hero instead of against it. Hero only.' },
 ]
 
-export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.Element {
+export default function SceneEditor({
+  open,
+  onOpen,
+  onClose,
+}: {
+  open: boolean
+  onOpen: () => void
+  onClose: () => void
+}): JSX.Element | null {
   const { theme, toggle } = useTheme()
   const doc = useDoc()
   const [sel, setSel] = useState<Sel | null>(null)
@@ -90,36 +98,71 @@ export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.E
   const [dirty, setDirty] = useState(false)
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState(false)
+  /**
+   * Whether the saved draft is being drawn over the page.
+   *
+   * **This is the fix for "clicking Save doesn't actually save anything when
+   * exiting Scene Editor".** Save always did persist — the draft was in
+   * localStorage and in `public/scene/draft.json` — but closing the panel tore
+   * the document out of the store, so the page snapped back to the shipped CSS
+   * and every edit vanished from view. From the outside that is a Save button
+   * that does nothing.
+   *
+   * The draft now stays applied after the panel closes, for the one person who
+   * can open the panel at all, and a pill says so and can switch it off. A
+   * visitor is unaffected: the chunk that loads a draft is only ever imported
+   * for a signed-in admin.
+   */
+  const [applied, setApplied] = useState(true)
+  const [edits, setEdits] = useState(0)
   const history = useRef<SceneDoc[]>([])
 
-  /* ── boot: load the draft, take the page over, and hand it back ────────── */
+  /* ── boot: load the draft once, whether or not the panel is open ───────── */
   useEffect(() => {
     let live = true
-    const previousIntensity = motionIntensity()
-    setMotionIntensity(0)
     void loadDraft().then((d) => {
       if (!live) return
       setDoc(d)
-      setEditing(true)
       const n = count(d)
+      setEdits(n)
       setStatus(n === 0 ? 'Empty draft. Click a piece to start.' : `Draft loaded — ${n} edits.`)
     })
     return () => {
       live = false
       setEditing(false)
       setDoc(null)
-      setMotionIntensity(previousIntensity)
     }
   }, [])
 
+  /* Keep the edit count in step, so the pill can say how much is in the draft
+     without the panel being open to count it. */
   useEffect(() => {
+    if (doc) setEdits(count(doc))
+  }, [doc])
+
+  /* The draft is drawn while the panel is open, and after it closes for as
+     long as the pill says it is. One writer, so the two can never disagree. */
+  useEffect(() => {
+    setEditing(open || applied)
+  }, [open, applied])
+
+  /* Motion is frozen only while the panel is OPEN. Leaving it at zero after
+     the panel closed would silently kill every drift on the page and look
+     like the editor had broken the site. */
+  useEffect(() => {
+    if (!open) {
+      setMotionIntensity(1)
+      return
+    }
     setMotionIntensity(frozen ? 0 : 1)
-  }, [frozen])
+    return () => setMotionIntensity(1)
+  }, [open, frozen])
 
   useEffect(() => {
+    if (!open) return
     document.documentElement.setAttribute('data-scene-edit', 'on')
     return () => document.documentElement.removeAttribute('data-scene-edit')
-  }, [])
+  }, [open])
 
   /* Where the dock sits is a preference about THIS browser's chrome, like the
      theme switch and the Developer tab beside it, so it is remembered the same
@@ -352,6 +395,41 @@ export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.E
     setStatus('Duplicated. It is a new piece — delete removes it for good.')
   }, [baseOf, commit, override, sel, selEl, theme])
 
+  /**
+   * Write a section's new stacking order into the draft.
+   *
+   * `ordered` arrives BACK to front, so the index is the `z` — a contiguous
+   * run from zero, which leaves the backmost piece interleaved with the plain
+   * bands at `z-index: auto` exactly as it was and lifts the rest above them
+   * in the order asked for.
+   *
+   * Only the pieces whose z actually changes are written, so a reorder that
+   * moves one row does not put six no-op entries in the draft.
+   */
+  const reorder = useCallback(
+    (ordered: Sel[]) => {
+      const d = getDoc()
+      commit(() => {
+        ordered.forEach((s, i) => {
+          const held = d
+            ? s.kind === 'slot'
+              ? d[theme].slots[s.id]?.z
+              : d[theme].extras.find((e) => e.id === s.id)?.z
+            : undefined
+          const live = (() => {
+            const el = selEl(s)
+            return el ? Number(getComputedStyle(el).zIndex) || 0 : 0
+          })()
+          if ((held ?? live) === i) return
+          if (s.kind === 'slot') patchSlot(theme, s.id, { z: i })
+          else patchExtra(theme, s.id, { z: i })
+        })
+      })
+      setStatus('Restacked. Depth z on the Piece tab is the same number.')
+    },
+    [commit, selEl, theme],
+  )
+
   const reset = useCallback(() => {
     if (!sel) return
     if (sel.kind === 'extra') {
@@ -369,8 +447,8 @@ export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.E
     setDirty(false)
     setStatus(
       res.where === 'repo'
-        ? `Saved to ${res.detail}. It is in the working tree.`
-        : `Saved to ${res.detail}. Use Download to get the file out.`,
+        ? `Saved to ${res.detail}. It stays on the page after you close this.`
+        : `Saved to ${res.detail}. It stays on the page after you close this; Download gets the file out.`,
     )
   }, [])
 
@@ -513,6 +591,31 @@ export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.E
     }
     return out
   }, [nameOfSel, theme])
+
+  /* ── closed ─────────────────────────────────────────────────────────────
+     Nothing at all when there is no draft: an admin who has never opened the
+     editor should not meet a control for a thing that does not exist. With a
+     draft, a pill — because a page that differs from the shipped one with
+     nothing on screen accounting for it reads as a bug, and gets reported as
+     one. It says how many edits, opens the panel, and switches the overlay
+     off without throwing the draft away. */
+  if (!open) {
+    if (edits === 0) return null
+    return (
+      <div className={`sceneed-pill${applied ? '' : ' is-off'}`} role="status">
+        <span className="sceneed-pill__dot" aria-hidden="true" />
+        <span className="sceneed-pill__text">
+          {applied ? 'Scene draft applied' : 'Scene draft hidden'} · {edits} edit{edits === 1 ? '' : 's'}
+        </span>
+        <button type="button" className="sceneed-pill__btn" onClick={() => setApplied((a) => !a)}>
+          {applied ? 'Hide' : 'Show'}
+        </button>
+        <button type="button" className="sceneed-pill__btn sceneed-pill__btn--go" onClick={onOpen}>
+          Edit
+        </button>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -699,6 +802,7 @@ export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.E
                   sel={sel}
                   hover={hover}
                   onHover={setHover}
+                  onReorder={reorder}
                   /* Picking a row moves you to the controls for it. Without
                      this, selecting a slot the theme does not draw left you
                      looking at the list with its "Draw It" button one
@@ -893,10 +997,13 @@ function PickLayer({
   const begin = (mode: Gesture['mode'], s: Sel, e: ReactPointerEvent<HTMLDivElement>) => {
     const base = onGestureStart(s)
     if (!base) return
+    /* Only a resize needs it, and it costs a forced reflow, so it is not paid
+       for on a move or a rotate. */
+    const slope = mode.startsWith('size:') ? transformSlope(elementFor(s)) : NO_SLOPE
     /* One history entry per gesture, taken before the first pixel — otherwise
        a drag across the screen is four hundred undo steps. */
     onGestureCommit()
-    drag.current = { mode, sel: s, base, startX: e.clientX, startY: e.clientY, moved: false }
+    drag.current = { mode, sel: s, base, slope, startX: e.clientX, startY: e.clientY, moved: false }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
@@ -1006,13 +1113,44 @@ function PickLayer({
     w = Math.max(4, w)
     h = Math.max(4, h)
 
-    /* The opposite edge stays where it is: growing from the west grip moves
-       `left` by exactly what the width gained, and the east grip does not
-       touch `left` at all. Derived from the FINAL size rather than from the
-       pointer delta, so it is still right after the ratio lock has overridden
-       one of the two axes. */
-    const offX = edge.l ? d.base.pxW - w : 0
-    const offY = edge.t ? d.base.pxH - h : 0
+    /* ── keeping the opposite edge where it is ────────────────────────────
+       The first version of this was `offX = edge.l ? pxW - w : 0`, which is
+       right only at zero rotation and was reported by review as such. A CSS
+       `rotate` turns the box about its CENTRE, so changing the size moves both
+       visual edges symmetrically about that centre; the anchor has to be held
+       in the frame it actually lives in.
+
+       Solving `screen(anchor)` before = after, with `c` the centre, `R` the
+       rotation and `a` the anchor corner in local coordinates:
+
+           (L', T') = (L, T) + (-dW/2, -dH/2) + R · [ (0.5-ax)·dW, (0.5-ay)·dH ]
+
+       At 0deg `R` is the identity and this collapses to exactly the old
+       expression, which is why the original 32-case grip sweep passed: every
+       one of those cases was unrotated.
+
+       `ax`/`ay` are where the anchor sits along each axis — 0 at the near
+       edge, 1 at the far one, 0.5 when that axis is not being dragged and the
+       box must grow symmetrically about its middle. */
+    const ax = edge.r ? 0 : edge.l ? 1 : 0.5
+    const ay = edge.b ? 0 : edge.t ? 1 : 0.5
+    const dW = w - d.base.pxW
+    const dH = h - d.base.pxH
+
+    /* And the piece's OWN transform, when its translation is a function of its
+       size. Nine layers here are `left: 50%` + `translateX(-50%)`, so growing
+       the width slides them another half of the gain — an anchor computed in
+       layout space alone cannot see it, and the review measured 50px of drift
+       at 0deg on `hero__cloud` because of it. The slope is measured rather
+       than assumed: one probe resize at gesture start, read straight off the
+       computed matrix, which covers a percentage translate, a pixel one, a
+       mirror, and any mixture, without this code having to know which. */
+    const localX = (0.5 - ax) * dW - d.slope.sx * dW
+    const localY = (0.5 - ay) * dH - d.slope.sy * dH
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    const offX = -dW / 2 + (localX * cos - localY * sin)
+    const offY = -dH / 2 + (localX * sin + localY * cos)
     const anchor = pxToPlacement(el, offX, offY)
 
     const patch: Partial<Extra> = {
@@ -1093,9 +1231,61 @@ type Gesture = {
   mode: 'move' | 'rotate' | `size:${string}`
   sel: Sel
   base: Base
+  /** How this piece's own CSS transform moves when its box grows. */
+  slope: Slope
   startX: number
   startY: number
   moved: boolean
+}
+
+type Slope = { sx: number; sy: number }
+
+const NO_SLOPE: Slope = { sx: 0, sy: 0 }
+
+/**
+ * How much the element's own `transform` translation moves per pixel of box.
+ *
+ * A percentage translate is a function of the box it is on — `translateX(-50%)`
+ * is `-0.5 x width` — so growing a piece slides it as well as stretching it,
+ * and an anchor computed only in layout space drifts by exactly that much.
+ * Nine layers on this page are that recipe.
+ *
+ * Measured rather than parsed: grow the box by 100px, read the computed matrix
+ * again, divide. That is right for a percentage translate, a pixel one, a
+ * mirror and any mixture of them, and it needs no knowledge of what the
+ * stylesheet actually said. Both writes and the read happen inside one
+ * synchronous block, before the browser has a chance to paint, so nothing
+ * flickers; the cost is one forced reflow per resize gesture.
+ */
+function transformSlope(el: HTMLElement | null): Slope {
+  if (!el) return NO_SLOPE
+  const translation = () => {
+    const t = getComputedStyle(el).transform
+    if (!t || t === 'none') return { e: 0, f: 0 }
+    try {
+      const m = new DOMMatrixReadOnly(t)
+      return { e: m.e, f: m.f }
+    } catch {
+      return { e: 0, f: 0 }
+    }
+  }
+  const w0 = el.style.width
+  const h0 = el.style.height
+  const base = translation()
+  const W = el.offsetWidth || 1
+  const H = el.offsetHeight || 1
+  el.style.width = `${W + 100}px`
+  el.style.height = `${H + 100}px`
+  const grown = translation()
+  el.style.width = w0
+  el.style.height = h0
+  void el.offsetWidth
+  const sx = (grown.e - base.e) / 100
+  const sy = (grown.f - base.f) / 100
+  return {
+    sx: Number.isFinite(sx) ? sx : 0,
+    sy: Number.isFinite(sy) ? sy : 0,
+  }
 }
 
 /**
@@ -1429,12 +1619,50 @@ function LibraryPanel({
   )
 }
 
+/**
+ * The Layers list — every piece in the scene, grouped by section, in paint
+ * order, and reorderable by dragging a row.
+ *
+ * ## Front at the top, because that is what the order MEANS
+ *
+ * The list used to be in DOM order, which is back-to-front, and that is only
+ * an answer if nobody is going to act on it. A list you can drag has to read
+ * the way the picture is stacked: the row at the top is the piece in front.
+ *
+ * ## Dragging writes `z`, because `z` is the only order there is
+ *
+ * A draft cannot move an element in the document — the sections are React
+ * components and their DOM order is the page's own structure. What it can do
+ * is set `z-index`, and within a section that is exactly equivalent: measured
+ * with `getComputedStyle` up the ancestor chain, the art in a section shares
+ * one stacking context (nothing between a piece and the root establishes one),
+ * so a z on the `<img>` really does reorder it against its neighbours.
+ *
+ * The one exception found by that measurement is `walk__frost-art`, which sits
+ * inside `.walk__frost` — an element with its own opacity, and therefore its
+ * own stacking context. It is alone in there, so it cannot be reordered
+ * against anything and the list says so rather than offering a drag that
+ * would do nothing.
+ *
+ * A drop rewrites the whole group's `z` as a contiguous run from the back, and
+ * only where the value actually changes, so a draft records an order rather
+ * than a pile of no-op entries. The panel's own Depth z field is the same
+ * number, so typing -1 there drops a piece behind the copy AND moves it to the
+ * bottom of this list — one idea with two controls, not two ideas.
+ *
+ * ## A press is a drag, a click is a selection
+ *
+ * The same rule the canvas uses, for the same reason: a row has to do both,
+ * and the pointer's own behaviour is what tells them apart. Under four pixels
+ * of travel it is a click and it selects; past that it is a reorder.
+ */
 function LayersPanel({
   rows,
   sel,
   hover,
   onSelect,
   onHover,
+  onReorder,
   doc,
   theme,
 }: {
@@ -1443,51 +1671,141 @@ function LayersPanel({
   hover: Sel | null
   onSelect: (s: Sel) => void
   onHover: (s: Sel | null) => void
+  onReorder: (ordered: Sel[]) => void
   doc: SceneDoc | null
   theme: 'dark' | 'light'
 }): JSX.Element {
   const [, bump] = useState(0)
+  const [drag, setDrag] = useState<{ sel: Sel; section: SectionId; from: number } | null>(null)
+  const [over, setOver] = useState<number | null>(null)
+  const press = useRef<{ y: number; sel: Sel; section: SectionId; from: number } | null>(null)
+  /* Set by a drag so the `click` that follows it does not also select. A row
+     is a button and selecting is its CLICK, not its pointerup — that is what
+     keeps Enter and Space working on it, which a pointer-only handler quietly
+     took away. */
+  const dragged = useRef(false)
+
+  /* The list is read off the live DOM, so it has to be re-read for pieces that
+     arrive late — a lazy image decoding, a section mounting as it scrolls in.
+     A second is slow enough to cost nothing and quick enough that a new piece
+     never feels missing. It stops when the tab is not showing, because this
+     component only exists while the Layers tab is open. */
   useEffect(() => {
-    const t = window.setInterval(() => bump((n) => n + 1), 700)
+    const t = window.setInterval(() => bump((n) => n + 1), 1000)
     return () => window.clearInterval(t)
   }, [])
+
   const all = rows()
   const hiddenSlots = doc ? Object.entries(doc[theme].slots).filter(([, v]) => v.hidden) : []
+
   return (
     <div className="sceneed__layers">
+      <p className="sceneed__note">
+        Front of the scene at the top. Drag a row to restack it inside its section.
+      </p>
       {SECTION_IDS.map((id) => {
-        const mine = all.filter((r) => r.section === id)
+        const mine = paintOrder(all.filter((r) => r.section === id))
         if (mine.length === 0) return null
+        /* Front at the top: the array is back-to-front, the list is not. */
+        const shown = [...mine].reverse()
+        const dragging = drag?.section === id
         return (
           <section key={id} className="sceneed__layer-group">
             <h3>#{id}</h3>
-            {mine.map((r) => {
+            {shown.map((r, i) => {
               const on = sel && sel.kind === r.sel.kind && sel.id === r.sel.id
               /* A slot this theme does not draw is still listed — it can be
                  brought back from the Piece tab — but it says so rather than
                  looking like a layer that is simply somewhere else. */
               const off = getComputedStyle(r.el).display === 'none'
               const lit = sameSel(hover, r.sel)
+              const held = dragging && sameSel(drag.sel, r.sel)
               return (
-                <button
-                  key={`${r.sel.kind}:${r.sel.id}`}
-                  type="button"
-                  className={`sceneed__layer${on ? ' is-on' : ''}${lit ? ' is-lit' : ''}${off ? ' is-off' : ''}`}
-                  onClick={() => onSelect(r.sel)}
-                  /* Pointer AND focus, so the highlight answers a keyboard
-                     walk down the list as well as a mouse. `onPointerLeave`
-                     clears only its own row, so moving between two rows never
-                     blanks the outline in between. */
-                  onPointerEnter={() => onHover(r.sel)}
-                  onPointerLeave={() => onHover(null)}
-                  onFocus={() => onHover(r.sel)}
-                  onBlur={() => onHover(null)}
-                >
-                  <span className="sceneed__layer-name">{r.label}</span>
-                  <span className="sceneed__layer-kind">
-                    {r.sel.kind === 'extra' ? 'added' : off ? 'not drawn' : ''}
-                  </span>
-                </button>
+                <div key={`${r.sel.kind}:${r.sel.id}`} className="sceneed__layer-slot">
+                  {dragging && over === i && <span className="sceneed__drop" aria-hidden="true" />}
+                  <button
+                    type="button"
+                    className={`sceneed__layer${on ? ' is-on' : ''}${lit ? ' is-lit' : ''}${off ? ' is-off' : ''}${held ? ' is-held' : ''}`}
+                    /* Pointer AND focus, so the highlight answers a keyboard
+                       walk down the list as well as a mouse. `onPointerLeave`
+                       clears only its own row, so moving between two rows never
+                       blanks the outline in between. */
+                    onPointerEnter={() => !drag && onHover(r.sel)}
+                    onPointerLeave={() => !drag && onHover(null)}
+                    onFocus={() => onHover(r.sel)}
+                    onBlur={() => onHover(null)}
+                    onPointerDown={(e) => {
+                      if (e.button !== 0) return
+                      press.current = { y: e.clientY, sel: r.sel, section: id, from: i }
+                      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+                    }}
+                    onPointerMove={(e) => {
+                      const p = press.current
+                      if (!p) return
+                      if (!drag) {
+                        /* Four pixels of slop, so a click with a shaky hand is
+                           still a click. */
+                        if (Math.abs(e.clientY - p.y) < 4) return
+                        setDrag({ sel: p.sel, section: p.section, from: p.from })
+                      }
+                      /* Which gap the pointer is over, measured against the
+                         rows themselves rather than guessed from the delta —
+                         rows are not all the same height once a name wraps. */
+                      const list = (e.currentTarget as HTMLElement).closest('.sceneed__layer-group')
+                      if (!list) return
+                      const btns = [...list.querySelectorAll('.sceneed__layer')]
+                      let idx = btns.length
+                      for (let k = 0; k < btns.length; k++) {
+                        const b = btns[k].getBoundingClientRect()
+                        if (e.clientY < b.top + b.height / 2) { idx = k; break }
+                      }
+                      setOver(idx)
+                    }}
+                    onClick={() => {
+                      if (dragged.current) {
+                        dragged.current = false
+                        return
+                      }
+                      onSelect(r.sel)
+                    }}
+                    onPointerUp={() => {
+                      press.current = null
+                      if (!drag || over === null) {
+                        setDrag(null)
+                        setOver(null)
+                        /* Not a drag: let the click that follows do the
+                           selecting, so the mouse and the keyboard take the
+                           same path. */
+                        return
+                      }
+                      dragged.current = true
+                      /* Rebuild the displayed (front-first) order, then hand
+                         it back BACK-first, which is the order `z` counts in. */
+                      const next = shown.filter((x) => !sameSel(x.sel, drag.sel))
+                      const at = over > drag.from ? over - 1 : over
+                      next.splice(at, 0, shown[drag.from])
+                      setDrag(null)
+                      setOver(null)
+                      onReorder([...next].reverse().map((x) => x.sel))
+                    }}
+                    onPointerCancel={() => {
+                      press.current = null
+                      setDrag(null)
+                      setOver(null)
+                    }}
+                  >
+                    <span className="sceneed__layer-grip" aria-hidden="true">
+                      ⠿
+                    </span>
+                    <span className="sceneed__layer-name">{r.label}</span>
+                    <span className="sceneed__layer-kind">
+                      {r.sel.kind === 'extra' ? 'added' : off ? 'not drawn' : ''}
+                    </span>
+                  </button>
+                  {dragging && over === i + 1 && i === shown.length - 1 && (
+                    <span className="sceneed__drop" aria-hidden="true" />
+                  )}
+                </div>
               )
             })}
           </section>
@@ -1515,6 +1833,22 @@ function LayersPanel({
       )}
     </div>
   )
+}
+
+/**
+ * Back to front: `z-index` first, document order second.
+ *
+ * The same comparator the canvas hit test uses, and deliberately so — a list
+ * that disagreed with what a click picks would be a list that lies about the
+ * picture.
+ */
+function paintOrder(list: ArtRow[]): ArtRow[] {
+  return [...list].sort((a, b) => {
+    const za = Number(getComputedStyle(a.el).zIndex) || 0
+    const zb = Number(getComputedStyle(b.el).zIndex) || 0
+    if (za !== zb) return za - zb
+    return a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+  })
 }
 
 /* ══ small controls, custom-styled like everything else here (rule 5) ═════ */

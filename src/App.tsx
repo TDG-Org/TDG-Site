@@ -119,7 +119,13 @@ export default function App() {
     route.kind !== 'about' &&
     route.kind !== 'account' &&
     route.kind !== 'profile'
-  const sceneEditor = isAdmin && sceneMode && onHome
+  /* Mounted for an admin on the home page whether the editor is OPEN or not.
+     A saved draft has to keep showing after the panel is closed — otherwise
+     Save is a button that appears to do nothing, which is exactly how it was
+     reported — and something has to be on screen saying the page you are
+     looking at is a draft. The chunk decides which of those it is; with no
+     draft and the editor shut it renders nothing at all. */
+  const sceneEditor = isAdmin && onHome
 
   /*
    * A provider redirect (e.g. GitHub/Google) or a clicked password-reset
@@ -399,7 +405,11 @@ export default function App() {
       {sceneEditor && (
         <ErrorBoundary key="scene-editor">
           <Suspense fallback={null}>
-            <SceneEditor onClose={() => setSceneMode(false)} />
+            <SceneEditor
+              open={sceneMode}
+              onOpen={() => setSceneMode(true)}
+              onClose={() => setSceneMode(false)}
+            />
           </Suspense>
         </ErrorBoundary>
       )}

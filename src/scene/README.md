@@ -157,6 +157,62 @@ unmounts the old one and runs its cleanup. Do not turn this into a prop.
 
 ---
 
+## Resizing a piece that is rotated, or whose transform depends on its size
+
+The size half of a resize is projected onto the piece's own axes, and so is the
+position half — that took two goes.
+
+Keeping the opposite edge still means solving `screen(anchor)` before = after.
+With `c` the centre, `R` the rotation and the anchor at `(ax, ay)` along each
+axis — 0 at the near edge, 1 at the far one, 0.5 on an axis that is not being
+dragged:
+
+    (L', T') = (L, T) + (-dW/2, -dH/2) + R · [ (0.5-ax)·dW, (0.5-ay)·dH ]
+
+At 0deg `R` is the identity and this collapses to `left -= ax·dW`, which is
+what the first version wrote — and why its 32-case grip sweep passed while a
+rotated resize slid the anchored edge by 26px at 30deg and 100px at 180deg. A
+review caught it; the sweep could not, because every case in it was unrotated.
+
+There is a second term, and it is not rotation at all. **Nine pieces here are
+`left: 50%` + `translateX(-50%)`, so their visual position is a function of
+their own width**: grow one by `dW` and it also slides by `dW/2`, which an
+anchor computed in layout space cannot see. Rather than parse the stylesheet,
+the slope is MEASURED — grow the box by 100px at gesture start, read the
+computed matrix again, divide. Checked against what the CSS actually declares:
+`-0.500` on all eight of the centring recipe, `-0.026` on `hero__weather-art`
+(which really is a -2.6% translate), and `sy: -1.043` with `sx: 0` on
+`origin__lamp`, whose percentage translate is on the other axis.
+
+Verified by driving the east grip along the element's own axis at 0, 30, 90 and
+180 degrees: the anchored edge holds to 0.14px and the dragged edge lands
+within 0.1px of the pointer.
+
+---
+
+## Reordering, and why it is `z`
+
+A draft cannot move an element in the document — the sections are React
+components and their DOM order is the page's own structure. `z-index` is the
+only order it can write, and within a section that turns out to be exactly
+equivalent: walking up from each piece with `getComputedStyle` looking for an
+ancestor that establishes a stacking context finds **none** for the art in a
+section, so they all participate in the root context and a `z` on the `<img>`
+really does restack it against its neighbours. Confirmed by dragging the sand
+floor to the front of `#games` and watching it cover the palm row.
+
+The one exception the same measurement found is `walk__frost-art`, which sits
+inside `.walk__frost` — an element with its own `opacity`, and therefore its
+own stacking context. It is alone in there and cannot be reordered against
+anything.
+
+A drop rewrites the whole group as a contiguous run from the back and only
+where the value changes, so the draft records an order rather than a pile of
+no-ops. The Piece tab's Depth z is the same number, so typing `-1` there drops
+a piece behind the copy AND moves it to the bottom of the list.
+
+---
+
 ## Saving
 
 | Where | What happens |
@@ -166,6 +222,26 @@ unmounts the old one and runs its cleanup. Do not turn this into a prop.
 
 `localStorage` is also written in dev, and is read FIRST on load, so an unsaved
 edit survives a reload. **Clear** empties both.
+
+### A saved draft stays on the page after the panel closes
+
+It did not, and that was reported as *"clicking Save doesn't actually save
+anything when exiting Scene Editor"*. Save always did persist — the draft was
+in `localStorage` and in the file — but closing the panel tore the document out
+of the store, so the page snapped back to the shipped CSS and every edit
+vanished from view. From the outside that is a Save button that does nothing.
+
+So the chunk is now mounted for any admin on the home page, open or not, and
+`setEditing(open || applied)` keeps the draft drawn after the panel is shut. A
+pill in the bottom-left says so, counts the edits, opens the panel, and can
+switch the overlay off without discarding the draft — because a page that
+differs from the shipped one with nothing on screen accounting for it reads as
+a bug, and gets reported as one.
+
+**A visitor is unaffected and that is checked rather than assumed**: with a
+saved draft sitting in `public/scene/draft.json`, a page loaded without the
+admin flag has no dock, no pill, no pick sheet, no added pieces, no inline
+style on any `.scene__art`, and no `data-scene-edit` on `<html>`.
 
 ---
 
@@ -209,6 +285,16 @@ edit survives a reload. **Clear** empties both.
   `matrix(-1, 0, 0, 1, ...)` decomposes to 180deg of rotation, which is true of
   the maths and false of the picture. Only the standalone `rotate` property is
   read.
+- **Selecting a Layers row on `pointerup` instead of `click`.** The rows became
+  draggable and the selection moved onto the pointer with it, which silently
+  took Enter and Space away from a list of buttons — caught when a scripted
+  `.click()` stopped selecting anything. A drag sets a flag and the `click`
+  that follows it bows out; everything else selects on `click`, so the mouse
+  and the keyboard take the same path.
+- **Asserting that a CORNER stays put during a resize.** With the ratio locked
+  an east drag grows the height too, so the anchored west edge holds while its
+  corners slide along it. The assertion is on the edge's MIDPOINT. Two hours
+  of "the anchor is broken" was the test being wrong.
 - **A dock pinned `top: 12px; bottom: 12px`.** A column of chrome down the
   whole right edge whatever is in it. It is `max-height: min(74svh, 660px)`
   with the body scrolling, it can be anchored to either edge, it can be dragged

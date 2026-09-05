@@ -753,3 +753,134 @@
 .sceneed__layer.is-off .sceneed__layer-name {
   opacity: 0.5;
 }
+
+/* ── the closed state ──────────────────────────────────────────────────────
+   A saved draft keeps drawing over the page after the panel is shut, which is
+   the whole point of Save — so something has to say so. A page that differs
+   from the shipped one with nothing on screen accounting for it does not read
+   as clever, it reads as broken.
+
+   Bottom LEFT, deliberately: the dock lives top-right by default and the site
+   has its own bottom-right furniture; this is the one corner nothing else
+   claims, and it is out of the way of the art it is describing. */
+.sceneed-pill {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 8980;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--border-hover);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  color: var(--text);
+  font: 400 12px var(--font-body);
+  box-shadow: var(--card-shadow);
+}
+
+.sceneed-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warm);
+  flex: none;
+}
+
+/* Hidden is a state with its own face rather than a missing pill: the draft is
+   still there and one press brings it back, and saying so is what stops
+   somebody thinking their work was thrown away. */
+.sceneed-pill.is-off .sceneed-pill__dot {
+  background: transparent;
+  border: 1px solid var(--faint);
+}
+
+.sceneed-pill.is-off .sceneed-pill__text {
+  color: var(--muted);
+}
+
+.sceneed-pill__text {
+  font: 500 11.5px var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.sceneed-pill__btn {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: 600 11px var(--font-body);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.sceneed-pill__btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.sceneed-pill__btn--go {
+  background: var(--invert-bg);
+  border-color: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+.sceneed-pill__btn--go:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.sceneed-pill__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── the Layers list, once it can be dragged ───────────────────────────────
+   A row is now a handle as well as a target, so it needs the two things a
+   draggable row needs and nothing more: a grip that says it can be picked up,
+   and a line that says where it will land. */
+.sceneed__layer-slot {
+  position: relative;
+}
+
+.sceneed__layer-grip {
+  flex: none;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1;
+  cursor: grab;
+  /* The pointer handlers live on the whole row, so this is a signpost rather
+     than the only place a drag can start — which is what stops a narrow grip
+     becoming a target you have to aim at. */
+}
+
+.sceneed__layer:active .sceneed__layer-grip {
+  cursor: grabbing;
+}
+
+/* The row being carried. Kept in the list rather than removed, so the list
+   does not resize under the pointer while it is being reordered. */
+.sceneed__layer.is-held {
+  opacity: 0.4;
+}
+
+/* Where it will land. A line rather than a gap, again so nothing moves while
+   you are aiming at it. */
+.sceneed__drop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.sceneed__layer-slot:last-child .sceneed__drop:last-child {
+  top: auto;
+  bottom: -1px;
+}
