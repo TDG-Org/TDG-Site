@@ -328,7 +328,7 @@ it, because this section has already been wrong once.
 | `components/Hero.tsx` | `usePointer` | The tall pine (26 × 11 px) and the moon (7 × 3). The ridges and the sky answer the mouse with nothing at all, which is what makes the pine read as near. |
 | `components/Origin.tsx` | `usePointer` | The lamppost, **on the x axis only** — a foot that bobs off the snow loses the illusion the whole arrangement exists to build. |
 | `components/Tools.tsx` | `useSway` | The boulder cluster's wrapper. |
-| `scene/ThemedArt.tsx` | `useSway` | Any slot a Scene Editor draft sets to `motion: 'sway'`, on the `<img>` itself — which is safe there because the resolver builds ONE component per slot, so nothing else is writing that element's `translate`. |
+| `scene/ThemedArt.tsx` | `useSway` | Any slot `src/scene/scene.json` sets to `motion: 'sway'`, on the `<img>` itself — which is safe there because the resolver builds ONE component per slot, so nothing else is writing that element's `translate`. |
 | `components/faith/Summit.tsx` | `usePointer` | The moon and the far ridge, by a few pixels. The cross takes no pointer response, deliberately. |
 | `components/Faith.tsx` | `useSectionProgress` | Read on the section and handed straight down to `faith/Summit.tsx` as the frozen accessor, where the moon, the far ridge and the crest lag the page by 30 / 26 / 13 px across the whole of `p`. |
 

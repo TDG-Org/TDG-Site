@@ -62,7 +62,7 @@ protection is RLS on the server.
 | `src/cloud/` | TDG Cloud, built and dormant: the Store's plan shelf, the Account fold, and the console's launch/economics tab, all reading TDG Core's `tdg_cloud_config`. | [`src/cloud/README.md`](src/cloud/README.md) |
 | `src/theme/` | The theme wave and the `data-theme` attribute. | [`src/theme/README.md`](src/theme/README.md) |
 | `src/dev/` | The internal Developer console at `#/dev`. | [`src/dev/README.md`](src/dev/README.md) |
-| `src/scene/` | The Scene Editor: a dock that moves, retimes and adds the parallax art, per theme, and the JSON draft it writes. **A draft is never the shipped default** — read the README before touching it. | [`src/scene/README.md`](src/scene/README.md) |
+| `src/scene/` | The Scene Editor: a dock that moves, retimes and adds the parallax art, per theme, and `scene.json`, the committed file it writes. **Saving that file changes the site for everybody** — read the README before touching it. | [`src/scene/README.md`](src/scene/README.md) |
 | `supabase/` | The edge function and the SQL migrations. Not part of the bundle. | [`supabase/README.md`](supabase/README.md) |
 
 **A folder's README is authoritative for that folder.** Read it before editing

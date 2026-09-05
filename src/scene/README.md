@@ -1,48 +1,60 @@
-# `src/scene/` · the Scene Editor and the draft it writes
+# `src/scene/` · the Scene Editor and the scene it writes
 
 A dock over the home page that selects, moves, resizes, retimes, duplicates,
 deletes and adds the parallax art — one theme at a time — and writes what it
-did to a JSON draft. Asked for by name: *"build me a developer toggle that can
+did to `scene.json`. Asked for by name: *"build me a developer toggle that can
 go into edit mode … I should be able to move, delete, duplicate, etc. any of
 the assets … make them moveable for the user interaction like with their mouse
 or scrolling, or to be still … edit either Dark mode and Light mode and save it
 … drag in assets from a library right into the interface. I will tell you when I
 like it and you will make it the default."*
 
-That last sentence is the architecture. **This folder produces a draft, not a
-default.** Read the two-stage arrangement below before changing anything here.
+**Save is what makes it the default.** `scene.json` is committed source, the
+app imports it, and every visitor gets it. There is no second stage.
 
 | | |
 | --- | --- |
-| `types.ts` | The draft's shape: `Placement`, `SlotOverride`, `Extra`, `SceneDoc`. |
-| `store.ts` | One module-level store. Load, save, patch, and the two hooks the art layer reads. |
+| `scene.json` | **The scene.** Committed source, imported by `store.ts`, bundled into the app. What the editor writes and what the site draws. |
+| `types.ts` | Its shape: `Placement`, `SlotOverride`, `Extra`, `SceneDoc`. |
+| `store.ts` | One module-level store. The scene, the editor's copy of it, save, patch, and the two hooks the art layer reads. |
 | `apply.ts` | A `Placement` as inline style, and the reverse — measuring a live element back into one. |
-| `SceneExtras.tsx` | Renders the pieces a draft ADDED to one section. Seven call sites, one per section. |
+| `SceneExtras.tsx` | Renders the pieces the scene ADDED to one section. Seven call sites, one per section. |
 | `sceneMode.ts` | The per-device switch in the account menu. |
 | `editor/SceneEditor.tsx` | The dock, the pick sheet, the three panels. Lazy; admins only. |
 | `editor/SceneEditor.css` | Its chrome, in the site's own tokens. |
 
 ---
 
-## The two stages, and why the second one is a person
+## Save writes the page. It did not always, and that was the complaint
 
-**Stage one is this folder.** The editor holds a draft, applies it over the
-shipped stylesheet as inline style, and saves it to `public/scene/draft.json`.
-Nothing here writes CSS, and nothing here is on for a visitor.
+This used to be a **two-stage** arrangement: the editor wrote a draft to
+`public/scene/draft.json`, the draft was drawn only for a signed-in admin with
+the editor switched on, and it became the actual site when a person sat down
+and hand-wrote the equivalent CSS. The site owner had to ask for that stage by
+hand — *"apply my saved changes to main it the new"* — and then, the next day,
+for the arrangement itself to go: *"Every time I save from it, it should also
+really apply to the actual site."*
 
-**Stage two is a human reading that JSON and writing the CSS.** Not a build
-step, and that is deliberate. Every placement rule in `src/components/*.css` is
-a `calc()` over named tokens with a paragraph above it saying how the number
-was solved and what breaks at 320px — `--games-pine-clear`, `--outro-horizon`,
-the clamp that keeps the hero's palm trunk off the right edge. A generator that
-turned `x: 31.7` into `left: 31.7%` would be correct at one viewport and would
-throw away the reason, which is the part that makes the next change possible.
-So the draft is a proposal in the same units the CSS is written in, and turning
-it into the default means picking the right token, writing the why, and
-rendering it. `AGENTS.md` §7.0 governs that step like any other visual change.
+So the draft is gone. `src/scene/scene.json` is source, `store.ts` imports it,
+Vite inlines it into the bundle, and **the overrides are applied for
+everybody** — signed in or not, editor loaded or not, in the first render.
+Pressing Save writes that file; the commit that carries it is the release.
 
-When the draft has been baked, `public/scene/draft.json` goes back to empty and
-the same commit carries both halves.
+### Baking into CSS is now an optional tidy-up, not a step
+
+It is still worth doing, and the reason is unchanged: every placement rule in
+`src/components/*.css` is a `calc()` over named tokens with a paragraph above
+it saying how the number was solved and what breaks at 320px —
+`--games-pine-clear`, `--outro-horizon`, the clamp that keeps the hero's palm
+trunk off the right edge. A placement in `scene.json` is a flat number at one
+viewport with no reason attached, so a piece that is going to live somewhere
+for good is better off as a rule with its why written down. `AGENTS.md` §7.0
+governs that like any other visual change.
+
+The difference is that nothing is waiting on it. Bake when the numbers have
+settled and empty the corresponding entries from `scene.json` in the same
+commit — the page must not move when you do, which is exactly what the
+geometry diff below checks. Skip it and the site is still correct.
 
 ---
 
@@ -53,10 +65,18 @@ the same commit carries both halves.
 - `sceneMode.ts` is off unless deliberately switched on, and `App.tsx` gates
   the whole thing behind `useAuth().isAdmin` as well. The editor is a lazy
   chunk, so nobody else fetches a byte of it.
-- `store.ts` holds `null` until the editor calls `loadDraft()`. `useSlotOverride`
-  returns the same `undefined` for every slot on every render, and `useExtras`
+- `store.ts` imports `scene.json` rather than fetching it, so there is no
+  request, no waterfall, and no window in which the art paints where the
+  stylesheet put it and then jumps. With an empty scene `useSlotOverride`
+  returns the same `undefined` for every slot on every render and `useExtras`
   returns one frozen empty array, so `useSyncExternalStore` sees an unchanged
-  snapshot and React does nothing.
+  snapshot and React does nothing. With placements in it, each hook returns a
+  reference **out of the imported document** — the same one every render, which
+  is the property that matters; a fresh object per render is an infinite loop,
+  not an optimisation.
+- Checked rather than assumed, on 2026-09-05 with an empty scene: 35
+  `.scene__art` elements on the home page, **none** of them carrying a `style`
+  attribute. A visitor's DOM is what it was before any of this existed.
 - `SceneExtras` returns `null` for that empty array, so the seven hosts cost a
   hook and a length check.
 - The three exports of `scene/ThemedArt.tsx` resolve to exactly the component
@@ -245,8 +265,13 @@ did, and the one thing that did not was worth catching: the added piece had
 been given `opacity: var(--art-far)` on the way in, which would have shipped it
 paler than the frame the owner approved.
 
-Then `public/scene/draft.json` is emptied in the same commit. A draft that
-survives its own bake is a draft that will be applied twice.
+Then the baked entries are emptied out of the scene in the same commit. A
+placement that survives its own bake is a placement that will be applied twice.
+
+That first bake is also why this arrangement changed. It was a day's work with
+a geometry diff to prove it, for changes the owner had already approved on
+screen the day before — and it had to happen again for the next batch. The
+right amount of that work is none, so `scene.json` ships.
 
 ---
 
@@ -254,36 +279,64 @@ survives its own bake is a draft that will be applied twice.
 
 | Where | What happens |
 | --- | --- |
-| `vite dev` | `POST /__scene` → `scripts/scene-draft-plugin.mjs` writes `public/scene/draft.json` in the working tree. It shows up in `git status`. |
-| A built site | No endpoint exists (`apply: 'serve'`), and `store.ts` does not even ask. The draft goes to `localStorage` and the panel says so; **Download** hands over the JSON. |
+| `vite dev` | `POST /__scene` → `scripts/scene-plugin.mjs` writes `src/scene/scene.json` in the working tree. It shows up in `git diff`, and the next commit ships it. |
+| A built site | No endpoint exists (`apply: 'serve'`), and `store.ts` does not even ask. **Nothing is written**, the panel says so in those words, and **Download** hands over the JSON to commit by hand. |
 
-`localStorage` is also written in dev, and is read FIRST on load, so an unsaved
-edit survives a reload. **Clear** empties both.
+**There is no `localStorage` copy of the scene, on purpose.** There was one, it
+was read first on load, and it is what made the closed-state pill go on reading
+*"12 edits"* for days after the file it was describing had been emptied: the
+browser held one document and the site held another, and nothing on screen
+could tell you which you were looking at. One file, one answer.
 
-### A saved draft stays on the page after the panel closes
+### Saving does not reload the page
 
-It did not, and that was reported as *"clicking Save doesn't actually save
-anything when exiting Scene Editor"*. Save always did persist — the draft was
-in `localStorage` and in the file — but closing the panel tore the document out
-of the store, so the page snapped back to the shipped CSS and every edit
-vanished from view. From the outside that is a Save button that does nothing.
+`store.ts` accepts `./scene.json` as an HMR dependency. Without that, writing
+the file makes Vite reload the whole page and an editing session loses its
+selection, its scroll position and its undo history every time Save is pressed.
+The accept swaps the document in place instead, so a Save shows up as the page
+redrawing from the file it just wrote. `doc` is only replaced when nothing is
+being edited — a hand-edit of the file mid-session must not throw away unsaved
+work.
 
-So the chunk is now mounted for any admin on the home page, open or not, and
-`setEditing(open || applied)` keeps the draft drawn after the panel is shut. A
-pill in the bottom-left says so, counts the edits, opens the panel, and can
-switch the overlay off without discarding the draft — because a page that
-differs from the shipped one with nothing on screen accounting for it reads as
-a bug, and gets reported as one.
+### There is no closed state
+
+The dock used to stay mounted after it was shut, with a status pill in the
+bottom-left corner counting the edits, because a saved draft had to keep
+showing and something had to account for a page that differed from the shipped
+one. The pill outlived the switch, and got reported: *"If I have Scene Editor
+off, it should not be on my UI in the bottom left."*
+
+It is gone, and the reason for it went with it. A saved scene is on the page by
+itself, so a closed editor has nothing left to draw. `App.tsx` mounts the chunk
+on `isAdmin && onHome && sceneMode` and the ✕ turns the switch off, so off
+means gone. The count moved into the dock's own footer, where it counts the
+document the page is drawing and cannot drift from it.
 
 **A visitor is unaffected and that is checked rather than assumed**: with a
-saved draft sitting in `public/scene/draft.json`, a page loaded without the
-admin flag has no dock, no pill, no pick sheet, no added pieces, no inline
-style on any `.scene__art`, and no `data-scene-edit` on `<html>`.
+placement saved in `scene.json`, a page loaded without the admin flag draws the
+placement and has no dock, no pill, no pick sheet, and no `data-scene-edit` on
+`<html>`. The dev-only halves are absent from the production bundle
+entirely — `grep -c '__scene' dist/assets` and `grep -c 'hot.accept'` both
+return 0.
 
 ---
 
 ## Things that were tried and are wrong
 
+- **A `localStorage` copy of the scene, read before the file.** It was there so
+  an unsaved edit survived a reload. What it actually did was let one browser
+  disagree with the site indefinitely, and report the disagreement as fact: a
+  pill reading "12 edits" against an empty file, with no way to tell from the
+  screen which document was on the page.
+- **A status pill for the closed editor.** It was answering a real question —
+  why does this page differ from the shipped one? — but the question only
+  existed because a save was not real. Fix the save and the pill is a control
+  for a state that no longer exists, sitting in the corner of a page whose
+  owner had switched the editor off.
+- **Fetching the scene instead of importing it.** A fetch cannot be there for
+  the first render, so the art paints where the stylesheet put it and then
+  jumps when the JSON lands. An import is inlined at build time and costs one
+  request fewer than the version that had no scene at all.
 - **One sticker layer over the whole page instead of seven section hosts.** It
   is one line instead of seven and it puts every added piece in front of every
   section's background, because a later sibling paints over an earlier one.

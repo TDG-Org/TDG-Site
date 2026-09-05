@@ -3,18 +3,7 @@ import { asset } from '../../lib/asset'
 import { onFrame, setMotionIntensity } from '../../lib/motion'
 import { useTheme } from '../../theme/ThemeProvider'
 import { measureHeightVh, measurePlacement, pxToPlacement, pxToVh, pxToVw } from '../apply'
-import {
-  addExtra,
-  clearLocal,
-  getDoc,
-  loadDraft,
-  patchExtra,
-  patchSlot,
-  saveDraft,
-  setDoc,
-  setEditing,
-  useDoc,
-} from '../store'
+import { addExtra, getDoc, patchExtra, patchSlot, saveScene, setDoc, setEditing, useDoc } from '../store'
 import { emptyDoc, SECTION_IDS, type ArtSlotInfo, type Extra, type Motion, type SceneDoc, type SectionId, type SlotOverride } from '../types'
 import './SceneEditor.css'
 
@@ -22,19 +11,24 @@ import './SceneEditor.css'
  * The Scene Editor.
  *
  * A dock over the home page that selects, moves, resizes, retimes, duplicates,
- * deletes and adds the art. Everything it changes goes into the draft in
+ * deletes and adds the art. Everything it changes goes into the document in
  * `scene/store.ts`, which is keyed by theme — so Light and Dark are two
  * documents edited one at a time, and the theme pill in the header is what
  * switches which one you are holding.
  *
- * ## It is a draft, and that is the whole arrangement
+ * ## Save writes the page
  *
- * Nothing here writes CSS. A draft is applied over the shipped stylesheet as
- * inline style while the editor is on, saved to `public/scene/draft.json`, and
- * turned into the default by hand afterwards — see `src/scene/README.md` for
- * why that last step is a person's job and not a build step. So the worst this
- * can do to the site is nothing at all: close the editor and the page is the
- * page again.
+ * Not a draft, and not any more. What this saves goes to
+ * `src/scene/scene.json`, which the app imports and applies for every visitor
+ * with no editor loaded — so pressing Save changes the site, and the commit
+ * that carries the file is the release. There is no second stage and nothing
+ * to bake by hand; `src/scene/README.md` has the whole arrangement and the
+ * history of why it used to have one.
+ *
+ * That also means the editor has nothing to do once it is closed, which is why
+ * `App.tsx` unmounts it with the switch. It used to stay mounted with a status
+ * pill in the bottom-left corner, so that a saved draft kept showing — and the
+ * pill outlived the switch, on a page whose owner had turned the editor off.
  *
  * ## Why it freezes motion by default
  *
@@ -71,15 +65,7 @@ const MOTIONS: { id: Motion; label: string; hint: string }[] = [
   { id: 'hero', label: 'Hero Ride', hint: 'Sinks with the hero instead of against it. Hero only.' },
 ]
 
-export default function SceneEditor({
-  open,
-  onOpen,
-  onClose,
-}: {
-  open: boolean
-  onOpen: () => void
-  onClose: () => void
-}): JSX.Element | null {
+export default function SceneEditor({ onClose }: { onClose: () => void }): JSX.Element {
   const { theme, toggle } = useTheme()
   const doc = useDoc()
   const [sel, setSel] = useState<Sel | null>(null)
@@ -94,75 +80,71 @@ export default function SceneEditor({
   const [pick, setPick] = useState(true)
   const [frozen, setFrozen] = useState(true)
   const [manifest, setManifest] = useState<ArtSlotInfo[] | null>(null)
-  const [status, setStatus] = useState<string>('Loading draft…')
+  const [status, setStatus] = useState<string>('')
   const [dirty, setDirty] = useState(false)
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   /**
-   * Whether the saved draft is being drawn over the page.
+   * Whether the page is drawing what you have changed, or what is saved.
    *
-   * **This is the fix for "clicking Save doesn't actually save anything when
-   * exiting Scene Editor".** Save always did persist — the draft was in
-   * localStorage and in `public/scene/draft.json` — but closing the panel tore
-   * the document out of the store, so the page snapped back to the shipped CSS
-   * and every edit vanished from view. From the outside that is a Save button
-   * that does nothing.
+   * The replacement for the old closed-state pill's Hide/Show, moved into the
+   * dock where it can be found, and now a real comparison: off draws
+   * `src/scene/scene.json` exactly as it stands on disk, which is the page
+   * everybody else gets. The old one could only compare against "no overrides
+   * at all", which stopped being the shipped page the first time a placement
+   * was baked into CSS.
    *
-   * The draft now stays applied after the panel closes, for the one person who
-   * can open the panel at all, and a pill says so and can switch it off. A
-   * visitor is unaffected: the chunk that loads a draft is only ever imported
-   * for a signed-in admin.
+   * Picking goes off with it. Measuring a piece to drag it reads the DOM, and
+   * the DOM is showing the saved placement while this is off — so a gesture
+   * there would start from a position the document does not hold.
    */
-  const [applied, setApplied] = useState(true)
-  const [edits, setEdits] = useState(0)
+  const [showEdits, setShowEdits] = useState(true)
+  const edits = useMemo(() => count(doc), [doc])
   const history = useRef<SceneDoc[]>([])
 
-  /* ── boot: load the draft once, whether or not the panel is open ───────── */
+  /* ── boot ───────────────────────────────────────────────────────────────
+     There is nothing to load: the scene is imported by the store, not fetched,
+     so it is already on the page before this mounts. All that is left is to
+     say what is in it — and to evict the last of the old arrangement. */
   useEffect(() => {
-    let live = true
-    void loadDraft().then((d) => {
-      if (!live) return
-      setDoc(d)
-      const n = count(d)
-      setEdits(n)
-      setStatus(n === 0 ? 'Empty draft. Click a piece to start.' : `Draft loaded — ${n} edits.`)
-    })
-    return () => {
-      live = false
-      setEditing(false)
-      setDoc(null)
+    try {
+      /* `tdg.scene-draft` was a per-browser copy of the draft. It is what made
+         the pill read "12 edits" against a file that had been emptied days
+         earlier: the browser held one document, the site held another, and
+         nothing on screen could tell you which you were looking at. Nothing
+         reads it any more; this takes it out of the browsers that still have
+         it rather than leaving a stale scene lying around. */
+      window.localStorage.removeItem('tdg.scene-draft')
+    } catch {
+      /* private mode, or storage disabled; there is nothing to evict */
     }
+    const n = count(getDoc())
+    setStatus(
+      n === 0
+        ? 'Click a piece to start. Save writes the page itself.'
+        : `${n} placement${n === 1 ? '' : 's'} in the scene. Save writes the page itself.`,
+    )
+    return () => setEditing(false)
   }, [])
 
-  /* Keep the edit count in step, so the pill can say how much is in the draft
-     without the panel being open to count it. */
+  /* One writer for "which document is on the page", so the toggle and the
+     store can never disagree. */
   useEffect(() => {
-    if (doc) setEdits(count(doc))
-  }, [doc])
+    setEditing(showEdits)
+  }, [showEdits])
 
-  /* The draft is drawn while the panel is open, and after it closes for as
-     long as the pill says it is. One writer, so the two can never disagree. */
-  useEffect(() => {
-    setEditing(open || applied)
-  }, [open, applied])
-
-  /* Motion is frozen only while the panel is OPEN. Leaving it at zero after
-     the panel closed would silently kill every drift on the page and look
+  /* Motion is frozen while the panel is up, and restored on the way out —
+     leaving it at zero would silently kill every drift on the page and look
      like the editor had broken the site. */
   useEffect(() => {
-    if (!open) {
-      setMotionIntensity(1)
-      return
-    }
     setMotionIntensity(frozen ? 0 : 1)
     return () => setMotionIntensity(1)
-  }, [open, frozen])
+  }, [frozen])
 
   useEffect(() => {
-    if (!open) return
     document.documentElement.setAttribute('data-scene-edit', 'on')
     return () => document.documentElement.removeAttribute('data-scene-edit')
-  }, [open])
+  }, [])
 
   /* Where the dock sits is a preference about THIS browser's chrome, like the
      theme switch and the Developer tab beside it, so it is remembered the same
@@ -220,11 +202,8 @@ export default function SceneEditor({
 
   /* ── every mutation goes through here, so undo is free ─────────────────── */
   const commit = useCallback((fn: () => void) => {
-    const before = getDoc()
-    if (before) {
-      history.current.push(before)
-      if (history.current.length > 80) history.current.shift()
-    }
+    history.current.push(getDoc())
+    if (history.current.length > 80) history.current.shift()
     fn()
     setDirty(true)
   }, [])
@@ -441,34 +420,34 @@ export default function SceneEditor({
   }, [commit, remove, sel, theme])
 
   const save = useCallback(async () => {
-    const d = getDoc() ?? emptyDoc()
     setStatus('Saving…')
-    const res = await saveDraft(d)
-    setDirty(false)
-    setStatus(
-      res.where === 'repo'
-        ? `Saved to ${res.detail}. It stays on the page after you close this.`
-        : `Saved to ${res.detail}. It stays on the page after you close this; Download gets the file out.`,
-    )
+    const res = await saveScene(getDoc())
+    if (res.where === 'repo') {
+      setDirty(false)
+      setStatus(`Saved to ${res.detail}. This is the page now — for everybody, signed in or not.`)
+      return
+    }
+    /* Not cleared: nothing was written, so the work is still unsaved and the
+       button has to keep saying so. A Save that reports success it did not
+       have is the bug this whole change is about. */
+    setStatus(`Nothing was written — ${res.detail}. Press Download and commit the file instead.`)
   }, [])
 
   const download = useCallback(() => {
-    const d = getDoc() ?? emptyDoc()
-    const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(getDoc(), null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'scene-draft.json'
+    a.download = 'scene.json'
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    setStatus('Downloaded scene-draft.json.')
+    setStatus('Downloaded scene.json. It belongs at src/scene/scene.json.')
   }, [])
 
   const revert = useCallback(() => {
     commit(() => setDoc(emptyDoc()))
-    clearLocal()
     setSel(null)
-    setStatus('Draft cleared. Nothing saved until you press Save.')
+    setStatus('Every placement cleared. Ctrl+Z puts them back; Save makes it real.')
   }, [commit])
 
   /* ── dropping a piece in from the library ──────────────────────────────── */
@@ -592,34 +571,13 @@ export default function SceneEditor({
     return out
   }, [nameOfSel, theme])
 
-  /* ── closed ─────────────────────────────────────────────────────────────
-     Nothing at all when there is no draft: an admin who has never opened the
-     editor should not meet a control for a thing that does not exist. With a
-     draft, a pill — because a page that differs from the shipped one with
-     nothing on screen accounting for it reads as a bug, and gets reported as
-     one. It says how many edits, opens the panel, and switches the overlay
-     off without throwing the draft away. */
-  if (!open) {
-    if (edits === 0) return null
-    return (
-      <div className={`sceneed-pill${applied ? '' : ' is-off'}`} role="status">
-        <span className="sceneed-pill__dot" aria-hidden="true" />
-        <span className="sceneed-pill__text">
-          {applied ? 'Scene draft applied' : 'Scene draft hidden'} · {edits} edit{edits === 1 ? '' : 's'}
-        </span>
-        <button type="button" className="sceneed-pill__btn" onClick={() => setApplied((a) => !a)}>
-          {applied ? 'Hide' : 'Show'}
-        </button>
-        <button type="button" className="sceneed-pill__btn sceneed-pill__btn--go" onClick={onOpen}>
-          Edit
-        </button>
-      </div>
-    )
-  }
-
+  /* There is no closed state. The switch in the Developer tab mounts this and
+     unmounts it, and a scene that has been saved is on the page by itself —
+     so there is nothing left for a closed editor to draw, and nothing to
+     leave in the corner of a page whose owner switched the editor off. */
   return (
     <>
-      {pick && (
+      {pick && showEdits && (
         <PickLayer
           rows={rows}
           sel={sel}
@@ -756,6 +714,19 @@ export default function SceneEditor({
                 onChange={setRatioLock}
                 title="Locked, a corner keeps the piece's shape. Unlocked, corners stretch it."
               />
+              <Toggle
+                label="Edits"
+                on={showEdits}
+                onChange={(v) => {
+                  setShowEdits(v)
+                  setStatus(
+                    v
+                      ? 'Showing your edits again.'
+                      : 'Showing the saved page — what everybody else sees. Picking is off while you compare.',
+                  )
+                }}
+                title="Off shows the page exactly as it is saved, so you can compare."
+              />
             </div>
 
             <nav className="sceneed__tabs">
@@ -824,6 +795,17 @@ export default function SceneEditor({
                 {status}
               </p>
               <div className="sceneed__actions">
+                {/* The scene's size, always on screen. The number that used to
+                    be here lived in a pill fed by a per-browser copy of the
+                    document, and it went on saying "12 edits" long after the
+                    file said none. This counts the document the page is
+                    drawing, so it cannot drift from it. */}
+                <span
+                  className="sceneed__count"
+                  title="Placements in the scene, both themes together."
+                >
+                  {edits}
+                </span>
                 <button type="button" className="sceneed__btn" onClick={undo} title="Ctrl+Z">
                   Undo
                 </button>

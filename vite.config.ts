@@ -8,7 +8,7 @@ import { version as siteVersion } from './package.json'
    AGENTS.md §5 is a page about not adding packages. A `.d.ts` beside the
    script gives the import its type. See the script for what the endpoint does
    and why it can never reach a build. */
-import { sceneDraftPlugin } from './scripts/scene-draft-plugin.mjs'
+import { scenePlugin } from './scripts/scene-plugin.mjs'
 
 /* GitHub Pages serves a project site from https://<org>.github.io/<repo>/, so a
    production build has to be rooted at /TDG-Site/. Dev stays at /, and `vite
@@ -16,7 +16,7 @@ import { sceneDraftPlugin } from './scripts/scene-draft-plugin.mjs'
 
    See src/lib/asset.ts for runtime srcSet rewriting via BASE_URL. */
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), sceneDraftPlugin()],
+  plugins: [react(), scenePlugin()],
   base: mode === 'production' ? '/TDG-Site/' : '/',
   /* package.json is this repo's only version carrier (AGENTS.md §6), so it is
      read from there and never restated: a second place to write the number is a

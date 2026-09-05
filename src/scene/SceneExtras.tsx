@@ -6,7 +6,7 @@ import { useExtras } from './store'
 import type { SectionId } from './types'
 
 /**
- * The pieces a draft ADDED to one section.
+ * The pieces the scene ADDED to one section.
  *
  * ## Why it is a host inside each section rather than one layer over the page
  *
@@ -21,21 +21,21 @@ import type { SectionId } from './types'
  *
  * ## It renders nothing, for everybody
  *
- * `useExtras` returns a frozen empty array unless the editor is on AND the
- * draft has a piece anchored here, and this returns `null` for that. So the
- * seven call sites cost a hook and a comparison against a constant. That is
- * the same bargain `store.ts` makes for slot overrides and for the same
- * reason: a developer-only feature everybody's browser evaluates is a feature
- * everybody pays for.
+ * `useExtras` returns one frozen empty array unless the scene actually has a
+ * piece anchored here, and this returns `null` for that. So with an empty
+ * scene — which is the usual state — the seven call sites cost a hook and a
+ * length check. That is the same bargain `store.ts` makes for slot overrides
+ * and for the same reason: something everybody's browser evaluates on every
+ * render is something everybody pays for.
  *
  * ## `position: absolute; inset: 0` and nothing else
  *
  * The host is a box the size of its section's art container, with no paint of
  * its own and no pointer surface, so a piece inside it takes percentages of
- * the same box the shipped pieces beside it take. That is what makes a draft's
- * `x`/`y` mean the same thing whether the piece was added by the editor or has
- * been in the CSS since the section was written — and it is what lets me bake
- * one into the other without re-deriving a single number.
+ * the same box the shipped pieces beside it take. That is what makes the
+ * scene's `x`/`y` mean the same thing whether the piece was added by the editor
+ * or has been in the CSS since the section was written — and it is what lets
+ * one be baked into the other without re-deriving a single number.
  */
 export function SceneExtras({ section }: { section: SectionId }): JSX.Element | null {
   const { theme } = useTheme()

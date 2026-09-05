@@ -1,12 +1,12 @@
 /**
- * The shape of a scene draft — what the Scene Editor writes and what
+ * The shape of the scene — what the Scene Editor writes and what
  * `store.ts` hands back to the art layer.
  *
  * Everything here is a DRAFT. Nothing in this file is applied to the page for
  * an ordinary visitor: `store.ts` only ever holds a document once the editor
  * has been switched on by an admin, and the committed default of every slot is
  * still the CSS in `src/components/*.css`. See `src/scene/README.md` for the
- * two-stage arrangement and for how a draft becomes the default.
+ * arrangement: saving this file IS making it the default.
  */
 
 /** The one place a theme name is spelled, for this folder. */
@@ -41,7 +41,7 @@ export const SECTION_IDS: readonly SectionId[] = [
  * Where a layer sits, in units that survive a change of viewport.
  *
  * **Percentages of the offset parent for position, `vw` for size**, and that
- * pairing is the whole reason a draft is portable between one window and the
+ * pairing is the whole reason the scene is portable between one window and the
  * next. A pixel offset read off a 1904px window is wrong on a 1280px one; a
  * percentage of the box the layer is actually positioned inside is the same
  * placement at both. Size is `vw` rather than a percentage because the art kit
@@ -51,7 +51,7 @@ export const SECTION_IDS: readonly SectionId[] = [
  * reads the same way on a laptop and a monitor.
  *
  * Every field is optional and only the ones present are written. That is what
- * lets a draft say "this piece moved 40px left" without also having to restate
+ * lets the scene say "this piece moved 40px left" without also having to restate
  * the height, the `object-position` and the mask that its CSS rule already
  * gets right. An absent field is not a zero; it is "the stylesheet decides".
  */
@@ -101,7 +101,7 @@ export type SlotOverride = Placement & {
   /** Swap the artwork this slot draws, without touching where it sits. */
   art?: string
   /** Draw nothing. Kept rather than deleted so the piece can come back, and
-   *  so a draft can say "not this one" about a slot it does not own. */
+   *  so the scene can say "not this one" about a slot it does not own. */
   hidden?: boolean
 }
 
@@ -128,7 +128,7 @@ export type ThemeDoc = {
   extras: Extra[]
 }
 
-/** A whole draft: the two themes are edited and saved independently, which is
+/** The whole scene: the two themes are edited and saved independently, which is
  *  the site's own rule 12 restated as a data shape. */
 export type SceneDoc = {
   version: 1

@@ -13,7 +13,7 @@ import './Scene.css'
 type ArtName = string
 
 /** Default pointer-sway amplitude, in px at full deflection. `Tools.tsx`'s
- *  boulders are 12 and 7; a piece a draft turns into a sway layer starts
+ *  boulders are 12 and 7; a piece the scene turns into a sway layer starts
  *  there and the editor's own sliders take it from anywhere. */
 const SWAY_X = 12
 const SWAY_Y = 7
@@ -129,7 +129,7 @@ function Art({
  * This is the kind of thing the next person will try to "simplify". It is not
  * a stylistic preference. Merge them and the art shakes.
  *
- * ── and this is what lets a draft change a slot's motion ───────────────────
+ * ── and this is what lets the scene change a slot's motion ─────────────────
  *
  * The three exported wrappers below now RESOLVE rather than render: each calls
  * `useSlotOverride` once, unconditionally, and then returns one of the four
@@ -139,10 +139,12 @@ function Art({
  * so the outgoing hook's cleanup runs and exactly one writer survives, which
  * is the property that mattered.
  *
- * With no draft loaded — which is everybody, always, unless a signed-in admin
- * has switched the editor on — `useSlotOverride` returns the same `undefined`
- * every render and each wrapper returns precisely what it returned before this
- * existed. See `src/scene/store.ts` for how that fast path is kept.
+ * The scene is loaded for EVERYBODY — it is imported by `store.ts`, not
+ * fetched, and applied whether or not the editor exists on the page. With an
+ * empty scene `useSlotOverride` returns the same `undefined` every render and
+ * each wrapper returns precisely what it returned before this existed; with
+ * placements in it, the same stable reference out of the imported document.
+ * See `src/scene/store.ts` for how that snapshot is kept stable.
  */
 
 type BuildProps = {
@@ -222,9 +224,9 @@ function resolve(
     motion: o?.motion ?? fallbackMotion,
     props: {
       art: o?.art ?? base.art,
-      /* A draft that swaps the artwork swaps BOTH themes' pictures to the one
+      /* A scene that swaps the artwork swaps BOTH themes' pictures to the one
          it names: it is editing this theme's page, and the other theme has its
-         own draft with its own answer. Leaving `light` pointing at the old
+         own half of the document with its own answer. Leaving `light` at the old
          Cebu piece would make a swapped slot draw the new art in dark and the
          old art in light, which is the sort of half-applied change that takes
          an afternoon to see. */
@@ -325,7 +327,7 @@ export function StillArt({
   const o = useSlotOverride(className, theme)
   const fallback = theme === 'light' && lightMotion ? lightMotion : 'still'
   /* factor 0.06 is the kit's usual gentle drift, and it is reached when a
-     draft — or a `lightMotion` baked from one — turns this slot into a
+     scene — or a `lightMotion` baked from one — turns this slot into a
      drifting one without naming an amount. */
   const r = resolve(o, fallback, { art, light, className, factor: 0.06 })
   return r && buildArt(r.motion, r.props)

@@ -76,9 +76,11 @@ const ProfilePage = lazy(() => import('./people/ProfilePage'))
  *
  * Lazy for the same reason the Developer console is, and with the same two
  * conditions in front of it: a signed-in admin AND a per-device switch that is
- * off by default (src/scene/sceneMode.ts). Nobody else downloads a byte of it,
- * and with it unloaded `src/scene/store.ts` holds nothing, so every piece of
- * art renders exactly what its stylesheet says. See src/scene/README.md.
+ * off by default (src/scene/sceneMode.ts). Nobody else downloads a byte of it.
+ *
+ * It is the thing that WRITES the scene, not the thing that applies it: what
+ * the editor saves goes into `src/scene/scene.json`, which the app imports and
+ * draws for everybody with no editor loaded at all. See src/scene/README.md.
  */
 const SceneEditor = lazy(() => import('./scene/editor/SceneEditor'))
 
@@ -119,13 +121,14 @@ export default function App() {
     route.kind !== 'about' &&
     route.kind !== 'account' &&
     route.kind !== 'profile'
-  /* Mounted for an admin on the home page whether the editor is OPEN or not.
-     A saved draft has to keep showing after the panel is closed — otherwise
-     Save is a button that appears to do nothing, which is exactly how it was
-     reported — and something has to be on screen saying the page you are
-     looking at is a draft. The chunk decides which of those it is; with no
-     draft and the editor shut it renders nothing at all. */
-  const sceneEditor = isAdmin && onHome
+  /* Mounted only while the switch is ON. It used to mount for any admin on
+     the home page, open or not, so that a saved draft kept showing after the
+     panel was closed — and the price was a status pill in the bottom-left
+     corner of a page whose owner had switched the editor off, which is exactly
+     how it was reported. A save now lands in `src/scene/scene.json` and is on
+     the page for everybody, so there is nothing left for a closed editor to
+     do, and off means gone. */
+  const sceneEditor = isAdmin && onHome && sceneMode
 
   /*
    * A provider redirect (e.g. GitHub/Google) or a clicked password-reset
@@ -405,11 +408,7 @@ export default function App() {
       {sceneEditor && (
         <ErrorBoundary key="scene-editor">
           <Suspense fallback={null}>
-            <SceneEditor
-              open={sceneMode}
-              onOpen={() => setSceneMode(true)}
-              onClose={() => setSceneMode(false)}
-            />
+            <SceneEditor onClose={() => setSceneMode(false)} />
           </Suspense>
         </ErrorBoundary>
       )}

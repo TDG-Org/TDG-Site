@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { Placement } from './types'
 
 /**
- * A draft placement, as inline style.
+ * A scene placement, as inline style.
  *
  * ## Why inline, and why only the fields that are set
  *
@@ -11,11 +11,11 @@ import type { Placement } from './types'
  * the numbers were solved. An editor that replaced those wholesale would throw
  * away the part that is right — the mask, the `object-position`, the clamp
  * that keeps a box inside the frame at 320px — in order to change the one part
- * that is not. So a draft writes as little as it can: an absent field is not a
+ * that is not. So a placement writes as little as it can: an absent field is not a
  * zero, it is "the stylesheet still decides".
  *
  * Inline is the only place that reliably wins over a stylesheet without an
- * `!important` arms race, and it is also what makes the draft readable — the
+ * `!important` arms race, and it is also what makes `scene.json` readable — the
  * element in DevTools shows exactly the four numbers the editor is holding.
  *
  * ## The two opposite edges have to be cleared
@@ -92,14 +92,14 @@ export function placementStyle(p: Placement | undefined): CSSProperties | undefi
 }
 
 /** Three decimals is a hundredth of a pixel at any viewport this page is read
- *  at, and it keeps the draft JSON readable when I come to bake it into CSS. */
+ *  at, and it keeps `scene.json` readable if it is ever baked into CSS. */
 function round(n: number, places = 3): number {
   const f = 10 ** places
   return Math.round(n * f) / f
 }
 
 /**
- * Read a live element's placement back out, in the same units the draft
+ * Read a live element's placement back out, in the same units the scene
  * stores — the LAYOUT box, never the visual one.
  *
  * This is what the first drag of an untouched piece uses: rather than starting
@@ -165,7 +165,7 @@ function round(n: number, places = 3): number {
  * `outro__shore`, the two tallest boxes on the page — move by 0.8px and 0.6px.
  *
  * That is one integer rounding, it only ever applies to the FIRST grab of a
- * piece the draft has not touched (every later drag starts from the stored
+ * piece the scene has not touched (every later drag starts from the stored
  * number, not from a re-measurement), and it is a tenth of the smallest nudge
  * the arrow keys make. Removing it means reconstructing the layout box from
  * the visual rect by decomposing the computed transform matrix and its
@@ -199,23 +199,23 @@ export function offsetBox(el: HTMLElement): { width: number; height: number } {
   }
 }
 
-/** A pixel delta, in the units the draft stores. */
+/** A pixel delta, in the units the scene stores. */
 export function pxToPlacement(el: HTMLElement, dxPx: number, dyPx: number): { dx: number; dy: number } {
   const parent = offsetBox(el)
   return { dx: (dxPx / parent.width) * 100, dy: (dyPx / parent.height) * 100 }
 }
 
-/** A width delta, in the `vw` the draft stores. */
+/** A width delta, in the `vw` the scene stores. */
 export const pxToVw = (px: number): number => (px / (window.innerWidth || 1)) * 100
 
-/** A height delta, in the `vh` the draft stores. */
+/** A height delta, in the `vh` the scene stores. */
 export const pxToVh = (px: number): number => (px / (window.innerHeight || 1)) * 100
 
 /**
  * The height a piece is actually painting at, in `vh`.
  *
  * Needed the moment the editor lets the ratio be unlocked: until then a piece
- * takes its height from its own `aspect-ratio` and the draft says nothing, and
+ * takes its height from its own `aspect-ratio` and the scene says nothing, and
  * the first free resize has to start from the height that rule produced rather
  * than from zero. `offsetHeight` for the same reason `measurePlacement` uses
  * `offsetLeft` — it is the layout box, before any transform.

@@ -1,47 +1,67 @@
 import { useSyncExternalStore } from 'react'
-import { asset } from '../lib/asset'
+import scene from './scene.json'
 import { emptyDoc, emptyThemeDoc, type Extra, type SceneDoc, type SectionId, type SlotOverride, type ThemeKey } from './types'
 
 /**
- * The scene draft, as one module-level store.
+ * The scene, as one module-level store.
  *
- * ## The rule this file exists to keep
+ * ## What this is now, and what it used to be
  *
- * **An ordinary visitor must get today's page, byte for byte.** Every art
- * component now asks this store whether it has an override, and the answer for
- * everybody who is not editing has to be "no" in a way that costs nothing and
- * changes nothing:
+ * It used to hold a *draft*: a JSON file in `public/`, fetched by the editor,
+ * drawn only while a signed-in admin had the editor switched on, and turned
+ * into the real page later by a person hand-writing CSS. That second stage is
+ * why the owner had to ask, in as many words, for his saved changes to be
+ * "applied to main" — and then, the next day, for **every** save to "really
+ * apply to the actual site".
  *
- * - `doc` starts as `null` and stays `null` until `loadDraft()` is called,
- *   which happens only inside the editor chunk, which is only imported for a
- *   signed-in admin who has switched the editor on.
- * - `useSlotOverride` returns `undefined` — one stable value, not a fresh
- *   object — so `useSyncExternalStore` sees the same snapshot every render and
- *   nothing re-renders.
- * - `subscribe` adds a callback to a Set and is the only listener any of this
- *   installs. No timers, no storage reads per render, no network.
+ * So the draft is gone and this is the scene. `src/scene/scene.json` is
+ * committed **source**, imported here, bundled into the app by Vite, and
+ * applied for **everybody** — signed in or not, editor loaded or not. Pressing
+ * Save in the Scene Editor writes that file (see
+ * `scripts/scene-plugin.mjs`), and what the file says is what the site is.
  *
- * That is the same arrangement `src/dev/devMode.ts` uses for the Developer
- * tab, and for the same reason: a developer-only feature that everybody's
- * browser has to evaluate is a feature everybody pays for.
+ * ## What that costs a visitor, exactly
  *
- * ## Where a draft lives
+ * - **No fetch.** A JSON import is inlined into the bundle at build time, so
+ *   there is no request, no waterfall, and no window in which the art paints
+ *   in its stylesheet position and then jumps. The overrides are there in the
+ *   first render, which a fetched draft could never be.
+ * - **No editor.** Nothing here imports `scene/editor/`. The dock is still a
+ *   lazy chunk behind an admin check and a per-device switch
+ *   (`src/scene/sceneMode.ts`); it is the thing that WRITES the scene, not the
+ *   thing that applies it.
+ * - **No new object per render.** `useSlotOverride` hands back a reference out
+ *   of the imported document — the same one every render — so
+ *   `useSyncExternalStore` sees a stable snapshot and nothing re-renders. With
+ *   an empty scene it hands back the same `undefined` it always did.
  *
- * `public/scene/draft.json`, fetched by the editor. In `vite dev` the Save
- * button POSTs back to `/__scene`, which `vite.config.ts` answers by writing
- * that same file — so a draft survives a reload, a restart and a `git diff`
- * without anybody exporting anything. In a built site there is no such
- * endpoint, so Save falls back to `localStorage` plus a downloaded file, and
- * says which it did.
+ * ## Two documents, and why
  *
- * A draft is never the shipped default. Turning one into the default means
- * writing it into `src/components/*.css` by hand, which is a person's job and
- * is described in `src/scene/README.md`.
+ * - `saved` is what is on disk: the imported file, replaced when a Save lands.
+ * - `doc` is what the editor is holding, `saved` plus whatever has been
+ *   dragged since.
+ *
+ * Reads take `doc` while the editor is editing and `saved` otherwise, which is
+ * what makes the dock's **Edits** toggle a real comparison — off shows the
+ * page as it is actually saved, not "the page with no overrides at all", which
+ * is what the old Compare showed and has not been the same thing since the
+ * first draft was baked into CSS.
+ *
+ * There is deliberately **no `localStorage`**. A per-browser copy of the scene
+ * is how the pill came to read "12 edits" against a file that had been emptied
+ * days earlier: the browser had the old document and the site had the new one,
+ * and nothing on screen could tell you which you were looking at. One file,
+ * one answer.
  */
 
-const LS_KEY = 'tdg.scene-draft'
+/** What is on disk. Replaced by a successful Save, and by HMR when the file
+ *  changes under a running dev server. */
+let saved: SceneDoc = normalise(scene as unknown as SceneDoc)
 
-let doc: SceneDoc | null = null
+/** What the editor is holding. The same document until something is dragged. */
+let doc: SceneDoc = saved
+
+/** Whether the editor's unsaved document is the one being drawn. */
 let editing = false
 
 const listeners = new Set<() => void>()
@@ -56,33 +76,32 @@ function subscribe(fn: () => void): () => void {
   }
 }
 
-/* ── the empty answers ─────────────────────────────────────────────────────
-   Frozen module constants rather than fresh objects, because
+/** The document the page is currently drawing. */
+const active = (): SceneDoc => (editing ? doc : saved)
+
+/* ── the empty answer ──────────────────────────────────────────────────────
+   A frozen module constant rather than a fresh object, because
    `useSyncExternalStore` compares snapshots by identity and a new `{}` every
    render is an infinite loop rather than an optimisation. */
-const NO_OVERRIDE: SlotOverride | undefined = undefined
 const NO_EXTRAS: readonly Extra[] = Object.freeze([])
 
-export const getDoc = (): SceneDoc | null => doc
-export const isEditing = (): boolean => editing
+export const getDoc = (): SceneDoc => doc
 
-/** Replace the whole draft. Used by load, undo and Revert. */
-export function setDoc(next: SceneDoc | null): void {
+/** What is on disk, for the editor to compare against. */
+export const getSaved = (): SceneDoc => saved
+
+/** Replace the editor's document. Used by every edit, by undo and by Clear. */
+export function setDoc(next: SceneDoc): void {
   doc = next
   emit()
 }
 
-/** Turn the overrides on or off without discarding them — the editor's own
- *  "Compare" control, so a placement can be checked against the shipped one
+/** Draw the editor's unsaved document, or the saved one. The dock's **Edits**
+ *  toggle, so a placement can be checked against what is actually saved
  *  without saving, reloading or losing the edit. */
 export function setEditing(on: boolean): void {
   editing = on
   emit()
-}
-
-/** The live doc, or an empty one, ready to be mutated into a new object. */
-function draft(): SceneDoc {
-  return doc ?? emptyDoc()
 }
 
 function withTheme(d: SceneDoc, theme: ThemeKey, fn: (t: SceneDoc[ThemeKey]) => SceneDoc[ThemeKey]): SceneDoc {
@@ -91,9 +110,8 @@ function withTheme(d: SceneDoc, theme: ThemeKey, fn: (t: SceneDoc[ThemeKey]) => 
 
 /** Merge a patch into one slot of one theme. `null` clears the whole slot. */
 export function patchSlot(theme: ThemeKey, slot: string, patch: Partial<SlotOverride> | null): void {
-  const d = draft()
   setDoc(
-    withTheme(d, theme, (t) => {
+    withTheme(doc, theme, (t) => {
       const slots = { ...t.slots }
       if (patch === null) delete slots[slot]
       else slots[slot] = { ...slots[slot], ...patch }
@@ -105,9 +123,8 @@ export function patchSlot(theme: ThemeKey, slot: string, patch: Partial<SlotOver
 /** Merge a patch into one added piece. `null` removes it outright — an extra
  *  has no shipped default to fall back to, so deleting it IS the undo. */
 export function patchExtra(theme: ThemeKey, id: string, patch: Partial<Extra> | null): void {
-  const d = draft()
   setDoc(
-    withTheme(d, theme, (t) => ({
+    withTheme(doc, theme, (t) => ({
       ...t,
       extras:
         patch === null
@@ -118,8 +135,7 @@ export function patchExtra(theme: ThemeKey, id: string, patch: Partial<Extra> | 
 }
 
 export function addExtra(theme: ThemeKey, extra: Extra): void {
-  const d = draft()
-  setDoc(withTheme(d, theme, (t) => ({ ...t, extras: [...t.extras, extra] })))
+  setDoc(withTheme(doc, theme, (t) => ({ ...t, extras: [...t.extras, extra] })))
 }
 
 /* ── reads, for the art layer ──────────────────────────────────────────── */
@@ -128,14 +144,15 @@ export function addExtra(theme: ThemeKey, extra: Extra): void {
  * The override for one slot, or `undefined`.
  *
  * Called by every `ThemedArt` / `StillArt` on the page — about thirty of them
- * — so the fast path matters: when no draft is loaded this returns the same
- * `undefined` for every slot on every render and React does nothing.
+ * — so the snapshot has to be stable: this returns a reference out of the
+ * current document, which does not change until something replaces the
+ * document. With an empty scene every slot returns the same `undefined`.
  */
 export function useSlotOverride(slot: string, theme: ThemeKey): SlotOverride | undefined {
   return useSyncExternalStore(
     subscribe,
-    () => (editing && doc ? doc[theme]?.slots?.[slot] : NO_OVERRIDE),
-    () => NO_OVERRIDE,
+    () => active()[theme]?.slots?.[slot],
+    () => saved[theme]?.slots?.[slot],
   )
 }
 
@@ -143,17 +160,18 @@ export function useSlotOverride(slot: string, theme: ThemeKey): SlotOverride | u
 export function useExtras(section: SectionId, theme: ThemeKey): readonly Extra[] {
   return useSyncExternalStore(
     subscribe,
-    () => {
-      if (!editing || !doc) return NO_EXTRAS
-      const all = doc[theme]?.extras
-      if (!all || all.length === 0) return NO_EXTRAS
-      /* Memoised per (section, theme) so a filter that returns the same rows
-         returns the same ARRAY — otherwise every emit hands React a new
-         reference and re-renders seven section hosts for one dragged pixel. */
-      return sliceExtras(all, section)
-    },
-    () => NO_EXTRAS,
+    () => slice(active(), section, theme),
+    () => slice(saved, section, theme),
   )
+}
+
+function slice(d: SceneDoc, section: SectionId, theme: ThemeKey): readonly Extra[] {
+  const all = d[theme]?.extras
+  if (!all || all.length === 0) return NO_EXTRAS
+  /* Memoised per (section, theme) so a filter that returns the same rows
+     returns the same ARRAY — otherwise every emit hands React a new reference
+     and re-renders seven section hosts for one dragged pixel. */
+  return sliceExtras(all, section)
 }
 
 let sliceSource: readonly Extra[] | null = null
@@ -172,55 +190,18 @@ function sliceExtras(all: readonly Extra[], section: SectionId): readonly Extra[
   return value
 }
 
-/** Whether the editor is currently applying its draft, for the chrome that
- *  wants to know (the outline layer, the section hosts). */
-export function useEditing(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => editing,
-    () => false,
-  )
-}
-
-/** The whole draft, for the editor's own panels. */
-export function useDoc(): SceneDoc | null {
+/** The editor's document, for the editor's own panels. */
+export function useDoc(): SceneDoc {
   return useSyncExternalStore(
     subscribe,
     () => doc,
-    () => null,
+    () => saved,
   )
-}
-
-/* ── load and save ────────────────────────────────────────────────────────
-   Both are called only from the editor chunk. They live here rather than in
-   the editor so that the store owns its own persistence and there is exactly
-   one place that knows the file's name. */
-
-/** Local first (an unsaved edit outlives a reload), then the committed file. */
-export async function loadDraft(): Promise<SceneDoc> {
-  try {
-    const raw = window.localStorage.getItem(LS_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as SceneDoc
-      if (parsed?.version === 1) return normalise(parsed)
-    }
-  } catch {
-    /* private mode, or a draft written by an older shape — fall through */
-  }
-  try {
-    const res = await fetch(asset('scene/draft.json'), { cache: 'no-store' })
-    if (res.ok) {
-      const parsed = (await res.json()) as SceneDoc
-      if (parsed?.version === 1) return normalise(parsed)
-    }
-  } catch {
-    /* no draft has ever been saved; an empty one is the right answer */
-  }
-  return emptyDoc()
 }
 
 /** Both halves always present, so no consumer has to check. */
 function normalise(d: SceneDoc): SceneDoc {
+  if (d?.version !== 1) return emptyDoc()
   return {
     version: 1,
     dark: { slots: d.dark?.slots ?? {}, extras: d.dark?.extras ?? [] },
@@ -228,44 +209,72 @@ function normalise(d: SceneDoc): SceneDoc {
   }
 }
 
-export type SaveResult = { where: 'repo' | 'local'; detail: string }
+/* ── saving ───────────────────────────────────────────────────────────────
+   Called only from the editor chunk. It lives here rather than in the editor
+   so that the store owns its own persistence and there is exactly one place
+   that knows the file's name. */
+
+export type SaveResult = { where: 'repo' | 'nowhere'; detail: string }
 
 /**
- * Save the draft.
+ * Write the scene.
  *
- * In `vite dev` this writes `public/scene/draft.json` in the working tree, so
- * the edit is a file you can see in `git status` and I can read when it is
- * time to make it the default. Anywhere else there is no endpoint to write it,
- * so the draft goes to `localStorage` and the caller is told — the editor then
- * offers the same JSON as a download rather than pretending it landed.
+ * In `vite dev` this POSTs to `/__scene`, which `scripts/scene-plugin.mjs`
+ * answers by writing `src/scene/scene.json` in the working tree — so the edit
+ * is a file that shows up in `git diff`, survives a restart, and is what the
+ * next build ships. **That is the whole point: there is no second stage.**
+ *
+ * A built site has no such endpoint and cannot write to a repo it was compiled
+ * out of, so there Save writes nothing and says so, and the editor's Download
+ * button hands over the same JSON to commit by hand. Pretending otherwise —
+ * which a `localStorage` fallback did — is what made a Save button that
+ * appeared to work and changed nothing.
  */
-export async function saveDraft(next: SceneDoc): Promise<SaveResult> {
-  const body = JSON.stringify(next, null, 2)
-  try {
-    window.localStorage.setItem(LS_KEY, body)
-  } catch {
-    /* nothing to persist to locally; the POST below may still land */
-  }
+export async function saveScene(next: SceneDoc): Promise<SaveResult> {
   if (import.meta.env.DEV) {
     try {
       const res = await fetch('/__scene', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body,
+        body: JSON.stringify(next, null, 2),
       })
-      if (res.ok) return { where: 'repo', detail: 'public/scene/draft.json' }
+      if (res.ok) {
+        saved = next
+        doc = next
+        emit()
+        return { where: 'repo', detail: 'src/scene/scene.json' }
+      }
     } catch {
-      /* the dev middleware is not there — fall through to the local answer */
+      /* the dev middleware is not there — fall through to the honest answer */
     }
   }
-  return { where: 'local', detail: 'this browser only' }
+  return {
+    where: 'nowhere',
+    detail: import.meta.env.DEV
+      ? 'the dev server did not answer /__scene'
+      : 'a built site cannot write to the repo',
+  }
 }
 
-/** Forget the local copy, so the next load takes the committed file. */
-export function clearLocal(): void {
-  try {
-    window.localStorage.removeItem(LS_KEY)
-  } catch {
-    /* nothing stored */
-  }
+/*
+ * ── the file changing under a running dev server ──────────────────────────
+ *
+ * A Save writes `scene.json`, Vite notices, and without this the whole page
+ * reloads: an editing session's selection, scroll position and undo history
+ * gone every time the owner presses Save. Accepting the dependency here
+ * swallows the reload and swaps the document in place instead, so a Save shows
+ * up as the page redrawing from the file it just wrote.
+ *
+ * `doc` is only replaced when nothing is being edited. Otherwise the editor is
+ * holding unsaved work — a hand-edit of the file mid-session must not throw it
+ * away — and `saved` moving on its own is exactly what the **Edits** toggle
+ * wants to compare against.
+ */
+if (import.meta.hot) {
+  import.meta.hot.accept('./scene.json', (mod) => {
+    if (!mod) return
+    saved = normalise((mod as { default?: SceneDoc }).default as SceneDoc)
+    if (!editing) doc = saved
+    emit()
+  })
 }
