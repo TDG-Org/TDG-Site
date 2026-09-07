@@ -23,7 +23,7 @@ The short version, if you read nothing else:
 | **Hosting** | GitHub Pages, from `main`, at `/TDG-Site/`. Deploy is manual-only (`workflow_dispatch`) as of 2026-08-27 — see `.github/workflows/deploy.yml`. |
 | **Router** | Hash routes, hand-rolled in `src/lib/route.ts`. No router library. |
 | **State** | React context and hooks. No Redux, Zustand, Jotai, React Query, or anything else. |
-| **Tests** | **There are none.** The typecheck and the build are the entire safety net. Read §7 before you claim anything works. |
+| **Tests** | `npm test` runs isolated account, Cloud billing and Store verifier regressions. See `tests/README.md`; read §7 before you claim anything works. |
 
 ```bash
 npm install && npm run dev
@@ -33,6 +33,7 @@ npm install && npm run dev
 | --- | --- |
 | `npm run dev` | Vite dev server on `http://localhost:5180`. |
 | `npm run typecheck` | `tsc -b --noEmit`. Must be silent. |
+| `npm test` | Isolated regression checks; no backend or payment writes. |
 | `npm run build` | `tsc -b && vite build`. Must be green. The 500 kB chunk warning is pre-existing and expected. |
 | `npm run preview` | Serves the production build, so it sees the real `/TDG-Site/` base path. |
 | `npm run verify:store` | Holds every advertised price and link in `store.ts` against what Stripe actually sells, plus the Cloud config and the webhook endpoints, via the `tdg-store-verify` Edge Function. Run it whenever a price moves, and before a release. |
@@ -701,8 +702,8 @@ questions. Otherwise: don't run it, don't touch it, don't ask "should I."
 
 ## 7 · What "done" means here
 
-There are no tests. That is not permission to skip verification; it means the
-verification is manual and you have to actually do it.
+The regression checks cover specific account and billing failures. Passing them
+does not replace manual verification; you have to actually do it.
 
 ### 7.0 · LOOK AT IT. Every time. Before you say it is done.
 

@@ -42,23 +42,20 @@ export function ReplyInbox() {
   const [replies, setReplies] = useState<InboxReply[]>([])
   const [notices, setNotices] = useState<Notice[]>([])
   const [open, setOpen] = useState(false)
-  const askedFor = useRef<string | null>(null)
+  const accountId = status === 'signedIn' ? user?.id ?? null : null
+  const [owner, setOwner] = useState<string | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
   // What Tab is not allowed to leave. See src/lib/modal.ts.
   const cardRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    // Signing out forgets who we asked for, so signing back in — as the same
-    // account or another one — asks again. Without this, a reply written while
-    // somebody was signed out sat unshown until a full reload: `askedFor` still
-    // held their id from the first visit and the check below skipped the read.
-    if (status !== 'signedIn' || !user) {
-      askedFor.current = null
-      return
-    }
-    // Once per account per sign-in. A re-render does not ask again.
-    if (askedFor.current === user.id) return
-    askedFor.current = user.id
+    setOpen(false)
+    setReplies([])
+    setNotices([])
+    setOwner(null)
+    if (!accountId) return
+    // The account id owns the request. Token refresh replaces the User object
+    // without changing accounts; cancelling on that object lost pending replies.
     let live = true
     // Both at once, and opened once. Asked separately with a `setOpen` each,
     // the second answer would re-open a panel the reader had already dealt
@@ -68,12 +65,17 @@ export function ReplyInbox() {
       if (!live || (list.length === 0 && waiting.length === 0)) return
       setReplies(list)
       setNotices(waiting)
+      setOwner(accountId)
       setOpen(true)
     })
     return () => {
       live = false
     }
-  }, [status, user])
+  }, [accountId])
+
+  // Hide the old account's messages during the render that changes identity,
+  // before effect cleanup has had a chance to clear their stored contents.
+  const visible = open && accountId !== null && owner === accountId
 
   const dismiss = useCallback(() => setOpen(false), [])
 
@@ -83,6 +85,7 @@ export function ReplyInbox() {
   const backdrop = useBackdropClose(dismiss)
 
   const gotIt = () => {
+    if (!visible) return
     for (const r of replies) ackReply(r.reply_id)
     for (const n of notices) ackNotice(n.id)
     setOpen(false)
@@ -93,14 +96,14 @@ export function ReplyInbox() {
   // Focus lands on the close button, never on Got It: this panel opens by
   // itself, and a stray Enter must not be able to ack a reply nobody read.
   useModal({
-    open,
+    open: visible,
     onClose: dismiss,
     layer: MODAL_LAYER.feedback,
     dialog: cardRef,
     focusFirst: closeRef,
   })
 
-  if (!open || (replies.length === 0 && notices.length === 0)) return null
+  if (!visible || (replies.length === 0 && notices.length === 0)) return null
 
   const total = replies.length + notices.length
   const one = total === 1

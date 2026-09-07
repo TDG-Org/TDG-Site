@@ -16,6 +16,11 @@ tab (`src/dev/`), and the server contract both halves speak is
 | `ReplyInbox.tsx` | The startup panel that delivers **everything waiting for this account** — a developer's reply, quoted next to what the person originally wrote, and any [notice](../notices/README.md) about a change we made to what they own. Checks once per sign-in; renders nothing when nothing waits. One panel and not two, because two dialogs opening over each other at boot is worse than either, and because there is no difference the reader cares about: both are a message from us. |
 | `Feedback.css` | Both dialogs' skin. Themed with the page — unlike the auth modal, which is always dark on purpose. |
 
+The inbox and its modal lock belong to one account id. They disappear on the
+first render after that identity changes, before another inbox read finishes.
+A refreshed token for the same account preserves an in-flight read; Supabase's
+replacement `User` object is not a new sign-in.
+
 ## `#/feedback` — this form is also the OTHER apps' form
 
 Several TDG apps have no sign-in at all: MARANATHA, N8-Tools, VidHelper,

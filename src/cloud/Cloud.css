@@ -538,14 +538,20 @@
   color: var(--warm-text, var(--text));
 }
 
-/* The manage button's host inside the fold: the chooser needs a positioned
-   ancestor with clipping, the way a card gives it one on the shelf. */
+/* The account fold has no sibling card to keep level. Its panel contributes
+   to layout: an absolute panel was clipped to this button-height host, hiding
+   every billing action. The Store shelf keeps its existing card overlay. */
 .cloud__managehost {
   position: relative;
   overflow: hidden;
   max-width: 420px;
   padding: 2px;
   border-radius: 3px;
+}
+.cloud__managehost .store__plans {
+  position: relative;
+  inset: auto;
+  margin-top: 10px;
 }
 
 /* ── the fold's file browser and its one dangerous button ── */

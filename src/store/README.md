@@ -5,6 +5,7 @@
 | `useOwnedPacks.ts` | The read: which packs this account holds, and how it holds each one. |
 | `grant.ts` | What "how it holds it" MEANS — the shape, and the sentence the card prints. |
 | `billing.ts` | The write: change a plan, stop the renewals, start them again. |
+| `checkoutTab.ts` | Reserves a themed Stripe waiting tab during the click, before a slow billing request loses browser popup permission. Detaches its opener immediately; callers close it on failure and navigate it only after success. Shared by Store and Cloud billing, including cancellation before lifetime checkout. |
 | `sale.ts` | Whether a pack may be bought AT ALL — which is a question about the app, not the account. |
 
 ```ts

@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -332,6 +333,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [recovery, setRecovery] = useState(false)
   const [oauthError, setOauthError] = useState<string | null>(null)
   const [setup, setSetup] = useState<AccountSetup | null>(null)
+  // Invalidate reads at the auth event itself, before an old account's
+  // response can restore its profile or developer UI after sign-out.
+  const identity = useRef<{ uid: string | null; revision: number }>({ uid: null, revision: 0 })
 
   // A provider that isn't enabled yet redirects back here with ?error=…
   // instead of raising synchronously, and this is the only place that lands.
@@ -355,6 +359,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user.id ?? null
+      const changed = identity.current.uid !== uid
+      const revision = identity.current.revision + 1
+      identity.current = { uid, revision }
+      const current = () => !cancelled && identity.current.revision === revision
+      if (changed) {
+        setProfile(null)
+        setTier(null)
+        setSetup(null)
+        setRecovery(false)
+      }
       // A clicked reset-password link lands here as a real session, not as
       // a normal sign-in, so hold it in "recovery" until a new password is set,
       // so the UI shows "choose a new password" instead of flipping to Account.
@@ -373,9 +388,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRecovery(false)
         return
       }
-      const uid = session.user.id
-      void readProfile(uid).then((row) => {
-        if (!cancelled) setProfile(row)
+      void readProfile(session.user.id).then((row) => {
+        if (current()) setProfile(row)
       })
       /*
        * Asked at every sign-in, not only after a provider redirect.
@@ -391,7 +405,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        * through the Sign up form.
        */
       void readSetup().then((needs) => {
-        if (!cancelled) setSetup(needs)
+        if (current()) setSetup(needs)
       })
       supabase
         .from('subscriptions')
@@ -399,12 +413,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', uid)
         .maybeSingle()
         .then(({ data }) => {
-          if (!cancelled) setTier(data?.tier ?? null)
+          if (current()) setTier(data?.tier ?? null)
         })
     })
 
     return () => {
       cancelled = true
+      identity.current = { uid: null, revision: identity.current.revision + 1 }
       sub.subscription.unsubscribe()
     }
   }, [])
@@ -430,8 +445,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      */
     const reread = async () => {
       const uid = user?.id
-      if (!uid) return
+      if (!uid || identity.current.uid !== uid) return
+      const revision = identity.current.revision
       const [row, needs] = await Promise.all([readProfile(uid), readSetup()])
+      if (identity.current.revision !== revision) return
       // A failed read leaves the previous profile standing. Stale and true
       // beats blank: this runs right after a save, and blanking somebody's
       // own name because the follow-up request lost the network would look

@@ -3,6 +3,7 @@ import { PlanPanel, PlanRow } from '../components/PlanChooser'
 import { billingMessage, openBilling, setRenewal, type BillingError } from '../store/billing'
 import { formatDay, standingOfGrant, type PackGrant, type PackStanding } from '../store/grant'
 import { STORE_BILLING_LINK_NOTICE } from '../data/storeAnswers'
+import { reserveCheckoutTab } from '../store/checkoutTab'
 
 /**
  * Manage or cancel a TDG Cloud plan, wherever the plan is shown.
@@ -32,6 +33,7 @@ export function CloudManage({
   pack,
   planName,
   grant,
+  blocked = false,
   onChanged,
 }: {
   /** The pack id the billing call names — `standard` or `studio`. */
@@ -40,6 +42,8 @@ export function CloudManage({
   planName: string
   /** The grant behind it, exactly as the webhook wrote it. */
   grant: PackGrant | null
+  /** Revocation closes access, never the route for stopping its renewals. */
+  blocked?: boolean
   /** Called after Stripe confirmed a change, so the host re-reads status. */
   onChanged: () => void
 }) {
@@ -84,6 +88,7 @@ export function CloudManage({
   }
 
   const changeRenewal = async (renew: boolean) => {
+    if (blocked && renew) return
     setStep({ at: 'busy', doing: renew ? 'Starting the renewals again…' : 'Stopping the renewals…' })
     const result = await setRenewal({ app: 'cloud', pack, renew })
     if (!result.ok) {
@@ -104,13 +109,23 @@ export function CloudManage({
   }
 
   const goToStripe = async (intent: 'update' | 'billing') => {
+    if (blocked && intent === 'update') return
+    const tab = reserveCheckoutTab()
+    if (!tab) {
+      setStep({ at: 'error', error: 'popup_blocked' })
+      return
+    }
     setStep({ at: 'busy', doing: 'Opening your billing page…' })
     const result = await openBilling({ app: 'cloud', pack, intent })
     if (!result.ok) {
+      tab.close()
       setStep({ at: 'error', error: result.error })
       return
     }
-    window.open(result.value, '_blank', 'noopener,noreferrer')
+    if (!tab.navigate(result.value)) {
+      setStep({ at: 'error', error: 'popup_blocked' })
+      return
+    }
     close()
   }
 
@@ -157,24 +172,30 @@ export function CloudManage({
           )}
           {step.at === 'menu' && (
             <ul className="store__plan-list" data-menu>
-              <PlanRow
-                label="Change Plan"
-                note="Move between the Cloud plans, or between monthly and yearly, on Stripe's page."
-                onClick={() => void goToStripe('update')}
-              />
-              {shown.ending ? (
+              {!blocked && (
                 <PlanRow
-                  label="Resume Subscription"
-                  note="Renewals start again, on the same plan. Nothing is charged today."
-                  onClick={() => void changeRenewal(true)}
+                  label="Change Plan"
+                  note="Move between the Cloud plans, or between monthly and yearly, on Stripe's page."
+                  onClick={() => void goToStripe('update')}
                 />
+              )}
+              {shown.ending ? (
+                !blocked && (
+                  <PlanRow
+                    label="Resume Subscription"
+                    note="Renewals start again, on the same plan. Nothing is charged today."
+                    onClick={() => void changeRenewal(true)}
+                  />
+                )
               ) : (
                 <PlanRow
                   label="Cancel Subscription"
                   note={
-                    shown.endsAt
-                      ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}, then your data goes read-only.`
-                      : 'Renewals stop. Yours to the end of the period you have paid for, then your data goes read-only.'
+                    blocked
+                      ? 'Renewals stop, and nothing more is charged. Cloud stays unavailable on this account.'
+                      : shown.endsAt
+                        ? `Renewals stop. Yours until ${formatDay(shown.endsAt.toISOString())}, then your data goes read-only.`
+                        : 'Renewals stop. Yours to the end of the period you have paid for, then your data goes read-only.'
                   }
                   tone="leave"
                   onClick={() => setStep({ at: 'confirm' })}
@@ -192,9 +213,11 @@ export function CloudManage({
             <div className="store__ask">
               <p className="store__ask-q">Cancel this subscription?</p>
               <p className="store__ask-what">
-                {shown.endsAt
-                  ? `Nothing more is charged, and nothing is taken away today. Your storage keeps working until ${formatDay(shown.endsAt.toISOString())}. After that your hosted data stays readable and downloadable for a while — the Store's Cloud section says how long — and comes back in full if you resubscribe before it is removed.`
-                  : 'Nothing more is charged, and nothing is taken away today. Your storage keeps working to the end of the period you have paid for, then your hosted data stays readable and downloadable for a while before it is removed.'}
+                {blocked
+                  ? 'Nothing more is charged. Cloud stays unavailable on this account either way.'
+                  : shown.endsAt
+                    ? `Nothing more is charged, and nothing is taken away today. Your storage keeps working until ${formatDay(shown.endsAt.toISOString())}. After that your hosted data stays readable and downloadable for a while — the Store's Cloud section says how long — and comes back in full if you resubscribe before it is removed.`
+                    : 'Nothing more is charged, and nothing is taken away today. Your storage keeps working to the end of the period you have paid for, then your hosted data stays readable and downloadable for a while before it is removed.'}
               </p>
               <div className="store__ask-row">
                 <button type="button" className="store__ghost" onClick={() => setStep({ at: 'menu' })}>

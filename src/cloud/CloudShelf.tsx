@@ -171,7 +171,11 @@ function CloudPlanCard({
 
       <div className="cloud__action">
         {block !== null ? (
-          <CloudBlock block={block} planId={plan.id} planName={plan.name} />
+          <>
+            <CloudBlock block={block} planId={plan.id} planName={plan.name} />
+            <CloudManage pack={plan.id} planName={plan.name}
+              grant={block.held_grants?.[plan.id] ?? null} blocked onChanged={onChanged} />
+          </>
         ) : held ? (
           <>
             <p className="store__owned" data-tone={standing.kind === 'perpetual' ? 'ok' : undefined}>

@@ -41,7 +41,7 @@ export type CloudStatus = {
   perApp: { app: string; bytes: number; files: number }[]
   egress: { monthBytes: number; allowanceBytes: number; behavior: string }
   retention: { state: 'none' | 'read_only' | 'purge_eligible'; lapsedAt: string | null; deadline: string | null }
-  revoked: { pack: string; reason: string | null; created_at: string } | null
+  revoked: { pack: string; reason: string | null; created_at: string; held_grants: Record<string, PackGrant> } | null
   warnings: CloudWarning[]
 }
 
@@ -154,7 +154,7 @@ export function useCloudStatus(): { state: CloudStatusState; refresh: () => void
     }
 
     let cancelled = false
-    void supabase.rpc('tdg_cloud_status').then(({ data, error }) => {
+    void supabase.rpc('tdg_cloud_status').then(async ({ data, error }) => {
       if (cancelled || !live.current) return
       if (error) {
         if (!answered.current) setState({ kind: 'error' })
@@ -164,6 +164,28 @@ export function useCloudStatus(): { state: CloudStatusState; refresh: () => void
       if (parsed === null) {
         if (!answered.current) setState({ kind: 'error' })
         return
+      }
+      if (parsed.revoked) {
+        // Cloud status describes access, not the subscriptions held under a
+        // block. The existing account-scoped RPC exposes those grants for
+        // cancellation, without reopening storage or offering another purchase.
+        const blocks = await supabase.rpc('tdg_my_revocations')
+        if (cancelled || !live.current) return
+        if (blocks.error || !Array.isArray(blocks.data)) {
+          setState({ kind: 'error' })
+          return
+        }
+        const grants: Record<string, PackGrant> = {}
+        for (const block of blocks.data) {
+          if (block.app !== 'cloud' || !block.held_grants || typeof block.held_grants !== 'object') continue
+          for (const [pack, grant] of Object.entries(block.held_grants)) {
+            if (grant && typeof grant === 'object' && !Array.isArray(grant)) grants[pack] = grant as PackGrant
+          }
+        }
+        // A block on one plan shuts Cloud for the whole account, including a
+        // different plan that may still be on the live entitlements row.
+        if (parsed.plan?.grant) grants[parsed.plan.pack] = parsed.plan.grant
+        parsed.revoked = { ...parsed.revoked, held_grants: grants }
       }
       answered.current = true
       setState({ kind: 'ready', status: parsed })

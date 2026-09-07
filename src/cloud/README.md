@@ -10,7 +10,7 @@ against live tables; what makes it Coming Soon is one flag in
 | --- | --- |
 | `CloudMark.tsx` | The rounded gradient TDG Cloud product tile, transparent outside its corners, shared by the Store shelf and Account fold. Each caller supplies its rendered size so the browser selects an export without upscaling it, and every responsive URL goes through `asset()` so GitHub Pages' subpath cannot break them. The complete export kit lives in [`public/assets/tdg-cloud/`](../../public/assets/tdg-cloud/README.md). |
 | `config.ts` | The public config store: plans, quotas, prices and availability from `tdg_cloud_public_config()`, over the built-in copy in [`src/data/cloud.ts`](../data/cloud.ts), cached the way `src/content/store.ts` caches. **Fails closed**: `available` and the payment links only ever come from a fresh server answer, so nothing stale can open a checkout. |
-| `useCloudStatus.ts` | The signed-in account's whole standing in one `tdg_cloud_status()` round trip: plan and grant, quota against used/reserved, per-app bytes, egress, retention, revocation, and the server's own warnings. Re-asks on foreground/focus/online/every 5 minutes, and a failed re-check never unsettles a settled answer — `useOwnedPacks`' rules, because it is the same money. |
+| `useCloudStatus.ts` | Reads `tdg_cloud_status()`: plan and grant, quota against used/reserved, per-app bytes, egress, retention, revocation, and warnings. A blocked account also reads its held grants through `tdg_my_revocations()` so it can still stop billing. Re-asks on foreground/focus/online/every 5 minutes. Ordinary failed rechecks preserve a settled answer; failure to resolve a newly returned block's billing grants shows an error instead of stale access. |
 | `CloudShelf.tsx` | The Store index's branded Cloud area: the two plan cards, priced from config, with every state given a face — Coming Soon (a disabled button that says so), on sale, held (usage meter + manage), revoked, could-not-check. Buying reuses the one `PlanChooser` and the pack cards' five-minute payment watch. Its panel carries `CLOUD_ANCHOR`'s id, which is what `#/store?to=cloud-plans` lands on. |
 | `CloudFold.tsx` | The Account page's branded fold: Coming Soon until Core opens the door for the account, then the management surface — plan and standing, the visualizer, sync recency, warnings, browse/download every hosted file, and delete-all behind a typed confirmation. Pinning a visualizer segment opens that app's file browser. |
 | `CloudViz.tsx` | The storage visualizer: one bar, every app a coloured segment from the eight `--chart-*` tokens (assigned by rank — tokens.css says why), a striped segment for uploads in flight, an aria-live inspector strip that prints the EXACT byte count, and a legend of pressable chips. Its entrance animation's first frame is a legible bar on purpose: a starved animation clock must never freeze the meter into showing nothing. This is the canonical implementation the apps mirror natively — `docs/cloud-visualizer.md` is the contract. |
@@ -59,6 +59,21 @@ critical / full, egress past the fair-use allowance, read-only retention with
 its deadline and the resubscribe promise, purge-eligible, and revoked with the
 developer's own reason. The wording for the warnings lives in
 `CloudFold.tsx`'s `warningFace`, one place.
+
+Revocation closes storage access, not cancellation. Both surfaces offer held
+subscriptions through `CloudManage` with `blocked` set: cancel and payment
+receipts stay available, while change-plan and resume do not. The Account fold
+also keeps existing billing visible when Cloud availability is switched off.
+These reads use the existing account-scoped revocation RPC and billing resolver;
+they do not change grants or reopen Cloud in the browser.
+
+In the Account fold, the management panel participates in normal flow so its
+clipped host contains every control. The Store's card grid keeps the overlaid
+panel to preserve equal sibling heights.
+
+Billing reserves its Stripe tab through `store/checkoutTab.ts` before requesting
+the portal URL, so slow replies keep the browser's popup permission. Refused
+requests close the waiting tab and show the existing in-panel error state.
 
 ## What launches, and what launching takes
 
