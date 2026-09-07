@@ -321,7 +321,15 @@ function OpenFace({ status, refresh }: { status: CloudStatus; refresh: () => voi
           /* Said BEFORE the plan, whatever the plan says: a block outranks a
              grant on the shelf and it outranks one here. See CloudBlock.tsx
              for the face this fold used to lack. */
-          <CloudBlock block={status.revoked} />
+          <>
+            <CloudBlock block={status.revoked} />
+            {Object.entries(status.revoked.held_grants ?? {}).map(([pack, grant]) => (
+              <div className="cloud__managehost" key={pack}>
+                <CloudManage pack={pack} planName={config.plans.find((plan) => plan.id === pack)?.name ?? pack}
+                  grant={grant} blocked onChanged={refresh} />
+              </div>
+            ))}
+          </>
         ) : status.plan === null ? (
           <p className="acct__note">
             No Cloud plan on this account{status.usedBytes > 0 ? ', and hosted data is read-only' : ''}.
@@ -401,6 +409,8 @@ export function CloudFold() {
 
   const status = state.kind === 'ready' ? state.status : null
   const enabled = status?.enabledForYou === true
+  // Closing Cloud cannot hide a subscription's cancellation route.
+  const showStanding = enabled || status?.plan != null || status?.revoked != null
 
   const count =
     status?.plan != null
@@ -430,11 +440,11 @@ export function CloudFold() {
         </p>
       )}
 
-      {state.kind === 'ready' && status !== null && enabled && (
+      {state.kind === 'ready' && status !== null && showStanding && (
         <OpenFace status={status} refresh={refresh} />
       )}
 
-      {state.kind === 'ready' && status !== null && !enabled && (
+      {state.kind === 'ready' && status !== null && !showStanding && (
         <div className="cloud__acct">
           <p className="acct__note">
             <strong>TDG Cloud is coming.</strong> One pooled storage allowance for your whole TDG

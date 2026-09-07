@@ -16,6 +16,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { FeedbackDialog } from './feedback/FeedbackDialog'
 import { ReplyInbox } from './feedback/ReplyInbox'
 import { useAuth } from './auth/AuthProvider'
+import { prefetchInactiveArt } from './theme/artPrefetch'
 import { useOffscreenPause } from './hooks/useOffscreenPause'
 import { arriveAt, useRoute } from './lib/route'
 import { setSceneMode, useSceneMode } from './scene/sceneMode'
@@ -86,7 +87,7 @@ const SceneEditor = lazy(() => import('./scene/editor/SceneEditor'))
 
 export default function App() {
   useOffscreenPause()
-  const { oauthError, recovery, setup, isAdmin } = useAuth()
+  const { oauthError, recovery, setup, isAdmin, user } = useAuth()
   const [authOpen, setAuthOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   /**
@@ -129,6 +130,12 @@ export default function App() {
      the page for everybody, so there is nothing left for a closed editor to
      do, and off means gone. */
   const sceneEditor = isAdmin && onHome && sceneMode
+
+  useEffect(() => {
+    // A direct Store/About visit has no scenery when the provider's first
+    // idle scan runs. Warm the newly mounted home art before its first toggle.
+    if (onHome) prefetchInactiveArt(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+  }, [onHome])
 
   /*
    * A provider redirect (e.g. GitHub/Google) or a clicked password-reset
@@ -336,7 +343,10 @@ export default function App() {
         </main>
       ) : route.kind === 'account' ? (
         <main>
-          <ErrorBoundary key="account">
+          {/* Local drafts and pending social reads belong to one account.
+              Remount on identity changes so a late response cannot refill
+              the signed-out page or another account's controls. */}
+          <ErrorBoundary key={`account:${user?.id ?? ''}`}>
             <Suspense fallback={<div className="page-fallback" />}>
               <AccountPage
                 onOpenAuth={() => setAuthOpen(true)}
@@ -347,15 +357,15 @@ export default function App() {
         </main>
       ) : route.kind === 'profile' ? (
         <main>
-          <ErrorBoundary key={`user:${route.username}`}>
+          <ErrorBoundary key={`user:${route.username}:${user?.id ?? ''}`}>
             <Suspense fallback={<div className="page-fallback" />}>
-              {/* Keyed on the handle so following one profile to another
+              {/* Keyed on the handle and viewer so following another profile
+                  or changing accounts
                   REMOUNTS rather than re-running effects inside a page still
                   holding the previous person's read. Two profiles are two
                   pages; `same()` in lib/route.ts already keeps them apart at
                   the route level, and this keeps them apart at the component. */}
               <ProfilePage
-                key={route.username}
                 username={route.username}
                 onOpenAuth={() => setAuthOpen(true)}
               />

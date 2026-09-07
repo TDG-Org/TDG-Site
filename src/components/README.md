@@ -120,6 +120,16 @@ counts scale to what the device can comfortably paint, and the dust runs at
 24 Hz on a capped DPR because nobody can tell and it is 2.5× less canvas work
 for an identical result.
 
+The hero model first mounts above the CSS visibility breakpoint of 640px.
+Narrow arrivals avoid its chunk and shape initialization; after first mount it
+stays mounted across resizing, preserving its pose. Both hero buttons share a
+smaller horizontal padding at 420px and below so their row fits a 320px screen.
+
+The light model's packed scanline colours are cached per backing-store height.
+This removes per-row typed-array allocations without changing the pixels.
+Resizing requests a repaint as well as a resync: reduced motion otherwise
+leaves a resized, cleared canvas blank while the frame loop is parked.
+
 **`PointCloud` is the only canvas on the site that does not redraw all of
 itself**, and it carries the one rule that comes with that. `Starfield` and
 `scene/Snow` open every frame with `clearRect`, so anything the browser did to
@@ -256,6 +266,10 @@ heights measure a pixel or two apart. Use `offsetWidth` / `offsetHeight` when yo
 are checking layout.
 
 ## Store.tsx is the worked example
+
+Store billing uses `store/checkoutTab.ts` to reserve its Stripe tab during the
+click. Both portal requests and lifetime checkout after cancellation reuse that
+tab; a blocked popup is reported before any renewal change is requested.
 
 ### Two views, and what each of them owns
 

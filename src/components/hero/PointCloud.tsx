@@ -233,6 +233,7 @@ export function PointCloud() {
     let acc = new Float32Array(0)
     let image: ImageData | null = null
     let img32 = new Uint32Array(0)
+    let lightRows = new Uint32Array(0)
     // region of the canvas that currently holds ink
     let px0 = 0
     let py0 = 0
@@ -266,6 +267,19 @@ export function PointCloud() {
       acc = new Float32Array(W * H)
       image = ctx.createImageData(W, H)
       img32 = new Uint32Array(image.data.buffer)
+      // The light ramp depends only on backing height, not on the morph or
+      // intensity. Packing every dirty row allocated two typed arrays per
+      // scanline per frame; cache the exact same bytes when the surface changes.
+      lightRows = new Uint32Array(H)
+      const denom = H > 1 ? H - 1 : 1
+      for (let y = 0; y < H; y++) {
+        const t = y / denom
+        lightRows[y] = packRGB(
+          (TOP.r + (FOOT.r - TOP.r) * t) | 0,
+          (TOP.g + (FOOT.g - TOP.g) * t) | 0,
+          (TOP.b + (FOOT.b - TOP.b) * t) | 0,
+        )
+      }
       px0 = 0
       py0 = 0
       px1 = -1
@@ -273,6 +287,10 @@ export function PointCloud() {
       // `image` is a new buffer and the canvas a new surface; the two are only
       // known to agree once one full frame has crossed between them.
       resync.current = true
+      // Resizing clears the backing store. A settled reduced-motion frame
+      // otherwise exits before copying the replacement image to the canvas.
+      repaint.current = true
+      wake()
     }
     resize()
     const ro = new ResizeObserver(resize)
@@ -586,18 +604,9 @@ export function PointCloud() {
          easing to gold at the bottom — and one colour for the whole cloud in
          dark. The lerp is hoisted out of the x loop, so the per-pixel cost is
          identical to the single-constant version it replaces. */
-      const denom = H > 1 ? H - 1 : 1
       for (let y = uy0; y <= uy1; y++) {
         const row = y * W
-        let rgb = WHITE
-        if (light) {
-          const t = y / denom
-          rgb = packRGB(
-            (TOP.r + (FOOT.r - TOP.r) * t) | 0,
-            (TOP.g + (FOOT.g - TOP.g) * t) | 0,
-            (TOP.b + (FOOT.b - TOP.b) * t) | 0,
-          )
-        }
+        const rgb = light ? lightRows[y] : WHITE
         for (let x = ux0; x <= ux1; x++) {
           const at = row + x
           const v = acc[at]

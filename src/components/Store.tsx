@@ -13,6 +13,7 @@ import {
   type PackStanding,
 } from '../store/grant'
 import { billingMessage, openBilling, setRenewal, type BillingError } from '../store/billing'
+import { reserveCheckoutTab, type CheckoutTab } from '../store/checkoutTab'
 import { saleWording, useSaleState, type SaleState } from '../store/sale'
 import { SectionsProvider } from '../lib/sections'
 import { appHash, rememberOrigin, storeAppHash, STORE_HASH } from '../lib/route'
@@ -237,7 +238,7 @@ function PackCard({
   sale: SaleState
   /** How this account holds it, when the app records that. Null when it does not. */
   grant: PackGrant | null
-  onBuy: (plan?: StorePlan) => void
+  onBuy: (plan?: StorePlan, tab?: CheckoutTab) => boolean
   onSignIn: () => void
   onCheck: () => void
 }) {
@@ -373,13 +374,22 @@ function PackCard({
 
   /** Off to Stripe's own page, in a new tab so the shop is still here after. */
   const goToStripe = async (intent: 'update' | 'billing') => {
+    const tab = reserveCheckoutTab()
+    if (!tab) {
+      setStep({ at: 'error', error: 'popup_blocked' })
+      return
+    }
     setStep({ at: 'busy', doing: 'Opening your billing page…' })
     const result = await openBilling({ app: appId, pack: pack.id, intent })
     if (!result.ok) {
+      tab.close()
       setStep({ at: 'error', error: result.error })
       return
     }
-    window.open(result.value, '_blank', 'noopener,noreferrer')
+    if (!tab.navigate(result.value)) {
+      setStep({ at: 'error', error: 'popup_blocked' })
+      return
+    }
     closeChooser()
   }
 
@@ -405,9 +415,15 @@ function PackCard({
     // closed on "Ends Soon", and no Stripe tab came — before the shop's
     // state reached this card.
     if (!lifetimePlan || !saleOpen) return
+    const tab = reserveCheckoutTab()
+    if (!tab) {
+      setStep({ at: 'error', error: 'popup_blocked' })
+      return
+    }
     setStep({ at: 'busy', doing: 'Stopping the renewals…' })
     const result = await setRenewal({ app: appId, pack: pack.id, renew: false })
     if (!result.ok) {
+      tab.close()
       setStep({ at: 'error', error: result.error })
       return
     }
@@ -420,8 +436,11 @@ function PackCard({
         currentPeriodEnd: result.value.currentPeriodEnd ?? grant?.currentPeriodEnd ?? null,
       }),
     )
-    closeChooser()
-    onBuy(lifetimePlan)
+    if (onBuy(lifetimePlan, tab)) closeChooser()
+    else {
+      tab.close()
+      setStep({ at: 'error', error: 'popup_blocked' })
+    }
   }
 
   return (
@@ -1423,7 +1442,7 @@ function StoreApp({
    * three cards has been made to do arithmetic to find out they are locked out.
    */
   revoked: Revocation | null
-  onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan) => void
+  onBuy: (app: StoreApp, pack: StorePack, plan?: StorePlan, tab?: CheckoutTab) => boolean
   onCheck: () => void
 }) {
   const head = useReveal<HTMLDivElement>('wipe', 0)
@@ -1534,7 +1553,7 @@ function StoreApp({
             /* Belt as well as braces: no card draws a Buy button while the
                shop is shut, and the one press that spends money still refuses
                to fire on its own account rather than trusting that. */
-            onBuy={(plan) => sale === 'open' && onBuy(app, pack, plan)}
+            onBuy={(plan, tab) => sale === 'open' && onBuy(app, pack, plan, tab)}
             onSignIn={onOpenAuth}
             onCheck={onCheck}
           />
@@ -1646,17 +1665,22 @@ export function Store({ onOpenAuth, app }: { onOpenAuth: () => void; app?: strin
    */
   const ownsIn = (app: StoreApp, packId: string) => owned.has(packKey(app.id, packId))
 
-  const buy = (app: StoreApp, pack: StorePack, plan?: StorePlan) => {
+  const buy = (app: StoreApp, pack: StorePack, plan?: StorePlan, tab?: CheckoutTab) => {
     if (!user) {
+      tab?.close()
       onOpenAuth()
-      return
+      return false
     }
     // A new tab, not this one: navigating away would throw the wait away, and
     // coming back to a shop that has already flipped to Owned is the whole
     // point of watching for it.
-    window.open(buyUrl(pack, user.id, user.email, plan), '_blank', 'noopener,noreferrer')
+    const url = buyUrl(pack, user.id, user.email, plan)
+    if (tab) {
+      if (!tab.navigate(url)) return false
+    } else window.open(url, '_blank', 'noopener,noreferrer')
     const key = packKey(app.id, pack.id)
     setPending({ key, app: app.id, pack: pack.id, upgrade: owned.has(key) })
+    return true
   }
 
   /*

@@ -6,7 +6,7 @@ elsewhere, and what a refusal says.
 
 | File | What it is |
 | --- | --- |
-| `AuthProvider.tsx` | The context: session, user, profile, and every sign-in / sign-up / reset call. |
+| `AuthProvider.tsx` | The context: session, user, profile, and every sign-in / sign-up / reset call. Account reads carry the auth-event revision that requested them; sign-out or a newer event invalidates late profile, tier and setup responses. |
 | `sessionGuard.ts` | Noticing that a session was ended somewhere else. |
 | `wording.ts` | What a refusal says, in one place. |
 

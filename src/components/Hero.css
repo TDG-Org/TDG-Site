@@ -2696,6 +2696,12 @@
   }
 }
 @media (max-width: 420px) {
+  .hero__ctas {
+    /* Keep both actions on the same row at 320px. The desktop padding made
+       the ghost wrap down onto the palm/water band in the light theme. Both
+       buttons still take their padding from this one shared value. */
+    --cta-pad-x: 12px;
+  }
   .hero__meta {
     gap: 12px;
     font-size: 9px;

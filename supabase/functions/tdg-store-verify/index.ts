@@ -40,10 +40,10 @@
  *  release. It answers `ok: false` the day any of this drifts.
  */
 
-const SOURCE_STAMP = 'tdg-store-verify@3';
+const SOURCE_STAMP = 'tdg-store-verify@4';
 
 /**
- * One sweep a minute, per isolate, for the GET.
+ * One upstream sweep a minute, per isolate, for both request methods.
  *
  * A GET costs about fifteen Stripe reads (one per app-tagged link, plus the
  * endpoints), and this function is callable by anybody — the header says why
@@ -54,12 +54,15 @@ const SOURCE_STAMP = 'tdg-store-verify@3';
  * webhooks' refetches would start answering 429 → 502 → Stripe retries, so
  * purchases would land late until the backoff cleared. Serving a sweep that
  * is under a minute old from memory bounds the cost at one sweep a minute
- * per isolate, whatever the request rate. The POST (a catalogue to verify)
- * always sweeps fresh: it is the release check, and it is what `npm run
- * verify:store` calls.
+ * per isolate. POST is anonymous too, so exempting it bypassed the same
+ * protection. Cache upstream facts, never a caller's catalogue verdict, and
+ * coalesce overlapping cold requests. The response timestamps the snapshot
+ * so a release check can see its bounded age.
  */
 const SWEEP_TTL_MS = 60_000;
-let sweepCache: { at: number; body: string } | null = null;
+type Sweep = { at: number; links: Map<string, LinkFact>; endpoints: Record<string, unknown>[]; doc: Record<string, unknown> };
+let sweepCache: Sweep | null = null;
+let sweepPending: Promise<Sweep> | null = null;
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SECRET_KEY') ?? '';
@@ -134,12 +137,27 @@ function checkCloud(
   links: Map<string, LinkFact>,
   problems: Problem[],
 ): Record<string, unknown> {
+  // A missing row or malformed response used to become an empty, dormant
+  // Cloud catalogue, which passed every check without comparing a price.
+  const availability = doc.availability;
+  const configuredPlans = doc.plans;
+  if (!availability || typeof availability !== 'object' ||
+      typeof (availability as Record<string, unknown>).available !== 'boolean' ||
+      !configuredPlans || typeof configuredPlans !== 'object' ||
+      Array.isArray(configuredPlans) || Object.keys(configuredPlans).length === 0) {
+    problems.push({ where: 'cloud/config', what: 'Cloud configuration is missing or invalid' });
+    return { verified: false };
+  }
   const available =
     ((doc.availability ?? {}) as Record<string, unknown>).available === true;
   const plans = (doc.plans ?? {}) as Record<string, Record<string, unknown>>;
   const report: Record<string, unknown> = { available };
 
   for (const [pack, plan] of Object.entries(plans)) {
+    if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
+      problems.push({ where: `cloud/${pack}`, what: 'plan configuration is invalid' });
+      continue;
+    }
     for (const cadence of ['monthly', 'annual'] as const) {
       const where = `cloud/${pack}/${cadence}`;
       const url = plan[`payment_link_${cadence}`];
@@ -279,6 +297,34 @@ function checkCatalog(
   });
 }
 
+async function upstreamSweep(): Promise<Sweep> {
+  if (sweepCache !== null && Date.now() - sweepCache.at < SWEEP_TTL_MS) return sweepCache;
+  if (sweepPending !== null) return sweepPending;
+  sweepPending = (async () => {
+    const [links, endpoints, cfgRes] = await Promise.all([
+      linkFacts(),
+      stripeGet('/v1/webhook_endpoints?limit=100'),
+      fetch(`${SUPABASE_URL}/rest/v1/tdg_cloud_config?select=doc`, {
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+      }),
+    ]);
+    if (!cfgRes.ok) throw new Error(`Cloud configuration read failed (${cfgRes.status})`);
+    const rows = await cfgRes.json();
+    const doc = Array.isArray(rows) && rows.length === 1 ? rows[0]?.doc : null;
+    if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('Cloud configuration row is missing or invalid');
+    if (!Array.isArray(endpoints.data)) throw new Error('Stripe webhook response is invalid');
+    return { at: Date.now(), links, endpoints: endpoints.data as Record<string, unknown>[], doc };
+  })();
+  try {
+    const sweep = await sweepPending;
+    sweepCache = sweep;
+    return sweep;
+  } finally {
+    // Failed reads must be retryable; never cache a successful-looking fallback.
+    sweepPending = null;
+  }
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method !== 'GET' && req.method !== 'POST') return json({ error: 'bad_request' }, 405);
   if (!STRIPE_SECRET_KEY || !SUPABASE_URL || !SERVICE_KEY) return json({ error: 'server_error' }, 500);
@@ -305,32 +351,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  if (req.method === 'GET' && sweepCache !== null && Date.now() - sweepCache.at < SWEEP_TTL_MS) {
-    return new Response(sweepCache.body, {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'X-Sweep-Cached': 'true' },
-    });
-  }
-
   try {
-    const [links, endpoints, cfgRes] = await Promise.all([
-      linkFacts(),
-      stripeGet('/v1/webhook_endpoints?limit=100'),
-      fetch(`${SUPABASE_URL}/rest/v1/tdg_cloud_config?select=doc`, {
-        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
-      }),
-    ]);
-    const doc = (((await cfgRes.json()) as { doc?: unknown }[] | null)?.[0]?.doc ?? {}) as Record<string, unknown>;
+    const cached = sweepCache !== null && Date.now() - sweepCache.at < SWEEP_TTL_MS;
+    const { at, links, endpoints, doc } = await upstreamSweep();
 
     const problems: Problem[] = [];
     const cloud = checkCloud(doc, links, problems);
-    const webhooks = checkWebhooks((endpoints.data as Record<string, unknown>[]) ?? [], problems);
+    const webhooks = checkWebhooks(endpoints, problems);
     const catalogReport = catalog.length > 0 ? checkCatalog(catalog, links, problems) : undefined;
 
     const body = JSON.stringify(
       {
         function: 'tdg-store-verify',
         stamp: SOURCE_STAMP,
+        checkedAt: new Date(at).toISOString(),
         ok: problems.length === 0,
         problems,
         cloud,
@@ -350,8 +384,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       null,
       1,
     );
-    if (req.method === 'GET') sweepCache = { at: Date.now(), body };
-    return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...(cached ? { 'X-Sweep-Cached': 'true' } : {}) },
+    });
   } catch (err) {
     console.error('tdg-store-verify failed', err);
     return json({ error: 'verify_failed', message: err instanceof Error ? err.message : String(err) }, 500);

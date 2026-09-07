@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { clamp01, onFrame, settle } from '../lib/motion'
 import { usePointer } from '../hooks/usePointer'
 import { CrossGlyph } from './CrossGlyph'
@@ -507,6 +507,18 @@ const dissolve = (t: number) => Math.pow(t, 1.85)
 const EPSILON = 0.00006
 
 export function Hero() {
+  // Match Hero.css's model visibility exactly. Phones previously downloaded
+  // the lazy module and built all twelve shapes for a display:none model.
+  // Once activated, keep it mounted so narrowing preserves the current morph.
+  const [modelEnabled, setModelEnabled] = useState(() => window.matchMedia('(width > 640px)').matches)
+  useEffect(() => {
+    if (modelEnabled) return
+    const media = window.matchMedia('(width > 640px)')
+    const activate = () => { if (media.matches) setModelEnabled(true) }
+    activate()
+    media.addEventListener('change', activate)
+    return () => media.removeEventListener('change', activate)
+  }, [modelEnabled])
   const section = useRef<HTMLElement | null>(null)
   const above = useRef<HTMLDivElement | null>(null)
   const frame = useRef<HTMLDivElement | null>(null)
@@ -1034,7 +1046,7 @@ export function Hero() {
               sky without its cross, not the hero without its page. */}
           <ErrorBoundary silent>
             <Suspense fallback={null}>
-              <PointCloud />
+              {modelEnabled && <PointCloud />}
             </Suspense>
           </ErrorBoundary>
 

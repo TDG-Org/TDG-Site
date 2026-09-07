@@ -31,7 +31,7 @@ One `useRoute()` call decides which of seven things is on screen:
 | `#/about` | `About`, lazily |
 | `#/store` · `#/store/<app>` | `Store`: its index of app cards, or one app's own page of packs |
 | `#/account` | `AccountPage`, lazily — **not gated**: a signed-out reader is told to sign in, on the page they asked for |
-| `#/user/<handle>` | `ProfilePage`, lazily, keyed on the handle so one profile to the next remounts |
+| `#/user/<handle>` | `ProfilePage`, lazily, keyed on the handle and signed-in viewer so old private reads cannot cross pages or accounts |
 | `#/app/<slug>` | `AppPage`, lazily |
 | `#/dev` | `DevConsole`, lazily, **and only for a signed-in TDG developer** |
 
@@ -40,6 +40,14 @@ feedback surfaces: `FeedbackDialog` (opened from Send Feedback in the account
 menu) and `ReplyInbox`, which renders nothing until a developer's reply is
 actually waiting for the signed-in account. See
 [`feedback/README.md`](feedback/README.md).
+
+Account and profile pages remount when the account id changes. Their local
+drafts and pending reads belong to that identity; token refreshes for the same
+account keep the page intact. Postgres still decides what each caller may read.
+
+Entering home warms the inactive theme's art after its scene mounts. The theme
+provider's startup pass alone cannot discover images when the first route was
+the Store or an article; `theme/artPrefetch.ts` owns scheduling and deduplication.
 
 **Seven lazy chunks, for three different reasons.** `AppPage`, `About`,
 `AccountPage` and `ProfilePage` are pages a visitor may never open, and one who

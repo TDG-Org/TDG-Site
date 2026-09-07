@@ -62,6 +62,7 @@ export type BillingError =
   | 'stripe_error'
   | 'server_error'
   | 'offline'
+  | 'popup_blocked'
 
 export type BillingResult<T> = { ok: true; value: T } | { ok: false; error: BillingError }
 
@@ -162,6 +163,8 @@ export async function setRenewal(input: {
  */
 export function billingMessage(error: BillingError): string {
   switch (error) {
+    case 'popup_blocked':
+      return 'The Stripe tab was blocked or closed. Allow popups for this site and try again.'
     case 'unauthorized':
       return 'That session has ended. Sign in again and this will be here.'
     case 'no_customer':

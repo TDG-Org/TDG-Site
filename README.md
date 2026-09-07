@@ -169,7 +169,7 @@ a card's caption becomes a real button the moment a deploy answers, and says
 | **Backend** | Supabase — **TDG Core**, shared with the other TDG apps. Nine edge functions and the SQL live in [`supabase/`](supabase/README.md). |
 | **Motion** | One frame loop, five hooks, and everything pauses off-screen. `prefers-reduced-motion` is honoured, not approximated. |
 | **Hosting** | GitHub Pages from `main`, at `/TDG-Site/`. The deploy is **manual** (`workflow_dispatch`) — pushing does not publish. |
-| **Tests** | There are none. The typecheck and the build are the entire safety net — which is why [`AGENTS.md` §7](AGENTS.md) defines what "done" means instead. |
+| **Tests** | `npm test` runs isolated account, Cloud billing and Store verifier regressions. Browser checks remain necessary; [`tests/`](tests/README.md) describes the coverage and [`AGENTS.md` §7](AGENTS.md) defines the visual bar. |
 
 **Every product's words are data.** The catalogue, the pages, About, the Store's prose and the
 Origin chapters all live in [`src/data/`](src/data/README.md), and since 2.0.0 the Developer
@@ -207,6 +207,7 @@ publishable key is not a secret; the protection is RLS on the server.
 | --- | --- |
 | `npm run dev` | Vite dev server, with HMR |
 | `npm run typecheck` | `tsc -b --noEmit`. Must be silent. |
+| `npm test` | Node regression checks with isolated upstream responses; no real accounts or payments |
 | `npm run build` | `tsc -b && vite build`. Must be green. |
 | `npm run preview` | Serves the production build, so it sees the real `/TDG-Site/` base path |
 
