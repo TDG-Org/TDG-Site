@@ -82,19 +82,35 @@
   --blade-point: calc(var(--mark-h) * 0.26);
 }
 
+/* ── the mark carries its two shadows at ALL times, transparent at rest ────
+   Every state of the mark — rest, hover, and each keyframe of the sword below
+   — is written as the same two drop-shadows at the same two radii, 8px and
+   14px, and only their COLOUR ever moves. `filter: none` at rest with a
+   radius that grows on hover or on the swing is the obvious way to write it,
+   and it is the one that stutters: a blur or drop-shadow radius passing
+   through tens of values is tens of distinct GPU kernels, and each first-seen
+   radius is a shader compiled on the spot. Measured on the flourish, with a
+   Chrome trace: 19-20ms raster stalls on a cold shader cache and 58-170ms
+   presents on a warm one, at exactly the two moments the radii were moving —
+   the swing out and the swing back. The same radius with a different colour
+   is the same shader, so two fixed radii are two kernels, compiled once per
+   machine, and the glow still comes and goes because its alpha does. What it
+   costs at rest is a render surface the size of a 15x24 mark, redrawn only
+   when the mark itself changes.                                             */
 .nav__mark {
   position: relative;
   display: block;
   width: var(--mark-w);
   height: var(--mark-h);
   flex: none;
+  filter: drop-shadow(0 0 8px transparent) drop-shadow(0 0 14px transparent);
   transition:
     transform 1.6s cubic-bezier(0.16, 0.84, 0.24, 1),
     filter 1.6s ease;
 }
 .nav__mark:hover {
   transform: scale(1.09);
-  filter: drop-shadow(0 0 7px var(--cross-glow));
+  filter: drop-shadow(0 0 8px var(--cross-glow)) drop-shadow(0 0 14px transparent);
 }
 .nav__mark-bar {
   position: absolute;
@@ -164,10 +180,11 @@
    crossbar's own line — the last rule in this block, and the only place two
    placements exist.
 
-   Every moving pixel is transform, opacity or clip-path, and the two filters
-   are held still through the long middle rather than animated across it. The
-   strip is mounted only while it is playing, so a mark nobody has pressed costs
-   exactly what it cost before. `--bless-life` is the one duration all seven
+   Every moving pixel is transform, opacity or clip-path, and the mark's two
+   drop-shadows never change radius — only their colour moves, and the block
+   above `.nav__mark` says what animating the radius cost. The strip is
+   mounted only while it is playing, so a mark nobody has pressed costs
+   exactly what it cost before. `--bless-life` is the one duration all eight
    timelines share, and Nav.tsx's BLESS_MS outlasts it.                        */
 
 .nav__bless {
@@ -184,6 +201,24 @@
   pointer-events: none;
   --bless-life: 4.25s;
   --bless-slack: calc(var(--bless-size) * 0.7);
+  /* ── the gilding ──────────────────────────────────────────────────────────
+     One set of numbers for the light on the words, the aura behind them and
+     the shine that travels along them, so the three are one gold. The rim is
+     the innermost shadow and the only one that has to carry white letters on
+     a light ground: on the dark theme it is --warm lifted toward white, a
+     pale gold rim on a page that already gives white its contrast; on the
+     light theme it is --warm taken toward black, a bronze that a white letter
+     reads against on the cream veil. Rendered at 2x on both themes, over the
+     hero and over the veil, and compared against three weaker and one heavier
+     candidate before these were picked.                                     */
+  --gild-rim: color-mix(in srgb, var(--warm) 85%, #fff);
+  --gild-near: var(--warm);
+  --gild-aura: 46%;
+}
+[data-theme='light'] .nav__bless {
+  --gild-rim: color-mix(in srgb, var(--warm) 72%, #000);
+  --gild-near: color-mix(in srgb, var(--warm) 80%, #000);
+  --gild-aura: 52%;
 }
 
 /* The window the words roll through. The vertical padding is slack, not
@@ -219,8 +254,21 @@
      wears badly, on the one line of it that is meant to be read as a gift. */
   font: 500 1em/1 var(--font-serif);
   letter-spacing: 0.055em;
-  color: var(--text);
-  text-shadow: 0 0 0.6em color-mix(in srgb, var(--warm) 34%, transparent);
+  /* White in BOTH themes, and gilded in both — the owner's ask, made on the
+     light theme, where the words were set in --text (a navy) and were lost
+     against the palms over the hero, with a warm shadow under them too faint
+     to read as gold at all. This is not a theme colour, for the same reason
+     .nav__mark-bar's over-the-hero white is not: the phrase is one object,
+     white with gold light on it, whatever the page behind it is. What carries
+     it on a light ground is the gilding, not the fill — the rim is the only
+     one of these five shadows the two themes set differently. */
+  color: #fff;
+  text-shadow:
+    0 0 0.04em var(--gild-rim),
+    0 0 0.04em var(--gild-rim),
+    0 0 0.2em var(--gild-near),
+    0 0 0.5em var(--warm),
+    0 0 1em color-mix(in srgb, var(--warm) 60%, transparent);
 }
 
 /* ── one letter, and it is the letter that rolls ──────────────────────────
@@ -231,12 +279,36 @@
    that moves. Transform and opacity only, so all thirteen composite. */
 .nav__bless-letter {
   display: inline-block;
+  position: relative;
   transform-origin: 50% 100%;
   backface-visibility: hidden;
   opacity: 0;
   animation: nav-bless-word var(--bless-life) cubic-bezier(0.2, 0.8, 0.2, 1) both;
   /* One beat per word, read off the index Nav.tsx writes. */
   animation-delay: calc(var(--k) * 38ms);
+}
+
+/* ── the shine ────────────────────────────────────────────────────────────
+   Gold light travelling along the words, twice: once as the letters land and
+   once before they leave. It is a second glyph over each letter — the same
+   character, in gold-white with its own gold halo — whose OPACITY is animated
+   on the letter's own stagger, so nothing here is painted per frame: thirteen
+   composited fades, and the 38ms beat between them is what turns thirteen
+   fades into one light passing left to right. The character comes from
+   `data-ch`, which Nav.tsx writes on every letter for exactly this. It rides
+   inside the letter's own transform, so it rolls with the glyph it gilds. */
+.nav__bless-letter::after {
+  content: attr(data-ch);
+  position: absolute;
+  inset: 0;
+  color: color-mix(in srgb, var(--warm) 55%, #fff);
+  text-shadow:
+    0 0 0.25em color-mix(in srgb, var(--warm) 90%, #fff),
+    0 0 0.6em var(--warm);
+  opacity: 0;
+  animation: nav-bless-shine var(--bless-life) ease both;
+  animation-delay: calc(var(--k) * 38ms);
+  pointer-events: none;
 }
 
 /* The light it arrives in. Sized off the strip it sits behind rather than a
@@ -251,22 +323,12 @@
   transform: translateY(-50%) scale(0.72);
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--warm) 24%, transparent),
+    color-mix(in srgb, var(--warm) var(--gild-aura), transparent),
     transparent 100%
   );
   filter: blur(7px);
   opacity: 0;
   animation: nav-bless-aura var(--bless-life) ease both;
-}
-
-/* Over the hero the chrome stays light in BOTH themes — the same reason the
-   mark's own bars go #fff above, and the same reason .nav__split carries a
-   literal. These are not theme colours. */
-.nav[data-over-dark='true'] .nav__bless-word {
-  color: #fff;
-}
-.nav[data-over-dark='true'] .nav__bless-aura {
-  background: radial-gradient(closest-side, rgba(245, 201, 138, 0.3), transparent 100%);
 }
 
 /* ── the sword ─────────────────────────────────────────────────────────── */
@@ -321,10 +383,15 @@
    as it swings and settles back to its own size the moment the blade lands. It
    has to settle to exactly scale(1), because the point is where the words are
    aimed and 6% of the blade's length would have put the two of them apart. */
+/* The radii are 8px and 14px in every frame, the rest state included — see
+   the block above .nav__mark for the measurement — so the only thing the
+   filter interpolates is colour. The long middle used to be 6px and 12px at
+   full strength; it is the same two radii at a lower alpha now, which is the
+   same amount of light spread a shade wider. */
 @keyframes nav-bless-mark {
   0% {
     transform: rotate(0deg) scale(1);
-    filter: none;
+    filter: drop-shadow(0 0 8px transparent) drop-shadow(0 0 14px transparent);
   }
   6% {
     transform: rotate(-52deg) scale(1.14);
@@ -334,8 +401,8 @@
   10%,
   88% {
     transform: rotate(-90deg) scale(1);
-    filter: drop-shadow(0 0 6px var(--cross-glow))
-      drop-shadow(0 0 12px color-mix(in srgb, var(--warm) 45%, transparent));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cross-glow) 78%, transparent))
+      drop-shadow(0 0 14px color-mix(in srgb, var(--warm) 42%, transparent));
   }
   94% {
     transform: rotate(-38deg) scale(1.12);
@@ -344,7 +411,7 @@
   }
   100% {
     transform: rotate(0deg) scale(1);
-    filter: none;
+    filter: drop-shadow(0 0 8px transparent) drop-shadow(0 0 14px transparent);
   }
 }
 
@@ -519,6 +586,31 @@
   }
 }
 
+/* The two passes sit just after a letter lands (its roll-out ends at 32%) and
+   just before it leaves (the roll-up starts at 80%), inside the letter's own
+   stagger, so the light runs the length of the phrase on the same 38ms beat
+   the letters arrived on. */
+@keyframes nav-bless-shine {
+  0%,
+  33% {
+    opacity: 0;
+  }
+  37% {
+    opacity: 1;
+  }
+  42%,
+  70% {
+    opacity: 0;
+  }
+  74% {
+    opacity: 1;
+  }
+  78%,
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Asked for less motion, you still get the message — it simply arrives and
    leaves rather than rolling, and the cross stays a cross, because a quarter
    turn, a blade running out and a struck glint are exactly the things that
@@ -551,6 +643,12 @@
     transform: translateY(-50%);
     animation: none;
     opacity: 1;
+  }
+  /* The shine is light moving along the words, which is motion; the gilding
+     on the letters themselves is not, and stays. */
+  .nav__bless-letter::after {
+    animation: none;
+    opacity: 0;
   }
   /* Named a bar at a time on purpose: the two sword rules above are
      `:first-child` / `:last-child`, and a plain `.nav__mark-bar` here is one

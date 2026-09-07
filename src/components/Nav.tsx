@@ -900,13 +900,17 @@ export function Nav({
                     `--k` is the letter's index across the whole phrase and
                     Nav.css spends it as the stagger, so the line reads as
                     written rather than as stamped. The word span stays as the
-                    unit the gap and the clip are measured by. */}
+                    unit the gap and the clip are measured by. `data-ch` is
+                    the same character again, for the gold shine: Nav.css draws
+                    it as a second glyph over the letter and fades it on the
+                    letter's own beat, so the light runs along the phrase. */}
                 {BLESSING.map((word, i) => (
                   <span key={word} className="nav__bless-word" style={{ '--i': i } as React.CSSProperties}>
                     {[...word].map((ch, j) => (
                       <span
                         key={j}
                         className="nav__bless-letter"
+                        data-ch={ch}
                         style={{ '--k': LETTER_OFFSET[i] + j } as React.CSSProperties}
                       >
                         {ch}

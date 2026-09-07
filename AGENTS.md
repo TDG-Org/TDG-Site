@@ -255,6 +255,17 @@ rate — counted in `origin/CabinScene.tsx`: the page moved on 214 frames and
 the cabin drew on 37. Rate caps are for a backdrop at rest behind prose, never
 for the frames a reader is scrolling through.
 
+**Never animate a blur or drop-shadow RADIUS. Animate the colour's alpha, at
+a fixed radius.** Every first-seen radius is a GPU kernel the browser
+compiles on the spot, and a radius passing through tens of values is tens of
+them: traced on the nav's blessing, that was a 19-20ms raster stall per
+radius on a cold shader cache and a 58-170ms present on a warm one, at
+exactly the two moments the sword's glow grew and shrank. `Nav.css` above
+`.nav__mark` is the pattern — the same two shadows at the same two radii in
+every state, transparent at rest — and the hero copy's dissolve blur is the
+one place the radius still moves, deliberately, because there the growing
+blur IS the effect and it is paid once per machine.
+
 **There is a narrow exemption, and taking it means documenting it at the call
 site.** A legitimate one is all three of these at once: the work is **not
 animation** — no tick of it repaints something that is moving; the shared loop
