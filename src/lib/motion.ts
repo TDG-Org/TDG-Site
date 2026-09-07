@@ -113,6 +113,23 @@ function markHeld() {
 // the collector has to come back for sixty times a second.
 const frame: Frame = { vh: 800, mi: 1, now: 0, dt: 0, hold: markHeld }
 
+/**
+ * The one write the loop makes BEFORE its read phase.
+ *
+ * Every subscriber measures against the scroll position, so whatever moves
+ * the scroll position has to have moved it before they read — in the same
+ * frame, not the next, or every layer paints a frame behind the page for as
+ * long as the page is moving. `lib/smoothScroll.ts` is the only occupant:
+ * it turns a wheel notch into a glide, and each frame of that glide is this
+ * call. It may `hold()`; it must not read anything a subscriber writes.
+ */
+let prelude: ((f: Frame) => void) | null = null
+
+export function setFramePrelude(fn: ((f: Frame) => void) | null) {
+  prelude = fn
+  wake()
+}
+
 function run(now: number) {
   const dt = Math.min(0.05, (now - (last || now)) / 1000)
   last = now
@@ -122,6 +139,14 @@ function run(now: number) {
   frame.mi = motionIntensity()
   frame.now = now
   frame.dt = dt
+
+  if (prelude) {
+    try {
+      prelude(frame)
+    } catch (err) {
+      console.error('[motion] prelude threw', err)
+    }
+  }
 
   // One subscriber throwing must not take the page's motion with it. Without
   // the finally, the throw escapes before the loop re-arms, and because rafId
@@ -174,7 +199,10 @@ export function wake(ms: number = GRACE_MS) {
   if (typeof window === 'undefined') return
   const until = performance.now() + ms
   if (until > awakeUntil) awakeUntil = until
-  if (!rafId && ticks.size) {
+  // The prelude counts as work: a route with no scroll-linked scenery at all
+  // still has a wheel, and a glide with no loop under it is a page that has
+  // taken the wheel event and then does not move.
+  if (!rafId && (ticks.size || prelude)) {
     last = 0
     rafId = requestAnimationFrame(run)
   }
@@ -241,7 +269,9 @@ export function onFrame(tick: Tick): () => void {
   wake()
   return () => {
     ticks.delete(tick)
-    if (ticks.size === 0 && rafId) {
+    // With a prelude set the loop parks itself instead: a route change that
+    // unmounts the last subscriber mid-glide must not cut the glide short.
+    if (ticks.size === 0 && rafId && !prelude) {
       cancelAnimationFrame(rafId)
       rafId = 0
     }

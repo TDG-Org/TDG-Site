@@ -236,6 +236,25 @@ add a `setInterval` for animation. Subscribe with `onFrame`, read element rects
 rather than a scroll offset, and call `frame.hold()` only while genuinely
 time-based work is outstanding.
 
+**The scroll itself is motion on that loop too.** `src/lib/smoothScroll.ts`
+is the one `wheel` handler on the site: a notch adds to a target and the
+loop's prelude glides the page toward it with the same `settle` every layer
+uses, so a 100px notch is a dozen frames of movement rather than one — that
+is what "smooth" means to an eye, and why every scroll-linked layer looks
+choppy the moment the scroll is stepped. It is not a scroll listener, it
+writes the scroll position before any subscriber reads (that is what the
+prelude slot in `motion.ts` is for), and it leaves touch, the keyboard, the
+scrollbar, anchors, nested scrollers, dialogs and reduced motion native. Its
+header lists each of those and why. Anything that scrolls the page with
+`behavior: 'smooth'` calls `yieldScroll()` first, as `anchors.ts` does.
+
+**And a scroll-linked canvas draws on every frame the page moves.** A camera
+that follows the scroll but repaints at 30Hz repaints every fifth frame of a
+165Hz glide while the copy and the parallax around it slide at the display's
+rate — counted in `origin/CabinScene.tsx`: the page moved on 214 frames and
+the cabin drew on 37. Rate caps are for a backdrop at rest behind prose, never
+for the frames a reader is scrolling through.
+
 **There is a narrow exemption, and taking it means documenting it at the call
 site.** A legitimate one is all three of these at once: the work is **not
 animation** — no tick of it repaints something that is moving; the shared loop
@@ -807,6 +826,23 @@ clocks with it. The route that works is headless Chrome over raw CDP:
 - Do not time anything in headless — SwiftShader makes every 3D frame a
   multi-second task. Use the Browser pane's JS with a `PerformanceObserver`
   for timing, and headless for pictures.
+- **For scroll timing, drive a HEADED Chrome over CDP instead** — the Browser
+  pane throttles `requestAnimationFrame` whenever it is hidden, so its numbers
+  are worthless the moment you cannot see it. Launch `chrome.exe` with
+  `--remote-debugging-port`, its own `--user-data-dir`, and
+  `--disable-backgrounding-occluded-windows --disable-renderer-backgrounding
+  --disable-background-timer-throttling` at a window position off the
+  desktop; it renders on the real GPU at the display's real refresh rate.
+  Then, in the page, record `performance.now()` and `scrollY` per animation
+  frame, hook `WebGL2RenderingContext.prototype.drawElements` (and its three
+  siblings) to count canvas repaints per frame, and fire
+  `Input.dispatchMouseEvent {type: 'mouseWheel'}` per notch — or
+  `Input.synthesizeScrollGesture {gestureSourceType: 'mouse'}` for the
+  browser's own wheel animation. `Page.startScreencast` in the same session
+  gives a filmstrip to LOOK at, and `Tracing.start` names a hitch: the smooth
+  scroll (v2.61.0) was measured this way, and so was the cabin repainting on
+  37 of 214 moving frames. Put a reused profile in `%TEMP%`, not in a session
+  scratchpad — from there the GPU process stalled for 190ms a frame.
 
 ### 7.2 · Art comes in at the size it is PAINTED at
 

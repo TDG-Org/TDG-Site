@@ -1580,12 +1580,13 @@ export function CabinScene({
       if (converging || animating || holding) hold()
       if (!converging && !animating && !fading && settled && !dirty) return
 
-      // 30Hz outside, this section's existing number. A camera on a damped
-      // scalar and snow drifting at about a metre a second are both well inside
+      // 30Hz outside AT REST, this section's existing number. Snow drifting at
+      // about a metre a second and smoke over a chimney are both well inside
       // what that reads as, and it is half the GPU work of an uncapped scene
-      // sitting behind prose. A scroll that outruns it is absorbed by the
-      // damping, which is the other half of why this does not judder on a
-      // trackpad.
+      // sitting behind prose. The camera is NOT in that sentence any more: a
+      // camera that follows the scroll repaints on every frame the page moves
+      // — the gate below says why, with the count that settled it — and the
+      // cap applies only once it has converged.
       //
       // **15Hz once the camera is inside and settled, and that is the one new
       // number in this gate.** Indoors the smoke is off and every flake in the
@@ -1612,7 +1613,34 @@ export function CabinScene({
       // has to be repainted now; a cross-fade is motion, and motion waits its
       // turn like the rest of the motion in here.
       knotsOf(marks)
-      const hz = !converging && !fading && insideness(wanted) > 0.99 ? FIRE_HZ : SCENE_HZ
+      /*
+       * ── every frame while the camera MOVES; capped only while it rests ──
+       *
+       * SCENE_HZ used to cap the moving camera as well, and that was the
+       * choppiness the site owner reported in the 3D sections. A camera that
+       * follows the scroll but repaints at 30Hz repaints every fifth frame of
+       * a 165Hz glide and every other frame of a 60Hz one: the copy, the
+       * band and every parallax layer around this canvas slide at the
+       * display's rate while the cabin holds still for 33ms and then jumps.
+       * Counted, with draw calls hooked per animation frame during a wheel
+       * glide through the walk at 165Hz: the page moved on 214 frames and
+       * this canvas drew on 37 of them.
+       *
+       * It is a rate choice and not a cost. Drawn on every frame of the same
+       * glide the frame interval stays at 6.1ms (it was 6.1ms), because the
+       * scene is a few thousand vertices and a handful of draw calls; the
+       * thing the cap was bought for was a backdrop repainting behind prose
+       * a reader had stopped scrolling, and that is exactly the state the
+       * two caps below still own: SCENE_HZ outside at rest with the snow and
+       * the smoke moving, FIRE_HZ indoors and settled. `converging` is the
+       * same test that decides whether this tick holds the loop, so the
+       * uncapped state ends the moment the loop would have parked anyway.
+       */
+      const hz = converging
+        ? Infinity
+        : !fading && insideness(wanted) > 0.99
+          ? FIRE_HZ
+          : SCENE_HZ
       pending += dt
       if (pending < 1 / hz && !urgent) return
       const step = pending
@@ -2228,8 +2256,8 @@ const WASH_FROM = 0.55
  * (an earlier version of this note said 2.9M "clears" 2.4M, which it does
  * not); a canvas stretched over a whole 2400px section would be far past it,
  * and this is what stops that mount from allocating a 40MB buffer and filling
- * it thirty times a second — SCENE_HZ, which is the rate this file actually
- * runs at. The cap never takes a 1x display below native: `resize` says why.
+ * it thirty times a second at rest (SCENE_HZ) and at the display's own rate
+ * for as long as the camera is moving with the scroll. The cap never takes a 1x display below native: `resize` says why.
  */
 const MAX_PIXELS = 2_400_000
 

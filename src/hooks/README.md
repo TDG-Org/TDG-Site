@@ -9,6 +9,12 @@ never animate on a `setInterval`.** The loop parks itself when nothing holds it,
 and any of those three breaks the parking — which is worth 71 ms of main thread
 per second on a page nobody is even scrolling.
 
+The scroll position these hooks read is itself driven by that loop: a wheel
+notch becomes a glide in [`../lib/smoothScroll.ts`](../lib/README.md), written
+before any hook reads a rect. A hook never has to know — it reads rects, as
+before — but it is why a layer that lerps behind the page at 0.16 now follows a
+page that is itself moving every frame rather than jumping 100px and stopping.
+
 | Hook | What it does |
 | --- | --- |
 | `useReveal(kind, index)` | Brings an element in as it enters the viewport. |

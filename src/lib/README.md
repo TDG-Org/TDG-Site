@@ -10,6 +10,7 @@ change one.
 | `route.ts` | The hash router. |
 | `anchors.ts` | Where `#apps` actually lands: the section's heading, clear of the nav. |
 | `motion.ts` | The one animation loop for the whole page. |
+| `smoothScroll.ts` | The wheel glides: a notch becomes a target, and the loop's prelude scrolls the page toward it. |
 | `sections.tsx` | Which collapsible sections are open. |
 | `supabase.ts` | The shared TDG Core client. |
 | `asset.ts` | A URL for a file in `public/`. |
@@ -249,6 +250,40 @@ cannot settle. `setMotionIntensity()` is the only writer of the intensity
 multiplier and nothing calls it today, so `mi` on the shipped site is 1, or 0
 for a visitor who asked for less motion. The 0–1.5 clamp is the contract for
 whatever turns that knob first, not a range the page uses.
+
+`setFramePrelude()` is the one write the loop makes BEFORE its read phase, and
+`smoothScroll.ts` below is its only occupant. The scroll position is what every
+subscriber measures against, so whatever moves it has to have moved it before
+they read — in the same frame, not the next, or every layer paints one frame
+behind the page for as long as the page is moving.
+
+## `smoothScroll.ts`
+
+**A wheel notch is a glide, not a step.** A mouse wheel delivers a page in
+notches of about 100px, and the browser animates each on its own and then stops
+until the next: measured with Chrome's own synthetic mouse gesture at 165Hz,
+`4 9 8 10 10 19` px on consecutive frames, then fourteen frames of `0`. Every
+layer on this site is driven off the scroll position, so a stepped scroll is
+stepped scenery — the choppiness the site owner reported in the 3D sections.
+
+So the wheel adds to a **target** instead, and the loop's prelude moves the page
+toward it with `settle(0.12, dt)`, the same lerp the parallax layers use. Two
+notches close together merge into one glide; the last one tails off. Measured
+after: every frame of a scroll moves the page (`12 11 10 10 9 8 …`), no frame
+inside a scroll moves it by 0, and `isParked()` is true again within a second
+of the last notch.
+
+**What stays native, and why, is the header's list** — touch, the keyboard, the
+scrollbar, anchors, pinch zoom, a nested scroller that can still move (or that
+declares `overscroll-behavior: contain`), a page under a dialog's scroll lock,
+and reduced motion. The one rule for callers: anything that scrolls the page
+with `behavior: 'smooth'` calls **`yieldScroll()`** first, the way `anchors.ts`
+does, because a native smooth scroll's first frame can move less than the pixel
+the driver treats as somebody else's move and would be cancelled on the next.
+A key or pointer press yields on its own.
+
+`installSmoothScroll()` is called once from `main.tsx`, before the first
+render.
 
 ## `sections.tsx`
 

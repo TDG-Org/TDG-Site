@@ -43,6 +43,8 @@
  * display. If the bar ever stops being one height, this becomes a clamp and
  * `--nav-h` becomes the thing that varies — not this.
  */
+import { yieldScroll } from './smoothScroll'
+
 const GAP = 18
 
 /** The nav's own height, from the one place it is written down. */
@@ -82,6 +84,10 @@ export function scrollToAnchor(id: string, behavior: 'smooth' | 'instant'): bool
   const top = target.getBoundingClientRect().top + window.scrollY - navHeight() - GAP
   // Clamped, because the hero's heading is above the top of the document and a
   // negative offset is not a place.
+  // A wheel glide still in flight would cancel this scroll on its next frame
+  // without noticing it: a native smooth scroll's first frame can move less
+  // than the pixel the driver treats as somebody else's move. So it is told.
+  yieldScroll()
   window.scrollTo({ top: Math.max(0, top), behavior: motionSafe(behavior) })
   return true
 }

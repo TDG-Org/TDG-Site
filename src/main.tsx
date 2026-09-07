@@ -8,10 +8,14 @@ import App from './App'
 import { ThemeProvider } from './theme/ThemeProvider'
 import { AuthProvider } from './auth/AuthProvider'
 import { guardChrome } from './lib/chromeGuard'
+import { installSmoothScroll } from './lib/smoothScroll'
 
 // Before the first render, so an extension that repaints a field never gets a
 // frame where its version is the one on screen. See src/lib/chromeGuard.ts.
 guardChrome()
+// Also before the first render: the wheel glides from the first notch, and no
+// frame is ever scrolled two ways. See src/lib/smoothScroll.ts.
+installSmoothScroll()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
